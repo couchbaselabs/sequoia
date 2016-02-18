@@ -1,0 +1,12 @@
+---
+bucket: bucket-1 
+ops: 5000
+create: 65 
+update: 0
+get: 30 
+delete: 5 
+miss: 0
+expire: 0
+ttl: 15
+hosts:
+  - db1

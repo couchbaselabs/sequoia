@@ -1,0 +1,37 @@
+---
+- hosts: servers 
+  vars:
+    build_no:  "{{BUILD_NO|default(754)}}"
+    base_url:  http://172.23.120.24/builds/latestbuilds/couchbase-server/watson/
+    build_pkg:  "couchbase-server-enterprise_4.5.0-{{build_no}}-ubuntu14.04_amd64.deb"
+    build_url: "{{base_url}}/{{build_no}}/{{build_pkg}}"
+    deb_path: "/tmp/{{build_pkg}}"
+  remote_user: root
+  tasks:
+  - name: cleanup old pkg dirs
+    shell: "rm /tmp/couchbase-server*deb* 2>/dev/null"
+    ignore_errors: True
+  - name: rm locks 
+    shell: "rm /var/lib/dpkg/lock" 
+    ignore_errors: True
+  - name: configure 
+    shell: "dpkg --configure -a" 
+  - name: stop couchbase
+    shell: "ps aux | grep 'couchbase-server' | awk '{print $2}' | xargs kill -s 9"
+    ignore_errors: True
+  - name: stop memcached 
+    shell: "ps aux | grep 'memcached' | awk '{print $2}' | xargs kill -s 9"
+    ignore_errors: True
+  - name: uninstall couchbase
+    apt: name=couchbase-server state=absent
+  - name: rm opt dir
+    shell: "rm -rf /opt/couchbase"
+    ignore_errors: True
+  - name: rm data dir
+    shell: "rm -rf /data/*"
+  - name: download binary
+    get_url: url="{{build_url}}" dest="{{deb_path}}"
+  - name: install couchbase
+    apt: deb="{{deb_path}}"
+  - name: wait for install done
+    wait_for: port=8091 delay=10
