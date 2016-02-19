@@ -1,0 +1,23 @@
+{
+  "name": "sequoia",
+  "version": "0.0.0",
+  "description": "sequoia test runner",
+  "main": "run.js",
+  "scripts": {
+    "test": "mocha run.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/couchbaselabs/sequoia.git"
+  },
+  "author": "Couchbase",
+  "license": "BSD-2-Clause",
+  "bugs": {
+    "url": "https://github.com/couchbaselabs/sequoia/issues"
+  },
+  "dependencies": {
+    "mocha": "~2.4.5",
+    "dockerode": "~2.2.9",
+    "async": "~1.5.2"
+  }
+}
