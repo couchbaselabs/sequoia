@@ -1,0 +1,6 @@
+---
+load:
+  - test:
+     framework: gideon
+     async: true
+  - duration: 300000

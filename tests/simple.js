@@ -6,7 +6,7 @@ var Docker = require('dockerode')
 
 var logStream
 
-var DOCKER_HOST = '192.168.99.100'
+var DOCKER_HOST = '192.168.99.103'
 var docker = new Docker({
 	protocol: 'https',
 	host: DOCKER_HOST,
