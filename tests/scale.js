@@ -4,23 +4,13 @@ var Docker = require('dockerode')
     , assert = require('assert');
 
 
-var DOCKER_HOST = '172.23.121.59'
-var SERVERS = {ips: []}
 
 var logStream
+
+var DOCKER_HOST = '172.23.121.59'
 var docker = new Docker({host: DOCKER_HOST, port: 2375})
 
-/*
-var docker = new Docker({socketPath: DOCKER_HOST});
-var docker = new Docker({
-	protocol: 'https',
-	host: DOCEKRIP,
-	port: 2376,
-	ca: fs.readFileSync(process.env.DOCKER_CERT_PATH + '/ca.pem'),
-	cert: fs.readFileSync(process.env.DOCKER_CERT_PATH + '/cert.pem'),
-	key: fs.readFileSync(process.env.DOCKER_CERT_PATH + '/key.pem')
-};
-*/
+
 
 describe("Cleanup App Containers", function(){
     this.timeout(60000)
@@ -114,7 +104,7 @@ describe("Provision Cluster", function(){
 
     it('init cluster', function(done){
         docker.run('couchbase-cli',
-           ['./couchbase-cli', 'cluster-init', '-c', _glb.hosts[0], '-u', 'Administrator', '-p', 'password', '--cluster-username', 'Administrator', '--cluster-password', 'password', '--cluster-port', '8091', '--cluster-ramsize', '300', '--services', 'data'],
+           ['./couchbase-cli', 'cluster-init', '-c', _glb.hosts[0], '-u', 'Administrator', '-p', 'password', '--cluster-username', 'Administrator', '--cluster-password', 'password', '--cluster-port', '8091', '--cluster-ramsize', '876', '--services', 'data'],
            [logStream, process.stderr],
            {Tty:false}, done)
     })
@@ -141,7 +131,7 @@ describe("Provision Cluster", function(){
     it('create bucket', function(done){
         var orchestrator = _glb.hosts[0]
         docker.run('couchbase-cli',
-           ['./couchbase-cli', 'bucket-create', '-c', orchestrator, '-u', 'Administrator', '-p', 'password', '--bucket', 'bucket-1', '--bucket-ramsize', '300', '--bucket-type', 'couchbase', '--wait'],
+           ['./couchbase-cli', 'bucket-create', '-c', orchestrator, '-u', 'Administrator', '-p', 'password', '--bucket', 'bucket-1', '--bucket-ramsize', '512', '--bucket-type', 'couchbase', '--wait'],
            [logStream, process.stderr],
            {Tty:false}, done)
     })
