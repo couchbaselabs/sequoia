@@ -1,5 +1,5 @@
 ---
-bucket: bucket-1 
+bucket: default 
 ops: 5000
 create: 65 
 update: 0
@@ -9,4 +9,4 @@ miss: 0
 expire: 0
 ttl: 15
 hosts:
-  - db1
+  - local

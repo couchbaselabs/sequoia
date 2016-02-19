@@ -1,0 +1,23 @@
+---
+docker:
+  host: 192.168.99.100
+  port: 2376
+  proto: https
+
+buckets:
+  default:
+    count: 1
+    ram: 512
+    replica: 1
+    type: couchbase
+
+servers:
+  local:
+    count: 1
+    ram: 876
+    services: data
+    rest_username: Administrator
+    rest_password: password
+    rest_port: 8091
+    cluster: 1
+    buckets: default

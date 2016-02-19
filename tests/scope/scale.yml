@@ -1,0 +1,37 @@
+---
+# settings for docker endpoint
+# supported endpoints include http(s), tcp, unix socket and docker swarm!
+docker:
+  host: 172.23.121.59  # docker host ip, omit if using unix socket
+  port: 2375  # docker reachable port, omit if using socket
+  proto: http  # http | https | tcp | unix
+
+buckets:
+  bucket:
+    count: 2  # create 2 buckets [bucket-1, bucket-2]
+    ram: 256
+    replica: 1
+    type: couchbase
+
+
+servers:
+  db:
+    count: 3  # create 3 nodes of this type [db-1, db-2, db-3]
+    ram: 876
+    services: data
+    rest_username: Administrator
+    rest_password: password
+    rest_port: 8091
+    cluster: 2 # join 2 of 3 nodes
+    buckets: bucket # adds buckets [bucket-1, bucket-2]
+  dbx:
+    count: 2
+    ram: 876
+    services: data
+    rest_username: Administrator
+    rest_password: password
+    rest_port: 8091
+    cluster: 1
+    join: db  # join the servers listed in db
+
+

@@ -4,7 +4,7 @@
   "description": "sequoia test runner",
   "main": "run.js",
   "scripts": {
-    "test": "mocha tests/simple.js"
+    "test": "mocha tests/run.js -s tests/scope/small_cluster.yml -t tests/simple.yml"
   },
   "repository": {
     "type": "git",
@@ -16,8 +16,12 @@
     "url": "https://github.com/couchbaselabs/sequoia/issues"
   },
   "dependencies": {
-    "mocha": "~2.4.5",
+    "async": "~1.5.2",
+    "command-line-args": "^2.1.6",
     "dockerode": "~2.2.9",
-    "async": "~1.5.2"
+    "js-yaml": "^3.5.3",
+    "lodash": "^4.5.0",
+    "mocha": "~2.4.5",
+    "promise": "^7.1.1"
   }
 }

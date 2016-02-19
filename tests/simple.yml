@@ -1,0 +1,6 @@
+---
+load:
+  - test:
+     framework: gideon
+     wait: false
+     duration: 30000
