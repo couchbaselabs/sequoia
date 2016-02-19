@@ -7,6 +7,7 @@ Couchbase testing scaled way up with containers
 
 **Build Containers**
 ```bash
+# takes a while ... but you only have to do it once
 ./build.sh
 ```
 
