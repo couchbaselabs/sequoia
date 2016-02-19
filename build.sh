@@ -5,3 +5,4 @@ docker build -t gideon frameworks/gideon/
 docker build -t perfrunner-n1ql frameworks/perfrunner/
 docker build -t couchbase-watson couchbase/
 docker build -t couchbase-cli frameworks/couchbase-cli
+npm install
