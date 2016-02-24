@@ -133,6 +133,9 @@ exports.api = (function(){
 		getContainerIps: function(_type){
 			if(_type){
 				return containerIps[_type]
+			} else {
+				// return everything
+				return containerIps
 			}
 		}
     }

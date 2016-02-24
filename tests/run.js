@@ -8,7 +8,8 @@ var Docker = require('dockerode')
     , commandLineArgs = require('command-line-args');
 
 var client = require("./lib/client.js").api
-    util = require("./lib/util.js").api
+    , util = require("./lib/util.js").api
+    , argResolver = require("./lib/resolve.js").api.resolve
 
 var logStream = null
 
@@ -36,9 +37,8 @@ var SCOPE = util.loadSpec(options.scope)
 var TEST = util.loadSpec(options.test)
 
 var docker = client.init(SCOPE.docker)
-var servers = util.extrapolateRange(SCOPE.servers)
 var buckets = util.extrapolateRange(SCOPE.buckets)
-
+var servers = util.extrapolateRange(SCOPE.servers)
 
 function teardown(){
 	describe("removing app containers", function(){
@@ -63,7 +63,6 @@ describe("Teardown", function(){
 	teardown()
 })
 
-
 describe("Start Cluster", function(){
 
 	util.values(servers)
@@ -77,17 +76,16 @@ describe("Start Cluster", function(){
 	    })
 
 	util.values(servers)
-		.forEach(function(name, i){
+		.forEach(function(name){
 	        it('verified started node ['+name+']', function(){
 	        	return client.runContainer(true,
-	        		{Image: 'martin/wait', Cmd: ["-p", "809"+(i+1)]},
+	        		{Image: 'martin/wait', Cmd: ["-p", "8091", "-t", "120"]},
 	        		{Links:[name+":"+name]}
 	        	)
 	        })
 	    })
 	
 })
-
 
 
 
@@ -129,33 +127,32 @@ describe("Provision Cluster", function(){
     })
     it('init cluster', function(){
     	//  cluster-init:
-    	//     a cluster is initialized when server spec
-    	//     is defined that is not joining another server
+    	//     initializes a set of servers within clusters
     	var serverTypes = util.keys(servers)
     	var promises = []
         serverTypes.forEach(function(type){
 
+        	// set first node to be orchestrator
 	    	var orchestratorType = type
 	    	var clusterSpec = SCOPE.servers[orchestratorType]
-	    	if(clusterSpec.join){
-	    		return // skip, this cluster is joining another
-	    	} else {
-		    	var firstNode = servers[orchestratorType][0]
-		    	var rest_username = clusterSpec.rest_username
-		    	var rest_password = clusterSpec.rest_password
-		    	var rest_port = clusterSpec.rest_port.toString()
-		    	var services = clusterSpec.services
-		    	var ram = clusterSpec.ram.toString()
-		    	var orchestratorIp = netMap[firstNode]
-				var p = client.runContainer(true,{
-					Image: 'couchbase-cli',
-				 	Cmd: ['./couchbase-cli', 'cluster-init',
-			            '-c', orchestratorIp, '-u', rest_username, '-p', rest_password,
-			            '--cluster-username', rest_username, '--cluster-password', rest_password,
-			            '--cluster-port', rest_port, '--cluster-ramsize', ram, '--services', services]
-			        })
-        		promises.push(p)
-	    	}
+	    	var firstNode = servers[orchestratorType][0]
+
+	    	// provision vars
+	    	var rest_username = clusterSpec.rest_username
+	    	var rest_password = clusterSpec.rest_password
+	    	var rest_port = clusterSpec.rest_port.toString()
+	    	var services = clusterSpec.services
+	    	var ram = clusterSpec.ram.toString()
+	    	var orchestratorIp = netMap[firstNode]
+
+			var p = client.runContainer(true,{
+				Image: 'couchbase-cli',
+			 	Cmd: ['./couchbase-cli', 'cluster-init',
+		            '-c', orchestratorIp, '-u', rest_username, '-p', rest_password,
+		            '--cluster-username', rest_username, '--cluster-password', rest_password,
+		            '--cluster-port', rest_port, '--cluster-ramsize', ram, '--services', services]
+		        })
+    		promises.push(p)
         })
   		return Promise.all(promises)
 
@@ -172,15 +169,10 @@ describe("Provision Cluster", function(){
 			if(n_to_cluster > servers[type].length){
 				n_to_cluster = servers[type].length
 			}
-			if(n_to_cluster <= 1 && !clusterSpec.join){
-				// only 1 node here and not joining elsewhere
+			if(n_to_cluster <= 1){
+				// skip, only 1 node in this cluster
 				type_cb(null)
 				return
-			}
-
-			if(clusterSpec.join){
-				// override orchestrator to join different server set
-				orchestratorType = clusterSpec.join
 			}
 
 	    	var firstNode = servers[orchestratorType][0]
@@ -217,9 +209,8 @@ describe("Provision Cluster", function(){
 
 	    	var orchestratorType = type
 	    	var clusterSpec = SCOPE.servers[orchestratorType]
-	    	if(clusterSpec.join || clusterSpec.cluster <= 1){
-	    		return // skip, this cluster is joining another
-	    		       // or no rebalance is needed
+	    	if(clusterSpec.cluster <= 1){
+	    		return // skip, rebalance is needed for single node cluster
 	    	} else if(clusterSpec.cluster > 1) {
 		    	var firstNode = servers[orchestratorType][0]
 		    	var rest_username = clusterSpec.rest_username
@@ -245,8 +236,8 @@ describe("Provision Cluster", function(){
 
 	    	var orchestratorType = type
 	    	var clusterSpec = SCOPE.servers[orchestratorType]
-	    	if(clusterSpec.join){
-	    		cb(null) // skip, no buckets for these servers
+	    	if(!clusterSpec.buckets){
+	    		cb(null) // skip, no buckets for these servers now
 	    	} else if(clusterSpec.buckets) {
 		    	var firstNode = servers[orchestratorType][0]
 		    	var rest_username = clusterSpec.rest_username
@@ -291,21 +282,46 @@ describe("Test", function(){
 
             before(function() {
                 links['pairs'] = util.containerLinks(servers)
+                return client.updateContainerIps()
             })
 
-            // generate tests
+            // generate tasks
             var phaseTests = _.filter(TEST[phase], 'test')
 
         	// run each test in the phase
-           async.each(phaseTests, function(val){
-           		var testSpec = val.test
+           async.each(phaseTests, function(t){
+           		var testSpec = t.test
                 var framework = testSpec.framework
                 var duration = testSpec.duration || 0
+                var command = testSpec.command
+                if(command){
+                	it('resolve command: '+command, function(){
+	                	command = _.map(command.split(/\s+/),
+	                		function(arg){
+	                			var argv = arg.split(":")
+	                			if(argv.length > 1){
+	                				var subscope = SCOPE[argv[0]]
+	                				var func = argv[1]
+	                				var fargs = argv.slice(2)
+	                				var val = argResolver(subscope, 
+	                					                  func, 
+	                					                  fargs,
+	                					                  client.getContainerIps('couchbase-watson'))
+	                				argv = val
+	                			} else {
+	                				argv = arg
+	                			}
+	                			return argv
+	                		})
+	                })
+
+                }
                 it('test: '+framework, function(){
                     if (framework){
-                    	return client.runContainer(testSpec.async,
+                    	return client.runContainer(testSpec.wait,
                     		{
 								Image: framework,
+								Cmd: command,
 							 	Links:links.pairs
 							}, null, duration)
                     } else {
@@ -323,4 +339,6 @@ describe("Test", function(){
 describe("Teardown", function(){
  	teardown()
 })
+
+
 

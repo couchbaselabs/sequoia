@@ -14,24 +14,23 @@ buckets:
     type: couchbase
 
 
-servers:
-  db:
-    count: 3  # create 3 nodes of this type [db-1, db-2, db-3]
+
+servers: # each server tag represents a cluster
+ local:
+    count: 4  # create 3 nodes of this type [local-1, local-2, local-3, local-4]
     ram: 876
     services: data
     rest_username: Administrator
     rest_password: password
     rest_port: 8091
-    cluster: 2 # join 2 of 3 nodes
+    cluster: 2
     buckets: bucket # adds buckets [bucket-1, bucket-2]
-  dbx:
-    count: 2
+ remote:
+    count: 4
     ram: 876
     services: data
     rest_username: Administrator
     rest_password: password
     rest_port: 8091
     cluster: 1
-    join: db  # join the servers listed in db
-
-
+    buckets: bucket

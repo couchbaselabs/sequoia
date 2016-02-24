@@ -1,0 +1,33 @@
+---
+docker:
+  host: 172.23.121.59
+  port: 2375
+  proto: http
+
+buckets:
+  bucket:
+    count: 2
+    ram: 256
+    replica: 1
+    type: couchbase
+
+servers:
+ local:
+    count: 4
+    ram: 876
+    services: data
+    rest_username: Administrator
+    rest_password: password
+    rest_port: 8091
+    cluster: 2
+    buckets: bucket
+ remote:
+    count: 4
+    ram: 876
+    services: data
+    rest_username: Administrator
+    rest_password: password
+    rest_port: 8091
+    cluster: 1
+    buckets: bucket
+

@@ -1,8 +1,8 @@
 ---
 docker:
-  host: 192.168.99.100
-  port: 2376
-  proto: https
+  host: 172.23.121.59  # docker host ip, omit if using unix socket
+  port: 2375  # docker reachable port, omit if using socket
+  proto: http  # http | https | tcp | unix
 
 buckets:
   default:
@@ -13,11 +13,11 @@ buckets:
 
 servers:
   local:
-    count: 1
-    ram: 876
-    services: data
-    rest_username: Administrator
-    rest_password: password
-    rest_port: 8091
-    cluster: 1
-    buckets: default
+     count: 1
+     ram: 876
+     services: data
+     rest_username: Administrator
+     rest_password: password
+     rest_port: 8091
+     cluster: 1
+     buckets: default
