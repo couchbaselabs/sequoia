@@ -59,6 +59,7 @@ exports.api = (function(){
 				})
 			} else if (dockerSpec.proto == 'unix') {
 				// sock path
+				docker = new Docker({socketPath: '/var/run/docker.sock'})
 			} else {
 				docker = new Docker({host: dockerSpec.host, port: dockerSpec.port})
 			}
