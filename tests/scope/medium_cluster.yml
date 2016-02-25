@@ -1,0 +1,23 @@
+---
+docker:
+  host: 172.23.107.163 # docker host ip, omit if using unix socket 192.168.99.100 | 172.23.121.59
+  port: 2375  # docker reachable port, omit if using socket
+  proto: http  # http | https | tcp | unix
+
+buckets:
+  default:
+    count: 2  # creates default-1 and default-2
+    ram: 4096
+    replica: 1
+    type: couchbase
+
+servers:
+  local:
+     count: 4  # creates local-1 local-2 local-3 local-4
+     ram: 12000
+     services: data
+     rest_username: Administrator
+     rest_password: password
+     rest_port: 8091
+     init_nodes: 3
+     buckets: default

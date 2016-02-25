@@ -1,9 +1,9 @@
 [clusters]
 systest =
-    db-1:8091,index,n1ql
-    db-2:8091,index,n1ql
-    db-3:8091,index,n1ql
-    db-4:8091,index,n1ql
+    local-1,index,n1ql
+    local-2,index,n1ql
+    local-3,index,n1ql
+    local-4,index,n1ql
 
 [clients]
 hosts =

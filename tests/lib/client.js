@@ -31,8 +31,6 @@ exports.api = (function(){
 		});
 
 		return _as_promised(function(done){
-
-
 			container.wait(function(err, rc){
 				if(rc.StatusCode == 0){
 					done()
@@ -77,16 +75,23 @@ exports.api = (function(){
 		killContainers: function(){
 			return _as_promised(function(done){
 		        async.eachSeries(locals.containers, function(item, cb){
+		          if(item.Image == "swarm"){ cb() }
+		          	else{
 		          docker.getContainer(item.Id).kill(function(err){
 		          	cb() // ignore kill err
 		          })
+		      }
 		        }, done)
 		    })
 		},
 		removeContainers: function(){
 			return _as_promised(function(done){
 		        async.eachSeries(locals.containers, function(item, cb){
-		          docker.getContainer(item.Id).remove(cb)
+		          if (item.Image == "swarm"){
+		          	cb()
+		          } else {
+			          docker.getContainer(item.Id).remove(cb)
+			      }
 		        }, done)
 		    })
 		},
@@ -115,7 +120,7 @@ exports.api = (function(){
 					})
 			})
 		},
-		updateContainerIps: function(){
+		updateContainerIps: function(network){
 			return _as_promised(function(done){
 		        docker.listContainers(function(err, containers){
 		            async.eachSeries(containers, function(item, cb){ docker.getContainer(item.Id).inspect(function(e,d){
@@ -124,7 +129,12 @@ exports.api = (function(){
 		            	if(!containerIps[image]){
 		            		containerIps[image] = {}
 		            	}
-		            	containerIps[image][name] = d.NetworkSettings.IPAddress
+		            	var netSettings = d.NetworkSettings
+		            	if(network){
+			            	containerIps[image][name] = netSettings.Networks[network].IPAddress
+		            	} else {
+			            	containerIps[image][name] = netSettings.IPAddress
+			            }
 		                cb(e)
 		            }) }, done)
 		        })

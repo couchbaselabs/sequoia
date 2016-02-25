@@ -64,28 +64,43 @@ describe("Teardown", function(){
 })
 
 describe("Start Cluster", function(){
+    var netMap = {}
 
 	util.values(servers)
 		.forEach(function(name, i){
 	        it('should start node ['+name+']', function() {
 	        	return client.runContainer(false,
-	        		{Image: 'couchbase-watson', name: name},
-	        		{"PortBindings": {"8091/tcp": [{"HostPort": "809"+(i+1)}]}}
+	        		{Image: 'couchbase-watson', 
+	        		 name: name,
+	        		 HostConfig: {
+	        		 	PortBindings: {"8091/tcp": [{"HostPort": "809"+(i+1)}]}
+	        		 }}
 	        	)
 	        })
 	    })
 
+	it('update ip addresses', function(){
+		// save addresses for node containers
+		return client.updateContainerIps()
+    		.then(function(){
+    			netMap = client.getContainerIps("couchbase-watson")
+    		})
+	})
 	util.values(servers)
 		.forEach(function(name){
 	        it('verified started node ['+name+']', function(){
 	        	return client.runContainer(true,
-	        		{Image: 'martin/wait', Cmd: ["-p", "8091", "-t", "120"]},
-	        		{Links:[name+":"+name]}
+	        		{Image: 'martin/wait', 
+	        		 HostConfig: {
+	        		 	Links:[name+":"+name]
+	        		 }, 
+	        		 Cmd: ["-p", "8091", "-t", "120"]}
 	        	)
 	        })
 	    })
 	
 })
+
 
 
 
@@ -116,15 +131,17 @@ describe("Provision Cluster", function(){
 	        servers[type].forEach(function(name){
 	        	var ip = netMap[name]+":"+rest_port
 	        	  var p = client.runContainer(true,{
-	        	 	Image: 'couchbase-cli',
-	        		 Cmd: ['./couchbase-cli', 'node-init', '-c', ip,
-	        		       '-u', rest_username, '-p', rest_password]
+	        	 		Image: 'couchbase-cli',
+	        	 		HostConfig: {Links:[name+":"+name]},
+	        		 	Cmd: ['./couchbase-cli', 'node-init', '-c', ip,
+	        		       	  '-u', rest_username, '-p', rest_password]
 	        		})
 	        	  promises.push(p)
 	        })
         })
         return Promise.all(promises)
     })
+
     it('init cluster', function(){
     	//  cluster-init:
     	//     initializes a set of servers within clusters
@@ -147,6 +164,7 @@ describe("Provision Cluster", function(){
 
 			var p = client.runContainer(true,{
 				Image: 'couchbase-cli',
+    	 		HostConfig: {Links:[firstNode+":"+firstNode]},
 			 	Cmd: ['./couchbase-cli', 'cluster-init',
 		            '-c', orchestratorIp, '-u', rest_username, '-p', rest_password,
 		            '--cluster-username', rest_username, '--cluster-password', rest_password,
@@ -165,7 +183,7 @@ describe("Provision Cluster", function(){
 	    async.eachSeries(serverTypes, function(type, type_cb){
 			var orchestratorType = type
 	    	var clusterSpec = SCOPE.servers[orchestratorType]
-			var n_to_cluster = clusterSpec.cluster
+			var n_to_cluster = clusterSpec.init_nodes
 			if(n_to_cluster > servers[type].length){
 				n_to_cluster = servers[type].length
 			}
@@ -191,6 +209,7 @@ describe("Provision Cluster", function(){
 		        	// adding node
 		        	ip = ip+":"+rest_port
 					client.runContainer(true,{
+		    	 		HostConfig: {Links:[name+":"+name]},
 						Image: 'couchbase-cli',
 					 	Cmd: ['./couchbase-cli', 'server-add', '-c', orchestratorIp,
 	                          '-u', rest_username, '-p', rest_password, '--server-add', ip,
@@ -209,9 +228,9 @@ describe("Provision Cluster", function(){
 
 	    	var orchestratorType = type
 	    	var clusterSpec = SCOPE.servers[orchestratorType]
-	    	if(clusterSpec.cluster <= 1){
+	    	if(clusterSpec.init_nodes <= 1){
 	    		return // skip, rebalance is needed for single node cluster
-	    	} else if(clusterSpec.cluster > 1) {
+	    	} else if(clusterSpec.init_nodes > 1) {
 		    	var firstNode = servers[orchestratorType][0]
 		    	var rest_username = clusterSpec.rest_username
 		    	var rest_password = clusterSpec.rest_password
@@ -219,6 +238,7 @@ describe("Provision Cluster", function(){
 		    	var orchestratorIp = netMap[firstNode]+":"+rest_port
 		    	var p = client.runContainer(true,{
 						Image: 'couchbase-cli',
+		    	 		HostConfig: {Links:[firstNode+":"+firstNode]},
 					 	Cmd: ['./couchbase-cli', 'rebalance', '-c', orchestratorIp,
 	                '-u', rest_username, '-p', rest_password]
 				        })
@@ -256,6 +276,7 @@ describe("Provision Cluster", function(){
 		    		var bucketSpecType = bucketSpec.type
 		    		client.runContainer(true,{
 						Image: 'couchbase-cli',
+		    	 		HostConfig: {Links:[firstNode+":"+firstNode]},
 					 	Cmd: ['./couchbase-cli', 'bucket-create',
 			           '-c', orchestratorIp, '-u', rest_username, '-p', rest_password,
 			           '--bucket', name, '--bucket-ramsize', ram,
@@ -291,7 +312,8 @@ describe("Test", function(){
         	// run each test in the phase
            async.each(phaseTests, function(t){
            		var testSpec = t.test
-                var framework = testSpec.framework
+           		var scale = testSpec.scale || 1
+                var container = testSpec.container
                 var duration = testSpec.duration || 0
                 var command = testSpec.command
                 if(command){
@@ -316,18 +338,20 @@ describe("Test", function(){
 	                })
 
                 }
-                it('test: '+framework, function(){
-                    if (framework){
-                    	return client.runContainer(testSpec.wait,
-                    		{
-								Image: framework,
-								Cmd: command,
-							 	Links:links.pairs
-							}, null, duration)
-                    } else {
-                        // something else
-                    }
-                })
+                for (var i = 0; i<scale; i++){
+	                it('test: '+container, function(){
+	                    if (container){
+	                    	return client.runContainer(testSpec.wait,
+	                    		{
+									Image: container,
+									Cmd: command,
+									HostConfig: {Links:links.pairs}
+								}, null, duration)
+	                    } else {
+	                        // something else
+	                    }
+	                })
+	            }
             })
            cb()
         })
@@ -335,10 +359,7 @@ describe("Test", function(){
     })
 })
 
-
 describe("Teardown", function(){
- 	teardown()
+//	teardown()
 })
-
-
 

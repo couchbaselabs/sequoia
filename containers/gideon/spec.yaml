@@ -1,5 +1,5 @@
 ---
-bucket: default 
+bucket: default
 ops: 5000
 create: 65 
 update: 0

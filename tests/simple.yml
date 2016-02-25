@@ -1,6 +1,7 @@
 ---
 load:
   - test:
-     framework: gideon
+     container: gideon
+     command: "python gideon.py kv --ops 10000 --create 10 --get 90 --hosts servers:address:0:0"
      wait: false
      duration: 30000

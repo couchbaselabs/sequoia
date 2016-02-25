@@ -1,0 +1,45 @@
+---
+phase1:  # load bucket-1 with perfrunner and bucket-2 with gideon
+  - test:
+     container: perfrunner
+     command: '/tmp/env/bin/python -m perfrunner 
+              -c clusters/systest.spec
+              -t tests/n1ql/n1ql_memdb_thr_Q3_20M_gsi_false.test  
+              --local'
+     wait: false
+  - test:
+     container: gideon
+     command: "python gideon.py kv --ops 20000 --create 10 --get 90 
+               --hosts servers:address:0:0 --bucket buckets:bucketname:0:1"
+     scale: 10
+
+phase2:  # xdcr
+  - test:
+       container: couchbase-cli
+       command:  './couchbase-cli xdcr-setup -c  servers:address:0:0 --create
+       					--xdcr-cluster-name servers:clustername:0
+       					--xdcr-hostname servers:address:1:0
+       					--xdcr-username servers:rest_username:1
+       					--xdcr-password servers:rest_password:1'
+  - test:
+       container: couchbase-cli
+       command: './couchbase-cli xdcr-replicate -c servers:address:0:0 
+       					--xdcr-cluster-name servers:clustername:0 
+       					--xdcr-from-bucket buckets:bucketname:0:0 
+       					--xdcr-to-bucket buckets:bucketname:0:0'
+
+phase3:  # perfrunner view test uses sasl
+  - test:
+       container: 'couchbase-cli'
+       command: './couchbase-cli bucket-edit -c servers:address:0:0
+                   --bucket buckets:bucketname:0:0 --bucket-password password 
+                   -u Administrator -p password'
+       wait: true
+phase4:  # view perf rebalance
+  - test:
+       container: perfrunner
+       command: '/tmp/env/bin/python -m perfrunner 
+       				-c clusters/systest.spec 
+       				-t tests/query_dev_20M_group_by.test 
+       				--local'
+       	wait: true
