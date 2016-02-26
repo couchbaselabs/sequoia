@@ -13,11 +13,12 @@ buckets:
 
 servers:
   local:
-     count: 1  # create single server with link named 'local'
+     count: 4  # create single server with link named 'local'
      ram: 876
-     services: data
+     index_ram: 512
+     services: data,query,index
      rest_username: Administrator
      rest_password: password
      rest_port: 8091
-     init_nodes: 1
+     init_nodes: 4
      buckets: default
