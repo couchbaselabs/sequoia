@@ -91,7 +91,7 @@ exports.api = (function(){
 		          if (item.Image == "swarm"){
 		          	cb()
 		          } else {
-			          docker.getContainer(item.Id).remove(cb)
+			          docker.getContainer(item.Id).remove({force: true}, cb)
 			      }
 		        }, done)
 		    })
