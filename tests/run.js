@@ -70,7 +70,7 @@ describe("Start Cluster", function(){
 		.forEach(function(name, i){
 	        it('should start node ['+name+']', function() {
 	        	return client.runContainer(false,
-	        		{Image: 'couchbase-watson', 
+	        		{Image: 'couchbase-watson',
 	        		 name: name,
 	        		 HostConfig: {
 	        		 	PortBindings: {"8091/tcp": [{"HostPort": "809"+(i+1)}]}
@@ -90,10 +90,10 @@ describe("Start Cluster", function(){
 		.forEach(function(name){
 	        it('verified started node ['+name+']', function(){
 	        	return client.runContainer(true,
-	        		{Image: 'martin/wait', 
+	        		{Image: 'martin/wait',
 	        		 HostConfig: {
 	        		 	Links:[name+":"+name]
-	        		 }, 
+	        		 },
 	        		 Cmd: ["-p", "8091", "-t", "120"]}
 	        	)
 	        })
@@ -161,14 +161,18 @@ describe("Provision Cluster", function(){
 	    	var services = clusterSpec.services
 	    	var ram = clusterSpec.ram.toString()
 	    	var orchestratorIp = netMap[firstNode]
+	    	var command = ['./couchbase-cli', 'cluster-init',
+		            '-c', orchestratorIp, '-u', rest_username, '-p', rest_password,
+		            '--cluster-username', rest_username, '--cluster-password', rest_password,
+		            '--cluster-port', rest_port, '--cluster-ramsize', ram, '--services', services]
+		    if(clusterSpec.index_ram){
+		    	command = command.concat(['--cluster-index-ramsize', clusterSpec.index_ram.toString()])
+		    }
 
 			var p = client.runContainer(true,{
 				Image: 'couchbase-cli',
     	 		HostConfig: {Links:[firstNode+":"+firstNode]},
-			 	Cmd: ['./couchbase-cli', 'cluster-init',
-		            '-c', orchestratorIp, '-u', rest_username, '-p', rest_password,
-		            '--cluster-username', rest_username, '--cluster-password', rest_password,
-		            '--cluster-port', rest_port, '--cluster-ramsize', ram, '--services', services]
+			 	Cmd: command
 		        })
     		promises.push(p)
         })
@@ -325,8 +329,8 @@ describe("Test", function(){
 	                				var subscope = SCOPE[argv[0]]
 	                				var func = argv[1]
 	                				var fargs = argv.slice(2)
-	                				var val = argResolver(subscope, 
-	                					                  func, 
+	                				var val = argResolver(subscope,
+	                					                  func,
 	                					                  fargs,
 	                					                  client.getContainerIps('couchbase-watson'))
 	                				argv = val
