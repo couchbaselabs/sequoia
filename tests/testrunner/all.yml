@@ -1,0 +1,30 @@
+---
+#### SERVER POOL PULL SUITES -> CONF+INI
+n1ql:
+  - wait: false
+  - test:
+     container: testrunner
+     command: "/testrunner -i n1ql.ini -c conf/2i/py-clusterops.conf -p doc-per-day=1,get-cbcollect-info=False,gsi_type=forestdb"
+     servers: 0:0-3  # explicit index matching  (safest)
+  - test:
+     container: testrunner
+     command: "/testrunner -i n1ql.ini -c conf/2i/py-clusterops.conf -p doc-per-day=1,get-cbcollect-info=False,gsi_type=forestdb"
+     servers: n1ql:4-7  # explicit match by scope name (risky - creates dependancy on scope) 
+  - test:
+     container: testrunner
+     command: "/testrunner -i n1ql.ini -c conf/2i/py-clusterops.conf -p doc-per-day=1,get-cbcollect-info=False,gsi_type=forestdb"
+     servers: 8-11   # implicit match for name 'n1ql'  (same scope dependence)
+  - test:
+     container: testrunner
+     command: "/testrunner -i n1ql.ini -c conf/2i/py-clusterops.conf -p doc-per-day=1,get-cbcollect-info=False,gsi_type=forestdb"
+     servers: 0:12-15
+view:
+  - wait: false
+  - test:
+     container: testrunner
+     command: "python testrunner.py -i view.ini -c conf/view-conf/py-createview.conf -p max-dupe-result-count=10,get-cbcollect-info=True,num-tries=60,attempt-num=60,get-delays=True"
+     servers: 1:0-3  # excplict match 2nd cluster match
+  - test:
+     container: testrunner
+     command: "python testrunner.py -i view.ini -c conf/view-conf/py-createview.conf -p max-dupe-result-count=10,get-cbcollect-info=True,num-tries=60,attempt-num=60,get-delays=True"
+     servers: view:4-7   # explicit match by scope name. not (just 4-7 is wrong as it would resolve to 0:4-7)

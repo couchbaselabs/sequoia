@@ -1,0 +1,32 @@
+---
+docker:
+  host: 172.23.107.163 # docker host ip, omit if using unix socket 192.168.99.100 | 172.23.121.59
+  port: 2375  # docker reachable port, omit if using socket
+  proto: http  # http | https | tcp | unix
+
+buckets:
+  bucket0:
+    count: 1
+    ram: 4096
+    replica: 1
+    type: couchbase
+
+servers:
+  n1ql:
+     count: 16  # creates n1ql-1...n1ql-16
+     ram: 12000
+     index_ram: 8000
+     services: data,query,index
+     init_nodes: 1
+     buckets: default
+  view:  # creates view-1...view-16
+     count: 8
+     ram: 12000
+     services: data
+     init_nodes: 1
+     buckets: default
+
+  overrides:
+     rest_username: Administrator
+     rest_password: password
+     rest_port: 8091
