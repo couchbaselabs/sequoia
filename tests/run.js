@@ -58,7 +58,6 @@ function teardown(){
 	})
 }
 
-
 describe("Teardown", function(){
 	teardown()
 })
@@ -73,7 +72,8 @@ describe("Start Cluster", function(){
 	        		{Image: 'couchbase-watson',
 	        		 name: name,
 	        		 HostConfig: {
-	        		 	PortBindings: {"8091/tcp": [{"HostPort": "809"+(i+1)}]}
+	        		 	PortBindings: {"8091/tcp": [{"HostPort": "809"+(i+1)}]},
+                                        NetworkMode: "stnet"
 	        		 }}
 	        	)
 	        })
@@ -81,7 +81,7 @@ describe("Start Cluster", function(){
 
 	it('update ip addresses', function(){
 		// save addresses for node containers
-		return client.updateContainerIps()
+		return client.updateContainerIps("stnet")
     		.then(function(){
     			netMap = client.getContainerIps("couchbase-watson")
     		})
@@ -89,18 +89,19 @@ describe("Start Cluster", function(){
 	util.values(servers)
 		.forEach(function(name){
 	        it('verified started node ['+name+']', function(){
+                        var ip = netMap[name]
 	        	return client.runContainer(true,
 	        		{Image: 'martin/wait',
 	        		 HostConfig: {
-	        		 	Links:[name+":"+name]
+                                       Links:[name+":"+name],
+	                               NetworkMode: "stnet"
 	        		 },
-	        		 Cmd: ["-p", "8091", "-t", "120"]}
+	        		 Cmd: ["-c", ip+":8091", "-t", "120"]}
 	        	)
 	        })
 	    })
 	
 })
-
 
 
 
@@ -110,7 +111,7 @@ describe("Provision Cluster", function(){
 
     before(function() {
     	// save addresses for node containers
-    	return client.updateContainerIps()
+    	return client.updateContainerIps("stnet")
 	    		.then(function(){
 	    			netMap = client.getContainerIps("couchbase-watson")
 	    		})
@@ -132,7 +133,7 @@ describe("Provision Cluster", function(){
 	        	var ip = netMap[name]+":"+rest_port
 	        	  var p = client.runContainer(true,{
 	        	 		Image: 'couchbase-cli',
-	        	 		HostConfig: {Links:[name+":"+name]},
+	        	 		HostConfig: {NetworkMode: "stnet"},
 	        		 	Cmd: ['./couchbase-cli', 'node-init', '-c', ip,
 	        		       	  '-u', rest_username, '-p', rest_password]
 	        		})
@@ -161,20 +162,24 @@ describe("Provision Cluster", function(){
 	    	var services = clusterSpec.services
 	    	var ram = clusterSpec.ram.toString()
 	    	var orchestratorIp = netMap[firstNode]
-	    	var command = ['./couchbase-cli', 'cluster-init',
-		            '-c', orchestratorIp, '-u', rest_username, '-p', rest_password,
-		            '--cluster-username', rest_username, '--cluster-password', rest_password,
-		            '--cluster-port', rest_port, '--cluster-ramsize', ram, '--services', services]
-		    if(clusterSpec.index_ram){
-		    	command = command.concat(['--cluster-index-ramsize', clusterSpec.index_ram.toString()])
-		    }
+		servers[type].forEach(function(name){
+			var ip = netMap[name]+":"+rest_port
+			var command = ['./couchbase-cli', 'cluster-init',
+				    '-c', ip, '-u', rest_username, '-p', rest_password,
+				    '--cluster-username', rest_username, '--cluster-password', rest_password,
+				    '--cluster-port', rest_port, '--cluster-ramsize', ram, '--services', services]
+			    if(clusterSpec.index_ram){
+				command = command.concat(['--cluster-index-ramsize', clusterSpec.index_ram.toString()])
+			    }
 
-			var p = client.runContainer(true,{
-				Image: 'couchbase-cli',
-    	 		HostConfig: {Links:[firstNode+":"+firstNode]},
-			 	Cmd: command
-		        })
-    		promises.push(p)
+				var p = client.runContainer(true,{
+					Image: 'couchbase-cli',
+				HostConfig: {NetworkMode: "stnet"},
+					Cmd: command
+				})
+				  promises.push(p)
+			})
+
         })
   		return Promise.all(promises)
 
@@ -213,7 +218,7 @@ describe("Provision Cluster", function(){
 		        	// adding node
 		        	ip = ip+":"+rest_port
 					client.runContainer(true,{
-		    	 		HostConfig: {Links:[name+":"+name]},
+		    	 		HostConfig: {NetworkMode: "stnet"},
 						Image: 'couchbase-cli',
 					 	Cmd: ['./couchbase-cli', 'server-add', '-c', orchestratorIp,
 	                          '-u', rest_username, '-p', rest_password, '--server-add', ip,
@@ -242,7 +247,7 @@ describe("Provision Cluster", function(){
 		    	var orchestratorIp = netMap[firstNode]+":"+rest_port
 		    	var p = client.runContainer(true,{
 						Image: 'couchbase-cli',
-		    	 		HostConfig: {Links:[firstNode+":"+firstNode]},
+		    	 		HostConfig: {NetworkMode: "stnet"},
 					 	Cmd: ['./couchbase-cli', 'rebalance', '-c', orchestratorIp,
 	                '-u', rest_username, '-p', rest_password]
 				        })
@@ -280,7 +285,7 @@ describe("Provision Cluster", function(){
 		    		var bucketSpecType = bucketSpec.type
 		    		client.runContainer(true,{
 						Image: 'couchbase-cli',
-		    	 		HostConfig: {Links:[firstNode+":"+firstNode]},
+		    	 		HostConfig: {NetworkMode: "stnet"},
 					 	Cmd: ['./couchbase-cli', 'bucket-create',
 			           '-c', orchestratorIp, '-u', rest_username, '-p', rest_password,
 			           '--bucket', name, '--bucket-ramsize', ram,
@@ -307,7 +312,7 @@ describe("Test", function(){
 
             before(function() {
                 links['pairs'] = util.containerLinks(servers)
-                return client.updateContainerIps()
+                return client.updateContainerIps("stnet")
             })
 
             // generate tasks
@@ -349,7 +354,7 @@ describe("Test", function(){
 	                    		{
 									Image: container,
 									Cmd: command,
-									HostConfig: {Links:links.pairs}
+									HostConfig: {NetworkMode: "stnet"}
 								}, null, duration)
 	                    } else {
 	                        // something else
@@ -362,6 +367,7 @@ describe("Test", function(){
 
     })
 })
+
 
 describe("Teardown", function(){
 //	teardown()

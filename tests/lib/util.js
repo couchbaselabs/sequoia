@@ -26,7 +26,13 @@ exports.api = (function(){
 					range[name].push(name)
 				} else {
 					for( var i = 1; i<=count;i++){
-						range[name].push(name+"-"+i)
+                                                var parts = name.split(".")
+                                                var fqn = name.split(".")[0]+"-"+i
+                                                if (parts.length > 0){
+                                                   fqn = fqn+"."+parts.slice(1).join(".")
+                                                }
+                                                console.log(fqn) 
+						range[name].push(fqn)
 					}
 				}
 			})
