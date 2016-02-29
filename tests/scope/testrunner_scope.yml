@@ -1,20 +1,24 @@
 ---
 docker:
-  host: 0.0.0.0  # docker host ip, omit if using unix socket 192.168.99.100 | 172.23.121.59
-  port: 2375  # docker reachable port, omit if using socket
-  proto: http  # http | https | tcp | unix
+  host: 192.168.99.101  # docker host ip, omit if using unix socket 192.168.99.100 | 172.23.121.59
+  port: 2376  # docker reachable port, omit if using socket
+  proto: https  # http | https | tcp | unix
+  network: 
+     name: ipnet
+     driver: bridge  # overlay, bridge, none, container
+     subnet: 192.10.10.0/24  # subnet to use for containers on the network
 
 buckets:
   default:
     count: 1  # single bucket named 'default'
-    ram: 512
+    ram: 1024
     replica: 1
     type: couchbase
 
 servers:
   local.st.couchbase.com:
      count: 4  # create single server with link named 'local'
-     ram: 876
+     ram: 4096
      services: data,query,index
      rest_username: Administrator
      rest_password: password

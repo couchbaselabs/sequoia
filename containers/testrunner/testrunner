@@ -1,0 +1,3 @@
+#! /bin/bash
+./host2ip.sh local.ini
+exec python ${0}.py "$@"

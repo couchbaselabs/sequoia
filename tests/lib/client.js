@@ -10,6 +10,7 @@ exports.api = (function(){
 	var locals = {
 		containers: []
 	}
+	var _network = null
 
 	function createContainer(createOpts){
 		return _as_promised(function(done){
@@ -131,8 +132,8 @@ exports.api = (function(){
 		            		containerIps[image] = {}
 		            	}
 		            	var netSettings = d.NetworkSettings
-		            	if(network){
-			            	containerIps[image][name] = netSettings.Networks[network].IPAddress
+		            	if(_network && _network!="bridge"){
+			            	containerIps[image][name] = netSettings.Networks[_network].IPAddress
 		            	} else {
 			            	containerIps[image][name] = netSettings.IPAddress
 			            }
@@ -148,6 +149,22 @@ exports.api = (function(){
 				// return everything
 				return containerIps
 			}
+		},
+		createNetwork: function(spec){
+			return _as_promised(function(done){
+				_network = spec.Name
+		        docker.createNetwork(spec, function(err, status){
+		        	if(err.statusCode == 409){
+		        		// exists.. ignore
+		        		done()
+		        	} else {
+		        		done(err)
+		        	}
+		        })
+		    })
+		},
+		getNetwork: function(){
+			return _network || "bridge"
 		}
     }
 })()
