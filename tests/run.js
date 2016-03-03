@@ -88,11 +88,12 @@ describe("Start Cluster", function(){
 		.forEach(function(name, i){
 	        it('should start node ['+name+']', function() {
 	        	var network = client.getNetwork()
+    		 	var remotePort = 8091+i
 	        	return client.runContainer(false,
 	        		{Image: 'couchbase-watson',
 	        		 name: name,
 	        		 HostConfig: {
-	        		 	PortBindings: {"8091/tcp": [{"HostPort": "809"+(i+1)}]},
+	        		 	PortBindings: {"8091/tcp": [{"HostPort": remotePort.toString()}]},
                                         NetworkMode: network
 	        		 }}
 	        	)
@@ -351,6 +352,19 @@ describe("Test", function(){
                 var container = testSpec.container
                 var duration = testSpec.duration || 0
                 var command = testSpec.command
+                if(testSpec.servers){
+                	// translate link pairs
+                	var startEnd = testSpec.servers.split(":")
+                		.map(function(i){return parseInt(i)})
+                	var links = util.containerLinks(servers)
+                	var range = startEnd[1] - startEnd[0]+1
+                	links.pairs = links.slice(0, range)
+                					.map(function(l, i){
+                						i++
+                						var ii = startEnd[0]+i
+                						return l.replace(i, ii)
+                					})
+                }
                 if(command){
                 	it('resolve command: '+command, function(){
 	                	command = _.map(command.split(/\s+/),
@@ -378,7 +392,7 @@ describe("Test", function(){
 	                    if (container){
 	                    	var network = client.getNetwork()
 	                    	var hostConfig = {NetworkMode: network}
-	                    	if (network == "bridge"){
+	                    	if (network == "bridge" && links){
 	                    		hostConfig["Links"] = links.pairs
 			                }
 	                    	return client.runContainer(testSpec.wait,
