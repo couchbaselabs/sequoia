@@ -1,27 +1,9 @@
 ---
-load:
-  - test:
-     container: gideon
-     command: "python gideon.py kv --ops 150000 --create 10 --get 90 
-               --hosts servers:address:0:0 --bucket buckets:bucketname:0:0"
-     scale: 1
-  - test:
-     container: gideon
-     command: "python gideon.py kv --ops 20000 --create 10 --get 90 
-               --hosts servers:address:0:0 --bucket buckets:bucketname:0:1"
-     duration: 5000
-     scale: 5
-add:
-   - test:
-       container: couchbase-cli
-       command: "./couchbase-cli server-add -c  servers:address:0:0
-                 --server-add  servers:address:0:3
-                 -u  servers:rest_username:0 -p  servers:rest_password:0
-                 --server-add-username servers:rest_username:0 --server-add-password  servers:rest_password:0"
-       wait: true
 
-rebalance:
+tpcc:
   - test:
-       container: couchbase-cli
-       command:  "./couchbase-cli rebalance -c  servers:address:0:0
-	              -u  servers:rest_username:0 -p  servers:rest_password:0"
+       container: tpcc
+       command:  "cwpy/ddl/run_query.sh cwpy/ddl/createindex.sql"
+  - test:
+       container: tpcc
+       command:  "./tpcc.py --warehouses 1 --no-execute n1ql --query-url servers:address:0:0 --auth Administrator:password"

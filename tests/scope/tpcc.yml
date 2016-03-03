@@ -1,0 +1,73 @@
+---
+# settings for docker endpoint
+# supported endpoints include http(s), tcp, unix socket and docker swarm!
+docker:
+  host: 192.168.99.100  # docker host ip, omit if using unix socket 192.168.99.100 | 172.23.121.59
+  port: 2376  # docker reachable port, omit if using socket
+  proto: https  # http | https | tcp | unix
+
+buckets:
+  CUSTOMER:
+    count: 1
+    ram: 256
+    replica: 1
+    type: couchbase
+
+  DISTRICT:
+    count: 1
+    ram: 100
+    replica: 1
+    type: couchbase
+
+  HISTORY:
+    count: 1
+    ram: 128
+    replica: 1
+    type: couchbase
+
+  ITEM:
+    count: 1
+    ram: 128
+    replica: 1
+    type: couchbase
+
+  NEW_ORDER:
+    count: 1
+    ram: 256
+    replica: 1
+    type: couchbase
+
+  ORDERS:
+    count: 1
+    ram: 1024
+    replica: 1
+    type: couchbase
+
+  ORDER_LINE:
+    count: 1
+    ram: 1024
+    replica: 1
+    type: couchbase
+
+  STOCK:
+    count: 1
+    ram: 512
+    replica: 1
+    type: couchbase
+
+  WAREHOUSE:
+    count: 1
+    ram: 128
+    replica: 1
+    type: couchbase
+
+servers: # each server tag represents a cluster
+ local:
+    count: 4
+    ram: 876
+    services: data,n1ql,index
+    rest_username: Administrator
+    rest_password: password
+    rest_port: 8091
+    cluster: 1
+    buckets: CUSTOMER,DISTRICT,HISTORY,ITEM,NEW_ORDER,ORDERS,ORDER_LINE,STOCK,WAREHOUSE
