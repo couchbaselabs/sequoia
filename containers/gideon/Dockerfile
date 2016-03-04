@@ -27,4 +27,4 @@ RUN git clone https://github.com/couchbaselabs/gideon.git
 WORKDIR gideon
 
 COPY spec.yaml /spec.yaml
-CMD python gideon.py kv --spec /spec.yaml
+ENTRYPOINT ["python", "gideon.py"]

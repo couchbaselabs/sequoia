@@ -10,3 +10,4 @@ RUN pip install gevent &&\
 COPY local.ini local.ini
 COPY host2ip.sh host2ip.sh
 COPY testrunner testrunner
+ENTRYPOINT ["./testrunner"]

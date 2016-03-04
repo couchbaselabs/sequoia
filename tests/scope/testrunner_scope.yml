@@ -1,8 +1,8 @@
 ---
 docker:
-  host: 172.23.107.163  # docker host ip, omit if using unix socket 192.168.99.100 | 172.23.121.59
-  port: 2375  # docker reachable port, omit if using socket
-  proto: http  # http | https | tcp | unix
+  host: 192.168.99.100  # docker host ip, omit if using unix socket 192.168.99.100 | 172.23.121.59
+  port: 2376  # docker reachable port, omit if using socket
+  proto: https  # http | https | tcp | unix
 
 buckets:
   default:
@@ -13,7 +13,7 @@ buckets:
 
 servers:
   local.st.couchbase.com:
-     count: 16  # create single server with link named 'local'
+     count: 4  # create single server with link named 'local'
      ram: 4096
      services: data,query,index
      rest_username: Administrator

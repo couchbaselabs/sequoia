@@ -4,7 +4,7 @@
   "description": "sequoia test runner",
   "main": "run.js",
   "scripts": {
-    "test": "mocha tests/run.js -s tests/scope/small_cluster.yml -t tests/simple.yml"
+    "test": "mocha tests/run.js -s tests/scope/testrunner_scope.yml -t tests/testrunner/poc.yml"
   },
   "repository": {
     "type": "git",

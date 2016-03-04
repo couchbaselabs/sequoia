@@ -17,4 +17,5 @@ RUN cd /root && \
 COPY systest.spec /root/perfrunner/clusters/systest.spec
 WORKDIR /root/perfrunner
 COPY systest.spec /root/perfrunner/clusters/systest.spec
-CMD /tmp/env/bin/python -m perfrunner -c /root/perfrunner/clusters/systest.spec -t tests/n1ql/n1ql_thr_Q3_20M_gsi_false.test  --local
+
+ENTRYPOINT ["/tmp/env/bin/python", "-m", "perfrunner"]

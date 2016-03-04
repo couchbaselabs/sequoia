@@ -1,7 +1,6 @@
 ---
 load:
-  - test:
-     container: gideon
-     command: "python gideon.py kv --ops 10000 --create 10 --get 90 --hosts servers:address:0:0"
-     wait: false
-     duration: 30000
+  - test: #  1 Million Documents to default bucket with pillowfight
+     container: pillowfight
+     command: "-U servers:address:0:0  -I 1000000 -t 4 -B 250 -c 1000"
+     wait: true
