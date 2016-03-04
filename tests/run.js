@@ -147,14 +147,17 @@ describe("Provision Cluster", function(){
         	var rest_username = SCOPE.servers[type].rest_username
         	var rest_password = SCOPE.servers[type].rest_password
         	var rest_port = SCOPE.servers[type].rest_port
-
+        	var hostConfig = {NetworkMode: client.getNetwork()}
+        	var provider = SCOPE.servers[type].provider || "docker"
+        	if(provider == "docker"){
+				hostConfig["Links"] = [name+":"+name]
+        	}
 	        servers[type].forEach(function(name){
 	        	var ip = netMap[name]+":"+rest_port
 	        	  var p = client.runContainer(true,{
 	        	 		Image: 'couchbase-cli',
-				 		HostConfig: {NetworkMode: client.getNetwork(), 
-		    	 					Links:[name+":"+name]},
-	        		 	Cmd: ['./couchbase-cli', 'node-init', '-c', name,
+				 		HostConfig: hostConfig,
+	        		 	Cmd: ['./couchbase-cli', 'node-init', '-c', ip,
 	        		       	  '-u', rest_username, '-p', rest_password]
 	        		})
 	        	  promises.push(p)
@@ -185,17 +188,20 @@ describe("Provision Cluster", function(){
 			servers[type].forEach(function(name){
 				var ip = netMap[name]+":"+rest_port
 				var command = ['./couchbase-cli', 'cluster-init',
-					    '-c', name, '-u', rest_username, '-p', rest_password,
+					    '-c', ip, '-u', rest_username, '-p', rest_password,
 					    '--cluster-username', rest_username, '--cluster-password', rest_password,
 					    '--cluster-port', rest_port, '--cluster-ramsize', ram, '--services', services]
-				    if(clusterSpec.index_ram){
+			    if(clusterSpec.index_ram){
 					command = command.concat(['--cluster-index-ramsize', clusterSpec.index_ram.toString()])
-				    }
-
+			    }
+	        	var hostConfig = {NetworkMode: client.getNetwork()}
+	        	var provider = clusterSpec.provider || "docker"
+	        	if(provider == "docker"){
+					hostConfig["Links"] = [name+":"+name]
+	        	}
 					var p = client.runContainer(true,{
 						Image: 'couchbase-cli',
-					HostConfig: {NetworkMode: client.getNetwork(), 
-			    	 					Links:[name+":"+name]},
+					HostConfig: hostConfig,
 						Cmd: command
 					})
 					  promises.push(p)
@@ -238,14 +244,16 @@ describe("Provision Cluster", function(){
 	        	} else {
 		        	// adding node
 		        	ip = ip+":"+rest_port
-		        	var hostConfig = 
+		        	var hostConfig = {NetworkMode: client.getNetwork()}
+		        	var provider = clusterSpec.provider || "docker"
+		        	if(provider == "docker"){
+						hostConfig["Links"] = [name+":"+name]
+		        	}
 					client.runContainer(true,{
-		    	 		HostConfig: {NetworkMode: client.getNetwork(), 
-		    	 					 Links:[name+":"+name]
-},
+		    	 		HostConfig: docker,
 						Image: 'couchbase-cli',
 					 	Cmd: ['./couchbase-cli', 'server-add', '-c', orchestratorIp,
-	                          '-u', rest_username, '-p', rest_password, '--server-add', name,
+	                          '-u', rest_username, '-p', rest_password, '--server-add', ip,
 			                  '--server-add-username', rest_username, '--server-add-password', rest_password]
 				        }).then(cb).catch(cb)
 		        }
@@ -269,12 +277,15 @@ describe("Provision Cluster", function(){
 		    	var rest_password = clusterSpec.rest_password
 		    	var rest_port = clusterSpec.rest_port.toString()
 		    	var orchestratorIp = netMap[firstNode]+":"+rest_port
+	        	var hostConfig = {NetworkMode: client.getNetwork()}
+	        	var provider = clusterSpec.provider || "docker"
+	        	if(provider == "docker"){
+					hostConfig["Links"] = [firstNode+":"+firstNode]
+	        	}
 		    	var p = client.runContainer(true,{
 						Image: 'couchbase-cli',
-		    	 		HostConfig: 
-		    	 			{NetworkMode: client.getNetwork(), 
-		    	 					Links:[firstNode+":"+firstNode]},
-					 		Cmd: ['./couchbase-cli', 'rebalance', '-c', firstNode,
+		    	 		HostConfig: hostConfig,
+					 		Cmd: ['./couchbase-cli', 'rebalance', '-c', orchestratorIp,
 	                				'-u', rest_username, '-p', rest_password]
 				        })
 		    	promises.push(p)
@@ -309,10 +320,14 @@ describe("Provision Cluster", function(){
 		    		var ram = bucketSpec.ram.toString()
 		    		var replica = bucketSpec.replica.toString() //TODO
 		    		var bucketSpecType = bucketSpec.type
+		        	var hostConfig = {NetworkMode: client.getNetwork()}
+		        	var provider = clusterSpec.provider || "docker"
+		        	if(provider == "docker"){
+						hostConfig["Links"] = [firstNode+":"+firstNode]
+		        	}
 		    		client.runContainer(true,{
 						Image: 'couchbase-cli',
-		    	 		HostConfig: {NetworkMode: client.getNetwork(), 
-		    	 					Links:[firstNode+":"+firstNode]},
+		    	 		HostConfig: hostConfig,
 					 	Cmd: ['./couchbase-cli', 'bucket-create',
 			           '-c', orchestratorIp, '-u', rest_username, '-p', rest_password,
 			           '--bucket', name, '--bucket-ramsize', ram,
@@ -417,4 +432,5 @@ describe("Test", function(){
 describe("Teardown", function(){
 //	teardown()
 })
+
 
