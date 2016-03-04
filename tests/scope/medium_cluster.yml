@@ -1,23 +1,29 @@
 ---
 docker:
-  host: 172.23.107.163 # docker host ip, omit if using unix socket 192.168.99.100 | 172.23.121.59
-  port: 2375  # docker reachable port, omit if using socket
-  proto: http  # http | https | tcp | unix
+  host: 192.168.99.100 # docker host ip, omit if using unix socket 192.168.99.100 | 172.23.121.59
+  port: 2376  # docker reachable port, omit if using socket
+  proto: https  # http | https | tcp | unix
 
 buckets:
   default:
-    count: 2  # creates default-1 and default-2
-    ram: 4096
+    count: 1  # creates default
+    ram: 2048
     replica: 1
+    type: couchbase
+  bucket:
+    count: 2  # creates bucket-1 and bucket2-2
+    ram: 1024
+    replica: 2
     type: couchbase
 
 servers:
-  local:
+  local.st.couchbase.com:
      count: 4  # creates local-1 local-2 local-3 local-4
-     ram: 12000
-     services: data
+     ram: 4096
+     index_ram: 1024
+     services: data,index,query
      rest_username: Administrator
      rest_password: password
      rest_port: 8091
      init_nodes: 3
-     buckets: default
+     buckets: default,bucket

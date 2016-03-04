@@ -1,9 +1,9 @@
 [clusters]
 systest =
-    local-1,index,n1ql
-    local-2,index,n1ql
-    local-3,index,n1ql
-    local-4,index,n1ql
+    local-1.st.couchbase.com,index,n1ql
+    local-2.st.couchbase.com,index,n1ql
+    local-3.st.couchbase.com,index,n1ql
+    local-4.st.couchbase.com,index,n1ql
 
 [clients]
 hosts =

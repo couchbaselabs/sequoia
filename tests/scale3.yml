@@ -1,0 +1,70 @@
+--- # 3 nodes -> 4 nodes 85% dgm with view and n1ql (fdb type) -> heavy dgm -> failover
+phase0:
+  - test:
+     container: perfrunner
+     command: '-c clusters/systest.spec
+               -t tests/n1ql/n1ql_part2_thr_Q3_gsi_ok.test
+               --local'
+     wait: false
+
+phase1:
+  - test: # continous doc loading to bucket-1 with gideon
+     container: gideon
+     command: "kv --ops 20000 --create 30 --get 70 
+               --hosts servers:address:0:0 --bucket buckets:bucketname:1:1"
+  - test: #  1 Million Documents to default bucket with pillowfight
+     container: pillowfight
+     command: "-U servers:address:0:0  -I 1000000 -t 4 -B 250 -c 1000"
+     wait: true
+
+phase2:  # load 3M items.  on small cluster = ~85% dgm
+  - test:
+     container: pillowfight
+     command: "-U servers:address:0:0  -p aaa -m 1024 -I 1000000 -t 1 -B 100"
+  - test:
+     container: pillowfight
+     command: "-U servers:address:0:0  -p bbb -m 1024 -I 1000000 -t 1 -B 100 -c 10000"
+     wait: true
+
+phase3:  # rebalance in
+  - test:
+       container: couchbase-cli
+       command: "server-add -c  servers:address:0:0
+                 --serverser-add  servers:address:0:3
+                 -u  servers:rest_username:0 -p  servers:rest_password:0
+                 --server-add-username servers:rest_username:0 --server-add-password  servers:rest_password:0"
+       wait: true
+  - test:
+       container: couchbase-cli
+       command:  "rebalance -c  servers:address:0:0
+                -u  servers:rest_username:0 -p  servers:rest_password:0"
+       wait: true
+
+phase5: # increase bucket-2 ops and put default bucket into higher dgm
+  - test: # higher doc loading to bucket-2
+     container: gideon
+     command: "kv --ops 20000 --create 30 --get 70 
+               --hosts servers:address:0:0 --bucket buckets:bucketname:1:1"
+     scale: 10
+  - test: # heavier dgm for default bucket
+      container: pillowfight
+      command: "-U servers:address:0:0  -p ccc -m 1024 -I 1000000 -t 1 -B 100 -c 10000"
+  - test:
+      container: pillowfight
+      command: "-U servers:address:0:0  -p ddd -m 1024 -I 1000000 -t 1 -B 100 -c 10000"
+      wait: true
+
+phase6: #failover
+  - test:
+      container: couchbase-cli
+      command: "failover -c servers:address:0:0 
+                --server-failover servers:address:0:2 
+                -u  servers:rest_username:0 -p  servers:rest_password:0 
+                --force"
+      wait: true
+  - test:
+      container: couchbase-cli
+      command:  "rebalance -c  servers:address:0:0
+                -u  servers:rest_username:0 -p  servers:rest_password:0"
+      wait: true
+
