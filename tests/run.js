@@ -158,7 +158,7 @@ describe("Provision Cluster", function(){
 	        	  var p = client.runContainer(true,{
 	        	 		Image: 'couchbase-cli',
 				 		HostConfig: hostConfig,
-	        		 	Cmd: ['./couchbase-cli', 'node-init', '-c', ip,
+	        		 	Cmd: ['node-init', '-c', ip,
 	        		       	  '-u', rest_username, '-p', rest_password]
 	        		})
 	        	  promises.push(p)
@@ -188,7 +188,7 @@ describe("Provision Cluster", function(){
 
 			servers[type].forEach(function(name){
 				var ip = netMap[name]+":"+rest_port
-				var command = ['./couchbase-cli', 'cluster-init',
+				var command = ['cluster-init',
 					    '-c', ip, '-u', rest_username, '-p', rest_password,
 					    '--cluster-username', rest_username, '--cluster-password', rest_password,
 					    '--cluster-port', rest_port, '--cluster-ramsize', ram, '--services', services]
@@ -253,7 +253,7 @@ describe("Provision Cluster", function(){
 					client.runContainer(true,{
 		    	 		HostConfig: docker,
 						Image: 'couchbase-cli',
-					 	Cmd: ['./couchbase-cli', 'server-add', '-c', orchestratorIp,
+					 	Cmd: ['server-add', '-c', orchestratorIp,
 	                          '-u', rest_username, '-p', rest_password, '--server-add', ip,
 			                  '--server-add-username', rest_username, '--server-add-password', rest_password]
 				        }).then(cb).catch(cb)
@@ -286,7 +286,7 @@ describe("Provision Cluster", function(){
 		    	var p = client.runContainer(true,{
 						Image: 'couchbase-cli',
 		    	 		HostConfig: hostConfig,
-					 		Cmd: ['./couchbase-cli', 'rebalance', '-c', orchestratorIp,
+					 		Cmd: ['rebalance', '-c', orchestratorIp,
 	                				'-u', rest_username, '-p', rest_password]
 				        })
 		    	promises.push(p)
@@ -331,7 +331,7 @@ describe("Provision Cluster", function(){
 			    		client.runContainer(true,{
 							Image: 'couchbase-cli',
 			    	 		HostConfig: hostConfig,
-						 	Cmd: ['./couchbase-cli', 'bucket-create',
+						 	Cmd: ['bucket-create',
 				           '-c', orchestratorIp, '-u', rest_username, '-p', rest_password,
 				           '--bucket', name, '--bucket-ramsize', ram,
 				           '--bucket-type', bucketSpecType, '--wait']
