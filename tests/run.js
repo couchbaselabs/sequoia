@@ -63,6 +63,7 @@ describe("Teardown", function(){
 	teardown()
 })
 
+
 describe("Create Network", function(){
 	var networkSpec = SCOPE.docker.network
 	if(networkSpec){
@@ -311,29 +312,32 @@ describe("Provision Cluster", function(){
 		    	var rest_port = clusterSpec.rest_port.toString()
 		    	var orchestratorIp = netMap[firstNode]+":"+rest_port
 
-		    	var bucketType = clusterSpec.buckets
-		    	var bucketSpec = SCOPE.buckets[bucketType]
-		    	var clusterBuckets = buckets[bucketType]
-		    	async.eachSeries(clusterBuckets, function(name, bucket_cb){
-					reloadLogStream()
+                async.eachSeries(clusterSpec.buckets.split(","), 
+                 function(bucketType, bucket_type_cb){
+                 	console.log(bucketType)
+			    	var bucketSpec = SCOPE.buckets[bucketType]
+			    	var clusterBuckets = buckets[bucketType]
+			    	async.eachSeries(clusterBuckets, function(name, bucket_cb){
+						reloadLogStream()
 
-		    		var ram = bucketSpec.ram.toString()
-		    		var replica = bucketSpec.replica.toString() //TODO
-		    		var bucketSpecType = bucketSpec.type
-		        	var hostConfig = {NetworkMode: client.getNetwork()}
-		        	var provider = clusterSpec.provider || "docker"
-		        	if(provider == "docker"){
-						hostConfig["Links"] = [firstNode+":"+firstNode]
-		        	}
-		    		client.runContainer(true,{
-						Image: 'couchbase-cli',
-		    	 		HostConfig: hostConfig,
-					 	Cmd: ['./couchbase-cli', 'bucket-create',
-			           '-c', orchestratorIp, '-u', rest_username, '-p', rest_password,
-			           '--bucket', name, '--bucket-ramsize', ram,
-			           '--bucket-type', bucketSpecType, '--wait']
-				        }).then(bucket_cb).catch(bucket_cb)
-		    	}, cb)
+			    		var ram = bucketSpec.ram.toString()
+			    		var replica = bucketSpec.replica.toString() //TODO
+			    		var bucketSpecType = bucketSpec.type
+			        	var hostConfig = {NetworkMode: client.getNetwork()}
+			        	var provider = clusterSpec.provider || "docker"
+			        	if(provider == "docker"){
+							hostConfig["Links"] = [firstNode+":"+firstNode]
+			        	}
+			    		client.runContainer(true,{
+							Image: 'couchbase-cli',
+			    	 		HostConfig: hostConfig,
+						 	Cmd: ['./couchbase-cli', 'bucket-create',
+				           '-c', orchestratorIp, '-u', rest_username, '-p', rest_password,
+				           '--bucket', name, '--bucket-ramsize', ram,
+				           '--bucket-type', bucketSpecType, '--wait']
+					        }).then(bucket_cb).catch(bucket_cb)
+			    	}, bucket_type_cb)
+			    }, cb)
 	    	}
         }, done)
 
