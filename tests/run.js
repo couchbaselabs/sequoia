@@ -150,10 +150,11 @@ describe("Provision Cluster", function(){
         	var rest_port = SCOPE.servers[type].rest_port
         	var hostConfig = {NetworkMode: client.getNetwork()}
         	var provider = SCOPE.servers[type].provider || "docker"
-        	if(provider == "docker"){
-				hostConfig["Links"] = [name+":"+name]
-        	}
+
 	        servers[type].forEach(function(name){
+	        	if(provider == "docker"){
+					hostConfig["Links"] = [name+":"+name]
+	        	}
 	        	var ip = netMap[name]+":"+rest_port
 	        	  var p = client.runContainer(true,{
 	        	 		Image: 'couchbase-cli',
@@ -314,7 +315,6 @@ describe("Provision Cluster", function(){
 
                 async.eachSeries(clusterSpec.buckets.split(","), 
                  function(bucketType, bucket_type_cb){
-                 	console.log(bucketType)
 			    	var bucketSpec = SCOPE.buckets[bucketType]
 			    	var clusterBuckets = buckets[bucketType]
 			    	async.eachSeries(clusterBuckets, function(name, bucket_cb){
