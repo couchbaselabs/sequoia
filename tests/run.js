@@ -334,7 +334,7 @@ describe("Provision Cluster", function(){
 						 	Cmd: ['bucket-create',
 				           '-c', orchestratorIp, '-u', rest_username, '-p', rest_password,
 				           '--bucket', name, '--bucket-ramsize', ram,
-				           '--bucket-type', bucketSpecType, '--wait']
+                           '--bucket-type', bucketSpecType, '--bucket-replica', replica, '--wait']
 					        }).then(bucket_cb).catch(bucket_cb)
 			    	}, bucket_type_cb)
 			    }, cb)
