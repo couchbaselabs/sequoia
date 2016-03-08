@@ -69,5 +69,6 @@ servers: # each server tag represents a cluster
     rest_username: Administrator
     rest_password: password
     rest_port: 8091
+    query_port: 8093
     cluster: 1
     buckets: CUSTOMER,DISTRICT,HISTORY,ITEM,NEW_ORDER,ORDERS,ORDER_LINE,STOCK,WAREHOUSE

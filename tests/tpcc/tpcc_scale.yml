@@ -1,9 +1,9 @@
 ---
 
 tpcc:
-  - test:
+  - create_index:
        container: tpcc
-       command:  "cwpy/ddl/run_query.sh cwpy/ddl/createindex.sql"
-  - test:
+       command:  "util/run_sql.sh < util/cbcrindex.sql"
+  - load_and_run_queries:
        container: tpcc
-       command:  "./tpcc.py --warehouses 1 --no-execute n1ql --query-url servers:address:0:0 --auth Administrator:password"
+       command:  "./tpcc.py --warehouses 1 --no-execute n1ql --query-url servers:address:0:0:servers:query_port:0 --userid Administrator --password password"
