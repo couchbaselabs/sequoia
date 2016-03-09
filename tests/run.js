@@ -63,7 +63,6 @@ describe("Teardown", function(){
 	teardown()
 })
 
-
 describe("Create Network", function(){
 	var networkSpec = SCOPE.docker.network
 	if(networkSpec){
@@ -82,8 +81,10 @@ describe("Create Network", function(){
 	}
 })
 
+
 describe("Start Cluster", function(){
     var netMap = {}
+
 
 	util.values(servers)
 		.forEach(function(name, i){
@@ -108,6 +109,8 @@ describe("Start Cluster", function(){
     			netMap = client.getContainerIps("couchbase-watson")
     		})
 	})
+
+
 	util.values(servers)
 		.forEach(function(name){
 	        it('verified started node ['+name+']', function(){
@@ -121,7 +124,7 @@ describe("Start Cluster", function(){
 	        	)
 	        })
 	    })
-	
+
 })
 
 
@@ -156,7 +159,7 @@ describe("Provision Cluster", function(){
 					hostConfig["Links"] = [name+":"+name]
 	        	}
 	        	var ip = netMap[name]+":"+rest_port
-	        	  var p = client.runContainer(true,{
+                var p = client.runContainer(true,{
 	        	 		Image: 'couchbase-cli',
 				 		HostConfig: hostConfig,
 	        		 	Cmd: ['node-init', '-c', ip,
@@ -167,6 +170,7 @@ describe("Provision Cluster", function(){
         })
         return Promise.all(promises)
     })
+
 
     it('init cluster', function(){
     	//  cluster-init:
@@ -252,7 +256,7 @@ describe("Provision Cluster", function(){
 						hostConfig["Links"] = [name+":"+name]
 		        	}
 					client.runContainer(true,{
-		    	 		HostConfig: docker,
+		    	 		HostConfig: hostConfig,
 						Image: 'couchbase-cli',
 					 	Cmd: ['server-add', '-c', orchestratorIp,
 	                          '-u', rest_username, '-p', rest_password, '--server-add', ip,
