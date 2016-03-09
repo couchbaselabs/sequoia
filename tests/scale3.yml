@@ -30,7 +30,7 @@ phase3:  # rebalance in
   - test:
        container: couchbase-cli
        command: "server-add -c  servers:address:0:0
-                 --serverser-add  servers:address:0:3
+                 --server-add  servers:address:0:3
                  -u  servers:rest_username:0 -p  servers:rest_password:0
                  --server-add-username servers:rest_username:0 --server-add-password  servers:rest_password:0"
        wait: true
