@@ -1,9 +1,7 @@
 ---
 
 tpcc:
-  - create_index:
+  - test:
        container: tpcc
-       command:  "util/run_sql.sh < util/cbcrindex.sql"
-  - load_and_run_queries:
-       container: tpcc
-       command:  "./tpcc.py --warehouses 1 --no-execute n1ql --query-url servers:address:0:0:servers:query_port:0 --userid Administrator --password password"
+       command:  "./run.sh local-1:8093"
+       wait: true
