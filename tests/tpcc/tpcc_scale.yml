@@ -3,5 +3,5 @@
 tpcc:
   - test:
        container: tpcc
-       command:  "./run.sh local-1:8093"
+       command:  "./run.sh servers:address:0:0 util/cbcrindex.sql"
        wait: true
