@@ -3,5 +3,11 @@
 tpcc:
   - test:
        container: tpcc
-       command:  "./run.sh servers:address:0:0 util/cbcrindex.sql"
+       command:  "./run.sh servers:address:0:0:8093 util/cbcrindex.sql"
        wait: true
+  - test:
+        container: tpcc
+        command: "python tpcc.py --warehouses 1 --no-execute n1ql 
+                                 --query-url servers:address:0:0:8093 
+                                 --userid Administrator --password password"
+        wait: true
