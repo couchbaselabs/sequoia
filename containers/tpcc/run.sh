@@ -1,6 +1,6 @@
 #!/bin/bash
 
-Url=$1:8093
+Url=$1
 Site=http://$Url/query/service
 while read line; do
   sql=$line

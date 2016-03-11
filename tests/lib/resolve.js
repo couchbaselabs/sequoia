@@ -10,6 +10,8 @@ var FUNCS = {
         //      from spec:
         //          -> servers:orchestrator:0:0 
         //          <- scope[servers][0][0].ip
+        //
+        //      optionally port can be appended
         
         var clusterIndex = parseInt(args[0])
         var nodeIndex = args[1]
@@ -26,6 +28,11 @@ var FUNCS = {
 
         // get node address
         var address = net[serveName]
+
+        if (args[2]){
+            address = address+":"+args[2]
+        }
+
         return address
     },
     clustername: function(scope, args){
