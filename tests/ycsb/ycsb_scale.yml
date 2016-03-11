@@ -1,59 +1,13 @@
 ---
 
-add:
-   - test:
-       container: couchbase-cli
-       command: "./couchbase-cli server-add -c  servers:address:0:0
-                 --server-add  servers:address:0:1
-                 -u  servers:rest_username:0 -p  servers:rest_password:0
-                 --server-add-username servers:rest_username:0 --server-add-password  --services=data,n1ql servers:rest_password:0"
-       wait: true
-
-add:
-   - test:
-       container: couchbase-cli
-       command: "./couchbase-cli server-add -c  servers:address:0:0
-                 --server-add  servers:address:0:2
-                 -u  servers:rest_username:0 -p  servers:rest_password:0
-                 --server-add-username servers:rest_username:0 --server-add-password  --services=data,query servers:rest_password:0"
-       wait: true
-
-add:
-   - test:
-       container: couchbase-cli
-       command: "./couchbase-cli server-add -c  servers:address:0:0
-                 --server-add  servers:address:0:3
-                 -u  servers:rest_username:0 -p  servers:rest_password:0
-                 --server-add-username servers:rest_username:0 --server-add-password --services=index servers:rest_password:0"
-       wait: true
-
-rebalance:
-  - test:
-       container: couchbase-cli
-       command:  "./couchbase-cli rebalance -c  servers:address:0:0 -u  servers:rest_username:0 -p  servers:rest_password:0"
-
-rebalance:
-  - test:
-       container: yscb
-       command:  "./couchbase-cli rebalance -c  servers:address:0:0 -u  servers:rest_username:0 -p  servers:rest_password:0"
-
-create_primary_index:
-  - test:
-       container: yscb
-       command:  "curl -XPOST http://servers:address:0:0:8093/query/service -d 'statement=create primary index on default&creds=[{"user":"admin:Administrator", "pass":"password"}]"'"
-
-create_gsi_index:
-  - test:
-       container: yscb
-       command:  "curl -XPOST http://servers:address:0:0:8093/query/service -d 'statement=create index metaindex on default(meta().id)&creds=[{"user":"admin:Administrator", "pass":"password"}]"'"
-
 ycsb_load_1:
   - test:
-       container: yscb
-       command:  "python27 ./bin/ycsb load couchbase2 -P workloads/workloade -p couchbase.host=servers:address:0:0 -threads 10 -p recordcount=1000000"
+       container: ycsb
+       command:  "python27 ./bin/ycsb load couchbase2 -P workloads/workloade -p couchbase.host=local-1 -threads 10 -p recordcount=1000000"
+       wait: true
 
 ycsb_load_2:
   - test:
-       container: yscb
-       command:  "python27 ./bin/ycsb run couchbase2 -P workloads/workloade -p couchbase.host=172.23.106.154 -p couchbase.adhoc=false -threads 1 -p recordcount=1000000 -p operationcount=20000 -p couchbase.maxParallelism=2"
-        wait: true
+       container: ycsb
+       command:  "python27 ./bin/ycsb run couchbase2 -P workloads/workloade -p couchbase.host=local-1 -p couchbase.adhoc=false -threads 1 -p recordcount=1000000 -p operationcount=20000 -p couchbase.maxParallelism=2"
+       wait: true
