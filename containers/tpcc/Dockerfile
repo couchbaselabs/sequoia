@@ -6,5 +6,4 @@ RUN apt-get update && \
 RUN git clone https://github.com/couchbaselabs/py-tpcc.git
 WORKDIR /root/py-tpcc/pytpcc
 COPY run.sh run.sh
-RUN chmod 777 ./run.sh
-RUN chmod 777 ./util/run_sql.sh
+ENTRYPOINT ["./run.sh"]
