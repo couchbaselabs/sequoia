@@ -1,7 +1,7 @@
 FROM ubuntu:14.04
+RUN apt-get update
 
-RUN apt-get update && \
-    apt-get install -yq runit wget python-httplib2  openssh-server  && \
+RUN apt-get install -yq runit wget python-httplib2  openssh-server  && \
     apt-get autoremove && apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 

@@ -1,10 +1,7 @@
-FROM ubuntu:14.04
+FROM ubuntu_python
 
 WORKDIR /root
-
-RUN apt-get update && \
-    apt-get install -y git python-dev python-pip curl libc6 libcurl3 zlib1g
-CMD apt-get install mvn
+RUN apt-get install -y curl libc6 libcurl3 zlib1g mvn
 CMD git clone https://github.com/daschl/YCSB.git
 
 WORKDIR  /root/YCSB
