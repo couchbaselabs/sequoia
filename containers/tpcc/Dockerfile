@@ -6,4 +6,3 @@ RUN apt-get update && \
 RUN git clone https://github.com/couchbaselabs/py-tpcc.git
 WORKDIR /root/py-tpcc/pytpcc
 COPY run.sh run.sh
-ENTRYPOINT ["./run.sh"]
