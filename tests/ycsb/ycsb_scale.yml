@@ -1,13 +1,14 @@
 ---
-
+create_index:
+  - test:
+       container: ycsb
+       command:  "./run.sh servers:address:0:0:8093 ./create_index.sql"
+       wait: true
 ycsb_load_1:
   - test:
        container: ycsb
-       command:  "python27 ./bin/ycsb load couchbase2 -P workloads/workloade -p couchbase.host=local-1 -threads 10 -p recordcount=1000000"
-       wait: true
-
-ycsb_load_2:
-  - test:
-       container: ycsb
-       command:  "python27 ./bin/ycsb run couchbase2 -P workloads/workloade -p couchbase.host=local-1 -p couchbase.adhoc=false -threads 1 -p recordcount=1000000 -p operationcount=20000 -p couchbase.maxParallelism=2"
+       command:  "python ./bin/ycsb load couchbase2 
+       					 -P workloads/workloade 
+       					 -p couchbase.host=local-1 
+       					 -threads 10 -p recordcount=1000000"
        wait: true

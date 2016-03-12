@@ -10,4 +10,6 @@ WORKDIR  /root/YCSB
 RUN git fetch origin
 RUN git checkout origin/refresh
 RUN mvn -pl com.yahoo.ycsb:couchbase2-binding -am clean package -Dmaven.test.skip -Dcheckstyle.skip=true
+COPY run.sh run.sh
+COPY create_index.sql create_index.sql
 

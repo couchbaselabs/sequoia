@@ -2,7 +2,7 @@
 # settings for docker endpoint
 # supported endpoints include http(s), tcp, unix socket and docker swarm!
 docker:
-  host: 192.168.99.100  # docker host ip, omit if using unix socket 192.168.99.100 | 172.23.121.59
+  host: 192.168.99.101  # docker host ip, omit if using unix socket 192.168.99.100 | 172.23.121.59
   port: 2376  # docker reachable port, omit if using socket
   proto: https  # http | https | tcp | unix
 
