@@ -1,0 +1,6 @@
+---
+load:
+  - test:
+     container: spring
+     command: "spring -crud 10-o 1000 -i 1000 -n 10 [cb://Administrator:password@local-1:8091/default"
+     wait: true
