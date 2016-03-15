@@ -19,24 +19,33 @@ function reloadLogStream(){
 
 // opt parser
 var cli = commandLineArgs([
-  {name: 'scope', alias: 's', type: String},
-  {name: 'test', alias: 't', type: String},
+  {name: 'scope', type: String},
+  {name: 'test', type: String},
+  {name: 'client', type: String},
 ])
 
 var options = cli.parse()
 if(!options.scope){
-	console.log("ERROR: missing -s <scope_file>")
+	console.log("ERROR: missing --scope <scope_file>")
 	process.exit(1)
 }
 if(!options.test){
-	console.log("ERROR: missing -t <test_file>")
+	console.log("ERROR: missing --test <test_file>")
 	process.exit(1)	
+}
+
+if(!options.client){
+    console.log("Using default docker client [--client https://192.168.99.100:2376]")
+    options.client = "https://192.168.99.100:2376"
 }
 
 var SCOPE = util.loadSpec(options.scope)
 var TEST = util.loadSpec(options.test)
+var docker = client.init(options.client)
 
-var docker = client.init(SCOPE.docker)
+if(!docker){
+   process.exit(1)
+}
 var buckets = util.extrapolateRange(SCOPE.buckets)
 var servers = util.extrapolateRange(SCOPE.servers)
 
@@ -63,7 +72,10 @@ describe("Teardown", function(){
 })
 
 describe("Create Network", function(){
-	var networkSpec = SCOPE.docker.network
+    
+	// TODO: only if docker provider
+    // var networkSpec = SCOPE.docker.network
+	var networkSpec = null
 	if(networkSpec){
 		it('should create network: '+ networkSpec.name, function(){
 			var network = {
@@ -82,6 +94,7 @@ describe("Create Network", function(){
 
 
 describe("Start Cluster", function(){
+    this.timeout(60000) // 1 min
     var netMap = {}
 
 
@@ -351,6 +364,7 @@ describe("Provision Cluster", function(){
 
 
 describe("Test", function(){
+    this.timeout(0)
     var links = {pairs: []}
 	var phases = util.keys(TEST)
 
@@ -442,5 +456,3 @@ describe("Test", function(){
 describe("Teardown", function(){
 //	teardown()
 })
-
-
