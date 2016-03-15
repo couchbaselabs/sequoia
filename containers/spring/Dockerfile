@@ -11,8 +11,6 @@ RUN ../cmake/configure --prefix=/usr && \
       make && \
       make install
 
-pip install spring
-
+WORKDIR /root
+RUN pip install spring
 WORKDIR spring
-
-ENTRYPOINT ["./spring"]

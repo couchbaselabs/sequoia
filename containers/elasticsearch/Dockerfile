@@ -6,6 +6,7 @@ FROM ubuntu_python
 # https://github.com/dockerfile/elasticsearch
 #
 
+RUN apt-get wget
 # Pull base image.
 RUN yes | apt-get install default-jdk
 
