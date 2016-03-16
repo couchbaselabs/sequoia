@@ -248,7 +248,7 @@ describe("Provision Cluster", function(){
 	    	var rest_username = clusterSpec.rest_username
 	    	var rest_password = clusterSpec.rest_password
 	    	var rest_port = clusterSpec.rest_port.toString()
-	    	var services = clusterSpec.services
+	    	var services = clusterSpec.services || "data"
 	    	var ram = clusterSpec.ram.toString()
 
 			servers[type].forEach(function(name){
@@ -284,6 +284,7 @@ describe("Provision Cluster", function(){
 	    async.eachSeries(serverTypes, function(type, type_cb){
 			var orchestratorType = type
 	    	var clusterSpec = SCOPE.servers[orchestratorType]
+	    	var services = clusterSpec.services || "data"
 			var n_to_cluster = clusterSpec.init_nodes
 			if(n_to_cluster > servers[type].length){
 				n_to_cluster = servers[type].length
@@ -318,7 +319,8 @@ describe("Provision Cluster", function(){
 						Image: 'couchbase-cli',
 					 	Cmd: ['server-add', '-c', orchestratorIp,
 	                          '-u', rest_username, '-p', rest_password, '--server-add', ip,
-			                  '--server-add-username', rest_username, '--server-add-password', rest_password]
+			                  '--server-add-username', rest_username, '--server-add-password', rest_password,
+			                  '--services', services]
 				        }).then(cb).catch(cb)
 		        }
             }, type_cb)
