@@ -408,7 +408,6 @@ describe("Provision Cluster", function(){
 
 
 describe("Test", function(){
-    this.timeout(0)
     var links = {pairs: []}
 	var phases = util.keys(TEST)
     var containerType = null
@@ -472,6 +471,7 @@ describe("Test", function(){
                 }
                 for (var i = 0; i<scale; i++){
 	                it('test: '+container, function(){
+                        this.timeout(0) // TODO can be overriden
 	                    if (container){
 	                    	var network = client.getNetwork()
 	                    	var hostConfig = {NetworkMode: network}
