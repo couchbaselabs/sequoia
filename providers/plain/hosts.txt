@@ -1,4 +1,4 @@
-kvm-s637.sc.couchbase.com
-kvm-s638.sc.couchbase.com
-kvm-s713.sc.couchbase.com
-xcp-s731.sc.couchbase.com
+172.23.107.162
+172.23.107.163
+172.23.99.46
+172.23.121.59
