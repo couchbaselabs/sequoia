@@ -22,6 +22,8 @@ var cli = commandLineArgs([
   {name: 'scope', type: String},
   {name: 'test', type: String},
   {name: 'client', type: String},
+  {name: 'provider', type: String},
+  {name: 'build', type: String},
 ])
 
 var options = cli.parse()
@@ -33,10 +35,12 @@ if(!options.test){
 	console.log("ERROR: missing --test <test_file>")
 	process.exit(1)	
 }
-
 if(!options.client){
     console.log("Using default docker client [--client https://192.168.99.100:2376]")
     options.client = "https://192.168.99.100:2376"
+}
+if(!options.provider){
+    options.provider = "docker"
 }
 
 var SCOPE = util.loadSpec(options.scope)
@@ -71,67 +75,111 @@ describe("Teardown", function(){
 	teardown()
 })
 
-describe("Create Network", function(){
-    
-	// TODO: only if docker provider
-    // var networkSpec = SCOPE.docker.network
-	var networkSpec = null
-	if(networkSpec){
-		it('should create network: '+ networkSpec.name, function(){
-			var network = {
-			  "Name": networkSpec.name,
-			  "Driver": networkSpec.driver,
-			  "IPAM":{
-			    "Config":[{
-			      "Subnet":networkSpec.subnet
-			    }]
-			  }
-			}
-			return client.createNetwork(network)
-		})
-	}
-})
+if (options.provider=='swarm'){
+
+    // overlay network required in swarm
+    describe("Create Network", function(){
+
+        // TODO: only if docker provider
+        // var networkSpec = SCOPE.docker.network
+        var networkSpec = null
+        if(networkSpec){
+            it('should create network: '+ networkSpec.name, function(){
+                var network = {
+                  "Name": networkSpec.name,
+                  "Driver": networkSpec.driver,
+                  "IPAM":{
+                    "Config":[{
+                      "Subnet":networkSpec.subnet
+                    }]
+                  }
+                }
+                return client.createNetwork(network)
+            })
+        }
+    })
+
+    // treat as normal docker provider from now on
+    options.provider='docker'
+}
+
+if (options.provider=='docker'){
+    describe("Start Cluster", function(){
+    	this.timeout(60000)
+        util.values(servers)
+            .forEach(function(name, i){
+                it('should start node ['+name+']', function() {
+                    var network = client.getNetwork()
+                    var remotePort = 8091+i
+                    return client.runContainer(false,
+                        {Image: 'couchbase-watson',
+                         name: name,
+                         HostConfig: {
+                            PortBindings: {"8091/tcp": [{"HostPort": remotePort.toString()}]},
+                                            NetworkMode: network
+                         }}
+                    )
+                })
+            })
+
+        it('update ip addresses', function(){
+            // save addresses for node containers
+            return client.updateContainerIps()
+        })
+
+    })
+} else { // custom provider
+
+    describe("Setup with host provider: "+options.provider, function(){
+        // providers config
+        var providerPath = "providers/"+options.provider+"/"
+        var providerFile = providerPath+"config.yml"
+        var providerSpec = util.loadSpec(providerFile)
+
+        it("should generate host file", function(){
+            // run generator command  (todo: ansible ec2)
+        })
+
+        it("should get ip's for hosts", function(){
+            // read generated ip file
+            var hostFile = providerPath+providerSpec.hostfile
+            var hostFileData = util.readHostFile(hostFile)
+
+            // map hostData to server scope
+            var scopeMapping = util.mapHostsToScope(hostFileData, servers)
+            client.setContainerIps(scopeMapping)
+        })
+    })
+
+}
 
 
-describe("Start Cluster", function(){
+describe("Verify Cluster", function(){
     this.timeout(60000) // 1 min
     var netMap = {}
 
+    before(function() {
+        var containerType = null
+    	// save addresses for node containers
+        if (options.provider == "docker"){
+            containerType = "couchbase-watson"
+        }
+    	return netMap = client.getContainerIps(containerType)
+    })
 
-	util.values(servers)
-		.forEach(function(name, i){
-	        it('should start node ['+name+']', function() {
-	        	var network = client.getNetwork()
-    		 	var remotePort = 8091+i
-	        	return client.runContainer(false,
-	        		{Image: 'couchbase-watson',
-	        		 name: name,
-	        		 HostConfig: {
-	        		 	PortBindings: {"8091/tcp": [{"HostPort": remotePort.toString()}]},
-                                        NetworkMode: network
-	        		 }}
-	        	)
-	        })
-	    })
-
-	it('update ip addresses', function(){
-		// save addresses for node containers
-		return client.updateContainerIps()
-    		.then(function(){
-    			netMap = client.getContainerIps("couchbase-watson")
-    		})
-	})
 
 
 	util.values(servers)
 		.forEach(function(name){
 	        it('verified started node ['+name+']', function(){
                 var ip = netMap[name]
+                var hostConfig = { NetworkMode: client.getNetwork() }
+                if (options.provider == "docker"){
+                    hostConfig['Links'] = [name+":"+name]
+                }
 	        	return client.runContainer(true,
 	        		{Image: 'martin/wait',
-	        		 HostConfig: { NetworkMode: client.getNetwork(), 
-		    	 				   Links:[name+":"+name]
-	        		 },
+	        		 HostConfig: hostConfig,
 	        		 Cmd: ["-c", ip+":8091", "-t", "120"]}
 	        	)
 	        })
@@ -141,15 +189,16 @@ describe("Start Cluster", function(){
 
 
 describe("Provision Cluster", function(){
-    this.timeout(60000) // 1 min
+    this.timeout(600000) // 10 min
     var netMap = {}
 
     before(function() {
+        var containerType = null
     	// save addresses for node containers
-    	return client.updateContainerIps()
-	    		.then(function(){
-	    			netMap = client.getContainerIps("couchbase-watson")
-	    		})
+        if (options.provider == "docker"){
+            containerType = "couchbase-watson"
+        }
+    	return netMap = client.getContainerIps(containerType)
     })
 
     beforeEach(function(){
@@ -164,10 +213,9 @@ describe("Provision Cluster", function(){
         	var rest_password = SCOPE.servers[type].rest_password
         	var rest_port = SCOPE.servers[type].rest_port
         	var hostConfig = {NetworkMode: client.getNetwork()}
-        	var provider = SCOPE.servers[type].provider || "docker"
 
 	        servers[type].forEach(function(name){
-	        	if(provider == "docker"){
+	        	if(options.provider == "docker"){
 					hostConfig["Links"] = [name+":"+name]
 	        	}
 	        	var ip = netMap[name]+":"+rest_port
@@ -213,8 +261,7 @@ describe("Provision Cluster", function(){
 					command = command.concat(['--cluster-index-ramsize', clusterSpec.index_ram.toString()])
 			    }
 	        	var hostConfig = {NetworkMode: client.getNetwork()}
-	        	var provider = clusterSpec.provider || "docker"
-	        	if(provider == "docker"){
+	        	if(options.provider == "docker"){
 					hostConfig["Links"] = [name+":"+name]
 	        	}
 					var p = client.runContainer(true,{
@@ -263,8 +310,7 @@ describe("Provision Cluster", function(){
 		        	// adding node
 		        	ip = ip+":"+rest_port
 		        	var hostConfig = {NetworkMode: client.getNetwork()}
-		        	var provider = clusterSpec.provider || "docker"
-		        	if(provider == "docker"){
+		        	if(options.provider == "docker"){
 						hostConfig["Links"] = [name+":"+name]
 		        	}
 					client.runContainer(true,{
@@ -296,8 +342,7 @@ describe("Provision Cluster", function(){
 		    	var rest_port = clusterSpec.rest_port.toString()
 		    	var orchestratorIp = netMap[firstNode]+":"+rest_port
 	        	var hostConfig = {NetworkMode: client.getNetwork()}
-	        	var provider = clusterSpec.provider || "docker"
-	        	if(provider == "docker"){
+                if(options.provider == "docker"){
 					hostConfig["Links"] = [firstNode+":"+firstNode]
 	        	}
 		    	var p = client.runContainer(true,{
@@ -329,7 +374,7 @@ describe("Provision Cluster", function(){
 		    	var rest_port = clusterSpec.rest_port.toString()
 		    	var orchestratorIp = netMap[firstNode]+":"+rest_port
 
-                async.eachSeries(clusterSpec.buckets.split(","), 
+                async.eachSeries(clusterSpec.buckets.split(","),
                  function(bucketType, bucket_type_cb){
 			    	var bucketSpec = SCOPE.buckets[bucketType]
 			    	var clusterBuckets = buckets[bucketType]
@@ -340,8 +385,7 @@ describe("Provision Cluster", function(){
 			    		var replica = bucketSpec.replica.toString() //TODO
 			    		var bucketSpecType = bucketSpec.type
 			        	var hostConfig = {NetworkMode: client.getNetwork()}
-			        	var provider = clusterSpec.provider || "docker"
-			        	if(provider == "docker"){
+			        	if(options.provider == "docker"){
 							hostConfig["Links"] = [firstNode+":"+firstNode]
 			        	}
 			    		client.runContainer(true,{
@@ -367,6 +411,7 @@ describe("Test", function(){
     this.timeout(0)
     var links = {pairs: []}
 	var phases = util.keys(TEST)
+    var containerType = null
 
 	// run each phase
     async.eachSeries(phases, function(phase, cb){
@@ -375,7 +420,9 @@ describe("Test", function(){
 
             before(function() {
                 links['pairs'] = util.containerLinks(servers)
-                return client.updateContainerIps()
+                if (options.provider == "docker"){
+                    containerType = "couchbase-watson"
+                }
             })
 
             // generate tasks
@@ -413,7 +460,7 @@ describe("Test", function(){
 	                				var val = argResolver(subscope,
 	                					                  func,
 	                					                  fargs,
-	                					                  client.getContainerIps('couchbase-watson'))
+	                					                  client.getContainerIps(containerType))
 	                				argv = val
 	                			} else {
 	                				argv = arg
@@ -428,10 +475,8 @@ describe("Test", function(){
 	                    if (container){
 	                    	var network = client.getNetwork()
 	                    	var hostConfig = {NetworkMode: network}
-	                    	if(!links){
+                            if(options.provider == 'docker'){
 	                    		links = {'pairs': util.containerLinks(servers)}
-	                    	}
-	                    	if (network == "bridge"){
 	                    		hostConfig["Links"] = links.pairs
 			                }
 	                    	return client.runContainer(testSpec.wait,
@@ -451,7 +496,6 @@ describe("Test", function(){
 
     })
 })
-
 
 describe("Teardown", function(){
 //	teardown()

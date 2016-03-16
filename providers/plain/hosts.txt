@@ -1,0 +1,4 @@
+kvm-s637.sc.couchbase.com
+kvm-s638.sc.couchbase.com
+kvm-s713.sc.couchbase.com
+xcp-s731.sc.couchbase.com
