@@ -12,3 +12,10 @@ ycsb_load_1:
        					 -p couchbase.host=local-1 
        					 -threads 10 -p recordcount=1000000"
        wait: true
+  - test:
+       container: ycsb
+       command:  "python ./bin/ycsb load couchbase2  
+                  -P workloads/workloade  -p couchbase.host=local-1  
+                  -threads 10 -p recordcount=1000000 
+                  -p operationcount=1000000 -p maxexecutiontime=600"
+       wait: true
