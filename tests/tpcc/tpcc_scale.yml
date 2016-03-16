@@ -1,5 +1,11 @@
 ---
 
+engine_initialize:
+  - test:
+    - test:
+       container: tpcc
+       command:  "./change_engine.sh  servers:address:0:0 Administrator:password"
+       wait: true
 tpcc:
   - test:
        container: tpcc
