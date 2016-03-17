@@ -18,7 +18,10 @@ servers: # each server tag represents a cluster
     count: 4
     ram: 4096
     index_ram: 2048
-    services: data,query,index
+    services:
+       data: 2
+       index: 1
+       query: 1
     rest_username: Administrator
     rest_password: password
     rest_port: 8091

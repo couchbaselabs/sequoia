@@ -15,7 +15,6 @@ servers:
   local:
      count: 2  # create single server with link named 'local'
      ram: 876
-     services: data
      rest_username: Administrator
      rest_password: password
      rest_port: 8091

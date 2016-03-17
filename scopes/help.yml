@@ -19,7 +19,6 @@ servers: # each server tag represents a cluster
  local:
     count: 4  # create 3 nodes of this type [local-1, local-2, local-3, local-4]
     ram: 876
-    services: data
     rest_username: Administrator
     rest_password: password
     rest_port: 8091
@@ -28,7 +27,6 @@ servers: # each server tag represents a cluster
  remote:
     count: 4
     ram: 876
-    services: data
     rest_username: Administrator
     rest_password: password
     rest_port: 8091

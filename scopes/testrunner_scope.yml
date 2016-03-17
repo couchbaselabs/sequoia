@@ -15,7 +15,6 @@ servers:
   local.st.couchbase.com:
      count: 4  # create single server with link named 'local'
      ram: 4096
-     services: data,query,index
      rest_username: Administrator
      rest_password: password
      rest_port: 8091
