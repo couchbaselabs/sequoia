@@ -232,6 +232,7 @@ describe("Provision Cluster", function(){
     })
 
 
+
     it('init cluster', function(){
     	//  cluster-init:
     	//     initializes a set of servers within clusters
@@ -242,40 +243,43 @@ describe("Provision Cluster", function(){
         	// set first node to be orchestrator
 	    	var orchestratorType = type
 	    	var clusterSpec = SCOPE.servers[orchestratorType]
-	    	var firstNode = servers[orchestratorType][0]
+	    	var name = servers[orchestratorType][0]
 
 	    	// provision vars
 	    	var rest_username = clusterSpec.rest_username
 	    	var rest_password = clusterSpec.rest_password
 	    	var rest_port = clusterSpec.rest_port.toString()
-	    	var services = clusterSpec.services || "data"
-	    	var ram = clusterSpec.ram.toString()
+	    	var numNodes = clusterSpec.init_nodes || servers[type].length
+	    	var serviceSpec = clusterSpec.services || {data: numNodes}
 
-			servers[type].forEach(function(name){
-				var ip = netMap[name]+":"+rest_port
-				var command = ['cluster-init',
-					    '-c', ip, '-u', rest_username, '-p', rest_password,
-					    '--cluster-username', rest_username, '--cluster-password', rest_password,
-					    '--cluster-port', rest_port, '--cluster-ramsize', ram, '--services', services]
-			    if(clusterSpec.index_ram){
-					command = command.concat(['--cluster-index-ramsize', clusterSpec.index_ram.toString()])
-			    }
-	        	var hostConfig = {NetworkMode: client.getNetwork()}
-	        	if(options.provider == "docker"){
-					hostConfig["Links"] = [name+":"+name]
-	        	}
-					var p = client.runContainer(true,{
-						Image: 'couchbase-cli',
-					HostConfig: hostConfig,
-						Cmd: command
-					})
-					  promises.push(p)
+	    	var ram = clusterSpec.ram.toString()
+			var ip = netMap[name]+":"+rest_port
+			var serviceMap = util.mapHostsToServices(serviceSpec, numNodes)
+			client.setServiceMap(type, serviceMap)
+			var services = serviceMap[0]
+			var command = ['cluster-init',
+				    '-c', ip, '-u', rest_username, '-p', rest_password,
+				    '--cluster-username', rest_username, '--cluster-password', rest_password,
+				    '--cluster-port', rest_port, '--cluster-ramsize', ram, '--services', services]
+		    if(clusterSpec.index_ram){
+				command = command.concat(['--cluster-index-ramsize', clusterSpec.index_ram.toString()])
+		    }
+        	var hostConfig = {NetworkMode: client.getNetwork()}
+        	if(options.provider == "docker"){
+				hostConfig["Links"] = [name+":"+name]
+        	}
+			var p = client.runContainer(true,{
+				Image: 'couchbase-cli',
+				HostConfig: hostConfig,
+				Cmd: command
 			})
+			promises.push(p)
 
         })
   		return Promise.all(promises)
 
     })
+
 
     it('add nodes', function(done){
     	// form clusters based on spec
@@ -284,7 +288,7 @@ describe("Provision Cluster", function(){
 	    async.eachSeries(serverTypes, function(type, type_cb){
 			var orchestratorType = type
 	    	var clusterSpec = SCOPE.servers[orchestratorType]
-	    	var services = clusterSpec.services || "data"
+	    	var serviceMap = client.getServiceMap(type)
 			var n_to_cluster = clusterSpec.init_nodes
 			if(n_to_cluster > servers[type].length){
 				n_to_cluster = servers[type].length
@@ -303,7 +307,10 @@ describe("Provision Cluster", function(){
 
 			// add nodes
 			var add_nodes = servers[type].slice(0, n_to_cluster)
+			var i = 0
 	        async.eachSeries(add_nodes, function(name, cb){
+		    	var services = serviceMap[i]
+		    	i++
 	        	var ip = netMap[name]
 	        	if(orchestratorIp == ip){
 	        		cb(null) // not adding self
@@ -407,8 +414,7 @@ describe("Provision Cluster", function(){
     })
 
 })
-
-
+/*
 describe("Test", function(){
     var links = {pairs: []}
 	var phases = util.keys(TEST)
@@ -498,6 +504,7 @@ describe("Test", function(){
 
     })
 })
+*/
 
 describe("Teardown", function(){
 //	teardown()
