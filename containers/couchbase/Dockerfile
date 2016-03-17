@@ -5,10 +5,10 @@ RUN apt-get install -yq runit wget python-httplib2  openssh-server  && \
     apt-get autoremove && apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
+ARG BUILD_NO=1307
 ENV NOTVISIBLE="in users profile" \
     PATH=$PATH:/opt/couchbase/bin:/opt/couchbase/bin/tools:/opt/couchbase/bin/install \
     LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/couchbase/lib \
-    BUILD_NO=1307 \
     BASE_URL=http://172.23.120.24/builds/latestbuilds/couchbase-server/watson
 ENV BUILD_PKG=couchbase-server-enterprise_4.5.0-$BUILD_NO-ubuntu14.04_amd64.deb
 

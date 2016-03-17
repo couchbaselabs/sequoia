@@ -1,3 +1,5 @@
+BUILD_NO=${1:-1818}
+
 # public images
 docker pull martin/wait
 
@@ -7,7 +9,7 @@ docker build -t ubuntu_python -f containers/templates/Dockerfile-ubuntu-python  
 
 # framework containers
 docker build -t perfrunner containers/perfrunner
-docker build -t couchbase-watson containers/couchbase
+docker build --build-arg BUILD_NO=$BUILD_NO -t couchbase-watson containers/couchbase
 docker build -t couchbase-cli containers/couchbase-cli
 docker build -t testrunner containers/testrunner
 docker build -t tpcc containers/tpcc

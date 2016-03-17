@@ -2,4 +2,4 @@ client:  https://192.168.99.100:2376
 scope:  scopes/small_cluster.yml
 test: tests/example/simple.yml
 provider: docker
-build: 4.5.0-1812
+build: 4.5.0-1818
