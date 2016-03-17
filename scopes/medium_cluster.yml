@@ -21,7 +21,11 @@ servers:
      count: 4  # creates local-1 local-2 local-3 local-4
      ram: 4096
      index_ram: 1024
-     services: data,index,query
+     services:
+        index: 1
+        query: 1
+        data: 2
+        strategy: spread  # spread | stack | explicit
      rest_username: Administrator
      rest_password: password
      rest_port: 8091

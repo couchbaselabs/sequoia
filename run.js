@@ -248,11 +248,14 @@ describe("Provision Cluster", function(){
 	    	var rest_username = clusterSpec.rest_username
 	    	var rest_password = clusterSpec.rest_password
 	    	var rest_port = clusterSpec.rest_port.toString()
-	    	var services = clusterSpec.services || "data"
-	    	var ram = clusterSpec.ram.toString()
+	    	var numNodes = clusterSpec.init_nodes || servers[type].length
+	    	var serviceSpec = clusterSpec.services || {data: numNodes}
 
-			servers[type].forEach(function(name){
+	    	var ram = clusterSpec.ram.toString()
+			servers[type].forEach(function(name, i){
 				var ip = netMap[name]+":"+rest_port
+				var serviceMap = util.mapHostsToServices(serviceSpec, initNodes)
+
 				var command = ['cluster-init',
 					    '-c', ip, '-u', rest_username, '-p', rest_password,
 					    '--cluster-username', rest_username, '--cluster-password', rest_password,
@@ -277,6 +280,7 @@ describe("Provision Cluster", function(){
 
     })
 
+/*
     it('add nodes', function(done){
     	// form clusters based on spec
     	var serverTypes = util.keys(servers)
@@ -405,10 +409,10 @@ describe("Provision Cluster", function(){
 
 
     })
+*/
 
 })
-
-
+/*
 describe("Test", function(){
     var links = {pairs: []}
 	var phases = util.keys(TEST)
@@ -498,6 +502,7 @@ describe("Test", function(){
 
     })
 })
+*/
 
 describe("Teardown", function(){
 //	teardown()
