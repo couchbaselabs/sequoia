@@ -19,33 +19,36 @@ function reloadLogStream(){
 
 // opt parser
 var cli = commandLineArgs([
-  {name: 'scope', type: String},
-  {name: 'test', type: String},
-  {name: 'client', type: String},
-  {name: 'provider', type: String},
-  {name: 'build', type: String},
+  {name: 'config', type: String}
 ])
 
 var options = cli.parse()
-if(!options.scope){
-	console.log("ERROR: missing --scope <scope_file>")
+if(!options.config){
+	console.log("ERROR: missing --config <config.yml>")
 	process.exit(1)
 }
-if(!options.test){
-	console.log("ERROR: missing --test <test_file>")
+
+var CONFIG = util.loadSpec(options.config)
+
+if(!CONFIG.scope){
+	console.log("ERROR: "+options.config+" is missing scope <scope_file>")
+	process.exit(1)
+}
+if(!CONFIG.test){
+	console.log("ERROR: "+options.config+" is missing test: <test_file>")
 	process.exit(1)	
 }
-if(!options.client){
+if(!CONFIG.client){
     console.log("Using default docker client [--client https://192.168.99.100:2376]")
-    options.client = "https://192.168.99.100:2376"
+    CONFIG.client = "https://192.168.99.100:2376"
 }
-if(!options.provider){
-    options.provider = "docker"
+if(!CONFIG.provider){
+    CONFIG.provider = "docker"
 }
 
-var SCOPE = util.loadSpec(options.scope)
-var TEST = util.loadSpec(options.test)
-var docker = client.init(options.client)
+var SCOPE = util.loadSpec(CONFIG.scope)
+var TEST = util.loadSpec(CONFIG.test)
+var docker = client.init(CONFIG.client)
 
 if(!docker){
    process.exit(1)
@@ -75,7 +78,7 @@ describe("Teardown", function(){
 	teardown()
 })
 
-if (options.provider=='swarm'){
+if (CONFIG.provider=='swarm'){
 
     // overlay network required in swarm
     describe("Create Network", function(){
@@ -100,10 +103,10 @@ if (options.provider=='swarm'){
     })
 
     // treat as normal docker provider from now on
-    options.provider='docker'
+    CONFIG.provider='docker'
 }
 
-if (options.provider=='docker'){
+if (CONFIG.provider=='docker'){
     describe("Start Cluster", function(){
     	this.timeout(60000)
         util.values(servers)
@@ -130,9 +133,9 @@ if (options.provider=='docker'){
     })
 } else { // custom provider
 
-    describe("Setup with host provider: "+options.provider, function(){
+    describe("Setup with host provider: "+CONFIG.provider, function(){
         // providers config
-        var providerPath = "providers/"+options.provider+"/"
+        var providerPath = "providers/"+CONFIG.provider+"/"
         var providerFile = providerPath+"config.yml"
         var providerSpec = util.loadSpec(providerFile)
 
@@ -161,7 +164,7 @@ describe("Verify Cluster", function(){
     before(function() {
         var containerType = null
     	// save addresses for node containers
-        if (options.provider == "docker"){
+        if (CONFIG.provider == "docker"){
             containerType = "couchbase-watson"
         }
     	return netMap = client.getContainerIps(containerType)
@@ -174,7 +177,7 @@ describe("Verify Cluster", function(){
 	        it('verified started node ['+name+']', function(){
                 var ip = netMap[name]
                 var hostConfig = { NetworkMode: client.getNetwork() }
-                if (options.provider == "docker"){
+                if (CONFIG.provider == "docker"){
                     hostConfig['Links'] = [name+":"+name]
                 }
 	        	return client.runContainer(true,
@@ -195,7 +198,7 @@ describe("Provision Cluster", function(){
     before(function() {
         var containerType = null
     	// save addresses for node containers
-        if (options.provider == "docker"){
+        if (CONFIG.provider == "docker"){
             containerType = "couchbase-watson"
         }
     	return netMap = client.getContainerIps(containerType)
@@ -215,7 +218,7 @@ describe("Provision Cluster", function(){
         	var hostConfig = {NetworkMode: client.getNetwork()}
 
 	        servers[type].forEach(function(name){
-	        	if(options.provider == "docker"){
+	        	if(CONFIG.provider == "docker"){
 					hostConfig["Links"] = [name+":"+name]
 	        	}
 	        	var ip = netMap[name]+":"+rest_port
@@ -265,7 +268,7 @@ describe("Provision Cluster", function(){
 				command = command.concat(['--cluster-index-ramsize', clusterSpec.index_ram.toString()])
 		    }
         	var hostConfig = {NetworkMode: client.getNetwork()}
-        	if(options.provider == "docker"){
+        	if(CONFIG.provider == "docker"){
 				hostConfig["Links"] = [name+":"+name]
         	}
 			var p = client.runContainer(true,{
@@ -318,7 +321,7 @@ describe("Provision Cluster", function(){
 		        	// adding node
 		        	ip = ip+":"+rest_port
 		        	var hostConfig = {NetworkMode: client.getNetwork()}
-		        	if(options.provider == "docker"){
+		        	if(CONFIG.provider == "docker"){
 						hostConfig["Links"] = [name+":"+name]
 		        	}
 					client.runContainer(true,{
@@ -351,7 +354,7 @@ describe("Provision Cluster", function(){
 		    	var rest_port = clusterSpec.rest_port.toString()
 		    	var orchestratorIp = netMap[firstNode]+":"+rest_port
 	        	var hostConfig = {NetworkMode: client.getNetwork()}
-                if(options.provider == "docker"){
+                if(CONFIG.provider == "docker"){
 					hostConfig["Links"] = [firstNode+":"+firstNode]
 	        	}
 		    	var p = client.runContainer(true,{
@@ -394,7 +397,7 @@ describe("Provision Cluster", function(){
 			    		var replica = bucketSpec.replica.toString() //TODO
 			    		var bucketSpecType = bucketSpec.type
 			        	var hostConfig = {NetworkMode: client.getNetwork()}
-			        	if(options.provider == "docker"){
+			        	if(CONFIG.provider == "docker"){
 							hostConfig["Links"] = [firstNode+":"+firstNode]
 			        	}
 			    		client.runContainer(true,{
@@ -427,7 +430,7 @@ describe("Test", function(){
 
             before(function() {
                 links['pairs'] = util.containerLinks(servers)
-                if (options.provider == "docker"){
+                if (CONFIG.provider == "docker"){
                     containerType = "couchbase-watson"
                 }
             })
@@ -483,7 +486,7 @@ describe("Test", function(){
 	                    if (container){
 	                    	var network = client.getNetwork()
 	                    	var hostConfig = {NetworkMode: network}
-                            if(options.provider == 'docker'){
+                            if(CONFIG.provider == 'docker'){
 	                    		links = {'pairs': util.containerLinks(servers)}
 	                    		hostConfig["Links"] = links.pairs
 			                }
