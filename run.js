@@ -414,7 +414,7 @@ describe("Provision Cluster", function(){
     })
 
 })
-/*
+
 describe("Test", function(){
     var links = {pairs: []}
 	var phases = util.keys(TEST)
@@ -504,7 +504,7 @@ describe("Test", function(){
 
     })
 })
-*/
+
 
 describe("Teardown", function(){
 //	teardown()
