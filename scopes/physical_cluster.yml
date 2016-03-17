@@ -1,15 +1,4 @@
 ---
-docker:
-#  host: 172.23.121.59 # docker host ip, omit if using unix socket 192.168.99.100 | 172.23.121.59
-#  port: 4000 # docker reachable port, omit if using socket
-  host: 192.168.99.104 # docker host ip, omit if using unix socket 192.168.99.100 | 172.23.121.59
-  port: 2376 # docker reachable port, omit if using socket
-  proto: http  # http | https | tcp | unix
-  network: 
-     name: ipnet
-     driver: overlay # overlay, bridge, none, container
-     subnet: 192.11.11.0/24  # subnet to use for containers on the network
-
 buckets:
   default:
     count: 1  # creates default

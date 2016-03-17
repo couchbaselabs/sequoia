@@ -1,9 +1,4 @@
 ---
-docker:
-  host: 172.23.107.163
-  port: 2375
-  proto: http
-
 buckets:
   bucket:
     count: 2
@@ -15,7 +10,6 @@ servers:  # 4x4 xdcr
  local:
     count: 4
     ram: 48000
-    services: data
     rest_username: Administrator
     rest_password: password
     rest_port: 8091
@@ -24,7 +18,6 @@ servers:  # 4x4 xdcr
  remote:
     count: 4
     ram: 48000
-    services: data
     rest_username: Administrator
     rest_password: password
     rest_port: 8091
