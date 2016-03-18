@@ -1,8 +1,9 @@
 #!/bin/bash
 
-host=$1:9108
+host=$1:8091
 Engine=memory_optimized
 Auth=$2
-Uri=http://$Auth@$host/settings
+Uri=http://$Auth@$host/settings/indexes
 
-curl -X POST  $Uri --data '{"indexer.settings.storage_mode" : "$Engine"}'
+echo curl -vv -X POST $Uri -d "storageMode=$Engine"
+curl -v -X POST $Uri -d "storageMode=$Engine"
