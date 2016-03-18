@@ -1,0 +1,41 @@
+---
+
+failover: #failover
+  - test:
+      container: couchbase-cli
+      command: "failover -c servers:address:0:0 
+                --server-failover servers:address:0:2 
+                -u  servers:rest_username:0 -p  servers:rest_password:0 
+                --force"
+      wait: true
+  - test:
+      container: couchbase-cli
+      command:  "rebalance -c  servers:address:0:0
+                -u  servers:rest_username:0 -p  servers:rest_password:0"
+      wait: true
+rebalance_in: #rebalance in
+  - test:
+       container: couchbase-cli
+       command: "server-add -c  servers:address:0:0
+                 --server-add  servers:address:0:2
+                 -u  servers:rest_username:0 -p  servers:rest_password:0
+                 --server-add-username servers:rest_username:0 --server-add-password  servers:rest_password:0"
+       wait: true
+  - test:
+       container: couchbase-cli
+       command:  "rebalance -c  servers:address:0:0
+                -u  servers:rest_username:0 -p  servers:rest_password:0"
+       wait: true
+rebalance_out: #rebalance out
+  - test:
+       container: couchbase-cli
+       command:  "rebalance -c  servers:address:0:0 --server-remove=servers:address:0:3:8091
+                -u  servers:rest_username:0 -p  servers:rest_password:0"
+       wait: true
+swap_rebalance: #swap rebalance
+  - test:
+       container: couchbase-cli
+       command:  "rebalance -c  servers:address:0:0 --server-remove=servers:address:0:3:8091 --server-add=servers:address:0:4:8091
+                -u  servers:rest_username:0 -p  servers:rest_password:0"
+       wait: true
+
