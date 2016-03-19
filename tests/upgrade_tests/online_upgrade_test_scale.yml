@@ -1,0 +1,23 @@
+---
+
+RunLoad:  # load bucket-1 with perfrunner and bucket-2 with gideon
+  - test:
+     container: gideon
+     command: "python gideon.py kv --ops 20000 --create 10 --get 90 
+               --hosts servers:address:0:0 --bucket buckets:bucketname:0:1"
+     wait: true
+OnLineUpgrade:
+  - test:
+     container: testrunner
+     command: "-i upgrade_local.ini -t upgrade.upgrade_tests.UpgradeTests.online_consequentially_upgrade,initial_version=2.5.0-1059-rel,skip_setup_cleanup=True"
+     wait: true
+Run1Sanity:
+  - test:
+     container: testrunner
+     command: "-i local.ini -c conf/py-1node-sanity.conf,skip_setup_cleanup=True"
+     wait: true
+Run4Sanity:
+  - test:
+     container: testrunner
+     command: "-i local.ini -c conf/py-4node-sanity.py,skip_setup_cleanup=True"
+     wait: true
