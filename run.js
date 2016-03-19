@@ -78,6 +78,7 @@ describe("Teardown", function(){
 	teardown()
 })
 
+
 if (CONFIG.provider=='swarm'){
 
     // overlay network required in swarm
@@ -171,7 +172,6 @@ describe("Verify Cluster", function(){
     })
 
 
-
 	util.values(servers)
 		.forEach(function(name){
 	        it('verified started node ['+name+']', function(){
@@ -206,9 +206,10 @@ describe("Initialize Nodes", function(){
 
     var serverTypes = util.keys(servers)
     serverTypes.forEach(function(type){
-        var rest_username = SCOPE.servers[type].rest_username
-        var rest_password = SCOPE.servers[type].rest_password
-        var rest_port = SCOPE.servers[type].rest_port
+        var clusterSpec = SCOPE.servers[type]
+        var rest_username = clusterSpec.rest_username
+        var rest_password = clusterSpec.rest_password
+        var rest_port = clusterSpec.rest_port
         var hostConfig = {NetworkMode: client.getNetwork()}
 
         servers[type].forEach(function(name){
@@ -217,11 +218,20 @@ describe("Initialize Nodes", function(){
                     hostConfig["Links"] = [name+":"+name]
                 }
                 var ip = netMap[name]+":"+rest_port
+                var command = ['node-init', '-c', ip,
+                               '-u', rest_username, '-p', rest_password]
+                if (clusterSpec.data_path){
+                    command = 
+                        command.concat(['--node-init-data-path', clusterSpec.data_path])
+                }
+                if (clusterSpec.index_path){
+                    command = 
+                        command.concat(['--node-init-index-path', clusterSpec.index_path])
+                }
                 return client.runContainer(true,{
                         Image: 'couchbase-cli',
                         HostConfig: hostConfig,
-                        Cmd: ['node-init', '-c', ip,
-                              '-u', rest_username, '-p', rest_password]
+                        Cmd: command, 
                     })
             })
         })
@@ -485,6 +495,7 @@ describe("Provision Cluster", function(){
     })
 
 })
+
 
 describe("Test", function(){
     var links = {pairs: []}
