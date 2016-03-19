@@ -190,6 +190,7 @@ describe("Verify Cluster", function(){
 
 })
 
+
 describe("Initialize Nodes", function(){
     this.timeout(600000) // 10 min
     var netMap = {}
@@ -226,7 +227,6 @@ describe("Initialize Nodes", function(){
         })
     })
 })
-
 
 describe("Initialize Cluster", function(){
     this.timeout(600000) // 10 min
@@ -330,6 +330,7 @@ describe("Configure Storage", function(){
         }
     })
 })
+
 
 describe("Provision Cluster", function(){
     this.timeout(600000) // 10 min
@@ -455,8 +456,17 @@ describe("Provision Cluster", function(){
 						reloadLogStream()
 
 			    		var ram = bucketSpec.ram.toString()
-			    		var replica = bucketSpec.replica.toString() //TODO
-			    		var bucketSpecType = bucketSpec.type
+			    		var replica = bucketSpec.replica.toString()
+			    		var bucketSpecType = bucketSpec.type || "couchbase"
+                        var command = ['bucket-create', '-c', orchestratorIp,
+                           '-u', rest_username, '-p', rest_password,
+				           '--bucket', name, '--bucket-ramsize', ram,
+                           '--bucket-type', bucketSpecType,
+                           '--bucket-replica', replica, '--wait']
+                        if (bucketSpec.sasl){
+                            command = command.concat(['--bucket-password',
+                                                      bucketSpec.sasl])
+                        }
 			        	var hostConfig = {NetworkMode: client.getNetwork()}
 			        	if(CONFIG.provider == "docker"){
 							hostConfig["Links"] = [firstNode+":"+firstNode]
@@ -464,10 +474,7 @@ describe("Provision Cluster", function(){
 			    		client.runContainer(true,{
 							Image: 'couchbase-cli',
 			    	 		HostConfig: hostConfig,
-						 	Cmd: ['bucket-create',
-				           '-c', orchestratorIp, '-u', rest_username, '-p', rest_password,
-				           '--bucket', name, '--bucket-ramsize', ram,
-                           '--bucket-type', bucketSpecType, '--bucket-replica', replica, '--wait']
+						 	Cmd: command 
 					        }).then(bucket_cb).catch(bucket_cb)
 			    	}, bucket_type_cb)
 			    }, cb)
@@ -478,7 +485,6 @@ describe("Provision Cluster", function(){
     })
 
 })
-
 
 describe("Test", function(){
     var links = {pairs: []}
@@ -568,9 +574,4 @@ describe("Test", function(){
         })
 
     })
-})
-
-
-describe("Teardown", function(){
-//	teardown()
 })
