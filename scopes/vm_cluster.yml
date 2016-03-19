@@ -1,0 +1,63 @@
+---
+buckets:
+  default:
+    count: 1  # creates default
+    ram: 8000
+    replica: 1
+    type: couchbase
+  bucket-1:
+    count: 1  # creates default
+    ram: 10000
+    replica: 1
+    type: couchbase
+    sasl: password
+  bucket-2:
+    count: 1  # creates default
+    ram: 15000
+    replica: 1
+    type: couchbase
+    sasl: password
+  WAREHOUSE:
+    count: 1
+    ram: 3000 
+    replica: 1
+    type: couchbase
+  CUSTOMER:
+    count: 1
+    ram: 1024 
+    replica: 1
+    type: couchbase
+  ITEM:
+    count: 1
+    ram: 1024 
+    replica: 1
+    type: couchbase
+
+servers:
+  local.st.couchbase.com:
+     count: 4
+     ram: 30000
+     index_ram: 4096
+     storage_mode: "memory_optimized"
+     data_path: "/data"
+     index_path: "/data"
+     services:
+        data: 2
+        index: 1
+        query: 1
+        strategy: spread
+     rest_username: Administrator
+     rest_password: password
+     rest_port: 8091
+     init_nodes: 4
+     buckets: bucket-1,bucket-2,default,WAREHOUSE,CUSTOMER,ITEM
+  remote.st.couchbase.com:
+     count: 2
+     ram: 35000
+     data_path: "/data"
+     index_path: "/data"
+     rest_username: Administrator
+     rest_password: password
+     rest_port: 8091
+     init_nodes: 2
+     buckets: default

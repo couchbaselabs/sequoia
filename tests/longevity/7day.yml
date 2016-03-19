@@ -5,29 +5,23 @@
 # kv
 # rebalance/failover
 
-view:  # perfrunner view test uses sasl
-  - test:
-       container: perfrunner
-       command: '-c clusters/systest.spec 
-                    -t tests/query_dev_20M_group_by.test 
-                    --local'
 tpcc:
   - test:
        container: tpcc
-       command:  "./run.sh servers:address:0:2:8093 util/cbcrindex.sql"
+       command:  "./run.sh servers:address:0:3:8093 util/cbcrindex.sql"
        wait: false 
   - test:
         container: tpcc
         command: "python tpcc.py --warehouses 1 --no-execute n1ql 
-                                 --query-url servers:address:0:2:8093 
+                                 --query-url servers:address:0:3:8093 
                                  --userid Administrator --password password"
         wait: false 
 
 phase1:
-  - test: # continous doc loading to WAREHOUSE with gideon
+  - test: # continous doc loading to bucket-2 with gideon
      container: gideon
-     command: "kv --ops 20000 --create 30 --get 70 
-         --hosts servers:address:0:0 --bucket WAREHOUSE"
+     command: "kv --ops 20000 --create 30 --get 70 --sizes 756 1024
+         --hosts servers:address:0:0 --bucket bucket-2"
   - test: #  1 Million Documents to default bucket with pillowfight
      container: pillowfight
      command: "-U servers:address:0:0  -I 1000000 -t 4 -B 250 -c 1000"
@@ -63,7 +57,7 @@ xdcr:  # xdcr 2 buckets -> 1
        container: couchbase-cli
        command: 'xdcr-replicate -c servers:address:0:0 
                         --xdcr-cluster-name servers:clustername:0
-                        --xdcr-from-bucket WAREHOUSE 
+                        --xdcr-from-bucket bucket-2 
                         --xdcr-to-bucket default'
        wait: true
 
@@ -84,9 +78,9 @@ phase3: #failover a data node
 phase4: # increase bucket-2 ops and put default bucket into higher dgm
   - test: # higher doc loading to bucket-2
      container: gideon
-     command: "kv --ops 20000 --create 30 --get 70 
+     command: "kv --ops 20000 --create 30 --get 70  --sizes 756 1024
                --hosts servers:address:0:0 --bucket buckets:bucketname:1:1"
-     scale: 10
+     scale: 5 
   - test: # heavier dgm for default bucket
       container: pillowfight
       command: "-U servers:address:0:0  -p ccc -m 1024 -I 1000000 -t 1 -B 100 -c 10000"
@@ -96,13 +90,43 @@ phase4: # increase bucket-2 ops and put default bucket into higher dgm
       wait: true
 
 
-phase6: # force failover and loose all data
+#   phase6: # force failover and loose all data
+#     - test:
+#         container: couchbase-cli
+#         command: "failover -c servers:address:0:0 
+#                   --server-failover servers:address:0:2 
+#                   -u  servers:rest_username:0 -p  servers:rest_password:0 
+#                   --force"
+#         wait: true
+#     - test:
+#         container: couchbase-cli
+#         command:  "rebalance -c  servers:address:0:0
+#                   -u  servers:rest_username:0 -p  servers:rest_password:0"
+#         wait: true
+
+
+
+phase5:  # rebalance back in
+  - test:
+       container: couchbase-cli
+       command: "server-add -c  servers:address:0:0
+                 --server-add  servers:address:0:1
+                 -u  servers:rest_username:0 -p  servers:rest_password:0
+                 --server-add-username servers:rest_username:0 --server-add-password  servers:rest_password:0"
+       wait: true
+  - test:
+       container: couchbase-cli
+       command:  "rebalance -c  servers:address:0:0
+                -u  servers:rest_username:0 -p  servers:rest_password:0"
+       wait: true
+
+
+phase5b: #failover with dataloss 
   - test:
       container: couchbase-cli
       command: "failover -c servers:address:0:0 
-                --server-failover servers:address:0:2 
-                -u  servers:rest_username:0 -p  servers:rest_password:0 
-                --force"
+                --server-failover servers:address:0:1 
+                -u  servers:rest_username:0 -p  servers:rest_password:0 --force"
       wait: true
   - test:
       container: couchbase-cli
@@ -110,21 +134,109 @@ phase6: # force failover and loose all data
                 -u  servers:rest_username:0 -p  servers:rest_password:0"
       wait: true
 
+phase5c:  # rebalance back in
+  - test:
+       container: couchbase-cli
+       command: "server-add -c  servers:address:0:0
+                 --server-add  servers:address:0:1
+                 -u  servers:rest_username:0 -p  servers:rest_password:0
+                 --server-add-username servers:rest_username:0 --server-add-password  servers:rest_password:0"
+       wait: true
+  - test:
+       container: couchbase-cli
+       command:  "rebalance -c  servers:address:0:0
+                -u  servers:rest_username:0 -p  servers:rest_password:0"
+       wait: true
 
 
-#   phase5:  # rebalance back in
-#     - test:
-#          container: couchbase-cli
-#          command: "server-add -c  servers:address:0:0
-#                    --server-add  servers:address:0:1
-#                    -u  servers:rest_username:0 -p  servers:rest_password:0
-#                    --server-add-username servers:rest_username:0 --server-add-password  servers:rest_password:0"
-#          wait: true
-#     - test:
-#          container: couchbase-cli
-#          command:  "rebalance -c  servers:address:0:0
-#                   -u  servers:rest_username:0 -p  servers:rest_password:0"
-#          wait: true
-#
+view:  # perfrunner view test uses sasl
+  - test:
+       container: perfrunner
+       command: '-c clusters/systest.spec 
+                    -t tests/query_dev_20M_group_by.test 
+                    --local'
+       wait: true
+
+phase6: 
+  - test:
+      container: couchbase-cli
+      command: "failover -c servers:address:0:0 
+                --server-failover servers:address:0:1 
+                -u  servers:rest_username:0 -p  servers:rest_password:0 --force"
+      wait: true
+  - test:
+      container: couchbase-cli
+      command:  "rebalance -c  servers:address:0:0
+                -u  servers:rest_username:0 -p  servers:rest_password:0"
+      wait: true
+
+phase7:  # rebalance back in
+  - test:
+       container: couchbase-cli
+       command: "server-add -c  servers:address:0:0
+                 --server-add  servers:address:0:1
+                 -u  servers:rest_username:0 -p  servers:rest_password:0
+                 --server-add-username servers:rest_username:0 --server-add-password  servers:rest_password:0"
+       wait: true
+  - test:
+       container: couchbase-cli
+       command:  "rebalance -c  servers:address:0:0
+                -u  servers:rest_username:0 -p  servers:rest_password:0"
+       wait: true
+
+
+phase8: #failover with dataloss 
+  - test:
+      container: couchbase-cli
+      command: "failover -c servers:address:0:0 
+                --server-failover servers:address:0:1 
+                -u  servers:rest_username:0 -p  servers:rest_password:0 --force"
+      wait: true
+  - test:
+      container: couchbase-cli
+      command:  "rebalance -c  servers:address:0:0
+                -u  servers:rest_username:0 -p  servers:rest_password:0"
+      wait: true
+phase9:  # rebalance back in
+  - test:
+       container: couchbase-cli
+       command: "server-add -c  servers:address:0:0
+                 --server-add  servers:address:0:1
+                 -u  servers:rest_username:0 -p  servers:rest_password:0
+                 --server-add-username servers:rest_username:0 --server-add-password  servers:rest_password:0"
+       wait: true
+  - test:
+       container: couchbase-cli
+       command:  "rebalance -c  servers:address:0:0
+                -u  servers:rest_username:0 -p  servers:rest_password:0"
+       wait: true
+
+
+phase10: #failover with dataloss 
+  - test:
+      container: couchbase-cli
+      command: "failover -c servers:address:0:0 
+                --server-failover servers:address:0:1 
+                -u  servers:rest_username:0 -p  servers:rest_password:0 --force"
+      wait: true
+  - test:
+      container: couchbase-cli
+      command:  "rebalance -c  servers:address:0:0
+                -u  servers:rest_username:0 -p  servers:rest_password:0"
+      wait: true
+phase11:  # rebalance back in
+  - test:
+       container: couchbase-cli
+       command: "server-add -c  servers:address:0:0
+                 --server-add  servers:address:0:1
+                 -u  servers:rest_username:0 -p  servers:rest_password:0
+                 --server-add-username servers:rest_username:0 --server-add-password  servers:rest_password:0"
+       wait: true
+  - test:
+       container: couchbase-cli
+       command:  "rebalance -c  servers:address:0:0
+                -u  servers:rest_username:0 -p  servers:rest_password:0"
+       wait: true
+
 
 
