@@ -190,6 +190,7 @@ describe("Verify Cluster", function(){
 
 })
 
+
 describe("Initialize Nodes", function(){
     this.timeout(600000) // 10 min
     var netMap = {}
@@ -471,7 +472,8 @@ describe("Provision Cluster", function(){
                            '-u', rest_username, '-p', rest_password,
 				           '--bucket', name, '--bucket-ramsize', ram,
                            '--bucket-type', bucketSpecType,
-                           '--bucket-replica', replica, '--wait']
+                           '--bucket-replica', replica,
+                           '--enable-flush', '1', '--wait']
                         if (bucketSpec.sasl){
                             command = command.concat(['--bucket-password',
                                                       bucketSpec.sasl])
@@ -494,6 +496,7 @@ describe("Provision Cluster", function(){
     })
 
 })
+
 
 
 describe("Test", function(){
