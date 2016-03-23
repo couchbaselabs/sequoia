@@ -190,7 +190,6 @@ describe("Verify Cluster", function(){
 
 })
 
-
 describe("Initialize Nodes", function(){
     this.timeout(600000) // 10 min
     var netMap = {}
@@ -569,12 +568,16 @@ describe("Test", function(){
 	                    		links = {'pairs': util.containerLinks(servers)}
 	                    		hostConfig["Links"] = links.pairs
 			                }
-	                    	return client.runContainer(testSpec.wait,
-	                    		{
+
+	                        var test = {
 									Image: container,
 									Cmd: command,
 									HostConfig: hostConfig
-								}, null, duration)
+						    }
+                            if(testSpec.entrypoint){
+                                test['Entrypoint'] = testSpec.entrypoint
+                            }
+	                    	return client.runContainer(testSpec.wait, test, null, duration)
 	                    } else {
 	                        // something else
 	                    }
