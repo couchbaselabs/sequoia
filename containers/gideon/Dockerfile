@@ -14,7 +14,11 @@ RUN pip install git+git://github.com/couchbase/couchbase-python-client &&\
 
 # src
 RUN git clone https://github.com/couchbaselabs/gideon.git
+
+RUN apt-get install curl
 WORKDIR gideon
 
 COPY spec.yaml /spec.yaml
+COPY views.json views.json
+COPY addviews.sh addviews.sh 
 ENTRYPOINT ["python", "gideon.py"]
