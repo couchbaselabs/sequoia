@@ -1,14 +1,14 @@
 {
     "views":{
         "stats":{
-            "map": "function (doc, meta) { emit(meta.id, doc.ops_sec); }",
+            "map": "function (doc, meta) { if(doc.profile){ if(500 < doc.rating < 520){ emit(meta.id, doc.ops_sec); }}}",
             "reduce": "_stats"
         },
         "padd":{
-            "map": "function (doc, meta) { emit(meta.id, doc.padding); }"
+            "map": "function (doc, meta) { if(doc.profile){ if (doc.rating < 200){ emit(meta.id, doc.padding); }}}"
         },
         "array":{
-            "map": "function (doc, meta) { emit(doc.active_hosts, null); }"
+            "map": "function (doc, meta) { if(doc.profile){ if(200< doc.rating< 300){ emit(doc.active_hosts, null); }}}"
         }
     }
 }
