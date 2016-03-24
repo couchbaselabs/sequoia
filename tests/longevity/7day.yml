@@ -141,7 +141,7 @@ swap_rebalance:
        command:  "rebalance -c  servers:address:0:0
                     --server-remove servers:address:0:2
                     -u  servers:rest_username:0 -p  servers:rest_password:0"
-           wait: true
+       wait: true
 
 kv5:
   - test:
