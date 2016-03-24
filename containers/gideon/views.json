@@ -9,10 +9,6 @@
         },
         "array":{
             "map": "function (doc, meta) { emit(doc.active_hosts, null); }"
-        },
-        "custom":{
-            "map": "function (doc, meta) { emit(meta.id, [doc.get_count, doc.ops_sec, doc.del_count, doc.create_count]) } ",
-            "reduce": "function(k, values){var sum = 0; for (var j = 0; j<values.length; j++){ sum+=values[j] }; return ([sum,values.length]) }"
         }
     }
 }
