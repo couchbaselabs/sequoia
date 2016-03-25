@@ -478,6 +478,11 @@ describe("Provision Cluster", function(){
                             command = command.concat(['--bucket-password',
                                                       bucketSpec.sasl])
                         }
+                        if (bucketSpec.eviction){
+                            command = command.concat(['--bucket-eviction-policy',
+                                                      bucketSpec.eviction])
+                        }
+
 			        	var hostConfig = {NetworkMode: client.getNetwork()}
 			        	if(CONFIG.provider == "docker"){
 							hostConfig["Links"] = [firstNode+":"+firstNode]
