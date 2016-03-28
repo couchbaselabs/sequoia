@@ -18,6 +18,7 @@ docker build -t tpcc containers/tpcc
 #docker build -t elasticsearch containers/elasticsearch
 docker build -t pillowfight containers/pillowfight
 docker build -t gideon containers/gideon  # depends on pillowfight
+docker build -t mortimer containers/mortimer
 
 # build framework
 npm install
