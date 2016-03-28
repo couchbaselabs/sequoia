@@ -19,6 +19,7 @@ docker build -t tpcc containers/tpcc
 docker build -t pillowfight containers/pillowfight
 docker build -t gideon containers/gideon  # depends on pillowfight
 docker build -t mortimer containers/mortimer
+docker build -t jinja containers/jinja
 
 # build framework
 npm install

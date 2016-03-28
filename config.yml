@@ -1,4 +1,4 @@
-client:  https://192.168.99.100:2376
+client:  https://192.168.99.101:2376
 scope:  scopes/small_cluster.yml
 test: tests/example/simple.yml
 provider: docker
