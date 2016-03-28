@@ -13,11 +13,12 @@ docker build --build-arg BUILD_NO=$BUILD_NO -t couchbase-watson containers/couch
 docker build -t couchbase-cli containers/couchbase-cli
 docker build -t testrunner containers/testrunner
 docker build -t tpcc containers/tpcc
-docker build -t ycsb containers/ycsb
-docker build -t mysql containers/mysql
-docker build -t elasticsearch containers/elasticsearch
+#docker build -t ycsb containers/ycsb
+#docker build -t mysql containers/mysql
+#docker build -t elasticsearch containers/elasticsearch
 docker build -t pillowfight containers/pillowfight
 docker build -t gideon containers/gideon  # depends on pillowfight
+docker build -t mortimer containers/mortimer
 
 # build framework
 npm install
