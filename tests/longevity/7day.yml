@@ -29,19 +29,16 @@ flush:
       command:  "bucket-flush -c servers:address:0:0 --force --bucket WAREHOUSE"
 
 
-kv:  # continous kv loading up to 200M items
+kv:  # continous kv loading a minimum of 15M items
   - test:
      container: pillowfight
-     command: "-U servers:address:0:0 -M 512 -p aaa -I 50000000 -t 4 -B 100 --rate-limit 1000"
+     command: "-U servers:address:0:0 -M 512 -p aaa -I 5000000 -t 4 -B 100 --rate-limit 1000"
   - test:
      container: pillowfight
-     command: "-U servers:address:0:0 -M 128 -p bbb -I 50000000 -t 4 -B 100 --rate-limit 1000"
+     command: "-U servers:address:0:0 -M 128 -p bbb -I 5000000 -t 4 -B 100 --rate-limit 1000"
   - test:
      container: pillowfight
-     command: "-U servers:address:0:0 -M 356 -p ccc -I 50000000 -t 4 -B 100 --rate-limit 1000"
-  - test:
-     container: pillowfight
-     command: "-U servers:address:0:0 -M 1024 -p ddd -I 50000000 -t 4 -B 100 --rate-limit 1000"
+     command: "-U servers:address:0:0 -M 356 -p ccc -I 5000000 -t 4 -B 100 --rate-limit 1000"
   - test:
      container: gideon
      command: "kv --ops 5000 --create 30 --get 70 --delete 10 --expire 20 --ttl 600  --hosts servers:address:0:0 --bucket  default --sizes 16000"
@@ -74,13 +71,13 @@ index:
        wait: true 
   - test:
         container: tpcc
-        command: "python tpcc.py --duration 259200 --client 10 --warehouses 100 --no-execute n1ql 
+        command: "python tpcc.py --duration 259200 --client 10 --warehouses 50 --no-execute n1ql 
                                  --query-url servers:address:0:7:8093 
                                  --userid Administrator --password password"
         wait: false 
   - test:
         container: tpcc
-        command: "python tpcc.py --duration 2259200 --client 10 --warehouses 100
+        command: "python tpcc.py --duration 2259200 --client 10 --warehouses 50 
                                  --no-load n1ql  --query-url servers:address:0:7:8093
                                  --userid Administrator --password password"
 
@@ -118,7 +115,7 @@ xdcr:  # start xdcr
        command: 'xdcr-replicate -c servers:address:0:0 
                         --xdcr-cluster-name servers:clustername:0 
                         --xdcr-from-bucket default
-                        --xdcr-to-bucket default'
+                        --xdcr-to-bucket remote'
        wait: true
 
 kv4:
@@ -175,12 +172,52 @@ kv6:
      command: "-U servers:address:0:0 -I 1000000 -t 4 -B 250 -c 1000"
      wait: true
 
+swap_hard_failover:
+      - test:
+           container: couchbase-cli  # as indexer
+           command: "server-add -c  servers:address:0:0
+                     --server-add  servers:address:0:1
+                     --services index
+                     -u  servers:rest_username:0 -p  servers:rest_password:0
+                     --server-add-username servers:rest_username:0 --server-add-password  servers:rest_password:0"
+           wait: true
+      - test:
+          container: couchbase-cli
+          command: "failover -c servers:address:0:0 
+                    --server-failover servers:address:0:2
+                    -u  servers:rest_username:0 -p  servers:rest_password:0 --force"
+          wait: true
+      - test:
+          container: couchbase-cli
+          command: "failover -c servers:address:0:0 
+                    --server-failover servers:address:0:3
+                    -u  servers:rest_username:0 -p  servers:rest_password:0 --force"
+          wait: true
+      - test:
+           container: couchbase-cli
+           command:  "rebalance -c  servers:address:0:0
+                        -u  servers:rest_username:0 -p  servers:rest_password:0"
+           wait: true
+
+kv7:
+  - test:
+     container: pillowfight
+     command: "-U servers:address:0:0 -I 1000000 -t 4 -B 250 -c 1000"
+     wait: true
+
 
 add_back:
       - test:
            container: couchbase-cli
            command: "server-add -c  servers:address:0:0
-                     --server-add  servers:address:0:1
+                     --server-add  servers:address:0:2
+                     -u  servers:rest_username:0 -p  servers:rest_password:0
+                     --server-add-username servers:rest_username:0 --server-add-password  servers:rest_password:0"
+           wait: true
+      - test:
+           container: couchbase-cli
+           command: "server-add -c  servers:address:0:0
+                     --server-add  servers:address:0:3
                      -u  servers:rest_username:0 -p  servers:rest_password:0
                      --server-add-username servers:rest_username:0 --server-add-password  servers:rest_password:0"
            wait: true
