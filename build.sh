@@ -2,6 +2,7 @@ BUILD_NO=${1:-1818}
 
 # public images
 docker pull martin/wait
+docker pull clue/httpie
 
 # base template
 docker build -t ubuntu_gcc -f containers/templates/Dockerfile-ubuntu-gcc  containers/templates/
@@ -20,6 +21,7 @@ docker build -t gideon containers/gideon  # depends on pillowfight
 #docker build -t elasticsearch containers/elasticsearch
 #docker build -t mortimer containers/mortimer
 #docker build -t jinja containers/jinja
+#docker build -t cbq containers/cbq
 
 # build framework
 npm install
