@@ -1,6 +1,4 @@
----
-load:
-  - test: #  1 Million Documents to default bucket with pillowfight
-     container: pillowfight
-     command: "-U servers:address:0:0  -I 1000000 -t 4 -B 250 -c 1000"
-     wait: true
+- #  1 Million Documents to default bucket with pillowfight
+   container: pillowfight
+   command: "-U servers:address:0:0  -I 1000000 -t 4 -B 250 -c 1000"
+   wait: true
