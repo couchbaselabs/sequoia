@@ -1,11 +1,16 @@
 package sequoia
 
+/*
+ * Container.go: container manager to wrap common docker tasks
+ */
+
 import (
 	"fmt"
 	"github.com/fatih/color"
 	"github.com/fsouza/go-dockerclient"
 	"log"
 	"os"
+	"strings"
 )
 
 type ContainerTask struct {
@@ -18,10 +23,16 @@ type ContainerTask struct {
 
 func (t *ContainerTask) GetOptions() docker.CreateContainerOptions {
 
-	links := fmt.Sprintf("%s:%s", t.LinksTo, t.LinksTo)
-	hostConfig := docker.HostConfig{
-		Links: []string{links},
+	hostConfig := docker.HostConfig{}
+	if len(t.LinksTo) > 0 {
+		links := strings.Split(t.LinksTo, ",")
+		pairs := []string{}
+		for _, name := range links {
+			pairs = append(pairs, name+":"+name)
+		}
+		hostConfig.Links = pairs
 	}
+
 	config := docker.Config{
 		Image: t.Image,
 		Cmd:   t.Command,
@@ -85,7 +96,7 @@ func (cm *ContainerManager) RunContainer(opts docker.CreateContainerOptions, asy
 
 func (cm *ContainerManager) Run(task ContainerTask) {
 
-	fmt.Printf("%s %s",
+	fmt.Printf("%s  %s",
 		color.CyanString("\u2192"),
 		color.WhiteString("%s", task.Description))
 
@@ -96,5 +107,5 @@ func (cm *ContainerManager) Run(task ContainerTask) {
 	chkerr(err)
 
 	// print result
-	fmt.Printf(color.GreenString("\t\u2713\n"))
+	fmt.Printf("\t%s\n", color.GreenString("\u2713"))
 }

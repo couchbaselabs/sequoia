@@ -1,14 +1,20 @@
 package sequoia
 
+/*
+ * Provider.go: providers provide couchbase servers to scope
+ */
+
 import (
 	"fmt"
 	"github.com/fatih/color"
 	"github.com/fsouza/go-dockerclient"
+	"strings"
 )
 
 type Provider interface {
 	ProvideCouchbaseServers(servers []ServerSpec)
 	GetHostAddress(name string) string
+	GetType() string
 }
 
 func NewProvider(config Config) Provider {
@@ -29,6 +35,9 @@ type DockerProvider struct {
 	ActiveContainers map[string]string
 }
 
+func (p *DockerProvider) GetType() string {
+	return "docker"
+}
 func (p *DockerProvider) GetHostAddress(name string) string {
 	var ipAddress string
 
@@ -75,4 +84,12 @@ func (p *DockerProvider) ProvideCouchbaseServers(servers []ServerSpec) {
 			fmt.Println(color.GreenString("\u2713 "), color.WhiteString("ok start %s", serverName))
 		}
 	}
+}
+
+func (p *DockerProvider) GetLinkPairs() string {
+	pairs := []string{}
+	for name, _ := range p.ActiveContainers {
+		pairs = append(pairs, name)
+	}
+	return strings.Join(pairs, ",")
 }

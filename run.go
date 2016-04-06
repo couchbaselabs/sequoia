@@ -1,16 +1,17 @@
 package main
 
 import (
-	"fmt"
 	S "github.com/couchbaselabs/sequoia/lib"
 	"os"
 )
 
 func main() {
 
+	// parse
 	config := S.NewConfigSpec(os.Args[1])
-	scope := S.SetupNewScope(config)
+	scope := S.NewScope(config)
+	test := S.NewTestSpec(config)
 
-	fmt.Println(scope)
-	/* todo: run test */
+	// run
+	test.Run(scope)
 }

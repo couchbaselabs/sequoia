@@ -14,7 +14,9 @@ package sequoia
 
 import (
 	"fmt"
+	"regexp"
 	"strconv"
+	"strings"
 )
 
 type Scope struct {
@@ -30,16 +32,29 @@ func NewScope(config Config) Scope {
 
 	// set container manager to use provisioning scope
 	cm := NewContainerManager(config.Client)
-	cm.RemoveAllContainers()
 
 	// create provider of resources for scope
 	provider := NewProvider(config)
-	provider.ProvideCouchbaseServers(spec.Servers)
 	return Scope{
 		spec,
 		cm,
 		provider,
 	}
+}
+
+func (s *Scope) Setup() {
+
+	s.Provider.ProvideCouchbaseServers(s.Spec.Servers)
+	s.WaitForNodes()
+	s.InitNodes()
+	s.InitCluster()
+	s.AddNodes()
+	s.RebalanceClusters()
+	s.CreateBuckets()
+}
+
+func (s *Scope) TearDown() {
+	s.Cm.RemoveAllContainers()
 }
 
 func (s *Scope) WaitForNodes() {
@@ -244,15 +259,44 @@ func (s *Scope) CreateBuckets() {
 
 }
 
-func SetupNewScope(config Config) Scope {
+func (s *Scope) CompileCommand(actionCommand string) []string {
 
-	scope := NewScope(config)
-	scope.WaitForNodes()
-	scope.InitNodes()
-	scope.InitCluster()
-	scope.AddNodes()
-	scope.RebalanceClusters()
-	scope.CreateBuckets()
+	// remove extraneous white space
+	re := regexp.MustCompile(`\s+`)
+	actionCommand = re.ReplaceAllString(actionCommand, " ")
 
-	return scope
+	//$address(servers,0,0)
+	idx := strings.Index(actionCommand, "$")
+	for idx > 0 {
+		fStart := strings.Index(actionCommand, "(")
+		fEnd := strings.Index(actionCommand, ")")
+		method := actionCommand[idx+1 : fStart]
+		args := actionCommand[fStart+1 : fEnd]
+		value := s.Resolve(method, args)
+		actionCommand = strings.Replace(
+			actionCommand,
+			actionCommand[idx:fEnd+1],
+			value, 1,
+		)
+		idx = strings.Index(actionCommand, "$")
+	}
+
+	// translate into in slice
+	command := strings.Split(actionCommand, " ")
+
+	return command
+}
+
+func (s *Scope) Resolve(method string, args string) string {
+	switch method {
+	case "servers":
+		argv := strings.Split(args, ",")
+		cluster, _ := strconv.Atoi(argv[0])
+		node, _ := strconv.Atoi(argv[1])
+		scopeName := s.Spec.Servers[cluster].Names[node]
+		address := s.Provider.GetHostAddress(scopeName)
+		return address
+	}
+
+	return ""
 }
