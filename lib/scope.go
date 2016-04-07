@@ -96,6 +96,12 @@ func (s *Scope) InitNodes() {
 			"-u", server.RestUsername,
 			"-p", server.RestPassword,
 		}
+		if server.DataPath != "" {
+		  command = append(command, "--node-init-data-path", server.DataPath)
+		}
+		if server.IndexPath != "" {
+		  command = append(command, "--node-init-index-path", server.IndexPath)
+		}
 		desc := "init node " + ip
 		task := ContainerTask{
 			Describe: desc,
@@ -106,6 +112,7 @@ func (s *Scope) InitNodes() {
 		if s.Provider.GetType() == "docker" {
 			task.LinksTo = name
 		}
+
 
 		s.Cm.Run(task)
 	}
@@ -132,6 +139,12 @@ func (s *Scope) InitCluster() {
 			"--cluster-port", server.RestPort,
 			"--cluster-ramsize", server.Ram,
 			"--services", services,
+		}
+                if server.IndexRam != "" {
+		  command = append(command, "--cluster-index-ramsize", server.IndexRam)
+                }
+		if server.IndexStorage != "" {
+		  command = append(command, "--index-storage-setting", server.IndexStorage)
 		}
 		desc := "init cluster " + orchestrator
 		task := ContainerTask{

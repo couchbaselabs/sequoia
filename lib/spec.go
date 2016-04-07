@@ -10,6 +10,7 @@ type Config struct {
 	Test         string
 	Provider     string
 	SkipSetup    bool `yaml:"skip_setup"`
+	SkipTest     bool `yaml:"skip_test"`
 	SkipTeardown bool `yaml:"skip_teardown"`
 	Repeat       int
 }
@@ -36,10 +37,14 @@ type ServerSpec struct {
 	Names        []string
 	Count        uint8
 	Ram          string
+        IndexRam     string  `yaml:"index_ram"`
 	RestUsername string `yaml:"rest_username"`
 	RestPassword string `yaml:"rest_password"`
 	RestPort     string `yaml:"rest_port"`
 	InitNodes    uint8  `yaml:"init_nodes"`
+        DataPath     string `yaml:"data_path"`
+        IndexPath    string `yaml:"index_path"`
+        IndexStorage string `yaml:"index_storage"`
 	Buckets      string
 	BucketSpecs  []BucketSpec
 	NodesActive  uint8

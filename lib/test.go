@@ -31,6 +31,16 @@ func NewTestSpec(config Config) Test {
 
 func (t *Test) Run(scope Scope) {
 
+	// do optional setup
+	if t.TestConfig.SkipSetup == false {
+		scope.TearDown()
+		scope.Setup()
+	}
+
+        if t.TestConfig.SkipTest == true {
+	  return
+	}
+
 	// run at least <repeat> times or forever if -1
 	repeat := t.TestConfig.Repeat
 	if repeat == -1 {
@@ -48,12 +58,6 @@ func (t *Test) Run(scope Scope) {
 }
 
 func (t *Test) _run(scope Scope) {
-
-	// do optional setup
-	if t.TestConfig.SkipSetup == false {
-		scope.TearDown()
-		scope.Setup()
-	}
 
 	// run all actions in test
 	var lastAction ActionSpec
