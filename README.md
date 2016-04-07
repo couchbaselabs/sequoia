@@ -1,13 +1,12 @@
 # sequoia
-Couchbase testing scaled way up with containers
+Scalable couchbase testing with docker
 
 **Install Docker**
 * Mac - https://docs.docker.com/mac/
 * Ubuntu - https://docs.docker.com/engine/installation/linux/ubuntulinux/
 
-**Requires**
-* Node - https://nodejs.org/en/download/
-* Npm - https://nodejs.org/en/download/package-manager/
+**Requires Go**
+* Download - https://golang.org/dl/ 
 
 
 **Build Containers**
@@ -17,5 +16,7 @@ Couchbase testing scaled way up with containers
 
 **Run Simple Test**
 ```bash
-npm test
+go get github.com/couchbaselabs/sequoia
+go build
+./sequoia config.yml
 ```
