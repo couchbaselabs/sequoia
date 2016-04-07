@@ -41,7 +41,7 @@ type FileProvider struct {
 }
 
 func (p *FileProvider) GetType() string {
-	return "plain"
+	return "file"
 }
 func (p *FileProvider) GetHostAddress(name string) string {
 	return p.ServerNameIp[name]

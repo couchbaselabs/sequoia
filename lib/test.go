@@ -35,7 +35,10 @@ func (t *Test) Run(scope Scope) {
 	if t.TestConfig.SkipSetup == false {
 		scope.TearDown()
 		scope.Setup()
-	}
+	} else if scope.Provider.GetType() == "file" {
+	   // at least IP's are needed for test
+	   scope.Provider.ProvideCouchbaseServers(scope.Spec.Servers)
+        }
 
         if t.TestConfig.SkipTest == true {
 	  return
