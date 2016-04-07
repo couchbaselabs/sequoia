@@ -1,5 +1,4 @@
 - 
-   describe: "10k Documents to default bucket with pillowfight" 
    image: pillowfight
-   command: "-U  $servers(0,0) -I 10000 -t 1 -c 100"
+   command: "-U  $address(0,0) -I 10000 -t 1 -c 100"
    wait: true

@@ -1,10 +1,6 @@
 package sequoia
 
 import (
-	"fmt"
-	"github.com/fatih/color"
-	"gopkg.in/yaml.v2"
-	"io/ioutil"
 	"strings"
 )
 
@@ -178,13 +174,4 @@ func NewScopeSpec(fileName string) ScopeSpec {
 	}
 
 	return spec
-}
-
-func ReadYamlFile(filename string, spec interface{}) {
-	source, err := ioutil.ReadFile(filename)
-	chkerr(err)
-
-	err = yaml.Unmarshal(source, spec)
-	chkerr(err)
-	fmt.Println(color.GreenString("\u2713 "), color.WhiteString("ok %s", filename))
 }

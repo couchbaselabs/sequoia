@@ -1,17 +1,16 @@
 ---
-buckets:
+buckets: # define single default bucket
   -
     name: default
-    count: 1  # single bucket named 'default'
-    ram: 128 
+    ram: 512 
     replica: 1
     type: couchbase
 
-servers:
+servers: # define a single server with link named 'local'
   -
-     name: local.st.couchbase.com
-     count: 2  # create single server with link named 'local'
-     ram: 1600 
+     name: local
+     count: 1  
+     ram: 756 
      rest_username: Administrator
      rest_password: password
      rest_port: 8091

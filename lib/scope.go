@@ -71,9 +71,12 @@ func (s *Scope) WaitForNodes() {
 			Describe: desc,
 			Image:    image,
 			Command:  command,
-			LinksTo:  name,
 			Async:    false,
 		}
+		if s.Provider.GetType() == "docker" {
+			task.LinksTo = name
+		}
+
 		s.Cm.Run(task)
 	}
 
@@ -98,9 +101,12 @@ func (s *Scope) InitNodes() {
 			Describe: desc,
 			Image:    image,
 			Command:  command,
-			LinksTo:  name,
 			Async:    false,
 		}
+		if s.Provider.GetType() == "docker" {
+			task.LinksTo = name
+		}
+
 		s.Cm.Run(task)
 	}
 
@@ -132,9 +138,12 @@ func (s *Scope) InitCluster() {
 			Describe: desc,
 			Image:    image,
 			Command:  command,
-			LinksTo:  orchestrator,
 			Async:    false,
 		}
+		if s.Provider.GetType() == "docker" {
+			task.LinksTo = orchestrator
+		}
+
 		s.Cm.Run(task)
 		server.NodesActive++
 	}
@@ -178,9 +187,12 @@ func (s *Scope) AddNodes() {
 			Describe: desc,
 			Image:    image,
 			Command:  command,
-			LinksTo:  orchestrator,
 			Async:    false,
 		}
+		if s.Provider.GetType() == "docker" {
+			task.LinksTo = orchestrator
+		}
+
 		s.Cm.Run(task)
 		server.NodesActive++
 	}
@@ -203,14 +215,17 @@ func (s *Scope) RebalanceClusters() {
 			"-u", server.RestUsername,
 			"-p", server.RestPassword,
 		}
-		desc := "rebalance cluster " + orchestrator
+		desc := "rebalance cluster " + orchestratorIp
 		task := ContainerTask{
 			Describe: desc,
 			Image:    image,
 			Command:  command,
-			LinksTo:  orchestrator,
 			Async:    false,
 		}
+		if s.Provider.GetType() == "docker" {
+			task.LinksTo = orchestrator
+		}
+
 		s.Cm.Run(task)
 	}
 
@@ -251,9 +266,12 @@ func (s *Scope) CreateBuckets() {
 					Describe: desc,
 					Image:    image,
 					Command:  command,
-					LinksTo:  orchestrator,
 					Async:    false,
 				}
+				if s.Provider.GetType() == "docker" {
+					task.LinksTo = orchestrator
+				}
+
 				s.Cm.Run(task)
 			}
 		}

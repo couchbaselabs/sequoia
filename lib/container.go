@@ -90,7 +90,7 @@ func (cm *ContainerManager) RunContainer(opts docker.CreateContainerOptions, asy
 	cm.Client.StartContainer(container.ID, nil)
 	if async == false {
 		if rc, _ := cm.Client.WaitContainer(container.ID); rc != 0 {
-			fmt.Println(color.RedString("\n\nContainer did not enjoy its' life: %s", container.ID))
+			fmt.Println(color.RedString("\n\nError on container: %s", container.Image))
 			logOpts := docker.LogsOptions{
 				Container:    container.ID,
 				OutputStream: os.Stdout,

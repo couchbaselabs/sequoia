@@ -20,14 +20,47 @@ type Provider interface {
 func NewProvider(config Config) Provider {
 	var provider Provider
 
-	if config.Provider == "docker" {
+	switch config.Provider {
+	case "docker":
 		cm := NewContainerManager(config.Client)
 		provider = &DockerProvider{
 			cm,
 			make(map[string]string),
 		}
+	case "file":
+		provider = &FileProvider{
+			make(map[string]string),
+		}
 	}
+
 	return provider
+}
+
+type FileProvider struct {
+	ServerNameIp map[string]string
+}
+
+func (p *FileProvider) GetType() string {
+	return "plain"
+}
+func (p *FileProvider) GetHostAddress(name string) string {
+	return p.ServerNameIp[name]
+}
+
+func (p *FileProvider) ProvideCouchbaseServers(servers []ServerSpec) {
+	var hostNames string
+	hostFile := "providers/file/hosts.yml"
+	ReadYamlFile(hostFile, &hostNames)
+	hosts := strings.Split(hostNames, " ")
+	var i int
+	for _, server := range servers {
+		for _, name := range server.Names {
+			if i < len(hosts) {
+				p.ServerNameIp[name] = hosts[i]
+			}
+			i++
+		}
+	}
 }
 
 type DockerProvider struct {
