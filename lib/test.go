@@ -1,54 +1,99 @@
 package sequoia
 
-import ()
+import (
+	"fmt"
+	"strings"
+)
 
 type ActionSpec struct {
-	Describe string
-	Image    string
-	Command  string
-	Wait     bool
+	Describe   string
+	Image      string
+	Command    string
+	Wait       bool
+	Entrypoint string
 }
 
 type Test struct {
-	Actions []ActionSpec
-	Cm      *ContainerManager
+	Actions    []ActionSpec
+	Cm         *ContainerManager
+	TestConfig Config
 }
 
 func NewTestSpec(config Config) Test {
 	var actions []ActionSpec
 	ReadYamlFile(config.Test, &actions)
 	cm := NewContainerManager(config.Client)
-	return Test{actions, cm}
+	return Test{actions,
+		cm,
+		config,
+	}
 }
 
 func (t *Test) Run(scope Scope) {
 
-	// setup scope
-	scope.TearDown()
-	scope.Setup()
+	// run at least <repeat> times or forever if -1
+	repeat := t.TestConfig.Repeat
+	if repeat == -1 {
+		// run forever
+		for {
+			t._run(scope)
+		}
+	} else {
+		repeat++
+		for loops := 0; loops < repeat; loops++ {
+			t._run(scope)
+		}
+	}
 
-	provider := scope.Provider
+}
 
-	// run actions
+func (t *Test) _run(scope Scope) {
+
+	// do optional setup
+	if t.TestConfig.SkipSetup == false {
+		scope.TearDown()
+		scope.Setup()
+	}
+
+	// run all actions in test
+	var lastAction ActionSpec
+
 	for _, action := range t.Actions {
 
 		// resolve command
 		command := scope.CompileCommand(action.Command)
 
+		if action.Image == "" {
+			// reuse last action
+			action.Image = lastAction.Image
+		}
+
+		if action.Describe == "" { // use command as describe
+			action.Describe = fmt.Sprintf("%s: %s", action.Image, strings.Join(command, " "))
+		}
+
 		// compile task
 		task := ContainerTask{
-			Description: action.Describe,
-			Image:       action.Image,
-			Command:     command,
-			Async:       !action.Wait,
+			Describe: action.Describe,
+			Image:    action.Image,
+			Command:  command,
+			Async:    !action.Wait,
 		}
-		if provider.GetType() == "docker" {
-			task.LinksTo = provider.(*DockerProvider).GetLinkPairs()
+		if scope.Provider.GetType() == "docker" {
+			task.LinksTo = scope.Provider.(*DockerProvider).GetLinkPairs()
+		}
+		if action.Entrypoint != "" {
+			task.Entrypoint = []string{action.Entrypoint}
 		}
 
 		// run
 		t.Cm.Run(task)
+
+		lastAction = action
 	}
 
-	scope.TearDown()
+	// do optional teardown
+	if t.TestConfig.SkipTeardown == false {
+		scope.TearDown()
+	}
 }

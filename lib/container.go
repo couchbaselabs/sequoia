@@ -8,17 +8,17 @@ import (
 	"fmt"
 	"github.com/fatih/color"
 	"github.com/fsouza/go-dockerclient"
-	"log"
 	"os"
 	"strings"
 )
 
 type ContainerTask struct {
-	Description string
-	Image       string
-	Command     []string
-	LinksTo     string
-	Async       bool
+	Describe   string
+	Image      string
+	Command    []string
+	LinksTo    string
+	Async      bool
+	Entrypoint []string
 }
 
 func (t *ContainerTask) GetOptions() docker.CreateContainerOptions {
@@ -36,6 +36,9 @@ func (t *ContainerTask) GetOptions() docker.CreateContainerOptions {
 	config := docker.Config{
 		Image: t.Image,
 		Cmd:   t.Command,
+	}
+	if len(t.Entrypoint) > 0 {
+		config.Entrypoint = t.Entrypoint
 	}
 	return docker.CreateContainerOptions{
 		Config:     &config,
@@ -86,8 +89,17 @@ func (cm *ContainerManager) RunContainer(opts docker.CreateContainerOptions, asy
 	container, err := cm.Client.CreateContainer(opts)
 	cm.Client.StartContainer(container.ID, nil)
 	if async == false {
-		if rc, err := cm.Client.WaitContainer(container.ID); rc != 0 {
-			log.Fatal("Container did not live a good life", err)
+		if rc, _ := cm.Client.WaitContainer(container.ID); rc != 0 {
+			fmt.Println(color.RedString("\n\nContainer did not enjoy its' life: %s", container.ID))
+			logOpts := docker.LogsOptions{
+				Container:    container.ID,
+				OutputStream: os.Stdout,
+				ErrorStream:  os.Stderr,
+				RawTerminal:  true,
+				Stdout:       true,
+				Stderr:       true,
+			}
+			cm.Client.Logs(logOpts)
 		}
 	}
 
@@ -98,7 +110,7 @@ func (cm *ContainerManager) Run(task ContainerTask) {
 
 	fmt.Printf("%s  %s",
 		color.CyanString("\u2192"),
-		color.WhiteString("%s", task.Description))
+		color.WhiteString("%s\t", task.Describe))
 
 	// get task options
 	options := task.GetOptions()
@@ -107,5 +119,5 @@ func (cm *ContainerManager) Run(task ContainerTask) {
 	chkerr(err)
 
 	// print result
-	fmt.Printf("\t%s\n", color.GreenString("\u2713"))
+	fmt.Printf("%s\n", color.GreenString("\u2713"))
 }

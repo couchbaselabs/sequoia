@@ -14,6 +14,7 @@ package sequoia
 
 import (
 	"fmt"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -67,11 +68,11 @@ func (s *Scope) WaitForNodes() {
 		command := []string{"-c", ip, "-t", "120"}
 		desc := "wait for " + ip
 		task := ContainerTask{
-			desc,
-			image,
-			command,
-			name,
-			false,
+			Describe: desc,
+			Image:    image,
+			Command:  command,
+			LinksTo:  name,
+			Async:    false,
 		}
 		s.Cm.Run(task)
 	}
@@ -94,11 +95,11 @@ func (s *Scope) InitNodes() {
 		}
 		desc := "init node " + ip
 		task := ContainerTask{
-			desc,
-			image,
-			command,
-			name,
-			false,
+			Describe: desc,
+			Image:    image,
+			Command:  command,
+			LinksTo:  name,
+			Async:    false,
 		}
 		s.Cm.Run(task)
 	}
@@ -114,6 +115,8 @@ func (s *Scope) InitCluster() {
 	initClusterOp := func(name string, server ServerSpec) {
 		orchestrator := server.Names[0]
 		ip := s.Provider.GetHostAddress(orchestrator)
+		servicesList := server.NodeServices[name]
+		services := strings.Join(servicesList, ",")
 		command := []string{"cluster-init",
 			"-c", ip,
 			"-u", server.RestUsername,
@@ -122,15 +125,15 @@ func (s *Scope) InitCluster() {
 			"--cluster-password", server.RestPassword,
 			"--cluster-port", server.RestPort,
 			"--cluster-ramsize", server.Ram,
-			"--services", server.Services,
+			"--services", services,
 		}
 		desc := "init cluster " + orchestrator
 		task := ContainerTask{
-			desc,
-			image,
-			command,
-			orchestrator,
-			false,
+			Describe: desc,
+			Image:    image,
+			Command:  command,
+			LinksTo:  orchestrator,
+			Async:    false,
 		}
 		s.Cm.Run(task)
 		server.NodesActive++
@@ -158,6 +161,8 @@ func (s *Scope) AddNodes() {
 			return // not adding self
 		}
 
+		servicesList := server.NodeServices[name]
+		services := strings.Join(servicesList, ",")
 		command := []string{"server-add",
 			"-c", orchestratorIp,
 			"-u", server.RestUsername,
@@ -165,16 +170,16 @@ func (s *Scope) AddNodes() {
 			"--server-add", ip,
 			"--server-add-username", server.RestUsername,
 			"--server-add-password", server.RestPassword,
-			"--services", server.Services,
+			"--services", services,
 		}
 
 		desc := "add node " + ip
 		task := ContainerTask{
-			desc,
-			image,
-			command,
-			orchestrator,
-			false,
+			Describe: desc,
+			Image:    image,
+			Command:  command,
+			LinksTo:  orchestrator,
+			Async:    false,
 		}
 		s.Cm.Run(task)
 		server.NodesActive++
@@ -200,11 +205,11 @@ func (s *Scope) RebalanceClusters() {
 		}
 		desc := "rebalance cluster " + orchestrator
 		task := ContainerTask{
-			desc,
-			image,
-			command,
-			orchestrator,
-			false,
+			Describe: desc,
+			Image:    image,
+			Command:  command,
+			LinksTo:  orchestrator,
+			Async:    false,
 		}
 		s.Cm.Run(task)
 	}
@@ -243,11 +248,11 @@ func (s *Scope) CreateBuckets() {
 
 				desc := "bucket create " + bucketName
 				task := ContainerTask{
-					desc,
-					image,
-					command,
-					orchestrator,
-					false,
+					Describe: desc,
+					Image:    image,
+					Command:  command,
+					LinksTo:  orchestrator,
+					Async:    false,
 				}
 				s.Cm.Run(task)
 			}
@@ -267,7 +272,7 @@ func (s *Scope) CompileCommand(actionCommand string) []string {
 
 	//$address(servers,0,0)
 	idx := strings.Index(actionCommand, "$")
-	for idx > 0 {
+	for idx > -1 {
 		fStart := strings.Index(actionCommand, "(")
 		fEnd := strings.Index(actionCommand, ")")
 		method := actionCommand[idx+1 : fStart]
@@ -289,14 +294,27 @@ func (s *Scope) CompileCommand(actionCommand string) []string {
 
 func (s *Scope) Resolve(method string, args string) string {
 	switch method {
-	case "servers":
+	case "address":
 		argv := strings.Split(args, ",")
 		cluster, _ := strconv.Atoi(argv[0])
 		node, _ := strconv.Atoi(argv[1])
 		scopeName := s.Spec.Servers[cluster].Names[node]
 		address := s.Provider.GetHostAddress(scopeName)
 		return address
+	case "bucket":
+		argv := strings.Split(args, ",")
+		set, _ := strconv.Atoi(argv[0])
+		index, _ := strconv.Atoi(argv[1])
+		bucket := s.Spec.Buckets[set].Names[index]
+		return bucket
+	case "attr":
+		argv := strings.Split(args, ",")
+		cluster, _ := strconv.Atoi(argv[0])
+		attr := strings.TrimSpace(argv[1])
+		attr = s.Spec.ToAttr(attr)
+		spec := reflect.ValueOf(s.Spec.Servers[cluster])
+		val := spec.FieldByName(attr).String()
+		return val
 	}
-
 	return ""
 }

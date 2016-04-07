@@ -9,10 +9,13 @@ import (
 )
 
 type Config struct {
-	Client   string
-	Scope    string
-	Test     string
-	Provider string
+	Client       string
+	Scope        string
+	Test         string
+	Provider     string
+	SkipSetup    bool `yaml:"skip_setup"`
+	SkipTeardown bool `yaml:"skip_teardown"`
+	Repeat       int
 }
 
 func NewConfigSpec(fileName string) Config {
@@ -41,10 +44,57 @@ type ServerSpec struct {
 	RestPassword string `yaml:"rest_password"`
 	RestPort     string `yaml:"rest_port"`
 	InitNodes    uint8  `yaml:"init_nodes"`
-	Services     string
 	Buckets      string
 	BucketSpecs  []BucketSpec
 	NodesActive  uint8
+	Services     map[string]uint8
+	NodeServices map[string][]string
+}
+
+func (s *ServerSpec) InitNodeServices() {
+
+	var i uint8
+	numNodes := s.Count
+	numIndexNodes := s.Services["index"]
+	numQueryNodes := s.Services["query"]
+	numDataNodes := s.Services["data"]
+	s.NodeServices = make(map[string][]string)
+
+	// Spread Strategy
+	// make first set of nodes data
+	// and second set index to avoid
+	// overlapping if possible when specific
+	// number of service types provided
+	indexStartPos := numNodes - numQueryNodes - numIndexNodes
+	if indexStartPos < 0 {
+		indexStartPos = 0
+	}
+
+	queryStartPos := numNodes - numQueryNodes
+	if queryStartPos < 0 {
+		queryStartPos = 0
+	}
+
+	for i = 0; i < numNodes; i = i + 1 {
+		name := s.Names[i]
+		s.NodeServices[name] = []string{}
+		if numDataNodes > 0 {
+			s.NodeServices[name] = append(s.NodeServices[name], "data")
+			numDataNodes--
+		}
+		if i >= indexStartPos && numIndexNodes > 0 {
+			s.NodeServices[name] = append(s.NodeServices[name], "index")
+			numIndexNodes--
+		}
+		if i >= queryStartPos && numQueryNodes > 0 {
+			s.NodeServices[name] = append(s.NodeServices[name], "query")
+			numQueryNodes--
+		}
+		// must have at least data service
+		if len(s.NodeServices[name]) == 0 {
+			s.NodeServices[name] = append(s.NodeServices[name], "data")
+		}
+	}
 }
 
 type ScopeSpec struct {
@@ -59,8 +109,13 @@ func (s *ScopeSpec) ApplyToAllServers(operation func(string, ServerSpec)) {
 func (s *ScopeSpec) ApplyToServers(operation func(string, ServerSpec),
 	startIdx int, endIdx int) {
 
+	useLen := false
+	if endIdx == 0 {
+		useLen = true
+	}
+
 	for _, server := range s.Servers {
-		if endIdx == 0 {
+		if useLen {
 			endIdx = len(server.Names)
 		}
 		for _, serverName := range server.Names[startIdx:endIdx] {
@@ -69,60 +124,60 @@ func (s *ScopeSpec) ApplyToServers(operation func(string, ServerSpec),
 	}
 }
 
+func (s *ScopeSpec) ToAttr(attr string) string {
+
+	switch attr {
+
+	case "rest_username":
+		return "RestUsername"
+	case "rest_password":
+		return "RestPassword"
+	case "name":
+		return "Name"
+	case "ram":
+		return "Ram"
+	case "rest_port":
+		return "RestPort"
+	}
+
+	return ""
+}
+
 func NewScopeSpec(fileName string) ScopeSpec {
 
 	// init from yaml
-	var scope ScopeSpec
-	ReadYamlFile(fileName, &scope)
+	var spec ScopeSpec
+	ReadYamlFile(fileName, &spec)
 
-	// init bucket section of scope
+	// init bucket section of spec
 	bucketNameMap := make(map[string]BucketSpec)
-	for i, bucket := range scope.Buckets {
-		scope.Buckets[i].Names = ExpandName(bucket.Name, bucket.Count)
-		if scope.Buckets[i].Type == "" {
-			scope.Buckets[i].Type = "couchbase"
+	for i, bucket := range spec.Buckets {
+		spec.Buckets[i].Names = ExpandName(bucket.Name, bucket.Count)
+		if spec.Buckets[i].Type == "" {
+			spec.Buckets[i].Type = "couchbase"
 		}
-		if scope.Buckets[i].Replica == 0 {
-			scope.Buckets[i].Replica = 1
+		if spec.Buckets[i].Replica == 0 {
+			spec.Buckets[i].Replica = 1
 		}
-		bucketNameMap[bucket.Name] = scope.Buckets[i]
+		bucketNameMap[bucket.Name] = spec.Buckets[i]
 	}
 
-	// init server section of scope
-	for i, server := range scope.Servers {
-		scope.Servers[i].Names = ExpandName(server.Name, server.Count)
-		scope.Servers[i].BucketSpecs = make([]BucketSpec, 0)
-
+	// init server section of spec
+	for i, server := range spec.Servers {
+		spec.Servers[i].Names = ExpandName(server.Name, server.Count)
+		spec.Servers[i].BucketSpecs = make([]BucketSpec, 0)
 		// map server buckets to bucket objects
-		bucketList := strings.Split(scope.Servers[i].Buckets, ",")
+		bucketList := strings.Split(spec.Servers[i].Buckets, ",")
 		for _, bucketName := range bucketList {
 			if bucketSpec, ok := bucketNameMap[bucketName]; ok {
-				scope.Servers[i].BucketSpecs = append(scope.Servers[i].BucketSpecs, bucketSpec)
+				spec.Servers[i].BucketSpecs = append(spec.Servers[i].BucketSpecs, bucketSpec)
 			}
 		}
+		// init node services
+		spec.Servers[i].InitNodeServices()
 	}
 
-	return scope
-}
-
-func ExpandName(name string, count uint8) []string {
-	names := make([]string, count)
-	var i uint8
-
-	if count == 1 {
-		names[0] = name
-	} else {
-		for i = 1; i <= count; i++ {
-			parts := strings.Split(name, ".")
-			fqn := fmt.Sprintf("%s-%d", parts[0], i)
-			if len(parts) > 1 {
-				parts[0] = fqn
-				fqn = strings.Join(parts, ".")
-			}
-			names[i-1] = fqn
-		}
-	}
-	return names
+	return spec
 }
 
 func ReadYamlFile(filename string, spec interface{}) {

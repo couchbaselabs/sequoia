@@ -41,19 +41,31 @@ func (p *DockerProvider) GetType() string {
 func (p *DockerProvider) GetHostAddress(name string) string {
 	var ipAddress string
 
-	if id, ok := p.ActiveContainers[name]; ok {
-		container, err := p.Cm.Client.InspectContainer(id)
+	id, ok := p.ActiveContainers[name]
+	if ok == false {
+		// look up container by name
+		filter := make(map[string][]string)
+		filter["name"] = []string{name}
+		opts := docker.ListContainersOptions{
+			Filters: filter,
+		}
+		containers, err := p.Cm.Client.ListContainers(opts)
 		chkerr(err)
-		ipAddress = container.NetworkSettings.IPAddress
+		id = containers[0].ID
 	}
+	container, err := p.Cm.Client.InspectContainer(id)
+	chkerr(err)
+	ipAddress = container.NetworkSettings.IPAddress
+
 	return ipAddress
 }
 
 func (p *DockerProvider) ProvideCouchbaseServers(servers []ServerSpec) {
 
+	var i int = 0
 	for _, server := range servers {
 		serverNameList := ExpandName(server.Name, server.Count)
-		for i, serverName := range serverNameList {
+		for _, serverName := range serverNameList {
 
 			portStr := fmt.Sprintf("%d", 8091+i)
 			port := docker.Port(portStr + "/tcp")
@@ -77,11 +89,13 @@ func (p *DockerProvider) ProvideCouchbaseServers(servers []ServerSpec) {
 				Config:     &config,
 				HostConfig: &hostConfig,
 			}
+
 			container, err := p.Cm.RunContainer(options, true)
 			chkerr(err)
 			p.ActiveContainers[container.Name] = container.ID
 
 			fmt.Println(color.GreenString("\u2713 "), color.WhiteString("ok start %s", serverName))
+			i++
 		}
 	}
 }
