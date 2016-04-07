@@ -11,7 +11,9 @@
 -
    command: "python tpcc.py --duration 2259200 --client 5 --warehouses 10
 				 --no-load n1ql  --query-url $address(0,7):8093"
-
+-
+   image: cbq
+   command: "-e=http://$address(0,7):8093  -u=Administrator -p=password -script='create index default_rating on `default`(rating)'"
 #============ continous kv loading a minimum of 15M items  ============
 -
    image: pillowfight
