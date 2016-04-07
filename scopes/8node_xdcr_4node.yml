@@ -1,94 +1,67 @@
 ---
 buckets:
-  default:
-    ram: 6000
-    replica: 1
-    eviction: fullEviction
-    type: couchbase
-
-  CUSTOMER:
-    count: 1
-    ram: 256
-    replica: 1
-    type: couchbase
-
-  DISTRICT:
-    count: 1
-    ram: 100
-    replica: 1
-    type: couchbase
-
-  HISTORY:
-    count: 1
-    ram: 128
-    replica: 1
-    type: couchbase
-
-  ITEM:
-    count: 1
-    ram: 128
-    replica: 1
-    type: couchbase
-
-  NEW_ORDER:
-    count: 1
-    ram: 256
-    replica: 1
-    type: couchbase
-
-  ORDERS:
-    count: 1
-    ram: 1024
-    replica: 1
-    type: couchbase
-
-  ORDER_LINE:
-    count: 1
-    ram: 1024
-    replica: 1
-    type: couchbase
-
-  STOCK:
-    count: 1
-    ram: 512
-    replica: 1
-    type: couchbase
-
-  WAREHOUSE:
-    count: 1
-    ram: 128
-    replica: 1
-    type: couchbase
-
-  remote:
-    ram: 90000 
-    replica: 1
-    type: couchbase
+  -
+      name: default
+      ram: 6000
+      eviction: fullEviction
+  -
+      name: CUSTOMER
+      ram: 256
+  -
+      name: DISTRICT
+      ram: 100
+  -
+      name: HISTORY
+      ram: 128
+  -
+      name: ITEM
+      ram: 128
+      replica: 1
+      type: couchbase
+  -
+      name: NEW_ORDER
+      ram: 256
+  -
+      name: ORDERS
+      ram: 1024
+  -
+      name: ORDER_LINE
+      ram: 1024
+  -
+      name: STOCK
+      ram: 512
+  -
+      name: WAREHOUSE
+      ram: 128
+  -
+      name: remote
+      ram: 90000
 
 servers: # each server tag represents a cluster
- local.st.couchbase.com:
-    count: 8
-    ram: 10000
-    index_ram: 20000
-    storage_mode: forestdb 
-    services: 
+  -
+      name: local.st.couchbase.com
+      count: 8
+      ram: 10000
+      index_ram: 20000
+      #index_storage: forestdb
+      services:
         query: 1
         index: 1
-    rest_username: Administrator
-    rest_password: password
-    data_path: "/data"
-    index_path: "/data"
-    rest_port: 8091
-    query_port: 8093
-    init_nodes: 8
-    buckets: default,CUSTOMER,DISTRICT,HISTORY,ITEM,NEW_ORDER,ORDERS,ORDER_LINE,STOCK,WAREHOUSE
- remote.st.couchbase.com:
-    count: 2
-    ram: 90000
-    rest_username: Administrator
-    rest_password: password
-    data_path: "/data"
-    rest_port: 8091
-    init_nodes: 2
-    buckets: remote 
-
+      rest_username: Administrator
+      rest_password: password
+      data_path: "/data"
+      index_path: "/data"
+      rest_port: 8091
+      query_port: 8093
+      init_nodes: 8
+      buckets: default,CUSTOMER,DISTRICT,HISTORY,ITEM,NEW_ORDER,ORDERS,ORDER_LINE,STOCK,WAREHOUSE
+  -
+      name: remote.st.couchbase.com
+      count: 2
+      ram: 90000
+      rest_username: Administrator
+      rest_password: password
+      data_path: "/data"
+      rest_port: 8091
+      init_nodes: 2
+      buckets: remote

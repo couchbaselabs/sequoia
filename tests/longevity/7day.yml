@@ -1,60 +1,172 @@
 ---
-#============ initial bucket flushing  ============
-- 
-    image: couchbase-cli
-    command:  "bucket-flush -c $address(0,0) --force --bucket $bucket(0,0)"
-    wait: true
-- 
-    command:  "bucket-flush -c $address(0,0) --force --bucket $bucket(1,0)"
-    wait: true
+#============ start tpcc indexing  ============
+-
+   image: tpcc
+   command:  "./run.sh $address(0,7):8093 util/cbcrindex.sql"
+   wait: true
+-
+   command: "python tpcc.py --duration 259200 --client 5 --warehouses 10 --no-execute n1ql
+				 --query-url $address(0,7):8093
+				 --userid Administrator --password password"
+-
+   command: "python tpcc.py --duration 2259200 --client 5 --warehouses 10
+				 --no-load n1ql  --query-url $address(0,7):8093"
 
 #============ continous kv loading a minimum of 15M items  ============
-- 
+-
    image: pillowfight
-   command: "-U  $address(0,0) -I 10000 -t 1 -c 100"
-- 
-   command: "-U  $address(0,0)/$bucket(1,0) -p bbb -I 10000 -t 1 -c 100"
-   wait: true
+   command: "-U $address(0,0) -M 512 -p aaa -I 5000000 -t 4 -B 100 --rate-limit 1000"
+-
+   command: "-U $address(0,0) -M 512 -p bbb -I 5000000 -t 4 -B 100 --rate-limit 1000"
+-
+   command: "-U $address(0,0) -M 512 -p ccc -I 5000000 -t 4 -B 100 --rate-limit 1000"
+-
+   image: gideon
+   command: "kv --ops 5000 --create 30 --get 70 --delete 10 --expire 20 --ttl 600  --hosts $address(0,0) --bucket  $bucket(0,0) --sizes 16000"
 
 #============ start view queries  ============
-- 
-   image: gideon
-   command: "kv --ops 5000 --create 30 --get 70 --delete 10 --expire 20 --ttl 600  --hosts $address(0,1) --bucket  $bucket(0,0) --sizes 16000"
-
-- 
+-
    image: gideon
    entrypoint: "./addviews.sh"
    command: "$address(0,0):8092 $bucket(1,0)"
    wait: true
-- 
+-
    command: "query --host $address(0,0) --ddoc scale --view stats --concurrency 10"
-- 
+-
    command: "query --host $address(0,0) --ddoc scale --view padd --concurrency 10"
-- 
+-
    command: "query --host $address(0,0) --ddoc scale --view array --concurrency 10"
 
 
-#============ start xdcr replications ============
-- 
-     image: couchbase-cli
-     command:  'xdcr-setup -c  $address(0,0) --create
-                      --xdcr-cluster-name $attr(0, name)
-                      --xdcr-hostname $address(1,0)
-                      --xdcr-username $attr(1, rest_username)
-                      --xdcr-password $attr(1, rest_password)'
-     wait: true
-- 
-     command: 'xdcr-replicate -c $address(0,0)
-                      --xdcr-cluster-name $attr(0, name) 
-                      --xdcr-from-bucket $bucket(0,0) 
-                      --xdcr-to-bucket $bucket(0,0)'
-     wait: true
+#============ load 1M items ============
+-
+   image: pillowfight
+   command: "-U $address(0,0) -I 1000000 -t 4 -B 250 -c 1000"
+   wait: true
 
 #============ rebalance out a node============
-- 
+-
     image: couchbase-cli
     command:  "rebalance -c  $address(0,0)
-               --server-remove $address(0,1)
-               -u  $attr(0, rest_username) -p  $attr(0, rest_password)"
+	       --server-remove $address(0,1)
+	       -u  $attr(0, rest_username) -p  $attr(0, rest_password)"
     wait: true
 
+#============ start xdcr replications ============
+-
+   image: couchbase-cli
+   command:  'xdcr-setup -c  $address(0,0) --create
+		    --xdcr-cluster-name $attr(0, name)
+		    --xdcr-hostname $address(1,0)
+		    --xdcr-username $attr(1, rest_username)
+		    --xdcr-password $attr(1, rest_password)'
+   wait: true
+-
+   command: 'xdcr-replicate -c $address(0,0)
+		    --xdcr-cluster-name $attr(0, name)
+		    --xdcr-from-bucket $bucket(0,0)
+		    --xdcr-to-bucket remote'
+   wait: true
+
+#============ load 1M items ============
+-
+   image: pillowfight
+   command: "-U $address(0,0) -I 1000000 -t 4 -B 250 -c 1000"
+   wait: true
+
+
+#============ swap rebalance ============
+-
+   image: couchbase-cli
+   command: "server-add -c  $address(0,0)
+	     --server-add  $address(0,1)
+	     -u  $attr(0, rest_username) -p  $attr(0, rest_password)
+	     --server-add-username $attr(0, rest_username) --server-add-password  $attr(0, rest_password)"
+   wait: true
+-
+   command:  "rebalance -c  $address(0,0)
+		--server-remove $address(0,2)
+		-u  $attr(0, rest_username) -p  $attr(0, rest_password)"
+   wait: true
+
+#============ update 1M items ============
+-
+   image: pillowfight
+   command: "-U $address(0,0) -I 1000000 -t 4 -B 250 -c 1000"
+   wait: true
+
+
+
+#============ swap failover ============
+-
+   image: couchbase-cli
+   command: "server-add -c  $address(0,0)
+	     --server-add  $address(0,2)
+	     -u  $attr(0, rest_username) -p  $attr(0, rest_password)
+	     --server-add-username $attr(0, rest_username) --server-add-password  $attr(0, rest_password)"
+   wait: true
+-
+   command: "failover -c $address(0,0)
+	     --server-failover $address(0,1)
+	     -u  $attr(0, rest_username) -p  $attr(0, rest_password)"
+   wait: true
+-
+   command:  "rebalance -c  $address(0,0) -u  $attr(0, rest_username) -p  $attr(0, rest_password)"
+   wait: true
+
+#============ update 1M items ============
+-
+   image: pillowfight
+   command: "-U $address(0,0) -I 1000000 -t 4 -B 250 -c 1000"
+   wait: true
+
+
+#============ swap hard failover ============
+-
+   image: couchbase-cli  # as indexer
+   command: "server-add -c  $address(0,0)
+	     --server-add  $address(0,1)
+	     -u  $attr(0, rest_username) -p  $attr(0, rest_password)
+	     --server-add-username $attr(0, rest_username) --server-add-password  $attr(0, rest_password)"
+   wait: true
+-
+   command: "failover -c $address(0,0)
+	    --server-failover $address(0,2)
+	    -u  $attr(0, rest_username) -p  $attr(0, rest_password) --force"
+   wait: true
+-
+   command: "failover -c $address(0,0)
+	    --server-failover $address(0,3)
+	    -u  $attr(0, rest_username) -p  $attr(0, rest_password) --force"
+   wait: true
+-
+   command:  "rebalance -c  $address(0,0) -u  $attr(0, rest_username) -p  $attr(0, rest_password)"
+   wait: true
+
+
+
+#============ update 1M items ============
+-
+   image: pillowfight
+   command: "-U $address(0,0) -I 1000000 -t 4 -B 250 -c 1000"
+   wait: true
+
+
+
+#============ add back============
+-
+   image: couchbase-cli
+   command: "server-add -c  $address(0,0)
+	     --server-add  $address(0,2)
+	     -u  $attr(0, rest_username) -p  $attr(0, rest_password)
+	     --server-add-username $attr(0, rest_username) --server-add-password  $attr(0, rest_password)"
+   wait: true
+-
+   command: "server-add -c  $address(0,0)
+	     --server-add  $address(0,3)
+	     -u  $attr(0, rest_username) -p  $attr(0, rest_password)
+	     --server-add-username $attr(0, rest_username) --server-add-password  $attr(0, rest_password)"
+   wait: true
+-
+   command:  "rebalance -c  $address(0,0) -u  $attr(0, rest_username) -p  $attr(0, rest_password)"
+   wait: true
