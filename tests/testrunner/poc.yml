@@ -1,5 +1,0 @@
-n1ql:
-  - test:
-     container: testrunner
-     command: "-i local.ini -c conf/2i/py-clusterops.conf -p doc-per-day=1,get-cbcollect-info=False,gsi_type=forestdb"
-     wait: true

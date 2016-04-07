@@ -1,6 +1,6 @@
 client:  https://192.168.99.100:2376
-scope:  tests/simple/small_cluster.yml
-test: tests/simple/simple.yml
+scope:  tests/tpcc/scope_4IndexQuery.yml
+test: tests/tpcc/test_tpcc10MinsTest.yml
 provider: docker 
 skip_setup: false 
 skip_teardown: false 

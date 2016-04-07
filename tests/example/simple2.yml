@@ -1,6 +1,0 @@
----
-load:
-  - test:
-     container: gideon
-     wait: false
-     duration: 30000
