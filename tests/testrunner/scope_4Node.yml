@@ -3,7 +3,7 @@ buckets:
 -
     name: default
     count: 1  # single bucket named 'default'
-    ram: 1024
+    ram: 100% 
     replica: 1
     type: couchbase
 
@@ -11,7 +11,7 @@ servers:
 -
      name: local.st.couchbase.com
      count: 4  # create single server with link named 'local'
-     ram: 4096
+     ram: 80% 
      rest_username: Administrator
      rest_password: password
      rest_port: 8091

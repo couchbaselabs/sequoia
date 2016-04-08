@@ -2,12 +2,12 @@
 #============ 10mins tpcc ============
 -
    image: tpcc
-   command:  "./run.sh $address(0,2):8093 util/cbcrindex.sql"
+   command:  "./run.sh $node(0:n1ql):8093 util/cbcrindex.sql"
    wait: true
 -
    command: "python tpcc.py --duration 60 --client 5 --warehouses 10 --no-execute n1ql
-				 --query-url $address(0,2):8093
+				 --query-url $node(0:n1ql):8093
 				 --userid Administrator --password password"
 -
    command: "python tpcc.py --duration 60 --client 5 --warehouses 10
-				 --no-load n1ql  --query-url $address(0,2):8093"
+				 --no-load n1ql  --query-url $node(0:n1ql):8093"

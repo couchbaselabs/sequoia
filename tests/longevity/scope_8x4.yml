@@ -37,29 +37,29 @@ buckets:
 
 servers: # each server tag represents a cluster
   -
-      name: local.st.couchbase.com
+      name: local
       count: 8
       ram: 90% 
-      index_ram: 512 
-      #index_storage: forestdb
+      index_ram: 90% 
+      index_storage: forestdb
       services:
         query: 1
         index: 1
       rest_username: Administrator
       rest_password: password
-#      data_path: "/data"
-#      index_path: "/data"
+      data_path: "/data"
+      index_path: "/data"
       rest_port: 8091
       query_port: 8093
       init_nodes: 8
       buckets: default,CUSTOMER,DISTRICT,HISTORY,ITEM,NEW_ORDER,ORDERS,ORDER_LINE,STOCK,WAREHOUSE
   -
-      name: remote.st.couchbase.com
+      name: remote
       count: 2
       ram: 90% 
       rest_username: Administrator
       rest_password: password
-#      data_path: "/data"
+      data_path: "/data"
       rest_port: 8091
       init_nodes: 2
       buckets: remote

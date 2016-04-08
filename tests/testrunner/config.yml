@@ -2,6 +2,7 @@ client:  https://192.168.99.100:2376
 scope:  tests/testrunner/scope_4Node.yml
 test: tests/testrunner/test_n1ql.yml
 provider: docker 
-skip_setup: false 
-skip_teardown: false 
-repeat: 0 
+options:
+  skip_setup: false 
+  skip_teardown: false 
+  repeat: 0 

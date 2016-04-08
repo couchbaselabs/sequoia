@@ -8,7 +8,7 @@ buckets: # define single default bucket
 
 servers: # define a single server with link named 'local'
   -
-     name: local
+     name: allday.st.couchbase.com
      ram: 70% 
      index_ram: 20% 
      count: 4

@@ -1,73 +1,72 @@
 ---
 #============ start tpcc indexing  ============
-
 -
    image: tpcc
-   command:  "./run.sh $address(0,7):8093 util/cbcrindex.sql"
+   command:  "./run.sh $node(0:n1ql):8093 util/cbcrindex.sql"
    wait: true
 -
-   command: "python tpcc.py --duration 259200 --client 5 --warehouses 10 --no-execute n1ql
-				 --query-url $address(0,7):8093
+   command: "python tpcc.py --duration 259200 --client $toscale(1) --warehouses $toscale(2) --no-execute n1ql
+				 --query-url $node(0:n1ql):8093
 				 --userid Administrator --password password"
 -
-   command: "python tpcc.py --duration 2259200 --client 5 --warehouses 10
-				 --no-load n1ql  --query-url $address(0,7):8093"
+   command: "python tpcc.py --duration 2259200 --client $toscale(1) --warehouses $toscale(2) 
+				 --no-load n1ql  --query-url $node(0:n1ql):8093"
 -
    image: cbq
-   command: "-e=http://$address(0,7):8093  -u=Administrator -p=password -script='create index default_rating on `default`(rating)'"
+   command: "-e=http://$node(0:n1ql):8093  -u=Administrator -p=password -script='create index default_rating on `default`(rating)'"
 
 
 #============ continous kv loading a minimum of 15M items  ============
 -
    image: pillowfight
-   command: "-U $address(0,0) -M 512 -p aaa -I 5000000 -t 4 -B 100 --rate-limit 1000"
+   command: "-U $orchestrator() -M 512 -p aaa -I $toscale(1000) -B $toscale(100) -t 4  --rate-limit $toscale(100)"
 -
-   command: "-U $address(0,0) -M 512 -p bbb -I 5000000 -t 4 -B 100 --rate-limit 1000"
+   command: "-U $orchestrator() -M 512 -p bbb -I $toscale(1000) -B $toscale(100) -t 4  --rate-limit $toscale(1000)"
 -
-   command: "-U $address(0,0) -M 512 -p ccc -I 5000000 -t 4 -B 100 --rate-limit 1000"
+   command: "-U $orchestrator() -M 512 -p ccc -I $toscale(1000) -B $toscale(100) -t 4  --rate-limit $toscale(1000)"
 -
    image: gideon
-   command: "kv --ops 5000 --create 30 --get 70 --delete 10 --expire 20 --ttl 600  --hosts $address(0,0) --bucket  $bucket(0,0) --sizes 16000"
+   command: "kv --ops $toscale(100) --create 30 --get 70 --delete 10 --expire 20 --ttl 600  --hosts $orchestrator() --bucket  $bucket(0,0) --sizes 16000"
 
 #============ start view queries  ============
 -
    image: gideon
    entrypoint: "./addviews.sh"
-   command: "$address(0,0):8092 default"
+   command: "$orchestrator():8092 default"
    wait: true
 -
-   command: "query --host $address(0,0) --ddoc scale --view stats --concurrency 10"
+   command: "query --host $node(0:kv, 0) --ddoc scale --view stats --concurrency $toscale(10)"
 -
-   command: "query --host $address(0,0) --ddoc scale --view padd --concurrency 10"
+   command: "query --host $node(0:kv, 4) --ddoc scale --view padd --concurrency $toscale(10)"
 -
-   command: "query --host $address(0,0) --ddoc scale --view array --concurrency 10"
+   command: "query --host $node(0:kv, 5) --ddoc scale --view array --concurrency $toscale(10)"
 
 
 #============ load 1M items ============
 -
    image: pillowfight
-   command: "-U $address(0,0) -I 1000000 -t 4 -B 250 -c 1000"
+   command: "-U  $orchestrator() -I $toscale(1000) -B $toscale(100) -t 4 -c 10"
    wait: true
 
 #============ rebalance out a node============
 -
     image: couchbase-cli
-    command:  "rebalance -c  $address(0,0)
-	       --server-remove $address(0,1)
+    command:  "rebalance -c  $orchestrator()
+	       --server-remove $node(0, 1)
 	       -u  $attr(0, rest_username) -p  $attr(0, rest_password)"
     wait: true
 
 #============ start xdcr replications ============
 -
    image: couchbase-cli
-   command:  'xdcr-setup -c  $address(0,0) --create
+   command:  'xdcr-setup -c  $orchestrator() --create
 		    --xdcr-cluster-name $attr(0, name)
-		    --xdcr-hostname $address(1,0)
+		    --xdcr-hostname $node(1,0)
 		    --xdcr-username $attr(1, rest_username)
 		    --xdcr-password $attr(1, rest_password)'
    wait: true
 -
-   command: 'xdcr-replicate -c $address(0,0)
+   command: 'xdcr-replicate -c $orchestrator()
 		    --xdcr-cluster-name $attr(0, name)
 		    --xdcr-from-bucket $bucket(0,0)
 		    --xdcr-to-bucket remote'
@@ -76,28 +75,28 @@
 #============ load 1M items ============
 -
    image: pillowfight
-   command: "-U $address(0,0) -I 1000000 -t 4 -B 250 -c 1000"
+   command: "-U  $orchestrator() -I $toscale(1000) -B $toscale(100) -t 4 -c 10"
    wait: true
 
 
 #============ swap rebalance ============
 -
    image: couchbase-cli
-   command: "server-add -c  $address(0,0)
-	     --server-add  $address(0,1)
+   command: "server-add -c  $orchestrator()
+	     --server-add  $node(0,1)
 	     -u  $attr(0, rest_username) -p  $attr(0, rest_password)
 	     --server-add-username $attr(0, rest_username) --server-add-password  $attr(0, rest_password)"
    wait: true
 -
-   command:  "rebalance -c  $address(0,0)
-		--server-remove $address(0,2)
+   command:  "rebalance -c  $orchestrator()
+		--server-remove $node(0,2)
 		-u  $attr(0, rest_username) -p  $attr(0, rest_password)"
    wait: true
 
 #============ update 1M items ============
 -
    image: pillowfight
-   command: "-U $address(0,0) -I 1000000 -t 4 -B 250 -c 1000"
+   command: "-U  $orchestrator() -I $toscale(1000) -B $toscale(100) -t 4 -c 10"
    wait: true
 
 
@@ -105,47 +104,47 @@
 #============ swap failover ============
 -
    image: couchbase-cli
-   command: "server-add -c  $address(0,0)
-	     --server-add  $address(0,2)
+   command: "server-add -c  $orchestrator()
+	     --server-add  $node(0,2)
 	     -u  $attr(0, rest_username) -p  $attr(0, rest_password)
 	     --server-add-username $attr(0, rest_username) --server-add-password  $attr(0, rest_password)"
    wait: true
 -
-   command: "failover -c $address(0,0)
-	     --server-failover $address(0,1)
+   command: "failover -c $orchestrator()
+	     --server-failover $node(0,1)
 	     -u  $attr(0, rest_username) -p  $attr(0, rest_password)"
    wait: true
 -
-   command:  "rebalance -c  $address(0,0) -u  $attr(0, rest_username) -p  $attr(0, rest_password)"
+   command:  "rebalance -c  $orchestrator() -u  $attr(0, rest_username) -p  $attr(0, rest_password)"
    wait: true
 
 #============ update 1M items ============
 -
    image: pillowfight
-   command: "-U $address(0,0) -I 1000000 -t 4 -B 250 -c 1000"
+   command: "-U  $orchestrator() -I $toscale(1000) -B $toscale(100) -t 4 -c 10"
    wait: true
 
 
 #============ swap hard failover ============
 -
    image: couchbase-cli  # as indexer
-   command: "server-add -c  $address(0,0)
-	     --server-add  $address(0,1)
+   command: "server-add -c  $orchestrator()
+	     --server-add  $node(0,1)
 	     -u  $attr(0, rest_username) -p  $attr(0, rest_password)
 	     --server-add-username $attr(0, rest_username) --server-add-password  $attr(0, rest_password)"
    wait: true
 -
-   command: "failover -c $address(0,0)
-	    --server-failover $address(0,2)
+   command: "failover -c $orchestrator()
+	    --server-failover $node(0,2)
 	    -u  $attr(0, rest_username) -p  $attr(0, rest_password) --force"
    wait: true
 -
-   command: "failover -c $address(0,0)
-	    --server-failover $address(0,3)
+   command: "failover -c $orchestrator()
+	    --server-failover $node(0,3)
 	    -u  $attr(0, rest_username) -p  $attr(0, rest_password) --force"
    wait: true
 -
-   command:  "rebalance -c  $address(0,0) -u  $attr(0, rest_username) -p  $attr(0, rest_password)"
+   command:  "rebalance -c  $orchestrator() -u  $attr(0, rest_username) -p  $attr(0, rest_password)"
    wait: true
 
 
@@ -153,7 +152,7 @@
 #============ update 1M items ============
 -
    image: pillowfight
-   command: "-U $address(0,0) -I 1000000 -t 4 -B 250 -c 1000"
+   command: "-U  $orchestrator() -I $toscale(1000) -B $toscale(100) -t 4 -c 10"
    wait: true
 
 
@@ -161,17 +160,17 @@
 #============ add back============
 -
    image: couchbase-cli
-   command: "server-add -c  $address(0,0)
-	     --server-add  $address(0,2)
+   command: "server-add -c  $orchestrator()
+	     --server-add  $node(0,2)
 	     -u  $attr(0, rest_username) -p  $attr(0, rest_password)
 	     --server-add-username $attr(0, rest_username) --server-add-password  $attr(0, rest_password)"
    wait: true
 -
-   command: "server-add -c  $address(0,0)
-	     --server-add  $address(0,3)
+   command: "server-add -c  $orchestrator()
+	     --server-add  $node(0,3)
 	     -u  $attr(0, rest_username) -p  $attr(0, rest_password)
 	     --server-add-username $attr(0, rest_username) --server-add-password  $attr(0, rest_password)"
    wait: true
 -
-   command:  "rebalance -c  $address(0,0) -u  $attr(0, rest_username) -p  $attr(0, rest_password)"
+   command:  "rebalance -c  $orchestrator() -u  $attr(0, rest_username) -p  $attr(0, rest_password)"
    wait: true

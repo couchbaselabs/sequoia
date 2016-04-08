@@ -3,7 +3,7 @@ scope:  tests/longevity/scope_8x4.yml
 test: tests/longevity/test_allFeatures.yml
 provider: docker 
 options:
-  skip_setup: false
+  skip_setup: true 
   skip_teardown: true 
-  repeat: -1
-  scale: 5 
+  repeat: -1 
+  scale: 1 
