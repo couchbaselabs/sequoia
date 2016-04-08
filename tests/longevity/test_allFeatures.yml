@@ -33,7 +33,7 @@
 -
    image: gideon
    entrypoint: "./addviews.sh"
-   command: "$address(0,0):8092 $bucket(1,0)"
+   command: "$address(0,0):8092 default"
    wait: true
 -
    command: "query --host $address(0,0) --ddoc scale --view stats --concurrency 10"
