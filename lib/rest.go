@@ -47,6 +47,20 @@ func GetMemReserved(host, user, password string) int {
 	return q
 }
 
+func GetIndexQuota(host, user, password string) int {
+	var n NodeSelf
+
+	err := jsonRequest(host, user, password, &n)
+	chkerr(err)
+
+	q := n.IndexMemoryQuota
+	if q == 0 {
+		time.Sleep(5 * time.Second)
+		return GetIndexQuota(host, user, password)
+	}
+	return q
+}
+
 func NodeHasService(service, host, user, password string) bool {
 	var n NodeSelf
 	err := jsonRequest(host, user, password, &n)

@@ -140,10 +140,7 @@ func (s *Scope) InitCluster() {
 		}
 		if strings.Index(ramQuota, "%") > -1 {
 			// use percentage of memtotal
-			memTotal := s.ClusterMemTotal(name, server)
-			ramQuota = strings.Replace(ramQuota, "%", "", 1)
-			ramVal, _ := strconv.Atoi(ramQuota)
-			ramQuota = strconv.Itoa((memTotal * ramVal) / 100)
+			ramQuota = s.GetPercOfMemTotal(name, server, ramQuota)
 		}
 
 		// update ramQuota in case modified
@@ -158,9 +155,20 @@ func (s *Scope) InitCluster() {
 			"--cluster-ramsize", server.Ram,
 			"--services", services,
 		}
+		// make sure if index services is specified that index ram is set
+		if strings.Index(services, "index") > -1 && server.IndexRam == "" {
+			server.IndexRam = strconv.Itoa(s.ClusterIndexQuota(name, server))
+		}
 		if server.IndexRam != "" {
+			indexQuota := server.IndexRam
+			if strings.Index(indexQuota, "%") > -1 {
+				// use percentage of memtotal
+				indexQuota := s.GetPercOfMemTotal(name, server, indexQuota)
+				server.IndexRam = indexQuota
+			}
 			command = append(command, "--cluster-index-ramsize", server.IndexRam)
 		}
+
 		if server.IndexStorage != "" {
 			command = append(command, "--index-storage-setting", server.IndexStorage)
 		}
@@ -280,7 +288,7 @@ func (s *Scope) CreateBuckets() {
 			for _, bucketName := range bucket.Names {
 				ramQuota := bucket.Ram
 				if strings.Index(ramQuota, "%") > -1 {
-					// convert ram to value
+					// convert bucket ram to value within context of server ram
 					ramQuota = strings.Replace(ramQuota, "%", "", 1)
 					ramVal, _ := strconv.Atoi(ramQuota)
 					nodeRam, _ := strconv.Atoi(server.Ram)
@@ -322,6 +330,14 @@ func (s *Scope) CreateBuckets() {
 
 }
 
+func (s *Scope) GetPercOfMemTotal(name string, server *ServerSpec, quota string) string {
+	memTotal := s.ClusterMemTotal(name, server)
+	ramQuota := strings.Replace(quota, "%", "", 1)
+	ramVal, _ := strconv.Atoi(ramQuota)
+	ramQuota = strconv.Itoa((memTotal * ramVal) / 100)
+	return ramQuota
+}
+
 func (s *Scope) ClusterMemTotal(name string, server *ServerSpec) int {
 	rest := s.Provider.GetRestUrl(name)
 	mem := GetMemTotal(rest, server.RestUsername, server.RestPassword)
@@ -331,6 +347,12 @@ func (s *Scope) ClusterMemTotal(name string, server *ServerSpec) int {
 func (s *Scope) ClusterMemReserved(name string, server *ServerSpec) int {
 	rest := s.Provider.GetRestUrl(name)
 	mem := GetMemReserved(rest, server.RestUsername, server.RestPassword)
+	return mem
+}
+
+func (s *Scope) ClusterIndexQuota(name string, server *ServerSpec) int {
+	rest := s.Provider.GetRestUrl(name)
+	mem := GetIndexQuota(rest, server.RestUsername, server.RestPassword)
 	return mem
 }
 

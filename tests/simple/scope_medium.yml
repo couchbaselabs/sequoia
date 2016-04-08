@@ -9,8 +9,8 @@ buckets: # define single default bucket
 servers: # define a single server with link named 'local'
   -
      name: local
-     ram: 80% # 80% of total memory 
-     index_ram: 512 
+     ram: 70% 
+     index_ram: 20% 
      count: 4
      rest_username: Administrator
      rest_password: password
