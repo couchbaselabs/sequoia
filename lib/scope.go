@@ -21,9 +21,10 @@ import (
 )
 
 type Scope struct {
-	Spec     ScopeSpec
-	Cm       *ContainerManager
-	Provider Provider
+	Spec       ScopeSpec
+	Cm         *ContainerManager
+	Provider   Provider
+	TestConfig Config
 }
 
 func NewScope(config Config) Scope {
@@ -40,6 +41,7 @@ func NewScope(config Config) Scope {
 		spec,
 		cm,
 		provider,
+		config,
 	}
 }
 
@@ -409,6 +411,15 @@ func (s *Scope) Resolve(method string, args string) string {
 		attr = s.Spec.ToAttr(attr)
 		spec := reflect.ValueOf(s.Spec.Servers[cluster])
 		val := spec.FieldByName(attr).String()
+		return val
+	case "toscale":
+		attr, _ := strconv.Atoi(args)
+		scale := s.TestConfig.Options.Scale
+		if scale == 0 {
+			scale++
+		}
+		fmt.Println(attr, scale)
+		val := strconv.Itoa(attr * scale)
 		return val
 	}
 	return ""

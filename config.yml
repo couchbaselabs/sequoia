@@ -4,7 +4,6 @@ test: tests/simple/test_simple.yml
 provider: docker 
 options:
   skip_setup: false 
-  skip_test: false 
   skip_teardown: false 
-  repeat: 0
-  scale: 1
+  repeat: 0 
+  scale: 1 
