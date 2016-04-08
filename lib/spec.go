@@ -84,10 +84,6 @@ func (s *ServerSpec) InitNodeServices() {
 	for i = 0; i < numNodes; i = i + 1 {
 		name := s.Names[i]
 		s.NodeServices[name] = []string{}
-		if numDataNodes > 0 {
-			s.NodeServices[name] = append(s.NodeServices[name], "data")
-			numDataNodes--
-		}
 		if i >= indexStartPos && numIndexNodes > 0 {
 			s.NodeServices[name] = append(s.NodeServices[name], "index")
 			numIndexNodes--
@@ -96,6 +92,13 @@ func (s *ServerSpec) InitNodeServices() {
 			s.NodeServices[name] = append(s.NodeServices[name], "query")
 			numQueryNodes--
 		}
+		if numDataNodes > 0 {
+			s.NodeServices[name] = append(s.NodeServices[name], "data")
+			numDataNodes--
+		} else if i == 0 { // must add data to orchestrator
+			s.NodeServices[name] = append(s.NodeServices[name], "data")
+		}
+
 		// must have at least data service
 		if len(s.NodeServices[name]) == 0 {
 			s.NodeServices[name] = append(s.NodeServices[name], "data")

@@ -20,7 +20,7 @@ type Provider interface {
 	GetRestUrl(name string) string
 }
 
-func NewProvider(config Config) Provider {
+func NewProvider(config Config, servers []ServerSpec) Provider {
 	var provider Provider
 
 	switch config.Provider {
@@ -28,10 +28,12 @@ func NewProvider(config Config) Provider {
 		cm := NewContainerManager(config.Client)
 		provider = &DockerProvider{
 			cm,
+			servers,
 			make(map[string]string),
 		}
 	case "file":
 		provider = &FileProvider{
+			servers,
 			make(map[string]string),
 		}
 	}
@@ -40,6 +42,7 @@ func NewProvider(config Config) Provider {
 }
 
 type FileProvider struct {
+	Servers      []ServerSpec
 	ServerNameIp map[string]string
 }
 
@@ -72,6 +75,7 @@ func (p *FileProvider) ProvideCouchbaseServers(servers []ServerSpec) {
 
 type DockerProvider struct {
 	Cm               *ContainerManager
+	Servers          []ServerSpec
 	ActiveContainers map[string]string
 }
 
@@ -108,7 +112,7 @@ func (p *DockerProvider) ProvideCouchbaseServers(servers []ServerSpec) {
 		for _, serverName := range serverNameList {
 
 			portStr := fmt.Sprintf("%d", 8091+i)
-			port := docker.Port(portStr + "/tcp")
+			port := docker.Port("8091/tcp")
 			binding := make([]docker.PortBinding, 1)
 			binding[0] = docker.PortBinding{
 				HostPort: portStr,
@@ -157,5 +161,14 @@ func (p *DockerProvider) GetRestUrl(name string) string {
 	// remove port if specified
 	re := regexp.MustCompile(`:.*`)
 	host = re.ReplaceAllString(host, "")
-	return host + ":8091"
+	port := 8091
+	for _, spec := range p.Servers {
+		for i, server := range spec.Names {
+			if server == name {
+				port = port + i
+			}
+		}
+	}
+	host = fmt.Sprintf("%s:%d\n", host, port)
+	return strings.TrimSpace(host)
 }

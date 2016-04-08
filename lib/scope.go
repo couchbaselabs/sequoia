@@ -36,7 +36,7 @@ func NewScope(config Config) Scope {
 	cm := NewContainerManager(config.Client)
 
 	// create provider of resources for scope
-	provider := NewProvider(config)
+	provider := NewProvider(config, spec.Servers)
 	return Scope{
 		spec,
 		cm,
@@ -440,7 +440,6 @@ func (s *Scope) Resolve(method string, args string) string {
 		for _, name := range serverSpec.Names {
 			rest := s.Provider.GetRestUrl(name)
 			ok := NodeHasService(service, rest, serverSpec.RestUsername, serverSpec.RestPassword)
-			//fmt.Println(ok, name, service)
 			if ok == true {
 				if idx > 0 {
 					idx--
