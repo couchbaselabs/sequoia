@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"time"
 )
 
 type NodeSelf struct {
@@ -16,10 +17,29 @@ type NodeSelf struct {
 	MemoryQuota       int
 }
 
-func GetMemQuota(host, user, password string) int {
-	n := new(NodeSelf)
+func GetMemTotal(host, user, password string) int {
+	var n NodeSelf
+
 	jsonRequest(host, user, password, &n)
-	return n.MemoryQuota
+	q := n.MemoryTotal
+	if q == 0 {
+		time.Sleep(5 * time.Second)
+		return GetMemTotal(host, user, password)
+	}
+	q = q / 1048576 // mb
+	return q
+}
+
+func GetMemReserved(host, user, password string) int {
+	var n NodeSelf
+
+	jsonRequest(host, user, password, &n)
+	q := n.McdMemoryReserved
+	if q == 0 {
+		time.Sleep(5 * time.Second)
+		return GetMemReserved(host, user, password)
+	}
+	return q
 }
 
 func jsonRequest(host, user, password string, v interface{}) {

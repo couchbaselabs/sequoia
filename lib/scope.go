@@ -132,16 +132,16 @@ func (s *Scope) InitCluster() {
 		services := strings.Join(servicesList, ",")
 		ramQuota := server.Ram
 		if ramQuota == "" {
-			// use cluster memquota
-			memQuota := s.ClusterMemQuota(name, server)
-			ramQuota = strconv.Itoa(memQuota)
+			// use cluster mcdReserved
+			memTotal := s.ClusterMemReserved(name, server)
+			ramQuota = strconv.Itoa(memTotal)
 		}
 		if strings.Index(ramQuota, "%") > -1 {
-			// use percentage of memquota
-			memQuota := s.ClusterMemQuota(name, server)
+			// use percentage of memtotal
+			memTotal := s.ClusterMemTotal(name, server)
 			ramQuota = strings.Replace(ramQuota, "%", "", 1)
 			ramVal, _ := strconv.Atoi(ramQuota)
-			ramQuota = strconv.Itoa((memQuota * ramVal) / 100)
+			ramQuota = strconv.Itoa((memTotal * ramVal) / 100)
 		}
 
 		// update ramQuota in case modified
@@ -319,10 +319,16 @@ func (s *Scope) CreateBuckets() {
 
 }
 
-func (s *Scope) ClusterMemQuota(name string, server *ServerSpec) int {
+func (s *Scope) ClusterMemTotal(name string, server *ServerSpec) int {
 	rest := s.Provider.GetRestUrl(name)
-	memQuota := GetMemQuota(rest, server.RestUsername, server.RestPassword)
-	return memQuota
+	mem := GetMemTotal(rest, server.RestUsername, server.RestPassword)
+	return mem
+}
+
+func (s *Scope) ClusterMemReserved(name string, server *ServerSpec) int {
+	rest := s.Provider.GetRestUrl(name)
+	mem := GetMemReserved(rest, server.RestUsername, server.RestPassword)
+	return mem
 }
 
 func (s *Scope) CompileCommand(actionCommand string) []string {
@@ -331,7 +337,6 @@ func (s *Scope) CompileCommand(actionCommand string) []string {
 	re := regexp.MustCompile(`\s+`)
 	actionCommand = re.ReplaceAllString(actionCommand, " ")
 
-	//$address(servers,0,0)
 	idx := strings.Index(actionCommand, "$")
 	for idx > -1 {
 		fStart := strings.Index(actionCommand, "(")

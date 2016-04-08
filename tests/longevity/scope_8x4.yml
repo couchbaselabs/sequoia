@@ -2,55 +2,53 @@
 buckets:
   -
       name: default
-      ram: 6000
+      ram: 50% 
       eviction: fullEviction
   -
-      name: CUSTOMER
-      ram: 256
-  -
-      name: DISTRICT
-      ram: 100
-  -
-      name: HISTORY
-      ram: 128
-  -
-      name: ITEM
-      ram: 128
-      replica: 1
-      type: couchbase
-  -
-      name: NEW_ORDER
-      ram: 256
-  -
       name: ORDERS
-      ram: 1024
+      ram: 10% 
   -
       name: ORDER_LINE
-      ram: 1024
+      ram: 10% 
+  -
+      name: CUSTOMER
+      ram: 5% 
   -
       name: STOCK
-      ram: 512
+      ram: 5% 
+  -
+      name: NEW_ORDER
+      ram: 5% 
   -
       name: WAREHOUSE
-      ram: 128
+      ram: 5%
+  -
+      name: DISTRICT
+      ram: 2% 
+  -
+      name: HISTORY
+      ram: 2% 
+  -
+      name: ITEM
+      ram: 2% 
   -
       name: remote
-      ram: 90000
+      ram: 100% 
 
 servers: # each server tag represents a cluster
   -
       name: local.st.couchbase.com
       count: 8
-      ram: 10000
-      index_ram: 20000
+      ram: 90% 
+      index_ram: 512 
       #index_storage: forestdb
       services:
         query: 1
         index: 1
       rest_username: Administrator
       rest_password: password
-      data_path: "/data"
-      index_path: "/data"
+#      data_path: "/data"
+#      index_path: "/data"
       rest_port: 8091
       query_port: 8093
       init_nodes: 8
@@ -58,10 +56,10 @@ servers: # each server tag represents a cluster
   -
       name: remote.st.couchbase.com
       count: 2
-      ram: 90000
+      ram: 90% 
       rest_username: Administrator
       rest_password: password
-      data_path: "/data"
+#      data_path: "/data"
       rest_port: 8091
       init_nodes: 2
       buckets: remote

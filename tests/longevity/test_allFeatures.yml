@@ -1,5 +1,6 @@
 ---
 #============ start tpcc indexing  ============
+
 -
    image: tpcc
    command:  "./run.sh $address(0,7):8093 util/cbcrindex.sql"
@@ -14,6 +15,8 @@
 -
    image: cbq
    command: "-e=http://$address(0,7):8093  -u=Administrator -p=password -script='create index default_rating on `default`(rating)'"
+
+
 #============ continous kv loading a minimum of 15M items  ============
 -
    image: pillowfight

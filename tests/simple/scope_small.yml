@@ -9,7 +9,7 @@ buckets: # define single default bucket
 servers: # define a single server with link named 'local'
   -
      name: local
-     ram: 80% # 80% of recommended MemQuota from couchbase
+     ram: 80% # 80% of total memory 
      count: 1  
      rest_username: Administrator
      rest_password: password
