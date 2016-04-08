@@ -1,4 +1,4 @@
 - 
    image: pillowfight
-   command: "-U  $address(0,0) -I $toscale(1000) -B $toscale(100) -t 1 -c 10"
+   command: "-U  $service(kv, local) -I $toscale(1000) -B $toscale(100) -t 1 -c 10"
    wait: true

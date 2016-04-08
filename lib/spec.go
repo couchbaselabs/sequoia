@@ -150,6 +150,17 @@ func (s *ScopeSpec) ToAttr(attr string) string {
 	return ""
 }
 
+func (s *ScopeSpec) ForCluster(name string) ServerSpec {
+	var spec ServerSpec
+	for _, cluster := range s.Servers {
+		if cluster.Name == name {
+			spec = cluster
+			break
+		}
+	}
+	return spec
+}
+
 func NewScopeSpec(fileName string) ScopeSpec {
 
 	// init from yaml

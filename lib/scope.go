@@ -174,9 +174,9 @@ func (s *Scope) InitCluster() {
 		if s.Provider.GetType() == "docker" {
 			task.LinksTo = orchestrator
 		}
-
 		s.Cm.Run(task)
 		server.NodesActive++
+
 	}
 
 	// apply only to orchestrator
@@ -226,6 +226,7 @@ func (s *Scope) AddNodes() {
 
 		s.Cm.Run(task)
 		server.NodesActive++
+
 	}
 
 	// add nodes
@@ -391,6 +392,7 @@ func (s *Scope) CompileCommand(actionCommand string) []string {
 
 func (s *Scope) Resolve(method string, args string) string {
 	switch method {
+
 	case "address":
 		argv := strings.Split(args, ",")
 		cluster, _ := strconv.Atoi(argv[0])
@@ -398,12 +400,14 @@ func (s *Scope) Resolve(method string, args string) string {
 		scopeName := s.Spec.Servers[cluster].Names[node]
 		address := s.Provider.GetHostAddress(scopeName)
 		return address
+
 	case "bucket":
 		argv := strings.Split(args, ",")
 		set, _ := strconv.Atoi(argv[0])
 		index, _ := strconv.Atoi(argv[1])
 		bucket := s.Spec.Buckets[set].Names[index]
 		return bucket
+
 	case "attr":
 		argv := strings.Split(args, ",")
 		cluster, _ := strconv.Atoi(argv[0])
@@ -412,15 +416,44 @@ func (s *Scope) Resolve(method string, args string) string {
 		spec := reflect.ValueOf(s.Spec.Servers[cluster])
 		val := spec.FieldByName(attr).String()
 		return val
-	case "toscale":
+
+	case "toscale": // ie.. $toscale(10)
 		attr, _ := strconv.Atoi(args)
 		scale := s.TestConfig.Options.Scale
 		if scale == 0 {
 			scale++
 		}
-		fmt.Println(attr, scale)
 		val := strconv.Itoa(attr * scale)
 		return val
+
+	case "service": // ie.. $service(kv, 0, *)
+		var argv = strings.Split(args, ",")
+		service := strings.TrimSpace(argv[0])
+		cluster := strings.TrimSpace(argv[1])
+		var val string = fmt.Sprintf("<service_%s_node_not_found>", service)
+		var idx int = 0
+		if len(argv) == 3 { // override  which node to choose
+			idx, _ = strconv.Atoi(strings.TrimSpace(argv[2]))
+		}
+
+		serverSpec := s.Spec.ForCluster(cluster)
+		for _, name := range serverSpec.Names {
+			rest := s.Provider.GetRestUrl(name)
+			ok := NodeHasService(service, rest, serverSpec.RestUsername, serverSpec.RestPassword)
+			//fmt.Println(ok, name, service)
+			if ok == true {
+				if idx > 0 {
+					idx--
+				} else {
+					// done found node with service
+					val = s.Provider.GetHostAddress(name)
+					break
+				}
+			}
+		}
+
+		return val
 	}
+
 	return ""
 }
