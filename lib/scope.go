@@ -355,7 +355,36 @@ func (s *Scope) CompileCommand(actionCommand string) []string {
 	// translate into in slice
 	command := strings.Split(actionCommand, " ")
 
-	return command
+	commandFinal := []string{}
+
+	// keep single quotes in tact
+	var lastSingleQuote int = -1
+	for i, v := range command {
+		if strings.Index(v, "'") > -1 {
+			// stash val until we reach another single quote
+			if lastSingleQuote == -1 {
+				// first quote
+				lastSingleQuote = i
+			} else {
+				// ending quote
+				var quotedString = []string{}
+				for j := lastSingleQuote; j <= i; j++ {
+					c := strings.Replace(command[j], "'", "", 1)
+					quotedString = append(quotedString, c)
+				}
+				// append to command as fully quoted string
+				commandFinal = append(commandFinal, strings.Join(quotedString, " "))
+				lastSingleQuote = -1
+			}
+		} else {
+			// just append value if not within single quote
+			if lastSingleQuote == -1 {
+				commandFinal = append(commandFinal, v)
+			}
+		}
+	}
+
+	return commandFinal
 }
 
 func (s *Scope) Resolve(method string, args string) string {
