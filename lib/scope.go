@@ -63,7 +63,7 @@ func (s *Scope) WaitForNodes() {
 	var image = "martin/wait"
 
 	// use martin/wait container to wait for node to listen on port 8091
-	waitForNodesOp := func(name string, server ServerSpec) {
+	waitForNodesOp := func(name string, server *ServerSpec) {
 		ip := fmt.Sprintf("%s:%d", s.Provider.GetHostAddress(name), 8091)
 		command := []string{"-c", ip, "-t", "120"}
 		desc := "wait for " + ip
@@ -89,18 +89,19 @@ func (s *Scope) InitNodes() {
 
 	var image = "couchbase-cli"
 
-	initNodesOp := func(name string, server ServerSpec) {
+	initNodesOp := func(name string, server *ServerSpec) {
 		ip := s.Provider.GetHostAddress(name)
 		command := []string{"node-init",
 			"-c", ip,
 			"-u", server.RestUsername,
 			"-p", server.RestPassword,
 		}
+
 		if server.DataPath != "" {
-		  command = append(command, "--node-init-data-path", server.DataPath)
+			command = append(command, "--node-init-data-path", server.DataPath)
 		}
 		if server.IndexPath != "" {
-		  command = append(command, "--node-init-index-path", server.IndexPath)
+			command = append(command, "--node-init-index-path", server.IndexPath)
 		}
 		desc := "init node " + ip
 		task := ContainerTask{
@@ -113,7 +114,6 @@ func (s *Scope) InitNodes() {
 			task.LinksTo = name
 		}
 
-
 		s.Cm.Run(task)
 	}
 
@@ -125,11 +125,27 @@ func (s *Scope) InitCluster() {
 
 	var image = "couchbase-cli"
 
-	initClusterOp := func(name string, server ServerSpec) {
+	initClusterOp := func(name string, server *ServerSpec) {
 		orchestrator := server.Names[0]
 		ip := s.Provider.GetHostAddress(orchestrator)
 		servicesList := server.NodeServices[name]
 		services := strings.Join(servicesList, ",")
+		ramQuota := server.Ram
+		if ramQuota == "" {
+			// use cluster memquota
+			memQuota := s.ClusterMemQuota(name, server)
+			ramQuota = strconv.Itoa(memQuota)
+		}
+		if strings.Index(ramQuota, "%") > -1 {
+			// use percentage of memquota
+			memQuota := s.ClusterMemQuota(name, server)
+			ramQuota = strings.Replace(ramQuota, "%", "", 1)
+			ramVal, _ := strconv.Atoi(ramQuota)
+			ramQuota = strconv.Itoa((memQuota * ramVal) / 100)
+		}
+
+		// update ramQuota in case modified
+		server.Ram = ramQuota
 		command := []string{"cluster-init",
 			"-c", ip,
 			"-u", server.RestUsername,
@@ -140,11 +156,11 @@ func (s *Scope) InitCluster() {
 			"--cluster-ramsize", server.Ram,
 			"--services", services,
 		}
-                if server.IndexRam != "" {
-		  command = append(command, "--cluster-index-ramsize", server.IndexRam)
-                }
+		if server.IndexRam != "" {
+			command = append(command, "--cluster-index-ramsize", server.IndexRam)
+		}
 		if server.IndexStorage != "" {
-		  command = append(command, "--index-storage-setting", server.IndexStorage)
+			command = append(command, "--index-storage-setting", server.IndexStorage)
 		}
 		desc := "init cluster " + orchestrator
 		task := ContainerTask{
@@ -170,7 +186,7 @@ func (s *Scope) AddNodes() {
 
 	var image = "couchbase-cli"
 
-	addNodesOp := func(name string, server ServerSpec) {
+	addNodesOp := func(name string, server *ServerSpec) {
 
 		if server.InitNodes <= server.NodesActive {
 			return
@@ -218,7 +234,7 @@ func (s *Scope) RebalanceClusters() {
 
 	var image = "couchbase-cli"
 	// configure rebalance operation
-	operation := func(name string, server ServerSpec) {
+	operation := func(name string, server *ServerSpec) {
 
 		orchestrator := server.Names[0]
 		orchestratorIp := s.Provider.GetHostAddress(orchestrator)
@@ -252,17 +268,25 @@ func (s *Scope) CreateBuckets() {
 	var image = "couchbase-cli"
 
 	// configure rebalance operation
-	operation := func(name string, server ServerSpec) {
+	operation := func(name string, server *ServerSpec) {
 
 		orchestrator := server.Names[0]
 		ip := s.Provider.GetHostAddress(orchestrator)
 
 		for _, bucket := range server.BucketSpecs {
 			for _, bucketName := range bucket.Names {
+				ramQuota := bucket.Ram
+				if strings.Index(ramQuota, "%") > -1 {
+					// convert ram to value
+					ramQuota = strings.Replace(ramQuota, "%", "", 1)
+					ramVal, _ := strconv.Atoi(ramQuota)
+					nodeRam, _ := strconv.Atoi(server.Ram)
+					ramQuota = strconv.Itoa((nodeRam * ramVal) / 100)
+				}
 				command := []string{"bucket-create", "-c", ip,
 					"-u", server.RestUsername, "-p", server.RestPassword,
 					"--bucket", bucketName,
-					"--bucket-ramsize", strconv.Itoa(int(bucket.Ram)),
+					"--bucket-ramsize", ramQuota,
 					"--bucket-type", bucket.Type,
 					"--bucket-replica", strconv.Itoa(int(bucket.Replica)),
 					"--enable-flush", "1", "--wait",
@@ -293,6 +317,12 @@ func (s *Scope) CreateBuckets() {
 	// apply only to orchestrator
 	s.Spec.ApplyToServers(operation, 0, 1)
 
+}
+
+func (s *Scope) ClusterMemQuota(name string, server *ServerSpec) int {
+	rest := s.Provider.GetRestUrl(name)
+	memQuota := GetMemQuota(rest, server.RestUsername, server.RestPassword)
+	return memQuota
 }
 
 func (s *Scope) CompileCommand(actionCommand string) []string {

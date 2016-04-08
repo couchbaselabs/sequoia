@@ -48,29 +48,31 @@ func (t *ContainerTask) GetOptions() docker.CreateContainerOptions {
 }
 
 type ContainerManager struct {
-	Client *docker.Client
+	Client   *docker.Client
+	Endpoint string
 }
 
 func NewContainerManager(clientUrl string) *ContainerManager {
 
-        var client *docker.Client
-        var err error
+	var client *docker.Client
+	var err error
 	// open docker client
-        if strings.Index(clientUrl, "https") > -1 {
-          // with tls
-          path := os.Getenv("DOCKER_CERT_PATH")
-          ca := fmt.Sprintf("%s/ca.pem", path)
-          cert := fmt.Sprintf("%s/cert.pem", path)
-          key := fmt.Sprintf("%s/key.pem", path)
-          client, err = docker.NewTLSClient(clientUrl, cert, key, ca)
-          chkerr(err)
-        } else {
-          client, err = docker.NewClient(clientUrl)
-          chkerr(err)
-        }
+	if strings.Index(clientUrl, "https") > -1 {
+		// with tls
+		path := os.Getenv("DOCKER_CERT_PATH")
+		ca := fmt.Sprintf("%s/ca.pem", path)
+		cert := fmt.Sprintf("%s/cert.pem", path)
+		key := fmt.Sprintf("%s/key.pem", path)
+		client, err = docker.NewTLSClient(clientUrl, cert, key, ca)
+		chkerr(err)
+	} else {
+		client, err = docker.NewClient(clientUrl)
+		chkerr(err)
+	}
 
 	return &ContainerManager{
-		Client: client,
+		Client:   client,
+		Endpoint: clientUrl,
 	}
 }
 

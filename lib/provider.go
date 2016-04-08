@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"github.com/fatih/color"
 	"github.com/fsouza/go-dockerclient"
+	"net/url"
+	"regexp"
 	"strings"
 )
 
@@ -15,6 +17,7 @@ type Provider interface {
 	ProvideCouchbaseServers(servers []ServerSpec)
 	GetHostAddress(name string) string
 	GetType() string
+	GetRestUrl(name string) string
 }
 
 func NewProvider(config Config) Provider {
@@ -45,6 +48,10 @@ func (p *FileProvider) GetType() string {
 }
 func (p *FileProvider) GetHostAddress(name string) string {
 	return p.ServerNameIp[name]
+}
+
+func (p *FileProvider) GetRestUrl(name string) string {
+	return p.GetHostAddress(name) + ":8091"
 }
 
 func (p *FileProvider) ProvideCouchbaseServers(servers []ServerSpec) {
@@ -139,4 +146,16 @@ func (p *DockerProvider) GetLinkPairs() string {
 		pairs = append(pairs, name)
 	}
 	return strings.Join(pairs, ",")
+}
+
+func (p *DockerProvider) GetRestUrl(name string) string {
+	// extract host from endpoint
+	url, err := url.Parse(p.Cm.Endpoint)
+	chkerr(err)
+	host := url.Host
+
+	// remove port if specified
+	re := regexp.MustCompile(`:.*`)
+	host = re.ReplaceAllString(host, "")
+	return host + ":8091"
 }

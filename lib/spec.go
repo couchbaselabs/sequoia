@@ -25,7 +25,7 @@ type BucketSpec struct {
 	Name     string
 	Names    []string
 	Count    uint8
-	Ram      uint32
+	Ram      string
 	Replica  uint8
 	Type     string
 	Sasl     string
@@ -37,14 +37,14 @@ type ServerSpec struct {
 	Names        []string
 	Count        uint8
 	Ram          string
-        IndexRam     string  `yaml:"index_ram"`
+	IndexRam     string `yaml:"index_ram"`
 	RestUsername string `yaml:"rest_username"`
 	RestPassword string `yaml:"rest_password"`
 	RestPort     string `yaml:"rest_port"`
 	InitNodes    uint8  `yaml:"init_nodes"`
-        DataPath     string `yaml:"data_path"`
-        IndexPath    string `yaml:"index_path"`
-        IndexStorage string `yaml:"index_storage"`
+	DataPath     string `yaml:"data_path"`
+	IndexPath    string `yaml:"index_path"`
+	IndexStorage string `yaml:"index_storage"`
 	Buckets      string
 	BucketSpecs  []BucketSpec
 	NodesActive  uint8
@@ -103,11 +103,11 @@ type ScopeSpec struct {
 	Servers []ServerSpec
 }
 
-func (s *ScopeSpec) ApplyToAllServers(operation func(string, ServerSpec)) {
+func (s *ScopeSpec) ApplyToAllServers(operation func(string, *ServerSpec)) {
 	s.ApplyToServers(operation, 0, 0)
 }
 
-func (s *ScopeSpec) ApplyToServers(operation func(string, ServerSpec),
+func (s *ScopeSpec) ApplyToServers(operation func(string, *ServerSpec),
 	startIdx int, endIdx int) {
 
 	useLen := false
@@ -115,12 +115,13 @@ func (s *ScopeSpec) ApplyToServers(operation func(string, ServerSpec),
 		useLen = true
 	}
 
-	for _, server := range s.Servers {
+	for i, server := range s.Servers {
 		if useLen {
 			endIdx = len(server.Names)
 		}
 		for _, serverName := range server.Names[startIdx:endIdx] {
-			operation(serverName, server)
+			operation(serverName, &server)
+			s.Servers[i] = server // allowed apply func to modify server
 		}
 	}
 }
