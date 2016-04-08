@@ -5,14 +5,19 @@ import (
 )
 
 type Config struct {
-	Client       string
-	Scope        string
-	Test         string
-	Provider     string
+	Client   string
+	Scope    string
+	Test     string
+	Provider string
+	Options  ConfigOpts
+}
+
+type ConfigOpts struct {
 	SkipSetup    bool `yaml:"skip_setup"`
 	SkipTest     bool `yaml:"skip_test"`
 	SkipTeardown bool `yaml:"skip_teardown"`
 	Repeat       int
+	Scale        int
 }
 
 func NewConfigSpec(fileName string) Config {

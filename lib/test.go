@@ -32,20 +32,20 @@ func NewTestSpec(config Config) Test {
 func (t *Test) Run(scope Scope) {
 
 	// do optional setup
-	if t.TestConfig.SkipSetup == false {
+	if t.TestConfig.Options.SkipSetup == false {
 		scope.TearDown()
 		scope.Setup()
 	} else if scope.Provider.GetType() == "file" {
-	   // at least IP's are needed for test
-	   scope.Provider.ProvideCouchbaseServers(scope.Spec.Servers)
-        }
+		// at least IP's are needed for test
+		scope.Provider.ProvideCouchbaseServers(scope.Spec.Servers)
+	}
 
-        if t.TestConfig.SkipTest == true {
-	  return
+	if t.TestConfig.Options.SkipTest == true {
+		return
 	}
 
 	// run at least <repeat> times or forever if -1
-	repeat := t.TestConfig.Repeat
+	repeat := t.TestConfig.Options.Repeat
 	if repeat == -1 {
 		// run forever
 		for {
@@ -100,7 +100,7 @@ func (t *Test) _run(scope Scope) {
 	}
 
 	// do optional teardown
-	if t.TestConfig.SkipTeardown == false {
+	if t.TestConfig.Options.SkipTeardown == false {
 		scope.TearDown()
 	}
 }

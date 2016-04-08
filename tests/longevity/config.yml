@@ -2,6 +2,8 @@ client:  https://192.168.99.100:2376
 scope:  tests/longevity/scope_8x4.yml
 test: tests/longevity/test_allFeatures.yml
 provider: docker 
-skip_setup: false 
-skip_teardown: true 
-repeat: -1 
+options:
+  skip_setup: false
+  skip_teardown: true 
+  repeat: -1
+  scale: 5 
