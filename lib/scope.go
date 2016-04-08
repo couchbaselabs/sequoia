@@ -440,16 +440,34 @@ func (s *Scope) Resolve(method string, args string) string {
 		val := strconv.Itoa(attr * scale)
 		return val
 
+	case "orchestrator":
+		name := s.Spec.Servers[0].Names[0]
+		val := s.Provider.GetHostAddress(name)
+		return val
+
 	case "node": // ie.. node(local:n1ql, 0)
 		var argv = strings.Split(args, ",")
 		var service string
 		var idx int = 0
 		var val string
+
+		// split cluster name and quantifier
 		clusterAndService := strings.Split(strings.TrimSpace(argv[0]), ":")
 		cluster := clusterAndService[0]
-		if len(argv) == 2 { // override  which node to choose
+		if len(argv) == 2 {
+			// override  which node to choose
 			idx, _ = strconv.Atoi(strings.TrimSpace(argv[1]))
 		}
+
+		// shortcuts for ocal and remote names to 0,1 respectively
+		if cluster == "local" {
+			cluster = "0"
+		}
+		if cluster == "remote" {
+			cluster = "1"
+		}
+
+		// determine if cluster name is being used or raw index
 		clusterIdx, err := strconv.Atoi(cluster)
 		var serverSpec ServerSpec
 		if err == nil {
