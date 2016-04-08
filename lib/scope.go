@@ -99,10 +99,10 @@ func (s *Scope) InitNodes() {
 			"-p", server.RestPassword,
 		}
 
-		if server.DataPath != "" {
+		if server.DataPath != "" && s.Provider.GetType() != "docker" {
 			command = append(command, "--node-init-data-path", server.DataPath)
 		}
-		if server.IndexPath != "" {
+		if server.IndexPath != "" && s.Provider.GetType() != "docker" {
 			command = append(command, "--node-init-index-path", server.IndexPath)
 		}
 		desc := "init node " + ip
@@ -415,14 +415,6 @@ func (s *Scope) CompileCommand(actionCommand string) []string {
 func (s *Scope) Resolve(method string, args string) string {
 	switch method {
 
-	case "address":
-		argv := strings.Split(args, ",")
-		cluster, _ := strconv.Atoi(argv[0])
-		node, _ := strconv.Atoi(argv[1])
-		scopeName := s.Spec.Servers[cluster].Names[node]
-		address := s.Provider.GetHostAddress(scopeName)
-		return address
-
 	case "bucket":
 		argv := strings.Split(args, ",")
 		set, _ := strconv.Atoi(argv[0])
@@ -448,29 +440,44 @@ func (s *Scope) Resolve(method string, args string) string {
 		val := strconv.Itoa(attr * scale)
 		return val
 
-	case "service": // ie.. $service(kv, 0, *)
+	case "node": // ie.. node(local:n1ql, 0)
 		var argv = strings.Split(args, ",")
-		service := strings.TrimSpace(argv[0])
-		cluster := strings.TrimSpace(argv[1])
-		var val string = fmt.Sprintf("<service_%s_node_not_found>", service)
+		var service string
 		var idx int = 0
-		if len(argv) == 3 { // override  which node to choose
-			idx, _ = strconv.Atoi(strings.TrimSpace(argv[2]))
+		var val string
+		clusterAndService := strings.Split(strings.TrimSpace(argv[0]), ":")
+		cluster := clusterAndService[0]
+		if len(argv) == 2 { // override  which node to choose
+			idx, _ = strconv.Atoi(strings.TrimSpace(argv[1]))
+		}
+		clusterIdx, err := strconv.Atoi(cluster)
+		var serverSpec ServerSpec
+		if err == nil {
+			serverSpec = s.Spec.Servers[clusterIdx]
+		} else {
+			serverSpec = s.Spec.ForCluster(cluster)
 		}
 
-		serverSpec := s.Spec.ForCluster(cluster)
-		for _, name := range serverSpec.Names {
-			rest := s.Provider.GetRestUrl(name)
-			ok := NodeHasService(service, rest, serverSpec.RestUsername, serverSpec.RestPassword)
-			if ok == true {
-				if idx > 0 {
-					idx--
-				} else {
-					// done found node with service
-					val = s.Provider.GetHostAddress(name)
-					break
+		if len(clusterAndService) > 1 {
+			service = clusterAndService[1]
+			val = fmt.Sprintf("<%s_node_not_found>", service)
+			for _, name := range serverSpec.Names {
+				rest := s.Provider.GetRestUrl(name)
+				ok := NodeHasService(service, rest, serverSpec.RestUsername, serverSpec.RestPassword)
+				if ok == true {
+					if idx > 0 {
+						idx--
+					} else {
+						// done found node with service
+						val = s.Provider.GetHostAddress(name)
+						break
+					}
 				}
 			}
+		} else {
+			// just get any node from cluster at index
+			scopeName := serverSpec.Names[idx]
+			val = s.Provider.GetHostAddress(scopeName)
 		}
 
 		return val
