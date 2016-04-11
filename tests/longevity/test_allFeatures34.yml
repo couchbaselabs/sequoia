@@ -1,0 +1,168 @@
+---
+
+#============ continous kv loading a minimum of 15M items  ============
+-
+   image: pillowfight
+   command: "-U $orchestrator() -M 512 -p aaa -I $toscale(1000) -B $toscale(100) -t 4  --rate-limit $toscale(100)"
+-
+   command: "-U $orchestrator() -M 512 -p bbb -I $toscale(1000) -B $toscale(100) -t 4  --rate-limit $toscale(1000)"
+-
+   command: "-U $orchestrator() -M 512 -p ccc -I $toscale(1000) -B $toscale(100) -t 4  --rate-limit $toscale(1000)"
+-
+   image: gideon
+   command: "kv --ops $toscale(1000) --create 30 --get 70 --delete 10 --expire 20 --ttl 600  --hosts $orchestrator() --bucket  $bucket(0,0) --sizes 16000"
+-
+   command: "kv --ops $toscale(1000) --create 30 --get 70 --delete 10 --expire 20 --ttl 600  --hosts $orchestrator() --bucket  $bucket(1,0) --sizes 16000"
+-
+   command: "kv --ops $toscale(1000) --create 30 --get 70 --delete 10 --expire 20 --ttl 600  --hosts $orchestrator() --bucket  $bucket(1,1)"
+-
+   command: "kv --ops $toscale(1000) --create 30 --get 70 --delete 10 --expire 20 --ttl 600  --hosts $orchestrator() --bucket  $bucket(1,2)"
+-
+   command: "kv --ops $toscale(1000) --create 30 --get 70 --delete 10 --expire 20 --ttl 600  --hosts $orchestrator() --bucket  $bucket(1,3)"
+
+#============ start view queries  ============
+-
+   image: gideon
+   entrypoint: "./addviews.sh"
+   command: "$orchestrator():8092 default"
+   wait: true
+-
+   command: "query --host $node(0, 0) --ddoc scale --view stats --concurrency $toscale(1)"
+-
+   command: "query --host $node(0, 4) --ddoc scale --view padd --concurrency $toscale(1)"
+-
+   command: "query --host $node(0, 5) --ddoc scale --view array --concurrency $toscale(1)"
+
+
+#============ load 1M items ============
+-
+   image: pillowfight
+   command: "-U  $orchestrator() -I $toscale(1000) -B $toscale(100) -t 4 -c 10"
+   wait: true
+
+#============ rebalance out a node============
+-
+    image: couchbase-cli
+    command:  "rebalance -c  $orchestrator()
+	       --server-remove $node(0, 1)
+	       -u  $attr(0, rest_username) -p  $attr(0, rest_password)"
+    wait: true
+#============ load 1M items ============
+-
+   image: pillowfight
+   command: "-U  $orchestrator() -I $toscale(1000) -B $toscale(100) -t 4 -c 10"
+   wait: true
+
+
+#============ swap rebalance ============
+-
+   image: couchbase-cli
+   command: "server-add -c  $orchestrator()
+	     --server-add  $node(0,1)
+	     -u  $attr(0, rest_username) -p  $attr(0, rest_password)
+	     --server-add-username $attr(0, rest_username) --server-add-password  $attr(0, rest_password)"
+   wait: true
+-
+   command:  "rebalance -c  $orchestrator()
+		--server-remove $node(0,2)
+		-u  $attr(0, rest_username) -p  $attr(0, rest_password)"
+   wait: true
+
+#============ update 1M items ============
+-
+   image: pillowfight
+   command: "-U  $orchestrator() -I $toscale(1000) -B $toscale(100) -t 4 -c 10"
+   wait: true
+
+
+#============ start xdcr replications ============
+-
+   image: couchbase-cli
+   command:  'xdcr-setup -c  $orchestrator() --create
+		    --xdcr-cluster-name $attr(0, name)
+		    --xdcr-hostname $node(1,0)
+		    --xdcr-username $attr(1, rest_username)
+		    --xdcr-password $attr(1, rest_password)'
+   wait: true
+-
+   command: 'xdcr-replicate -c $orchestrator()
+		    --xdcr-cluster-name $attr(0, name)
+		    --xdcr-from-bucket $bucket(0,0)
+		    --xdcr-to-bucket remote'
+   wait: true
+
+
+
+#============ swap failover ============
+-
+   image: couchbase-cli
+   command: "server-add -c  $orchestrator()
+	     --server-add  $node(0,2)
+	     -u  $attr(0, rest_username) -p  $attr(0, rest_password)
+	     --server-add-username $attr(0, rest_username) --server-add-password  $attr(0, rest_password)"
+   wait: true
+-
+   command: "failover -c $orchestrator()
+	     --server-failover $node(0,1)
+	     -u  $attr(0, rest_username) -p  $attr(0, rest_password)"
+   wait: true
+-
+   command:  "rebalance -c  $orchestrator() -u  $attr(0, rest_username) -p  $attr(0, rest_password)"
+   wait: true
+
+#============ update 1M items ============
+-
+   image: pillowfight
+   command: "-U  $orchestrator() -I $toscale(1000) -B $toscale(100) -t 4 -c 10"
+   wait: true
+
+
+#============ swap hard failover ============
+-
+   image: couchbase-cli  # as indexer
+   command: "server-add -c  $orchestrator()
+	     --server-add  $node(0,1)
+	     -u  $attr(0, rest_username) -p  $attr(0, rest_password)
+	     --server-add-username $attr(0, rest_username) --server-add-password  $attr(0, rest_password)"
+   wait: true
+-
+   command: "failover -c $orchestrator()
+	    --server-failover $node(0,2)
+	    -u  $attr(0, rest_username) -p  $attr(0, rest_password) --force"
+   wait: true
+-
+   command: "failover -c $orchestrator()
+	    --server-failover $node(0,3)
+	    -u  $attr(0, rest_username) -p  $attr(0, rest_password) --force"
+   wait: true
+-
+   command:  "rebalance -c  $orchestrator() -u  $attr(0, rest_username) -p  $attr(0, rest_password)"
+   wait: true
+
+
+
+#============ update 1M items ============
+-
+   image: pillowfight
+   command: "-U  $orchestrator() -I $toscale(1000) -B $toscale(100) -t 4 -c 10"
+   wait: true
+
+
+
+#============ add back============
+-
+   image: couchbase-cli
+   command: "server-add -c  $orchestrator()
+	     --server-add  $node(0,2)
+	     -u  $attr(0, rest_username) -p  $attr(0, rest_password)
+	     --server-add-username $attr(0, rest_username) --server-add-password  $attr(0, rest_password)"
+   wait: true
+-
+   command: "server-add -c  $orchestrator()
+	     --server-add  $node(0,3)
+	     -u  $attr(0, rest_username) -p  $attr(0, rest_password)
+	     --server-add-username $attr(0, rest_username) --server-add-password  $attr(0, rest_password)"
+   wait: true
+-
+   command:  "rebalance -c  $orchestrator() -u  $attr(0, rest_username) -p  $attr(0, rest_password)"
+   wait: true

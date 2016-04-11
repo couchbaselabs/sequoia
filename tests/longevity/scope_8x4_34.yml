@@ -1,0 +1,38 @@
+---
+buckets:
+  -
+      name: default
+      ram: 50% 
+      eviction: fullEviction
+      replica: 2
+  -
+      name: other 
+      count: 4
+      ram: 10% 
+  -
+      name: remote
+      ram: 100% 
+
+servers: # each server tag represents a cluster
+  -
+      name: local
+      count: 8
+      ram: 40% 
+      rest_username: Administrator
+      rest_password: password
+      data_path: "/data"
+      index_path: "/data"
+      rest_port: 8091
+      query_port: 8093
+      init_nodes: 8
+      buckets: default,other
+  -
+      name: remote
+      count: 2
+      ram: 60% 
+      rest_username: Administrator
+      rest_password: password
+      data_path: "/data"
+      rest_port: 8091
+      init_nodes: 2
+      buckets: remote
