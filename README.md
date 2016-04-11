@@ -5,10 +5,11 @@ Scalable couchbase testing with docker
 * Mac - https://docs.docker.com/mac/
 * Ubuntu - https://docs.docker.com/engine/installation/linux/ubuntulinux/
 
-**Requires Go**
-* Download - https://golang.org/dl/ 
-
-
+**Install Go**
+* Ubuntu - https://github.com/golang/go/wiki/Ubuntu
+* CentOS - http://itekblog.com/centos-golang/
+* Any - https://golang.org/dl/ 
+ 
 **Build Containers**
 ```bash
 ./build.sh
