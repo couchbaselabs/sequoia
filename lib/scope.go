@@ -153,7 +153,6 @@ func (s *Scope) InitCluster() {
 			"--cluster-password", server.RestPassword,
 			"--cluster-port", server.RestPort,
 			"--cluster-ramsize", server.Ram,
-			"--services", services,
 		}
 		// make sure if index services is specified that index ram is set
 		if strings.Index(services, "index") > -1 && server.IndexRam == "" {
@@ -209,8 +208,8 @@ func (s *Scope) AddNodes() {
 			return // not adding self
 		}
 
-		servicesList := server.NodeServices[name]
-		services := strings.Join(servicesList, ",")
+		//servicesList := server.NodeServices[name]
+		//services := strings.Join(servicesList, ",")
 		command := []string{"server-add",
 			"-c", orchestratorIp,
 			"-u", server.RestUsername,
@@ -218,7 +217,6 @@ func (s *Scope) AddNodes() {
 			"--server-add", ip,
 			"--server-add-username", server.RestUsername,
 			"--server-add-password", server.RestPassword,
-			"--services", services,
 		}
 
 		desc := "add node " + ip
