@@ -6,7 +6,7 @@ buckets: # define single default bucket
     replica: 1
     type: couchbase
 
-servers: # define a single server with link named 'local'
+servers: # define 4 servers
   -
      name: local.st.couchbase.com
      ram: 70% 
