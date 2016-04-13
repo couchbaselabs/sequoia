@@ -2,13 +2,13 @@
 buckets:
   -
       name: default
-      ram: 50% 
+      ram: 70% 
       eviction: fullEviction
       replica: 2
   -
       name: other 
-      count: 4
-      ram: 10% 
+      eviction: fullEviction
+      ram: 30% 
   -
       name: remote
       ram: 100% 

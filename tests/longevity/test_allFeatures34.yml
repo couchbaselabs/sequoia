@@ -12,13 +12,7 @@
    image: gideon
    command: "kv --ops $toscale(1000) --create 30 --get 70 --delete 10 --expire 20 --ttl 600  --hosts $orchestrator() --bucket  $bucket(0,0) --sizes 16000"
 -
-   command: "kv --ops $toscale(1000) --create 30 --get 70 --delete 10 --expire 20 --ttl 600  --hosts $orchestrator() --bucket  $bucket(1,0) --sizes 16000"
--
-   command: "kv --ops $toscale(1000) --create 30 --get 70 --delete 10 --expire 20 --ttl 600  --hosts $orchestrator() --bucket  $bucket(1,1)"
--
-   command: "kv --ops $toscale(1000) --create 30 --get 70 --delete 10 --expire 20 --ttl 600  --hosts $orchestrator() --bucket  $bucket(1,2)"
--
-   command: "kv --ops $toscale(1000) --create 30 --get 70 --delete 10 --expire 20 --ttl 600  --hosts $orchestrator() --bucket  $bucket(1,3)"
+   command: "kv --ops $toscale(1000) --create 30 --get 70 --delete 10 --expire 20 --ttl 600  --hosts $orchestrator() --bucket  $bucket(1,0)"
 
 #============ start view queries  ============
 -
