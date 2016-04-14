@@ -1,6 +1,7 @@
 package sequoia
 
 import (
+	"log"
 	"strings"
 )
 
@@ -20,9 +21,26 @@ type ConfigOpts struct {
 	Scale        int
 }
 
-func NewConfigSpec(fileName string) Config {
+func NewConfigSpec(fileName *string, scopeFile *string, testFile *string) Config {
 	var config Config
-	ReadYamlFile(fileName, &config)
+	ReadYamlFile(*fileName, &config)
+
+	// allow overrides
+	if *scopeFile != "" {
+		config.Scope = *scopeFile
+	}
+	if *testFile != "" {
+		config.Test = *testFile
+	}
+
+	// verify
+	if config.Scope == "" {
+		log.Fatalln("Config Error: scope file required, use -scope or specify in config.yml")
+	}
+	if config.Test == "" {
+		log.Fatalln("Config Error: test file required, use -test or specify in config.yml")
+	}
+
 	return config
 }
 
