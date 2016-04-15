@@ -136,17 +136,13 @@ func (p *DockerProvider) ProvideCouchbaseServers(servers []ServerSpec) {
 				if len(version) == 1 {
 					logerrstr(fmt.Sprintf("unexpected build format: [%s] i.e '4.5.0-1221' required", p.Build))
 				}
-				var buildNoArg = docker.BuildArg{
-					Name:  "BUILD_NO",
-					Value: version[1],
-				}
-
+				var buildArgs = BuildArgsForVersion(version[0], version[1])
 				var buildOpts = docker.BuildImageOptions{
 					Name:           imgName,
 					ContextDir:     "containers/couchbase/",
 					SuppressOutput: false,
 					Pull:           false,
-					BuildArgs:      []docker.BuildArg{buildNoArg},
+					BuildArgs:      buildArgs,
 				}
 
 				// build image
@@ -201,4 +197,36 @@ func (p *DockerProvider) GetRestUrl(name string) string {
 	}
 	host = fmt.Sprintf("%s:%d\n", host, port)
 	return strings.TrimSpace(host)
+}
+
+func BuildArgsForVersion(ver, build string) []docker.BuildArg {
+
+	var buildArgs []docker.BuildArg
+
+	var buildNoArg = docker.BuildArg{
+		Name:  "BUILD_NO",
+		Value: build,
+	}
+	var versionArg = docker.BuildArg{
+		Name:  "VERSION",
+		Value: ver,
+	}
+	var flavorArg = docker.BuildArg{
+		Name:  "FLAVOR",
+		Value: versionFlavor(ver),
+	}
+	buildArgs = []docker.BuildArg{versionArg, buildNoArg, flavorArg}
+
+	return buildArgs
+
+}
+
+func versionFlavor(ver string) string {
+	switch true {
+	case strings.Index(ver, "4.1") == 0:
+		return "sherlock"
+	case strings.Index(ver, "4.5") == 0:
+		return "watson"
+	}
+	return "watson"
 }
