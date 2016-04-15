@@ -89,7 +89,7 @@ func (s *Scope) WaitForNodes() {
 
 func (s *Scope) InitNodes() {
 
-	var image = "couchbase-cli"
+	var image = "sequoiatools/couchbase-cli"
 
 	initNodesOp := func(name string, server *ServerSpec) {
 		ip := s.Provider.GetHostAddress(name)
@@ -125,7 +125,7 @@ func (s *Scope) InitNodes() {
 
 func (s *Scope) InitCluster() {
 
-	var image = "couchbase-cli"
+	var image = "sequoiatools/couchbase-cli"
 
 	initClusterOp := func(name string, server *ServerSpec) {
 		orchestrator := server.Names[0]
@@ -194,7 +194,7 @@ func (s *Scope) InitCluster() {
 
 func (s *Scope) AddNodes() {
 
-	var image = "couchbase-cli"
+	var image = "sequoiatools/couchbase-cli"
 
 	addNodesOp := func(name string, server *ServerSpec) {
 
@@ -243,7 +243,7 @@ func (s *Scope) AddNodes() {
 
 func (s *Scope) RebalanceClusters() {
 
-	var image = "couchbase-cli"
+	var image = "sequoiatools/couchbase-cli"
 	// configure rebalance operation
 	operation := func(name string, server *ServerSpec) {
 
@@ -276,7 +276,7 @@ func (s *Scope) RebalanceClusters() {
 
 func (s *Scope) CreateBuckets() {
 
-	var image = "couchbase-cli"
+	var image = "sequoiatools/couchbase-cli"
 
 	// configure rebalance operation
 	operation := func(name string, server *ServerSpec) {
