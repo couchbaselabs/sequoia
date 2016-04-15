@@ -9,13 +9,13 @@ docker build -t ubuntu_gcc -f containers/templates/Dockerfile-ubuntu-gcc  contai
 docker build -t ubuntu_python -f containers/templates/Dockerfile-ubuntu-python  containers/templates/
 
 # framework containers
-docker build -t perfrunner containers/perfrunner
+docker build -t sequoiatools/perfrunner containers/perfrunner
 docker build --build-arg BUILD_NO=$BUILD_NO -t couchbase-watson containers/couchbase
-docker build -t couchbase-cli containers/couchbase-cli
-docker build -t testrunner containers/testrunner
-docker build -t tpcc containers/tpcc
-docker build -t pillowfight containers/pillowfight
-docker build -t gideon containers/gideon  # depends on pillowfight
+docker build -t sequoiatools/couchbase-cli containers/couchbase-cli
+docker build -t sequoiatools/testrunner containers/testrunner
+docker build -t sequoiatools/tpcc containers/tpcc
+docker build -t sequoiatools/pillowfight containers/pillowfight
+docker build -t sequoiatools/gideon containers/gideon  # depends on pillowfight
 #docker build -t ycsb containers/ycsb
 #docker build -t mysql containers/mysql
 #docker build -t elasticsearch containers/elasticsearch

@@ -1,7 +1,7 @@
 ---
 #============ start tpcc indexing  ============
 -
-   image: tpcc
+   image: sequoiatools/tpcc
    command:  "./run.sh {{.QueryNode}}:8093 util/cbcrindex.sql"
    wait: true
 -
@@ -11,25 +11,25 @@
    command: "python tpcc.py --duration 2259200 --client {{.Scale 1}}
                              --warehouses {{.Scale 2}} --no-load n1ql  --query-url {{.QueryNode}}:8093"
 -
-   image: cbq
+   image: sequoiatools/cbq
    command: "-e=http://{{.QueryNode}}:8093  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_rating on `default`(rating)'"
 
 
 #============ continous kv loading a minimum of 15M items  ============
 -
-   image: pillowfight
+   image: sequoiatools/pillowfight
    command: "-U {{.Orchestrator}} -M 512 -p aaa -I {{.Scale 1000}} -B {{.Scale 100}} -t 4  --rate-limit {{.Scale 100}}"
 -
    command: "-U {{.Orchestrator}} -M 512 -p bbb -I {{.Scale 1000}} -B {{.Scale 100}} -t 4  --rate-limit {{.Scale 1000}}"
 -
    command: "-U {{.Orchestrator}} -M 512 -p ccc -I {{.Scale 1000}} -B {{.Scale 100}} -t 4  --rate-limit {{.Scale 1000}}"
 -
-   image: gideon
+   image: sequoiatools/gideon
    command: "kv --ops {{.Scale 100}} --create 30 --get 70 --delete 10 --expire 20 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 16000"
 
 #============ start view queries  ============
 -
-   image: gideon
+   image: sequoiatools/gideon
    entrypoint: "./addviews.sh"
    command: "{{.Orchestrator}}:8092 {{.Bucket}}"
    wait: true
@@ -43,19 +43,19 @@
 
 #============ load 1M items ============
 -
-   image: pillowfight
+   image: sequoiatools/pillowfight
    command: "-U  {{.Orchestrator}} -I {{.Scale 1000}} -B {{.Scale 100}} -t 4 -c 10"
    wait: true
 
 #============ rebalance out a node============
 -
-    image: couchbase-cli
+    image: sequoiatools/couchbase-cli
     command:  "rebalance -c  {{.Orchestrator}} --server-remove {{.NthDataNode 1}}  -u  {{.RestUsername}} -p  {{.RestPassword}}"
     wait: true
 
 #============ start xdcr replications ============
 -
-   image: couchbase-cli
+   image: sequoiatools/couchbase-cli
    command:  "xdcr-setup -c {{.Orchestrator}} --create --xdcr-cluster-name remote 
         --xdcr-hostname {{.Nodes | .Cluster 1 | net 0}}
         --xdcr-username {{.Nodes | .Cluster 1 | .Attr `rest_username`}} 
@@ -70,14 +70,14 @@
 
 #============ load 1M items ============
 -
-   image: pillowfight
+   image: sequoiatools/pillowfight
    command: "-U  {{.Orchestrator}} -I {{.Scale 1000}} -B {{.Scale 100}} -t 4 -c 10"
    wait: true
 
 
 #============ swap rebalance ============
 -
-   image: couchbase-cli
+   image: sequoiatools/couchbase-cli
    command: "server-add -c  {{.Orchestrator}} 
        --server-add {{.NthDataNode 1}} 
        -u  {{.RestUsername}} -p  {{.RestPassword}}
@@ -91,13 +91,13 @@
 
 #============ update 1M items ============
 -
-   image: pillowfight
+   image: sequoiatools/pillowfight
    command: "-U  {{.Orchestrator}} -I {{.Scale 1000}} -B {{.Scale 100}} -t 4 -c 10"
    wait: true
 
 #============ swap failover ============
 -
-   image: couchbase-cli
+   image: sequoiatools/couchbase-cli
    command: "server-add -c  {{.Orchestrator}}
        --server-add  {{.NthDataNode 2}}
        -u  {{.RestUsername}} -p  {{.RestPassword}}
@@ -114,14 +114,14 @@
 
 #============ update 1M items ============
 -
-   image: pillowfight
+   image: sequoiatools/pillowfight
    command: "-U  {{.Orchestrator}} -I {{.Scale 1000}} -B {{.Scale 100}} -t 4 -c 10"
    wait: true
 
 
 #============ swap hard failover ============
 -
-   image: couchbase-cli  # as indexer
+   image: sequoiatools/couchbase-cli  # as indexer
    command: "server-add -c  {{.Orchestrator}}
        --server-add  {{.NthDataNode 1}}
        -u  {{.RestUsername}} -p  {{.RestPassword}}
@@ -145,13 +145,13 @@
 
 #============ update 1M items ============
 -
-   image: pillowfight
+   image: sequoiatools/pillowfight
    command: "-U  {{.Orchestrator}} -I {{.Scale 1000}} -B {{.Scale 100}} -t 4 -c 10"
    wait: true
 
 #============ add back============
 -
-   image: couchbase-cli
+   image: sequoiatools/couchbase-cli
    command: "server-add -c  {{.Orchestrator}}
        --server-add  {{.NthDataNode 2}}
        -u  {{.RestUsername}} -p  {{.RestPassword}}

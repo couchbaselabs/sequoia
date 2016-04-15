@@ -1,4 +1,4 @@
 - 
-  image: pillowfight
+  image: sequoiatools/pillowfight
   command: "-U  {{.Orchestrator}} -B 100 -t 1 -c 10"
   wait: true

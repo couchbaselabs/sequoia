@@ -5,9 +5,15 @@ import (
 	"github.com/fatih/color"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
+	"log"
 	"strings"
 )
 
+func logerr(err error) {
+	if err != nil {
+		log.Fatalln(err)
+	}
+}
 func chkerr(err error) {
 	if err != nil {
 		panic(err)
@@ -41,5 +47,5 @@ func ReadYamlFile(filename string, spec interface{}) {
 
 	err = yaml.Unmarshal(source, spec)
 	chkerr(err)
-	fmt.Println(color.GreenString("\u2713 "), color.WhiteString("ok %s", filename))
+	fmt.Println(color.CyanString("\u2192 "), color.WhiteString("ok %s", filename))
 }

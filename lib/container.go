@@ -91,8 +91,43 @@ func (cm *ContainerManager) RemoveAllContainers() {
 		err := cm.Client.RemoveContainer(opts)
 		chkerr(err)
 
-		fmt.Println(color.GreenString("\u2713 "), color.WhiteString("ok remove %s", c.Names))
+		fmt.Println(color.CyanString("\u2192 "), color.WhiteString("ok remove %s", c.Names))
 	}
+}
+
+func (cm *ContainerManager) CheckImageExists(image string) bool {
+
+	// list images
+	var found = false
+	listOpts := docker.ListImagesOptions{
+		All: true,
+	}
+	apiImages, err := cm.Client.ListImages(listOpts)
+	chkerr(err)
+
+	// find image locally
+	for _, apiImage := range apiImages {
+		for _, name := range apiImage.RepoTags {
+			name = strings.Split(name, ":")[0]
+			match := strings.Split(image, ":")[0]
+			if name == match {
+				found = true
+			}
+		}
+	}
+	return found
+}
+
+func (cm *ContainerManager) PullImage(repo string) error {
+	fmt.Printf("%s  %s",
+		color.CyanString("\u2192"),
+		color.WhiteString("pull Image %s\n", repo))
+
+	imgOpts := docker.PullImageOptions{
+		Repository: repo,
+	} // TODO: tag
+
+	return cm.Client.PullImage(imgOpts, docker.AuthConfiguration{})
 }
 
 func (cm *ContainerManager) RunContainer(opts docker.CreateContainerOptions, async bool) (*docker.Container, error) {
@@ -120,14 +155,19 @@ func (cm *ContainerManager) Run(task ContainerTask) {
 
 	fmt.Printf("%s  %s",
 		color.CyanString("\u2192"),
-		color.WhiteString("%s\t", task.Describe))
+		color.WhiteString("%s\n", task.Describe))
 
 	// get task options
 	options := task.GetOptions()
 
-	_, err := cm.RunContainer(options, task.Async)
-	chkerr(err)
+	// pull/build container if necessary
+	exists := cm.CheckImageExists(task.Image)
 
-	// print result
-	fmt.Printf("%s\n", color.GreenString("\u2713"))
+	if exists == false {
+		err := cm.PullImage(task.Image)
+		logerr(err)
+	}
+	_, err := cm.RunContainer(options, task.Async)
+	logerr(err)
+
 }
