@@ -64,10 +64,10 @@ func NewContainerManager(clientUrl string) *ContainerManager {
 		cert := fmt.Sprintf("%s/cert.pem", path)
 		key := fmt.Sprintf("%s/key.pem", path)
 		client, err = docker.NewTLSClient(clientUrl, cert, key, ca)
-		chkerr(err)
+		logerr(err)
 	} else {
 		client, err = docker.NewClient(clientUrl)
-		chkerr(err)
+		logerr(err)
 	}
 
 	return &ContainerManager{
@@ -121,13 +121,23 @@ func (cm *ContainerManager) CheckImageExists(image string) bool {
 func (cm *ContainerManager) PullImage(repo string) error {
 	fmt.Printf("%s  %s",
 		color.CyanString("\u2192"),
-		color.WhiteString("pull Image %s\n", repo))
+		color.WhiteString("pulling image %s\n", repo))
 
 	imgOpts := docker.PullImageOptions{
 		Repository: repo,
 	} // TODO: tag
 
 	return cm.Client.PullImage(imgOpts, docker.AuthConfiguration{})
+}
+
+func (cm *ContainerManager) BuildImage(opts docker.BuildImageOptions) error {
+	fmt.Printf("%s  %s",
+		color.CyanString("\u2192"),
+		color.WhiteString("building image %s\n", opts.Name))
+
+	// hookup io
+	opts.OutputStream = os.Stdout
+	return cm.Client.BuildImage(opts)
 }
 
 func (cm *ContainerManager) RunContainer(opts docker.CreateContainerOptions, async bool) (*docker.Container, error) {

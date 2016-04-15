@@ -29,6 +29,7 @@ func NewProvider(config Config, servers []ServerSpec) Provider {
 		provider = &DockerProvider{
 			cm,
 			servers,
+			config.Build,
 			make(map[string]string),
 		}
 	case "file":
@@ -76,6 +77,7 @@ func (p *FileProvider) ProvideCouchbaseServers(servers []ServerSpec) {
 type DockerProvider struct {
 	Cm               *ContainerManager
 	Servers          []ServerSpec
+	Build            string
 	ActiveContainers map[string]string
 }
 
@@ -124,8 +126,36 @@ func (p *DockerProvider) ProvideCouchbaseServers(servers []ServerSpec) {
 				PortBindings: portBindings,
 			}
 
+			// check if build version exists
+			var imgName = fmt.Sprintf("couchbase_%s", p.Build)
+			exists := p.Cm.CheckImageExists(imgName)
+			if exists == false {
+
+				// create options based on provider settings and build
+				var version = strings.Split(p.Build, "-")
+				if len(version) == 1 {
+					logerrstr(fmt.Sprintf("unexpected build format: [%s] i.e '4.5.0-1221' required", p.Build))
+				}
+				var buildNoArg = docker.BuildArg{
+					Name:  "BUILD_NO",
+					Value: version[1],
+				}
+
+				var buildOpts = docker.BuildImageOptions{
+					Name:           imgName,
+					ContextDir:     "containers/couchbase/",
+					SuppressOutput: false,
+					Pull:           false,
+					BuildArgs:      []docker.BuildArg{buildNoArg},
+				}
+
+				// build image
+				err := p.Cm.BuildImage(buildOpts)
+				logerr(err)
+			}
+
 			config := docker.Config{
-				Image: "couchbase-watson",
+				Image: imgName,
 			}
 
 			options := docker.CreateContainerOptions{

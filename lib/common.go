@@ -1,6 +1,7 @@
 package sequoia
 
 import (
+	"errors"
 	"fmt"
 	"github.com/fatih/color"
 	"gopkg.in/yaml.v2"
@@ -9,17 +10,19 @@ import (
 	"strings"
 )
 
-func logerr(err error) {
-	if err != nil {
-		log.Fatalln(err)
-	}
-}
 func chkerr(err error) {
 	if err != nil {
 		panic(err)
 	}
 }
-
+func logerr(err error) {
+	if err != nil {
+		log.Fatalln(err)
+	}
+}
+func logerrstr(err string) {
+	logerr(errors.New(err))
+}
 func ExpandName(name string, count uint8) []string {
 	var names []string
 

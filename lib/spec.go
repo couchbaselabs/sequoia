@@ -10,6 +10,7 @@ type Config struct {
 	Scope    string
 	Test     string
 	Provider string
+	Build    string
 	Options  ConfigOpts
 }
 
@@ -39,6 +40,10 @@ func NewConfigSpec(fileName *string, scopeFile *string, testFile *string) Config
 	}
 	if config.Test == "" {
 		log.Fatalln("Config Error: test file required, use -test or specify in config.yml")
+	}
+
+	if config.Build == "" {
+		config.Build = "latest"
 	}
 
 	return config
