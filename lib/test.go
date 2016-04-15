@@ -5,18 +5,28 @@ import (
 	"strings"
 )
 
+type Test struct {
+	Actions    []ActionSpec
+	Cm         *ContainerManager
+	TestConfig Config
+}
+
 type ActionSpec struct {
 	Describe   string
 	Image      string
 	Command    string
 	Wait       bool
 	Entrypoint string
+	Vars       []VarOptions
 }
 
-type Test struct {
-	Actions    []ActionSpec
-	Cm         *ContainerManager
-	TestConfig Config
+type VarOptions struct {
+	Name    string
+	Service string
+	Cluster uint8
+	Bucket  uint8
+	Offset  uint8
+	Port    int
 }
 
 func NewTestSpec(config Config) Test {
