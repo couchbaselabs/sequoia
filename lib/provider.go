@@ -84,6 +84,7 @@ type DockerProvider struct {
 func (p *DockerProvider) GetType() string {
 	return "docker"
 }
+
 func (p *DockerProvider) GetHostAddress(name string) string {
 	var ipAddress string
 
@@ -164,7 +165,7 @@ func (p *DockerProvider) ProvideCouchbaseServers(servers []ServerSpec) {
 			chkerr(err)
 			p.ActiveContainers[container.Name] = container.ID
 
-			fmt.Println(color.GreenString("\u2713 "), color.WhiteString("ok start %s", serverName))
+			fmt.Println(color.CyanString("\u2192 "), color.WhiteString("ok %s", serverName))
 			i++
 		}
 	}
