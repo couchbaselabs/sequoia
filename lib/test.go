@@ -89,6 +89,7 @@ func (t *Test) _run(scope Scope) {
 			logerr(err)
 			if pass == false {
 				colorsay("skipping due to requirements: " + action.Requires)
+				lastAction = action
 				continue
 			}
 		}
