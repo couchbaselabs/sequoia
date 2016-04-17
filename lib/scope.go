@@ -25,6 +25,7 @@ type Scope struct {
 	Provider   Provider
 	TestConfig Config
 	Version    string
+	Aux        int
 }
 
 func NewScope(config Config) Scope {
@@ -44,6 +45,7 @@ func NewScope(config Config) Scope {
 		provider,
 		config,
 		"",
+		0,
 	}
 }
 

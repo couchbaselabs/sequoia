@@ -51,25 +51,28 @@ func (t *Test) Run(scope Scope) {
 
 	// run at least <repeat> times or forever if -1
 	repeat := t.TestConfig.Options.Repeat
+	loops := 0
 	if repeat == -1 {
 		// run forever
 		for {
-			t._run(scope)
+			t._run(scope, loops)
+			loops++
 		}
 	} else {
 		repeat++
-		for loops := 0; loops < repeat; loops++ {
-			t._run(scope)
+		for loops = 0; loops < repeat; loops++ {
+			t._run(scope, loops)
 		}
 	}
 
 }
 
-func (t *Test) _run(scope Scope) {
+func (t *Test) _run(scope Scope, loop int) {
+
+	var lastAction ActionSpec
+	scope.Aux = loop
 
 	// run all actions in test
-	var lastAction ActionSpec
-
 	for _, action := range t.Actions {
 
 		if action.Image == "" {
