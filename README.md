@@ -10,14 +10,13 @@ Scalable couchbase testing with docker
 * CentOS - http://itekblog.com/centos-golang/
 * Any - https://golang.org/dl/ 
  
-**Build Containers**
-```bash
-./build.sh
-```
 
-**Run Simple Test**
+**Run Tests**
 ```bash
 go get github.com/couchbaselabs/sequoia
 go build
-./sequoia config.yml
+./sequoia  
+
+# see config.yml or specify via cli
+./sequoia -scope tests/longevity/scope_8x4.yml -test tests/longevity/test_allFeatures.yml 
 ```
