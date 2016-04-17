@@ -24,6 +24,7 @@ type Scope struct {
 	Cm         *ContainerManager
 	Provider   Provider
 	TestConfig Config
+	Version    string
 }
 
 func NewScope(config Config) Scope {
@@ -42,6 +43,7 @@ func NewScope(config Config) Scope {
 		cm,
 		provider,
 		config,
+		"",
 	}
 }
 
@@ -68,10 +70,11 @@ func (s *Scope) InitCli() {
 	orchestrator := cluster.Names[0]
 	rest := s.Provider.GetRestUrl(orchestrator)
 	version := GetServerVersion(rest, cluster.RestUsername, cluster.RestPassword)
+	s.Version = version[:3]
 
 	// pull cli tag matching version..ie 3.5, 4.1, 4.5
 	// :latest is used if no match found
-	s.Cm.PullTaggedImage("sequoiatools/couchbase-cli", version[:3])
+	s.Cm.PullTaggedImage("sequoiatools/couchbase-cli", s.Version)
 
 }
 
@@ -170,6 +173,7 @@ func (s *Scope) InitCluster() {
 			"--cluster-ramsize", server.Ram,
 			"--services", services,
 		}
+
 		// make sure if index services is specified that index ram is set
 		if strings.Index(services, "index") > -1 && server.IndexRam == "" {
 			server.IndexRam = strconv.Itoa(s.ClusterIndexQuota(name, server))
@@ -187,6 +191,9 @@ func (s *Scope) InitCluster() {
 		if server.IndexStorage != "" {
 			command = append(command, "--index-storage-setting", server.IndexStorage)
 		}
+
+		command = cliCommandValidator(s.Version, command)
+
 		desc := "init cluster " + orchestrator
 		task := ContainerTask{
 			Describe: desc,
@@ -412,4 +419,56 @@ func (s *Scope) CompileCommand(actionCommand string) []string {
 	}
 
 	return commandFinal
+}
+
+//
+// cliCommandValidator checks the cli command for opts that
+// could possibly be invalid based on version
+//
+func cliCommandValidator(version string, command []string) []string {
+
+	if version == "" {
+		fmt.Println("version not set")
+		return command
+	}
+
+	result := []string{}
+	vMajor, _ := strconv.Atoi(version[:1])
+	vMinor, _ := strconv.Atoi(version[2:3])
+
+	for i, arg := range command {
+		if i == 0 {
+			// action
+			result = append(result, command[0])
+			continue
+		}
+		// must be an arg
+		if strings.Index(arg, "-") != 0 {
+			continue
+		}
+
+		// <4.5 builds
+		if vMajor == 4 && vMinor < 5 {
+			if arg == "--index-storage-setting" {
+				continue
+			}
+		}
+
+		// <4.0 builds
+		if vMajor < 4 &&
+			arg == "--services" &&
+			arg == "--cluster-index-ramsize" &&
+			arg == "--node-init-index-path" {
+			continue
+		}
+
+		// copy arg
+		result = append(result, arg)
+		// check if arg has value
+		if i+1 < len(command) {
+			result = append(result, command[i+1])
+		}
+	}
+
+	return result
 }
