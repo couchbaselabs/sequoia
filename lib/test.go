@@ -17,16 +17,6 @@ type ActionSpec struct {
 	Command    string
 	Wait       bool
 	Entrypoint string
-	Vars       []VarOptions
-}
-
-type VarOptions struct {
-	Name    string
-	Service string
-	Cluster uint8
-	Bucket  uint8
-	Offset  uint8
-	Port    int
 }
 
 func NewTestSpec(config Config) Test {
