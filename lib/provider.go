@@ -20,6 +20,22 @@ type Provider interface {
 	GetRestUrl(name string) string
 }
 
+type FileProvider struct {
+	Servers      []ServerSpec
+	ServerNameIp map[string]string
+}
+
+type DockerProvider struct {
+	Cm               *ContainerManager
+	Servers          []ServerSpec
+	ActiveContainers map[string]string
+}
+
+type DockerProviderOpts struct {
+	Build            string
+	BuildUrlOverride string `yaml:"build_url_override"`
+}
+
 func NewProvider(config Config, servers []ServerSpec) Provider {
 	var provider Provider
 
@@ -29,7 +45,6 @@ func NewProvider(config Config, servers []ServerSpec) Provider {
 		provider = &DockerProvider{
 			cm,
 			servers,
-			config.Build,
 			make(map[string]string),
 		}
 	case "file":
@@ -40,11 +55,6 @@ func NewProvider(config Config, servers []ServerSpec) Provider {
 	}
 
 	return provider
-}
-
-type FileProvider struct {
-	Servers      []ServerSpec
-	ServerNameIp map[string]string
 }
 
 func (p *FileProvider) GetType() string {
@@ -72,13 +82,6 @@ func (p *FileProvider) ProvideCouchbaseServers(servers []ServerSpec) {
 			i++
 		}
 	}
-}
-
-type DockerProvider struct {
-	Cm               *ContainerManager
-	Servers          []ServerSpec
-	Build            string
-	ActiveContainers map[string]string
 }
 
 func (p *DockerProvider) GetType() string {
@@ -109,6 +112,10 @@ func (p *DockerProvider) GetHostAddress(name string) string {
 
 func (p *DockerProvider) ProvideCouchbaseServers(servers []ServerSpec) {
 
+	var providerOpts DockerProviderOpts
+	ReadYamlFile("providers/docker/options.yml", &providerOpts)
+	var build = providerOpts.Build
+
 	var i int = 0
 	for _, server := range servers {
 		serverNameList := ExpandName(server.Name, server.Count)
@@ -128,16 +135,11 @@ func (p *DockerProvider) ProvideCouchbaseServers(servers []ServerSpec) {
 			}
 
 			// check if build version exists
-			var imgName = fmt.Sprintf("couchbase_%s", p.Build)
+			var imgName = fmt.Sprintf("couchbase_%s", build)
 			exists := p.Cm.CheckImageExists(imgName)
 			if exists == false {
 
-				// create options based on provider settings and build
-				var version = strings.Split(p.Build, "-")
-				if len(version) == 1 {
-					logerrstr(fmt.Sprintf("unexpected build format: [%s] i.e '4.5.0-1221' required", p.Build))
-				}
-				var buildArgs = BuildArgsForVersion(version[0], version[1])
+				var buildArgs = BuildArgsForVersion(providerOpts)
 				var buildOpts = docker.BuildImageOptions{
 					Name:           imgName,
 					ContextDir:     "containers/couchbase/",
@@ -200,9 +202,16 @@ func (p *DockerProvider) GetRestUrl(name string) string {
 	return strings.TrimSpace(host)
 }
 
-func BuildArgsForVersion(ver, build string) []docker.BuildArg {
+func BuildArgsForVersion(opts DockerProviderOpts) []docker.BuildArg {
 
+	// create options based on provider settings and build
 	var buildArgs []docker.BuildArg
+	var version = strings.Split(opts.Build, "-")
+	if len(version) == 1 {
+		logerrstr(fmt.Sprintf("unexpected build format: [%s] i.e '4.5.0-1221' required", opts.Build))
+	}
+	var ver = version[0]
+	var build = version[1]
 
 	var buildNoArg = docker.BuildArg{
 		Name:  "BUILD_NO",
@@ -218,6 +227,23 @@ func BuildArgsForVersion(ver, build string) []docker.BuildArg {
 	}
 	buildArgs = []docker.BuildArg{versionArg, buildNoArg, flavorArg}
 
+	// add build url override if applicable
+	if opts.BuildUrlOverride != "" {
+		buildArgs = append(buildArgs,
+			docker.BuildArg{
+				Name:  "BUILD_URL",
+				Value: opts.BuildUrlOverride,
+			},
+		)
+		var buildParts = strings.Split(opts.BuildUrlOverride, "/")
+		var buildPkg = buildParts[len(buildParts)-1]
+		buildArgs = append(buildArgs,
+			docker.BuildArg{
+				Name:  "BUILD_PKG",
+				Value: buildPkg,
+			},
+		)
+	}
 	return buildArgs
 
 }

@@ -1,19 +1,19 @@
 FROM ubuntu:14.04
 RUN apt-get update
 
-RUN apt-get install -yq runit wget python-httplib2  openssh-server  && \
+RUN apt-get install -yq runit wget python-httplib2  openssh-server libssl0.9.8   && \
     apt-get autoremove && apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 ARG VERSION=4.5.0
 ARG BUILD_NO=1307
 ARG FLAVOR=watson
+ARG BUILD_PKG=couchbase-server-enterprise_$VERSION-$BUILD_NO-ubuntu14.04_amd64.deb
 
 ENV NOTVISIBLE="in users profile" \
     PATH=$PATH:/opt/couchbase/bin:/opt/couchbase/bin/tools:/opt/couchbase/bin/install \
     LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/couchbase/lib \
     BASE_URL=http://172.23.120.24/builds/latestbuilds/couchbase-server/$FLAVOR/$BUILD_NO
-ENV BUILD_PKG=couchbase-server-enterprise_$VERSION-$BUILD_NO-ubuntu14.04_amd64.deb
 
 RUN mkdir /var/run/sshd
 RUN echo 'root:couchbase' | chpasswd

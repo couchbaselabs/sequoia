@@ -2,7 +2,6 @@ client:  https://192.168.99.100:2376
 scope:  tests/simple/scope_small.yml
 test: tests/simple/test_simple.yml
 provider: docker
-build: 4.5.0-2133
 
 options:
   skip_setup: false 
