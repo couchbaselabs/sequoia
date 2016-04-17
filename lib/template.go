@@ -40,6 +40,10 @@ func (t *TemplateResolver) Version() float64 {
 	return val
 }
 
+func (t *TemplateResolver) DoOnce() bool {
+	return t.Scope.Aux == 0
+}
+
 // apply scope scale factor to the value
 func (t *TemplateResolver) Scale(val int) string {
 	scale := t.Scope.TestConfig.Options.Scale
@@ -122,8 +126,12 @@ func (t *TemplateResolver) DataNode() string {
 // Shortcut: .ClusterNodes | .Service `kv` | net N
 func (t *TemplateResolver) NthDataNode(n int) string {
 	nodes := t.ClusterNodes()
-	serviceNodes := t.Service("kv", nodes)
-	return t.Address(n, serviceNodes)
+	version, _ := strconv.ParseFloat(t.Scope.Version, 64)
+	if version > 4.0 {
+		nodes = t.Service("kv", nodes)
+	} // otherwise everything is data
+
+	return t.Address(n, nodes)
 }
 
 func (t *TemplateResolver) Attr(key string, servers []ServerSpec) string {
