@@ -244,6 +244,8 @@ func (s *Scope) AddNodes() {
 		}
 
 		desc := "add node " + ip
+		command = cliCommandValidator(s.Version, command)
+
 		task := ContainerTask{
 			Describe: desc,
 			Image:    image,
@@ -433,8 +435,7 @@ func cliCommandValidator(version string, command []string) []string {
 	}
 
 	result := []string{}
-	vMajor, _ := strconv.Atoi(version[:1])
-	vMinor, _ := strconv.Atoi(version[2:3])
+	vMajor, _ := strconv.ParseFloat(version, 64)
 
 	for i, arg := range command {
 		if i == 0 {
@@ -448,16 +449,16 @@ func cliCommandValidator(version string, command []string) []string {
 		}
 
 		// <4.5 builds
-		if vMajor == 4 && vMinor < 5 {
+		if vMajor < 4.5 {
 			if arg == "--index-storage-setting" {
 				continue
 			}
 		}
 
 		// <4.0 builds
-		if vMajor < 4 &&
-			arg == "--services" &&
-			arg == "--cluster-index-ramsize" &&
+		if vMajor < 4.0 &&
+			arg == "--services" ||
+			arg == "--cluster-index-ramsize" ||
 			arg == "--node-init-index-path" {
 			continue
 		}
