@@ -156,17 +156,8 @@ func (cm *ContainerManager) PullTaggedImage(repo, tag string) {
 			imgRepo := strings.Split(name, ":")[0]
 			if imgRepo == repo {
 				imgTag := strings.Split(name, ":")[1]
-				if imgTag != tag {
-					// rm image
-					err = cm.Client.RemoveImageExtended(apiImage.ID,
-						docker.RemoveImageOptions{
-							Force: true,
-						},
-					)
-					logerr(err)
-					break
-				} else {
-					// save tag
+				if imgTag == tag {
+					// save tag for future use against this repo
 					var tagId = apiImage.ID
 					tagArgs := strings.Split(apiImage.ID, ":")
 					if len(tagArgs) > 1 {
@@ -177,8 +168,6 @@ func (cm *ContainerManager) PullTaggedImage(repo, tag string) {
 			}
 		}
 	}
-
-	// associate tag with this container
 
 }
 
