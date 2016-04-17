@@ -9,13 +9,14 @@ buckets: # define single default bucket
 servers: # define 4 servers
   -
      name: local.st.couchbase.com
-     ram: 70% 
+     ram: 60% 
      index_ram: 20% 
      count: 4
      rest_username: Administrator
      rest_password: password
      rest_port: 8091
      init_nodes: 4
+     index_storage: forestdb
      services:
         query: 2
         index: 2
