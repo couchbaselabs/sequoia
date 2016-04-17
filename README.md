@@ -13,6 +13,7 @@ Scalable couchbase testing with docker
 **Build**
 ```bash
 go get github.com/couchbaselabs/sequoia
+cd $GOPATH/src/github.com/couchbaselabs/sequoia/
 go build
 ```
 
