@@ -2,6 +2,7 @@ package sequoia
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -17,6 +18,7 @@ type ActionSpec struct {
 	Command    string
 	Wait       bool
 	Entrypoint string
+	Requires   string
 }
 
 func NewTestSpec(config Config) Test {
@@ -30,6 +32,9 @@ func NewTestSpec(config Config) Test {
 }
 
 func (t *Test) Run(scope Scope) {
+
+	// prepare cli
+	scope.InitCli()
 
 	// do optional setup
 	if t.TestConfig.Options.SkipSetup == false {
@@ -66,6 +71,17 @@ func (t *Test) _run(scope Scope) {
 	var lastAction ActionSpec
 
 	for _, action := range t.Actions {
+
+		// check action requirements
+		if action.Requires != "" {
+			ok := ParseTemplate(&scope, action.Requires)
+			pass, err := strconv.ParseBool(ok)
+			logerr(err)
+			if pass == false {
+				colorsay("skipping due to requirements: " + action.Requires)
+				continue
+			}
+		}
 
 		// resolve command
 		command := scope.CompileCommand(action.Command)

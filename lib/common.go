@@ -23,6 +23,11 @@ func logerr(err error) {
 func logerrstr(err string) {
 	logerr(errors.New(err))
 }
+
+func colorsay(msg string) {
+	fmt.Println(color.CyanString("\u2192 "), color.WhiteString("%s", msg))
+}
+
 func ExpandName(name string, count uint8) []string {
 	var names []string
 

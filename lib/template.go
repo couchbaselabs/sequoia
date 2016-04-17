@@ -26,13 +26,18 @@ func ParseTemplate(s *Scope, command string) string {
 		"bucket": tResolv.BucketName,
 	}
 	tmpl, err := template.New("t").Funcs(netFunc).Parse(command)
-	chkerr(err)
+	logerr(err)
 
 	out := new(bytes.Buffer)
 	err = tmpl.Execute(out, &tResolv)
-	chkerr(err)
+	logerr(err)
 
 	return fmt.Sprintf("%s", out)
+}
+
+func (t *TemplateResolver) Version() float64 {
+	val, _ := strconv.ParseFloat(t.Scope.Version, 64)
+	return val
 }
 
 // apply scope scale factor to the value
