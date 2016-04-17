@@ -50,6 +50,7 @@ func (t *ContainerTask) GetOptions() docker.CreateContainerOptions {
 type ContainerManager struct {
 	Client   *docker.Client
 	Endpoint string
+	TagId    map[string]string
 }
 
 func NewContainerManager(clientUrl string) *ContainerManager {
@@ -73,6 +74,7 @@ func NewContainerManager(clientUrl string) *ContainerManager {
 	return &ContainerManager{
 		Client:   client,
 		Endpoint: clientUrl,
+		TagId:    make(map[string]string),
 	}
 }
 
@@ -95,17 +97,24 @@ func (cm *ContainerManager) RemoveAllContainers() {
 	}
 }
 
-func (cm *ContainerManager) CheckImageExists(image string) bool {
+func (cm *ContainerManager) ListImages() []docker.APIImages {
 
-	// list images
-	var found = false
 	listOpts := docker.ListImagesOptions{
 		All: true,
 	}
 	apiImages, err := cm.Client.ListImages(listOpts)
-	chkerr(err)
+	logerr(err)
+
+	return apiImages
+}
+
+func (cm *ContainerManager) CheckImageExists(image string) bool {
+
+	// list images
+	apiImages := cm.ListImages()
 
 	// find image locally
+	var found = false
 	for _, apiImage := range apiImages {
 		for _, name := range apiImage.RepoTags {
 			name = strings.Split(name, ":")[0]
@@ -130,6 +139,49 @@ func (cm *ContainerManager) PullImage(repo string) error {
 	return cm.Client.PullImage(imgOpts, docker.AuthConfiguration{})
 }
 
+func (cm *ContainerManager) PullTaggedImage(repo, tag string) {
+
+	// attempt to pull tagged image
+	err := cm.PullImage(repo + ":" + tag)
+
+	// no such repo - use latest
+	if err != nil {
+		err := cm.PullImage(repo)
+		logerr(err)
+	}
+
+	// remove any other images with different tags
+	for _, apiImage := range cm.ListImages() {
+		for _, name := range apiImage.RepoTags {
+			imgRepo := strings.Split(name, ":")[0]
+			if imgRepo == repo {
+				imgTag := strings.Split(name, ":")[1]
+				if imgTag != tag {
+					// rm image
+					err = cm.Client.RemoveImageExtended(apiImage.ID,
+						docker.RemoveImageOptions{
+							Force: true,
+						},
+					)
+					logerr(err)
+					break
+				} else {
+					// save tag
+					var tagId = apiImage.ID
+					tagArgs := strings.Split(apiImage.ID, ":")
+					if len(tagArgs) > 1 {
+						tagId = tagArgs[1]
+					}
+					cm.TagId[repo] = tagId[:7]
+				}
+			}
+		}
+	}
+
+	// associate tag with this container
+
+}
+
 func (cm *ContainerManager) BuildImage(opts docker.BuildImageOptions) error {
 	fmt.Printf("%s  %s",
 		color.CyanString("\u2192"),
@@ -142,6 +194,8 @@ func (cm *ContainerManager) BuildImage(opts docker.BuildImageOptions) error {
 
 func (cm *ContainerManager) RunContainer(opts docker.CreateContainerOptions, async bool) (*docker.Container, error) {
 	container, err := cm.Client.CreateContainer(opts)
+	chkerr(err)
+
 	cm.Client.StartContainer(container.ID, nil)
 	if async == false {
 		if rc, _ := cm.Client.WaitContainer(container.ID); rc != 0 {
@@ -167,16 +221,22 @@ func (cm *ContainerManager) Run(task ContainerTask) {
 		color.CyanString("\u2192"),
 		color.WhiteString("%s\n", task.Describe))
 
+	// use repo tag if exists
+	if tagId, ok := cm.TagId[task.Image]; ok {
+		task.Image = tagId
+	} else {
+
+		// pull/build container if necessary
+		exists := cm.CheckImageExists(task.Image)
+
+		if exists == false {
+			err := cm.PullImage(task.Image)
+			logerr(err)
+		}
+	}
+
 	// get task options
 	options := task.GetOptions()
-
-	// pull/build container if necessary
-	exists := cm.CheckImageExists(task.Image)
-
-	if exists == false {
-		err := cm.PullImage(task.Image)
-		logerr(err)
-	}
 	_, err := cm.RunContainer(options, task.Async)
 	logerr(err)
 

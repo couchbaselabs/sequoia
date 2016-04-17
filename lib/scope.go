@@ -49,6 +49,7 @@ func (s *Scope) Setup() {
 
 	s.Provider.ProvideCouchbaseServers(s.Spec.Servers)
 	s.WaitForNodes()
+	s.InitCli()
 	s.InitNodes()
 	s.InitCluster()
 	s.AddNodes()
@@ -58,6 +59,20 @@ func (s *Scope) Setup() {
 
 func (s *Scope) TearDown() {
 	s.Cm.RemoveAllContainers()
+}
+
+func (s *Scope) InitCli() {
+
+	// make sure proper couchbase-cli is used for node init
+	cluster := s.Spec.Servers[0]
+	orchestrator := cluster.Names[0]
+	rest := s.Provider.GetRestUrl(orchestrator)
+	version := GetServerVersion(rest, cluster.RestUsername, cluster.RestPassword)
+
+	// pull cli tag matching version..ie 3.5, 4.1, 4.5
+	// :latest is used if no match found
+	s.Cm.PullTaggedImage("sequoiatools/couchbase-cli", version[:3])
+
 }
 
 func (s *Scope) WaitForNodes() {

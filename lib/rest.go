@@ -16,6 +16,7 @@ type NodeSelf struct {
 	IndexMemoryQuota  int
 	MemoryQuota       int
 	Services          []string
+	Version           string
 }
 
 func GetMemTotal(host, user, password string) int {
@@ -74,6 +75,21 @@ func NodeHasService(service, host, user, password string) bool {
 	}
 
 	return false
+}
+
+func GetServerVersion(host, user, password string) string {
+	var n NodeSelf
+
+	err := jsonRequest(host, user, password, &n)
+	chkerr(err)
+
+	q := n.Version
+	if q == "" {
+		time.Sleep(1 * time.Second)
+		return GetServerVersion(host, user, password)
+	}
+
+	return q
 }
 
 func jsonRequest(host, user, password string, v interface{}) error {
