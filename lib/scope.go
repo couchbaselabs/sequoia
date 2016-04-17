@@ -51,6 +51,7 @@ func (s *Scope) Setup() {
 
 	s.Provider.ProvideCouchbaseServers(s.Spec.Servers)
 	s.WaitForNodes()
+	s.InitCli()
 	s.InitNodes()
 	s.InitCluster()
 	s.AddNodes()

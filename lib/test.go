@@ -33,9 +33,6 @@ func NewTestSpec(config Config) Test {
 
 func (t *Test) Run(scope Scope) {
 
-	// prepare cli
-	scope.InitCli()
-
 	// do optional setup
 	if t.TestConfig.Options.SkipSetup == false {
 		scope.TearDown()
@@ -43,6 +40,9 @@ func (t *Test) Run(scope Scope) {
 	} else if scope.Provider.GetType() == "file" {
 		// at least IP's are needed for test
 		scope.Provider.ProvideCouchbaseServers(scope.Spec.Servers)
+	} else {
+		// not doing setup but need to get cb versions
+		scope.InitCli()
 	}
 
 	if t.TestConfig.Options.SkipTest == true {
@@ -72,6 +72,16 @@ func (t *Test) _run(scope Scope) {
 
 	for _, action := range t.Actions {
 
+		if action.Image == "" {
+			// reuse last action image
+			action.Image = lastAction.Image
+
+			// reuse last action requires
+			if action.Requires == "" {
+				action.Requires = lastAction.Requires
+			}
+		}
+
 		// check action requirements
 		if action.Requires != "" {
 			ok := ParseTemplate(&scope, action.Requires)
@@ -85,11 +95,6 @@ func (t *Test) _run(scope Scope) {
 
 		// resolve command
 		command := scope.CompileCommand(action.Command)
-
-		if action.Image == "" {
-			// reuse last action
-			action.Image = lastAction.Image
-		}
 
 		if action.Describe == "" { // use command as describe
 			action.Describe = fmt.Sprintf("%s: %s", action.Image, strings.Join(command, " "))
