@@ -9,8 +9,8 @@ buckets: # define single default bucket
 servers: # define 4 servers
   -
      name: local.st.couchbase.com
-     ram: 60% 
-     index_ram: 20% 
+     ram: 40% 
+     index_ram: 10% 
      count: 4
      rest_username: Administrator
      rest_password: password
