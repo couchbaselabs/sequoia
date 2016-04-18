@@ -24,6 +24,11 @@ type FileProvider struct {
 	Servers      []ServerSpec
 	ServerNameIp map[string]string
 }
+type ClusterRunProvider struct {
+	Servers      []ServerSpec
+	ServerNameIp map[string]string
+	Endpoint     string
+}
 
 type DockerProvider struct {
 	Cm               *ContainerManager
@@ -38,8 +43,9 @@ type DockerProviderOpts struct {
 
 func NewProvider(config Config, servers []ServerSpec) Provider {
 	var provider Provider
+	providerArgs := strings.Split(config.Provider, ":")
 
-	switch config.Provider {
+	switch providerArgs[0] {
 	case "docker":
 		cm := NewContainerManager(config.Client)
 		provider = &DockerProvider{
@@ -51,6 +57,16 @@ func NewProvider(config Config, servers []ServerSpec) Provider {
 		provider = &FileProvider{
 			servers,
 			make(map[string]string),
+		}
+	case "dev":
+		endpoint := "127.0.0.1"
+		if len(providerArgs) == 2 {
+			endpoint = providerArgs[1]
+		}
+		provider = &ClusterRunProvider{
+			servers,
+			make(map[string]string),
+			endpoint,
 		}
 	}
 
@@ -79,6 +95,39 @@ func (p *FileProvider) ProvideCouchbaseServers(servers []ServerSpec) {
 			if i < len(hosts) {
 				p.ServerNameIp[name] = hosts[i]
 			}
+			i++
+		}
+	}
+}
+
+func (p *ClusterRunProvider) GetType() string {
+	return "dev"
+}
+func (p *ClusterRunProvider) GetHostAddress(name string) string {
+	return p.ServerNameIp[name]
+}
+
+func (p *ClusterRunProvider) GetRestUrl(name string) string {
+
+	var i int
+	for _, server := range p.Servers {
+		for _, pName := range server.Names {
+			if pName == name {
+				port := 9000 + i
+				return fmt.Sprintf("%s:%d", p.Endpoint, port)
+			}
+			i++
+		}
+	}
+	return "<no_host>"
+}
+
+func (p *ClusterRunProvider) ProvideCouchbaseServers(servers []ServerSpec) {
+	var i int
+	for _, server := range servers {
+		for _, name := range server.Names {
+			port := 9000 + i
+			p.ServerNameIp[name] = fmt.Sprintf("%s:%d", p.Endpoint, port)
 			i++
 		}
 	}

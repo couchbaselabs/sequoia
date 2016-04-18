@@ -86,7 +86,14 @@ func (s *Scope) WaitForNodes() {
 
 	// use martin/wait container to wait for node to listen on port 8091
 	waitForNodesOp := func(name string, server *ServerSpec) {
-		ip := fmt.Sprintf("%s:%d", s.Provider.GetHostAddress(name), 8091)
+
+		ip := s.Provider.GetHostAddress(name)
+		ipPort := strings.Split(ip, ":")
+		if len(ipPort) == 1 {
+			// use default port
+			ip = ip + ":8091"
+		}
+
 		command := []string{"-c", ip, "-t", "120"}
 		desc := "wait for " + ip
 		task := ContainerTask{
@@ -119,10 +126,10 @@ func (s *Scope) InitNodes() {
 			"-p", server.RestPassword,
 		}
 
-		if server.DataPath != "" && s.Provider.GetType() != "docker" {
+		if s.Provider.GetType() == "file" {
 			command = append(command, "--node-init-data-path", server.DataPath)
 		}
-		if server.IndexPath != "" && s.Provider.GetType() != "docker" {
+		if s.Provider.GetType() == "file" {
 			command = append(command, "--node-init-index-path", server.IndexPath)
 		}
 		desc := "init node " + ip

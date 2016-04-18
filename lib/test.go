@@ -37,8 +37,8 @@ func (t *Test) Run(scope Scope) {
 	if t.TestConfig.Options.SkipSetup == false {
 		scope.TearDown()
 		scope.Setup()
-	} else if scope.Provider.GetType() == "file" {
-		// at least IP's are needed for test
+	} else if scope.Provider.GetType() != "docker" {
+		// non-dynamic IP's need to be extrapolated before test
 		scope.Provider.ProvideCouchbaseServers(scope.Spec.Servers)
 	} else {
 		// not doing setup but need to get cb versions
