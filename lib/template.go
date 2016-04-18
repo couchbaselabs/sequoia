@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+	"strings"
 	"text/template"
 )
 
@@ -24,6 +25,7 @@ func ParseTemplate(s *Scope, command string) string {
 	netFunc := template.FuncMap{
 		"net":    tResolv.Address,
 		"bucket": tResolv.BucketName,
+		"noport": tResolv.NoPort,
 	}
 	tmpl, err := template.New("t").Funcs(netFunc).Parse(command)
 	logerr(err)
@@ -172,6 +174,7 @@ func (t *TemplateResolver) BucketName(index int, servers []ServerSpec) string {
 				if i == index {
 					return name
 				}
+				i++
 			}
 		}
 	}
@@ -186,4 +189,9 @@ func (t *TemplateResolver) Bucket() string {
 // .ClusterNodes | bucket N
 func (t *TemplateResolver) NthBucket(n int) string {
 	return t.BucketName(n, t.ClusterNodes())
+}
+
+// strip port from addr
+func (t *TemplateResolver) NoPort(addr string) string {
+	return strings.Split(addr, ":")[0]
 }

@@ -69,6 +69,7 @@ type ServerSpec struct {
 	RestUsername string `yaml:"rest_username"`
 	RestPassword string `yaml:"rest_password"`
 	RestPort     string `yaml:"rest_port"`
+	ViewPort     string `yaml:"view_port"`
 	InitNodes    uint8  `yaml:"init_nodes"`
 	DataPath     string `yaml:"data_path"`
 	IndexPath    string `yaml:"index_path"`
@@ -171,6 +172,8 @@ func (s *ScopeSpec) ToAttr(attr string) string {
 		return "Ram"
 	case "rest_port":
 		return "RestPort"
+	case "view_port":
+		return "ViewPort"
 	}
 
 	return ""
@@ -219,6 +222,10 @@ func NewScopeSpec(fileName string) ScopeSpec {
 		}
 		// init node services
 		spec.Servers[i].InitNodeServices()
+
+		if spec.Servers[i].ViewPort == "" {
+			spec.Servers[i].ViewPort = "8092"
+		}
 	}
 
 	return spec
