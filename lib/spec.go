@@ -223,9 +223,6 @@ func NewScopeSpec(fileName string) ScopeSpec {
 		// init node services
 		spec.Servers[i].InitNodeServices()
 
-		if spec.Servers[i].ViewPort == "" {
-			spec.Servers[i].ViewPort = "8092"
-		}
 	}
 
 	return spec

@@ -39,6 +39,25 @@ func NewScope(config Config) Scope {
 	// create provider of resources for scope
 	provider := NewProvider(config, spec.Servers)
 
+	// update defaults from spec based on provider
+	for i, _ := range spec.Servers {
+		// set default port services
+		if spec.Servers[i].RestPort == "" {
+			if provider.GetType() == "dev" {
+			} else {
+				spec.Servers[i].RestPort = "8091"
+			}
+		}
+
+		if spec.Servers[i].ViewPort == "" {
+			if provider.GetType() == "dev" {
+				spec.Servers[i].ViewPort = "9500"
+			} else {
+				spec.Servers[i].ViewPort = "8092"
+			}
+		}
+	}
+
 	return Scope{
 		spec,
 		cm,

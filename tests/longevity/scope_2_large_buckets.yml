@@ -22,8 +22,7 @@ servers: # each server tag represents a cluster
       rest_password: password
       data_path: "/data"
       index_path: "/data"
-      view_port: 9500 
-      init_nodes: 8
+      init_nodes: 6
       buckets: default,other
   -
       name: remote
@@ -32,6 +31,5 @@ servers: # each server tag represents a cluster
       rest_username: Administrator
       rest_password: password
       data_path: "/data"
-      rest_port: 9000 
       init_nodes: 2
       buckets: remote
