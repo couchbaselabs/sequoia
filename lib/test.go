@@ -49,6 +49,10 @@ func (t *Test) Run(scope Scope) {
 		return
 	}
 
+	// post setup, copy container manager tagsIds from scope
+	// in case some custom tags are in use
+	t.Cm.TagId = scope.Cm.TagId
+
 	// run at least <repeat> times or forever if -1
 	repeat := t.TestConfig.Options.Repeat
 	loops := 0
