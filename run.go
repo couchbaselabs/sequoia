@@ -15,8 +15,9 @@ func main() {
 
 	// parse config
 	config := S.NewConfigSpec(configFile, scopeFile, testFile)
-	scope := S.NewScope(config)
-	test := S.NewTestSpec(config)
+	cm := S.NewContainerManager(config.Client)
+	scope := S.NewScope(config, cm)
+	test := S.NewTest(config, cm)
 
 	// run
 	test.Run(scope)

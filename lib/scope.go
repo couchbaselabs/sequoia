@@ -28,13 +28,10 @@ type Scope struct {
 	Aux        int
 }
 
-func NewScope(config Config) Scope {
+func NewScope(config Config, cm *ContainerManager) Scope {
 
 	// init from yaml
 	spec := NewScopeSpec(config.Scope)
-
-	// set container manager to use provisioning scope
-	cm := NewContainerManager(config.Client)
 
 	// create provider of resources for scope
 	provider := NewProvider(config, spec.Servers)

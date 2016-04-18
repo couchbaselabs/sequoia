@@ -8,8 +8,8 @@ import (
 
 type Test struct {
 	Actions    []ActionSpec
-	Cm         *ContainerManager
 	TestConfig Config
+	Cm         *ContainerManager
 }
 
 type ActionSpec struct {
@@ -21,13 +21,12 @@ type ActionSpec struct {
 	Requires   string
 }
 
-func NewTestSpec(config Config) Test {
+func NewTest(config Config, cm *ContainerManager) Test {
 	var actions []ActionSpec
 	ReadYamlFile(config.Test, &actions)
-	cm := NewContainerManager(config.Client)
 	return Test{actions,
-		cm,
 		config,
+		cm,
 	}
 }
 
@@ -40,6 +39,7 @@ func (t *Test) Run(scope Scope) {
 	} else if scope.Provider.GetType() != "docker" {
 		// non-dynamic IP's need to be extrapolated before test
 		scope.Provider.ProvideCouchbaseServers(scope.Spec.Servers)
+		scope.InitCli()
 	} else {
 		// not doing setup but need to get cb versions
 		scope.InitCli()
@@ -48,10 +48,6 @@ func (t *Test) Run(scope Scope) {
 	if t.TestConfig.Options.SkipTest == true {
 		return
 	}
-
-	// post setup, copy container manager tagsIds from scope
-	// in case some custom tags are in use
-	t.Cm.TagId = scope.Cm.TagId
 
 	// run at least <repeat> times or forever if -1
 	repeat := t.TestConfig.Options.Repeat
