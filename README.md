@@ -17,11 +17,55 @@ cd $GOPATH/src/github.com/couchbaselabs/sequoia/
 go build
 ```
 
-**Run Tests**
+## Testing
+
+In Sequoia a test consists of a scope spec and a test spec.  The top-level config.yml file denotes which files to use for the test.  These defaults can be overridden via -scope and -test options on the command line.
+
 ```bash
-# simple test
+# use defaults from config.yml
 ./sequoia  
 
-# see config.yml or specify via cli
+# override scope file from config.yml
+./sequoia -scope tests/simple/scope_medium.yml
+
+# override both scope and test file
 ./sequoia -scope tests/longevity/scope_8x4.yml -test tests/longevity/test_allFeatures.yml 
 ```
+
+Refer to [Test Syntax](https://github.com/couchbaselabs/sequoia/wiki/Syntax) for more information about how to build out your test and scopes.
+
+## Client
+
+Sequoia works by running containers that apply load to couchbase servers.  These containers are running on docker specified by the client in your config file.  Depending on your docker install you will need to use http(s) and specify port.  It's recommended to run over a tcp port.  
+
+```yaml
+# config.yml
+...
+client:  https://192.168.99.100:2376
+```
+
+Or on server without https and daemon running on port 2375
+
+```yams
+# config.yml
+...
+client:  http://172.23.97.124:2375
+```
+
+
+## Providers
+
+Providers help decouple test and provisioning from the mechanisms that provide couchbase resources so that the same scope can present an identical environment to different tests.  You can change your provider via the config file.
+
+```yaml
+# config.yml
+...
+provider: docker  # dev, file
+```
+
+Read More about [Providers Here](https://github.com/couchbaselabs/sequoia/wiki/Providers)
+
+
+
+
+
