@@ -1,5 +1,8 @@
 # sequoia
 Scalable couchbase testing with docker
+<p align="center">
+  <img src="arch.png" width="350"/>
+</p>
 
 **Install Docker**
 * Mac - https://docs.docker.com/mac/
