@@ -35,7 +35,7 @@ In Sequoia a test consists of a scope spec and a test spec.  The top-level confi
 ./sequoia -scope tests/longevity/scope_8x4.yml -test tests/longevity/test_allFeatures.yml 
 ```
 
-Refer to [Test Syntax](https://github.com/couchbaselabs/sequoia/wiki/Syntax) for more information about how to build out your test and scopes.
+Refer to [Test Syntax](https://github.com/couchbaselabs/sequoia/wiki/Test-Syntax) for more information about how to build out your test and scopes.
 
 ## Client
 
