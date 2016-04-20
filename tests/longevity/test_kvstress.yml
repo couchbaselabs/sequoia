@@ -1,17 +1,17 @@
 ---
-#============ continous kv loading a minimum of 15M items  ============
+#============ continous kv loading a minimum of 1.5M items  at 1xScale============
 -
    image: sequoiatools/pillowfight
-   command: "-U {{.Orchestrator}} -M 512 -p aaa -I {{.Scale 1000}} -B {{.Scale 100}} -t 4  --rate-limit {{.Scale 100}}"
+   command: "-U {{.Orchestrator}} -M 512 -p aaa -I {{.Scale 500000}} -B 100 --rate-limit {{.Scale 1000}}"
 -
-   command: "-U {{.Orchestrator}} -M 512 -p bbb -I {{.Scale 1000}} -B {{.Scale 100}} -t 4  --rate-limit {{.Scale 1000}}"
+   command: "-U {{.Orchestrator}} -M 512 -p bbb -I {{.Scale 500000}} -B 100  --rate-limit {{.Scale 1000}}"
 -
-   command: "-U {{.Orchestrator}} -M 512 -p ccc -I {{.Scale 1000}} -B {{.Scale 100}} -t 4  --rate-limit {{.Scale 1000}}"
+   command: "-U {{.Orchestrator}} -M 512 -p ccc -I {{.Scale 500000}} -B 100  --rate-limit {{.Scale 1000}}"
 -
    image: sequoiatools/gideon
-   command: "kv --ops {{.Scale 100}} --create 30 --get 70 --delete 10 --expire 20 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 16000"
+   command: "kv --ops {{.Scale 1000}} --create 30 --get 70 --delete 10 --expire 20 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 16000"
 -
-   command: "kv --ops {{.Scale 100}} --create 30 --get 70 --delete 10 --expire 20 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}} --sizes 16000"
+   command: "kv --ops {{.Scale 1000}} --create 30 --get 70 --delete 10 --expire 20 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
 
 #============ start view queries  ============
 -
@@ -27,11 +27,12 @@
    command: "query --host {{.NthDataNode 5}} --ddoc scale --view array --concurrency {{.Scale 10}}"
 
 
-#============ load 1M items ============
+#============ load 100k items at 1xScale============
 -
    image: sequoiatools/pillowfight
-   command: "-U  {{.Orchestrator}} -I {{.Scale 1000}} -B {{.Scale 100}} -t 4 -c 10"
+   command: "-U  {{.Orchestrator}} -I {{.Scale 100000}} -B 100 -c {{.Scale 1000}}"
    wait: true
+
 
 #============ rebalance out a node============
 -
@@ -55,10 +56,10 @@
         --xdcr-to-bucket {{.Nodes | .Cluster 1 | bucket 0}}"
    wait: true
 
-#============ load 1M items ============
+#============ update 100k items at 1xScale============
 -
    image: sequoiatools/pillowfight
-   command: "-U  {{.Orchestrator}} -I {{.Scale 1000}} -B {{.Scale 100}} -t 4 -c 10"
+   command: "-U  {{.Orchestrator}} -I {{.Scale 100000}} -B 100 -c {{.Scale 1000}}"
    wait: true
 
 
@@ -76,10 +77,10 @@
     -u  {{.RestUsername}} -p  {{.RestPassword}}"
    wait: true
 
-#============ update 1M items ============
+#============ update 100k items at 1xScale============
 -
    image: sequoiatools/pillowfight
-   command: "-U  {{.Orchestrator}} -I {{.Scale 1000}} -B {{.Scale 100}} -t 4 -c 10"
+   command: "-U  {{.Orchestrator}} -I {{.Scale 100000}} -B 100 -c {{.Scale 1000}}"
    wait: true
 
 #============ swap failover ============
@@ -99,10 +100,10 @@
    command:  "rebalance -c  {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
    wait: true
 
-#============ update 1M items ============
+#============ update 100k items at 1xScale============
 -
    image: sequoiatools/pillowfight
-   command: "-U  {{.Orchestrator}} -I {{.Scale 1000}} -B {{.Scale 100}} -t 4 -c 10"
+   command: "-U  {{.Orchestrator}} -I {{.Scale 100000}} -B 100 -c {{.Scale 1000}}"
    wait: true
 
 
@@ -130,10 +131,10 @@
 
 
 
-#============ update 1M items ============
+#============ update 100k items at 1xScale============
 -
    image: sequoiatools/pillowfight
-   command: "-U  {{.Orchestrator}} -I {{.Scale 1000}} -B {{.Scale 100}} -t 4 -c 10"
+   command: "-U  {{.Orchestrator}} -I {{.Scale 100000}} -B 100 -c {{.Scale 1000}}"
    wait: true
 
 #============ add back============
