@@ -27,10 +27,10 @@
    command: "query --host {{.NthDataNode 5}} --ddoc scale --view array --concurrency {{.Scale 10}}"
 
 
-#============ load 100k items at 1xScale============
+#============ load 10k items at 1xScale============
 -
    image: sequoiatools/pillowfight
-   command: "-U  {{.Orchestrator}} -I {{.Scale 100000}} -B 100 -c {{.Scale 1000}}"
+   command: "-U  {{.Orchestrator}} -I {{.Scale 10000}} -B 100 -c {{.Scale 100}}"
    wait: true
 
 
@@ -56,7 +56,7 @@
         --xdcr-to-bucket {{.Nodes | .Cluster 1 | bucket 0}}"
    wait: true
 
-#============ update 100k items at 1xScale============
+#============ load 100k items at 1xScale============
 -
    image: sequoiatools/pillowfight
    command: "-U  {{.Orchestrator}} -I {{.Scale 100000}} -B 100 -c {{.Scale 1000}}"
