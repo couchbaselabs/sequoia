@@ -7,29 +7,29 @@
    wait: true
 -
    requires:  "{{.Version | le 4.0}}"
-   command: "python tpcc.py --duration 259200 --client {{.Scale 1}} --warehouses {{.Scale 2}} --no-execute n1ql
+   command: "python tpcc.py --duration 259200 --client {{.Scale 1}} --warehouses {{.Scale 5}} --no-execute n1ql
 				                    --query-url {{.QueryNode}}:8093 --userid {{.RestUsername}} --password {{.RestPassword}}"
 -
    requires:  "{{.Version | le 4.0}}"
    command: "python tpcc.py --duration 2259200 --client {{.Scale 1}}
-                             --warehouses {{.Scale 2}} --no-load n1ql  --query-url {{.QueryNode}}:8093"
+                             --warehouses {{.Scale 5}} --no-load n1ql  --query-url {{.QueryNode}}:8093"
 -
    image: sequoiatools/cbq
    requires:  "{{.Version | le 4.0}}"
    command: "-e=http://{{.QueryNode}}:8093  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_rating on `default`(rating)'"
 
 
-#============ continous kv loading a minimum of 15M items  ============
+#============ continous kv loading a minimum of 150K items when Scale=1 ============
 -
    image: sequoiatools/pillowfight
-   command: "-U {{.Orchestrator}} -M 512 -p aaa -I {{.Scale 1000}} -B {{.Scale 100}} -t 4  --rate-limit {{.Scale 100}}"
+   command: "-U {{.Orchestrator}} -M 512 -p aaa -I {{.Scale 500000}} -B 100 --rate-limit {{.Scale 100}}"
 -
-   command: "-U {{.Orchestrator}} -M 512 -p bbb -I {{.Scale 1000}} -B {{.Scale 100}} -t 4  --rate-limit {{.Scale 1000}}"
+   command: "-U {{.Orchestrator}} -M 512 -p bbb -I {{.Scale 500000}} -B 100  --rate-limit {{.Scale 100}}"
 -
-   command: "-U {{.Orchestrator}} -M 512 -p ccc -I {{.Scale 1000}} -B {{.Scale 100}} -t 4  --rate-limit {{.Scale 1000}}"
+   command: "-U {{.Orchestrator}} -M 512 -p ccc -I {{.Scale 500000}} -B 100  --rate-limit {{.Scale 100}}"
 -
    image: sequoiatools/gideon
-   command: "kv --ops {{.Scale 100}} --create 30 --get 70 --delete 10 --expire 20 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 16000"
+   command: "kv --ops {{.Scale 500}} --create 30 --get 70 --delete 10 --expire 20 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 16000"
 
 #============ start view queries  ============
 -
@@ -38,14 +38,14 @@
    command: "{{.Orchestrator}}:8092 {{.Bucket}}"
    wait: true
 -
-   command: "query --host {{.Orchestrator}} --ddoc scale --view stats --concurrency {{.Scale 10}}"
+   command: "query --host {{.Orchestrator}} --ddoc scale --view stats --concurrency {{.Scale 1}}"
 -
-   command: "query --host {{.NthDataNode 4}} --ddoc scale --view padd --concurrency {{.Scale 10}}"
+   command: "query --host {{.NthDataNode 4}} --ddoc scale --view padd --concurrency {{.Scale 1}}"
 -
-   command: "query --host {{.NthDataNode 5}} --ddoc scale --view array --concurrency {{.Scale 10}}"
+   command: "query --host {{.NthDataNode 5}} --ddoc scale --view array --concurrency {{.Scale 1}}"
 
 
-#============ load 1M items ============
+#============ quick update batch ============
 -
    image: sequoiatools/pillowfight
    command: "-U  {{.Orchestrator}} -I {{.Scale 1000}} -B {{.Scale 100}} -t 4 -c 10"
@@ -94,7 +94,7 @@
     -u  {{.RestUsername}} -p  {{.RestPassword}}"
    wait: true
 
-#============ update 1M items ============
+#============ quick update batch ============
 -
    image: sequoiatools/pillowfight
    command: "-U  {{.Orchestrator}} -I {{.Scale 1000}} -B {{.Scale 100}} -t 4 -c 10"
@@ -117,7 +117,7 @@
    command:  "rebalance -c  {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
    wait: true
 
-#============ update 1M items ============
+#============ quick update batch ============
 -
    image: sequoiatools/pillowfight
    command: "-U  {{.Orchestrator}} -I {{.Scale 1000}} -B {{.Scale 100}} -t 4 -c 10"
@@ -148,7 +148,7 @@
 
 
 
-#============ update 1M items ============
+#============ quick update batch ============
 -
    image: sequoiatools/pillowfight
    command: "-U  {{.Orchestrator}} -I {{.Scale 1000}} -B {{.Scale 100}} -t 4 -c 10"

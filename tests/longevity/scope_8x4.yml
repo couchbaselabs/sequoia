@@ -33,14 +33,14 @@ buckets:
       ram: 2% 
   -
       name: remote
-      ram: 100% 
+      ram: 80% 
 
 servers: # each server tag represents a cluster
   -
       name: local
       count: 8
-      ram: 90% 
-      index_ram: 90% 
+      ram: 40% 
+      index_ram: 50% 
       index_storage: forestdb
       services:
         query: 1
