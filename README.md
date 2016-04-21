@@ -7,6 +7,7 @@ Scalable couchbase testing with docker
 **Install Docker**
 * Mac - https://docs.docker.com/mac/
 * Ubuntu - https://docs.docker.com/engine/installation/linux/ubuntulinux/
+* CentOS - https://docs.docker.com/engine/installation/linux/centos/
 
 **Install Go**
 * Ubuntu - https://github.com/golang/go/wiki/Ubuntu
