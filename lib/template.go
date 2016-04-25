@@ -157,7 +157,7 @@ func (t *TemplateResolver) RestPassword() string {
 
 // Template function: `net`
 func (t *TemplateResolver) Address(index int, servers []ServerSpec) string {
-	if len(servers[0].Names) <= index {
+	if len(servers) == 0 || len(servers[0].Names) <= index {
 		return "<node_not_found>"
 	}
 
