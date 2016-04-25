@@ -46,6 +46,14 @@ func (t *TemplateResolver) DoOnce() bool {
 	return t.Scope.Aux == 0
 }
 
+func (t *TemplateResolver) EvenCount() bool {
+	return (t.Scope.Aux % 2) == 0
+}
+
+func (t *TemplateResolver) OddCount() bool {
+	return !t.EvenCount()
+}
+
 // apply scope scale factor to the value
 func (t *TemplateResolver) Scale(val int) string {
 	scale := t.Scope.TestConfig.Options.Scale
