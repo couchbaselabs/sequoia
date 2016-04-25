@@ -1,0 +1,75 @@
+####
+# Hybrid index test for verifying both memdb and forestdb indexes
+# set repeat >= 1 to excercise both storage modes
+#####
+
+
+############### data loading ################
+- 
+  requires:  "{{eq true .DoOnce}}"
+  image: sequoiatools/pillowfight
+  command: "-U  {{.Orchestrator}} -I 1000000 -B 100 -t 4 --rate-limit 5000"
+
+- 
+  image: sequoiatools/pillowfight
+  command: "-U  {{.Orchestrator}} -B 100 -t 1 -c 1000 --rate-limit 10000"
+  wait: true
+
+###############  remove indexer ################
+-
+   image: sequoiatools/couchbase-cli
+   command:  "rebalance -c  {{.Orchestrator}} --server-remove {{.Nodes | .Service `index` | net 0}}  -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   wait: true
+
+###############  update data ################
+- 
+  image: sequoiatools/pillowfight
+  command: "-U  {{.Orchestrator}} -B 100 -t 1 -c 1000 --rate-limit 10000"
+  wait: true
+
+
+###############  set storage mode ################
+-
+   requires:  "{{eq true .EvenCount}}"
+   image: sequoiatools/couchbase-cli
+   command: "cluster-edit -c {{.Orchestrator}}
+      -u  {{.RestUsername}} -p  {{.RestPassword}}
+      --output json 
+      --index-storage-setting forestdb"
+   wait: true
+-
+   requires:  "{{eq true .OddCount}}"
+   image: sequoiatools/couchbase-cli
+   command: "cluster-edit -c {{.Orchestrator}}
+      -u  {{.RestUsername}} -p  {{.RestPassword}}
+      --output json 
+      --index-storage-setting memory_optimized"
+   wait: true
+
+
+###############  add back index node ################
+-
+   image: sequoiatools/couchbase-cli
+   command: "server-add -c  {{.Orchestrator}}
+       --server-add  {{.Nodes | .Service `index` | net 0}}
+       --services index
+       -u  {{.RestUsername}} -p  {{.RestPassword}}
+       --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
+   wait: true
+-
+   command:  "rebalance -c  {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   wait: true
+
+###############  create index ################
+-
+   image: sequoiatools/cbq
+   requires:  "{{.Version | le 4.0}}"
+   command: "-e=http://{{.QueryNode}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_rating on `default`(rating)'"
+   wait: true
+
+###############  update data ################
+- 
+  image: sequoiatools/pillowfight
+  command: "-U  {{.Orchestrator}} -B 100 -t 1 -c 1000 --rate-limit 10000"
+  wait: true
+
