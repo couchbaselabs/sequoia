@@ -6,7 +6,8 @@
   command: "-e=http://{{.QueryNode}}:8093  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_rating on `default`(rating)'"
   wait: true
 -
-  # do 100 queries of the index
+  # run 10 instances each a total of 100 queries
   image: sequoiatools/queryloop
-  command: "{{.QueryNode}}:8093 'select SUM(rating) from default where rating > 0' 100"
+  command: "{{.QueryNode}}:8093 'select SUM(rating) from default where rating > 0' 100" #(100 queries)
+  concurrency: 10 # x10
   wait: true

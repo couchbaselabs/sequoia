@@ -212,8 +212,7 @@ func (p *DockerProvider) ProvideCouchbaseServers(servers []ServerSpec) {
 				HostConfig: &hostConfig,
 			}
 
-			container, err := p.Cm.RunContainer(options, true)
-			chkerr(err)
+			_, container := p.Cm.RunContainer(options)
 			p.ActiveContainers[container.Name] = container.ID
 
 			fmt.Println(color.CyanString("\u2192 "), color.WhiteString("ok %s", serverName))

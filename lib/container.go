@@ -13,12 +13,13 @@ import (
 )
 
 type ContainerTask struct {
-	Describe   string
-	Image      string
-	Command    []string
-	LinksTo    string
-	Async      bool
-	Entrypoint []string
+	Describe    string
+	Image       string
+	Command     []string
+	LinksTo     string
+	Async       bool
+	Entrypoint  []string
+	Concurrency int
 }
 
 func (t *ContainerTask) GetOptions() docker.CreateContainerOptions {
@@ -181,34 +182,41 @@ func (cm *ContainerManager) BuildImage(opts docker.BuildImageOptions) error {
 	return cm.Client.BuildImage(opts)
 }
 
-func (cm *ContainerManager) RunContainer(opts docker.CreateContainerOptions, async bool) (*docker.Container, error) {
+func (cm *ContainerManager) WaitContainer(container *docker.Container, c chan string) {
+
+	// wait for container
+	rc, _ := cm.Client.WaitContainer(container.ID)
+	if rc != 0 {
+		// log on error
+		fmt.Println(color.RedString("\n\nError on container: %s", container.Image))
+		logOpts := docker.LogsOptions{
+			Container:    container.ID,
+			OutputStream: os.Stdout,
+			ErrorStream:  os.Stderr,
+			RawTerminal:  true,
+			Stdout:       true,
+			Stderr:       true,
+		}
+		cm.Client.Logs(logOpts)
+	}
+
+	c <- container.ID
+}
+
+func (cm *ContainerManager) RunContainer(opts docker.CreateContainerOptions) (chan string, *docker.Container) {
 	container, err := cm.Client.CreateContainer(opts)
 	chkerr(err)
 
-	cm.Client.StartContainer(container.ID, nil)
-	if async == false {
-		if rc, _ := cm.Client.WaitContainer(container.ID); rc != 0 {
-			fmt.Println(color.RedString("\n\nError on container: %s", container.Image))
-			logOpts := docker.LogsOptions{
-				Container:    container.ID,
-				OutputStream: os.Stdout,
-				ErrorStream:  os.Stderr,
-				RawTerminal:  true,
-				Stdout:       true,
-				Stderr:       true,
-			}
-			cm.Client.Logs(logOpts)
-		}
-	}
+	c := make(chan string)
 
-	return container, err
+	// start container
+	cm.Client.StartContainer(container.ID, nil)
+	go cm.WaitContainer(container, c)
+
+	return c, container
 }
 
 func (cm *ContainerManager) Run(task ContainerTask) {
-
-	fmt.Printf("%s  %s",
-		color.CyanString("\u2192"),
-		color.WhiteString("%s\n", task.Describe))
 
 	// use repo tag if exists
 	if tagId, ok := cm.TagId[task.Image]; ok {
@@ -226,7 +234,31 @@ func (cm *ContainerManager) Run(task ContainerTask) {
 
 	// get task options
 	options := task.GetOptions()
-	_, err := cm.RunContainer(options, task.Async)
-	logerr(err)
 
+	// run container
+	printDesc(task.Describe)
+	ch, _ := cm.RunContainer(options)
+	idChans := []chan string{ch}
+
+	// start additional containers with support for concurrency
+	if task.Concurrency > 0 {
+		for i := 1; i < task.Concurrency; i++ {
+			printDesc(task.Describe)
+			ch, _ := cm.RunContainer(options)
+			idChans = append(idChans, ch)
+		}
+	}
+
+	// wait if necessary
+	if task.Async == false {
+		for _, ch := range idChans {
+			<-ch
+		}
+	}
+}
+
+func printDesc(desc string) {
+	fmt.Printf("%s  %s",
+		color.CyanString("\u2192"),
+		color.WhiteString("%s\n", desc))
 }

@@ -13,12 +13,13 @@ type Test struct {
 }
 
 type ActionSpec struct {
-	Describe   string
-	Image      string
-	Command    string
-	Wait       bool
-	Entrypoint string
-	Requires   string
+	Describe    string
+	Image       string
+	Command     string
+	Wait        bool
+	Entrypoint  string
+	Requires    string
+	Concurrency int
 }
 
 func NewTest(config Config, cm *ContainerManager) Test {
@@ -106,10 +107,11 @@ func (t *Test) _run(scope Scope, loop int) {
 
 		// compile task
 		task := ContainerTask{
-			Describe: action.Describe,
-			Image:    action.Image,
-			Command:  command,
-			Async:    !action.Wait,
+			Describe:    action.Describe,
+			Image:       action.Image,
+			Command:     command,
+			Async:       !action.Wait,
+			Concurrency: action.Concurrency,
 		}
 		if scope.Provider.GetType() == "docker" {
 			task.LinksTo = scope.Provider.(*DockerProvider).GetLinkPairs()
