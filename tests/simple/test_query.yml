@@ -1,6 +1,8 @@
 -
   image: sequoiatools/gideon
   command: "kv --ops {{.Scale 100}} --create 30 --get 70 --delete 10 --expire 100 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+  duration: 15 # pre load for 15 seconds
+  wait: true  # wait for preloading before going to next task
 -
   image: sequoiatools/cbq
   command: "-e=http://{{.QueryNode}}:8093  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_rating on `default`(rating)'"

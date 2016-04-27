@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type Test struct {
@@ -20,6 +21,7 @@ type ActionSpec struct {
 	Entrypoint  string
 	Requires    string
 	Concurrency int
+	Duration    time.Duration
 }
 
 func NewTest(config Config, cm *ContainerManager) Test {
@@ -112,6 +114,7 @@ func (t *Test) _run(scope Scope, loop int) {
 			Command:     command,
 			Async:       !action.Wait,
 			Concurrency: action.Concurrency,
+			Duration:    action.Duration,
 		}
 		if scope.Provider.GetType() == "docker" {
 			task.LinksTo = scope.Provider.(*DockerProvider).GetLinkPairs()

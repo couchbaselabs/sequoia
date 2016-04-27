@@ -10,6 +10,7 @@ import (
 	"github.com/fsouza/go-dockerclient"
 	"os"
 	"strings"
+	"time"
 )
 
 type ContainerTask struct {
@@ -20,6 +21,7 @@ type ContainerTask struct {
 	Async       bool
 	Entrypoint  []string
 	Concurrency int
+	Duration    time.Duration
 }
 
 func (t *ContainerTask) GetOptions() docker.CreateContainerOptions {
@@ -87,11 +89,15 @@ func (cm *ContainerManager) GetAllContainers() []docker.APIContainers {
 	return containers
 }
 
+func (cm *ContainerManager) RemoveContainer(id string) error {
+	opts := docker.RemoveContainerOptions{ID: id, RemoveVolumes: true, Force: true}
+	return cm.Client.RemoveContainer(opts)
+}
+
 func (cm *ContainerManager) RemoveAllContainers() {
 	// teardown
 	for _, c := range cm.GetAllContainers() {
-		opts := docker.RemoveContainerOptions{ID: c.ID, RemoveVolumes: true, Force: true}
-		err := cm.Client.RemoveContainer(opts)
+		err := cm.RemoveContainer(c.ID)
 		chkerr(err)
 
 		fmt.Println(color.CyanString("\u2192 "), color.WhiteString("ok remove %s", c.Names))
@@ -186,9 +192,9 @@ func (cm *ContainerManager) WaitContainer(container *docker.Container, c chan st
 
 	// wait for container
 	rc, _ := cm.Client.WaitContainer(container.ID)
-	if rc != 0 {
+	if rc != 0 && rc != 137 {
 		// log on error
-		fmt.Println(color.RedString("\n\nError on container: %s", container.Image))
+		fmt.Println(color.RedString("\n\nError occurred on container"))
 		logOpts := docker.LogsOptions{
 			Container:    container.ID,
 			OutputStream: os.Stdout,
@@ -237,16 +243,29 @@ func (cm *ContainerManager) Run(task ContainerTask) {
 
 	// run container
 	printDesc(task.Describe)
-	ch, _ := cm.RunContainer(options)
+	ch, container := cm.RunContainer(options)
 	idChans := []chan string{ch}
+	containers := []*docker.Container{container}
 
 	// start additional containers with support for concurrency
 	if task.Concurrency > 0 {
 		for i := 1; i < task.Concurrency; i++ {
 			printDesc(task.Describe)
-			ch, _ := cm.RunContainer(options)
+			ch, container := cm.RunContainer(options)
 			idChans = append(idChans, ch)
+			containers = append(containers, container)
 		}
+	}
+
+	// stop after duration
+	if task.Duration > 0 {
+		go func() {
+			time.Sleep(task.Duration * time.Second)
+			// remove container
+			for _, c := range containers {
+				cm.RemoveContainer(c.ID)
+			}
+		}()
 	}
 
 	// wait if necessary
