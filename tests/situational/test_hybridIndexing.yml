@@ -5,15 +5,14 @@
 
 
 ############### data loading ################
-- 
-  requires:  "{{eq true .DoOnce}}"
-  image: sequoiatools/pillowfight
-  command: "-U  {{.Orchestrator}} -I 1000000 -B 100 -t 4 --rate-limit 5000"
-
-- 
-  image: sequoiatools/pillowfight
-  command: "-U  {{.Orchestrator}} -B 100 -t 1 -c 1000 --rate-limit 10000"
-  wait: true
+-
+  image: sequoiatools/gideon
+  command: "kv --ops {{.Scale 100}} --create 30 --get 70 --delete 10 --expire 100 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+  duration: 15 # pre load for 15 seconds
+  wait: true  # wait for preloading before going to next task
+-
+  image: sequoiatools/gideon
+  command: "kv --ops {{.Scale 100}} --create 30 --get 70 --delete 10 --expire 100 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
 
 ###############  remove indexer ################
 -
@@ -64,8 +63,22 @@
 -
    image: sequoiatools/cbq
    requires:  "{{.Version | le 4.0}}"
-   command: "-e=http://{{.QueryNode}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_rating on `default`(rating)'"
+   command: "-e=http://{{.QueryNode}}:8093  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_rating on `default`(rating)'"
    wait: true
+-
+  requires: "{{ eq true .DoOnce}}"
+  image: sequoiatools/queryloop
+  command: "{{.QueryNode}}:8093 'select SUM(rating) from default where rating > 0'"
+-
+  command: "{{.QueryNode}}:8093 'select SUM(rating) from default where rating > 100'"
+-
+  command: "{{.QueryNode}}:8093 'select SUM(rating) from default where rating < 900'"
+-
+  command: "{{.QueryNode}}:8093 'delete from default where rating < 300'"
+-
+  command: "{{.QueryNode}}:8093 'delete from default where rating > 700'"
+-
+  command: "{{.QueryNode}}:8093 'delete from default where rating > 300 and rating < 700'"
 
 ###############  update data ################
 - 

@@ -3,12 +3,13 @@
 buckets:
   -
       name: default
+      replica: 2
       ram: 50% 
 
 servers: # each server tag represents a cluster
   -
       name: local
-      count: 4
+      count: 6
       ram: 40% 
       index_ram: 50% 
       index_storage: forestdb # memory_optimized
@@ -19,5 +20,5 @@ servers: # each server tag represents a cluster
       rest_password: password
       data_path: "/data"
       index_path: "/data"
-      init_nodes: 4
+      init_nodes: 6
       buckets: default
