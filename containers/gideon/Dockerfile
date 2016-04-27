@@ -1,5 +1,6 @@
-FROM pillowfight
+FROM sequoiatools/pillowfight
 
+RUN apt-get update
 RUN apt-get install -y python-dev python-pip
 
 # python deps
@@ -21,4 +22,5 @@ RUN git pull
 COPY spec.yaml /spec.yaml
 COPY views.json views.json
 COPY addviews.sh addviews.sh 
-ENTRYPOINT ["python", "gideon.py"]
+COPY run.sh /bin/run.sh
+ENTRYPOINT ["/bin/run.sh"]
