@@ -481,10 +481,9 @@ func cliCommandValidator(version string, command []string) []string {
 		}
 
 		// <4.0 builds
-		if vMajor < 4.0 &&
-			arg == "--services" ||
+		if vMajor < 4.0 && (arg == "--services" ||
 			arg == "--cluster-index-ramsize" ||
-			arg == "--node-init-index-path" {
+			arg == "--node-init-index-path") {
 			continue
 		}
 
