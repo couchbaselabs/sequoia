@@ -20,8 +20,8 @@ type ActionSpec struct {
 	Wait        bool
 	Entrypoint  string
 	Requires    string
-	Concurrency int
-	Duration    time.Duration
+	Concurrency string
+	Duration    string
 }
 
 func NewTest(config Config, cm *ContainerManager) Test {
@@ -86,6 +86,14 @@ func (t *Test) _run(scope Scope, loop int) {
 			if action.Requires == "" {
 				action.Requires = lastAction.Requires
 			}
+			// reuse last duration
+			if action.Duration == "" {
+				action.Duration = lastAction.Duration
+			}
+			// reuse last concurrency
+			if action.Concurrency == "" {
+				action.Concurrency = lastAction.Concurrency
+			}
 		}
 
 		// check action requirements
@@ -103,6 +111,24 @@ func (t *Test) _run(scope Scope, loop int) {
 		// resolve command
 		command := scope.CompileCommand(action.Command)
 
+		// resolve duration and concurrency
+		var taskDuration time.Duration = 0
+		var taskConcurrency = 0
+		var err error
+		if action.Duration != "" {
+			// parse template if units not found
+			if strings.Index(action.Duration, "ns") == -1 {
+				action.Duration = fmt.Sprintf("%s%s", ParseTemplate(&scope, action.Duration), "ns")
+			}
+			taskDuration, err = time.ParseDuration(action.Duration)
+			logerr(err)
+		}
+		if action.Concurrency != "" {
+			action.Concurrency = ParseTemplate(&scope, action.Concurrency)
+			taskConcurrency, err = strconv.Atoi(action.Concurrency)
+			logerr(err)
+		}
+
 		if action.Describe == "" { // use command as describe
 			action.Describe = fmt.Sprintf("%s: %s", action.Image, strings.Join(command, " "))
 		}
@@ -113,8 +139,8 @@ func (t *Test) _run(scope Scope, loop int) {
 			Image:       action.Image,
 			Command:     command,
 			Async:       !action.Wait,
-			Concurrency: action.Concurrency,
-			Duration:    action.Duration,
+			Duration:    taskDuration,
+			Concurrency: taskConcurrency,
 		}
 		if scope.Provider.GetType() == "docker" {
 			task.LinksTo = scope.Provider.(*DockerProvider).GetLinkPairs()
