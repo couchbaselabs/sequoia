@@ -6,30 +6,51 @@
    command:  "./run.sh {{.QueryNode}}:8093 util/cbcrindex.sql"
    wait: true
 -
+   image: sequoiatools/tpcc
    requires:  "{{.Version | le 4.0}}"
-   command: "python tpcc.py --duration 259200 --client {{.Scale 1}} --warehouses {{.Scale 5}} --no-execute n1ql
+   command: "python tpcc.py --duration 259200 --client {{.Scale 1}} --warehouses 5 --no-execute n1ql
 				                    --query-url {{.QueryNode}}:8093 --userid {{.RestUsername}} --password {{.RestPassword}}"
 -
-   requires:  "{{.Version | le 4.0}}"
+   requires:  "{{.Version | le 4.0 | eq .DoOnce}}"
    command: "python tpcc.py --duration 2259200 --client {{.Scale 1}}
-                             --warehouses {{.Scale 5}} --no-load n1ql  --query-url {{.QueryNode}}:8093"
+                             --warehouses 5 --no-load n1ql  --query-url {{.QueryNode}}:8093"
 -
    image: sequoiatools/cbq
    requires:  "{{.Version | le 4.0}}"
    command: "-e=http://{{.QueryNode}}:8093  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_rating on `default`(rating)'"
 
+###############  query index ################
+-
+  requires: "{{ eq true .DoOnce}}"
+  image: sequoiatools/queryloop
+  command: "{{.QueryNode}}:8093 'select SUM(rating) from default where rating > 0'"
+  concurrency: 5
+-
+  command: "{{.QueryNode}}:8093 'select SUM(rating) from default where rating > 100'"
+-
+  command: "{{.QueryNode}}:8093 'select SUM(rating) from default where rating < 900'"
+-
+  concurrency: 1  # only 1 instance of delete queries running
+  command: "{{.QueryNode}}:8093 'delete from default where rating < 300'"
+-
+  command: "{{.QueryNode}}:8093 'delete from default where rating > 700'"
+-
+  command: "{{.QueryNode}}:8093 'delete from default where rating > 300 and rating < 700'"
 
-#============ continous kv loading a minimum of 150K items when Scale=1 ============
+
+
+#============ continous kv loading ============
 -
    image: sequoiatools/pillowfight
-   command: "-U {{.Orchestrator}} -M 512 -p aaa -I {{.Scale 500000}} -B 100 --rate-limit {{.Scale 100}}"
+   command: "-U {{.Orchestrator}} -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 4  --rate-limit {{.Scale 2000}}"
+   duration: 3600  # 1 hour of main loader 
 -
-   command: "-U {{.Orchestrator}} -M 512 -p bbb -I {{.Scale 500000}} -B 100  --rate-limit {{.Scale 100}}"
+   image: sequoiatools/gideon 
+   command: "kv --ops {{.Scale 100}} --create 10 --get 90 --expire 100 --ttl 660  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 16000"
 -
-   command: "-U {{.Orchestrator}} -M 512 -p ccc -I {{.Scale 500000}} -B 100  --rate-limit {{.Scale 100}}"
--
-   image: sequoiatools/gideon
-   command: "kv --ops {{.Scale 500}} --create 30 --get 70 --delete 10 --expire 20 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 16000"
+   duration: 3600  # 1 hour of main loader 
+   command: "kv --ops {{.Scale 2000}} --create 15 --get 80 --delete 5  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 512 128 1024 2048"
+
 
 #============ start view queries  ============
 -
@@ -40,15 +61,15 @@
 -
    command: "query --host {{.Orchestrator}} --ddoc scale --view stats --concurrency {{.Scale 1}}"
 -
-   command: "query --host {{.NthDataNode 4}} --ddoc scale --view padd --concurrency {{.Scale 1}}"
+   command: "query --host {{.Orchestrator}} --ddoc scale --view padd --concurrency {{.Scale 1}}"
 -
-   command: "query --host {{.NthDataNode 5}} --ddoc scale --view array --concurrency {{.Scale 1}}"
+   command: "query --host {{.Orchestrator}} --ddoc scale --view array --concurrency {{.Scale 1}}"
 
 
 #============ quick update batch ============
 -
    image: sequoiatools/pillowfight
-   command: "-U  {{.Orchestrator}} -I {{.Scale 1000}} -B {{.Scale 100}} -t 4 -c 10"
+   command: "-U  {{.Orchestrator}} -I {{.Scale 1000}} -B {{.Scale 100}} -t 4 -c 100"
    wait: true
 
 #============ rebalance out a node============
@@ -76,7 +97,7 @@
 #============ load 1M items ============
 -
    image: sequoiatools/pillowfight
-   command: "-U  {{.Orchestrator}} -I {{.Scale 1000}} -B {{.Scale 100}} -t 4 -c 10"
+   command: "-U  {{.Orchestrator}} -I {{.Scale 1000}} -B {{.Scale 100}} -t 4 -c 100"
    wait: true
 
 
@@ -97,7 +118,7 @@
 #============ quick update batch ============
 -
    image: sequoiatools/pillowfight
-   command: "-U  {{.Orchestrator}} -I {{.Scale 1000}} -B {{.Scale 100}} -t 4 -c 10"
+   command: "-U  {{.Orchestrator}} -I {{.Scale 1000}} -B {{.Scale 100}} -t 4 -c 100"
    wait: true
 
 #============ swap failover ============
@@ -111,7 +132,7 @@
 -
    command: "failover -c {{.Orchestrator}}
        --server-failover {{.NthDataNode 1}}
-       -u  {{.RestUsername}} -p  {{.RestPassword}}"
+       -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
    wait: true
 -
    command:  "rebalance -c  {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
@@ -120,7 +141,7 @@
 #============ quick update batch ============
 -
    image: sequoiatools/pillowfight
-   command: "-U  {{.Orchestrator}} -I {{.Scale 1000}} -B {{.Scale 100}} -t 4 -c 10"
+   command: "-U  {{.Orchestrator}} -I {{.Scale 1000}} -B {{.Scale 100}} -t 4 -c 100"
    wait: true
 
 
@@ -135,7 +156,7 @@
 -
    command: "failover -c {{.Orchestrator}}
       --server-failover {{.NthDataNode 2}}
-      -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+      -u  {{.RestUsername}} -p  {{.RestPassword}}"
    wait: true
 -
    command: "failover -c {{.Orchestrator}}
@@ -151,7 +172,7 @@
 #============ quick update batch ============
 -
    image: sequoiatools/pillowfight
-   command: "-U  {{.Orchestrator}} -I {{.Scale 1000}} -B {{.Scale 100}} -t 4 -c 10"
+   command: "-U  {{.Orchestrator}} -I {{.Scale 1000}} -B {{.Scale 100}} -t 4 -c 100"
    wait: true
 
 #============ add back============
