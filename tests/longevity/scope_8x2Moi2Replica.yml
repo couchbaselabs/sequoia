@@ -1,0 +1,66 @@
+---
+buckets:
+  -
+      name: default
+      ram: 50%
+      replica: 2
+      eviction: fullEviction
+  -
+      name: ORDERS
+      ram: 10% 
+  -
+      name: ORDER_LINE
+      ram: 10% 
+  -
+      name: CUSTOMER
+      ram: 5% 
+  -
+      name: STOCK
+      ram: 5% 
+  -
+      name: NEW_ORDER
+      ram: 5% 
+  -
+      name: WAREHOUSE
+      ram: 5%
+  -
+      name: DISTRICT
+      ram: 2% 
+  -
+      name: HISTORY
+      ram: 2% 
+  -
+      name: ITEM
+      ram: 2% 
+  -
+      name: remote
+      ram: 80% 
+
+servers: # each server tag represents a cluster
+  -
+      name: local
+      count: 8
+      ram: 30%
+      index_ram: 90%
+      index_storage: memory_optimized
+      services:
+        query: 1
+        index: 1
+      rest_username: Administrator
+      rest_password: password
+      data_path: "/data"
+      index_path: "/data"
+      rest_port: 8091
+      query_port: 8093
+      init_nodes: 8
+      buckets: default,CUSTOMER,DISTRICT,HISTORY,ITEM,NEW_ORDER,ORDERS,ORDER_LINE,STOCK,WAREHOUSE
+  -
+      name: remote
+      count: 2
+      ram: 90% 
+      rest_username: Administrator
+      rest_password: password
+      data_path: "/data"
+      rest_port: 8091
+      init_nodes: 2
+      buckets: remote
