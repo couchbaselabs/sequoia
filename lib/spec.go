@@ -88,6 +88,9 @@ func (s *ServerSpec) InitNodeServices() {
 	numIndexNodes := s.Services["index"]
 	numQueryNodes := s.Services["query"]
 	numDataNodes := s.Services["data"]
+	customIndexStart := s.Services["index_start"]
+	customQueryStart := s.Services["query_start"]
+
 	s.NodeServices = make(map[string][]string)
 
 	// Spread Strategy
@@ -96,11 +99,19 @@ func (s *ServerSpec) InitNodeServices() {
 	// overlapping if possible when specific
 	// number of service types provided
 	indexStartPos := numNodes - numQueryNodes - numIndexNodes
-	if indexStartPos > numNodes { // ie negative
+	if customIndexStart > 0 {
+		// override
+		indexStartPos = customIndexStart - 1
+	}
+	if indexStartPos > numNodes {
 		indexStartPos = 0
 	}
 
 	queryStartPos := numNodes - numQueryNodes
+	if customQueryStart > 0 {
+		// override
+		queryStartPos = customQueryStart - 1
+	}
 	if queryStartPos < 0 {
 		queryStartPos = 0
 	}
