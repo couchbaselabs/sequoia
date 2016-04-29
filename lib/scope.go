@@ -212,6 +212,19 @@ func (s *Scope) InitCluster() {
 			}
 			command = append(command, "--cluster-index-ramsize", server.IndexRam)
 		}
+		// make sure if fts services is specified that fts ram is set
+		if strings.Index(services, "fts") > -1 && server.FtsRam == "" {
+			server.FtsRam = "256"
+		}
+		if server.FtsRam != "" {
+			ftsQuota := server.FtsRam
+			if strings.Index(ftsQuota, "%") > -1 {
+				// use percentage of memtotal
+				ftsQuota := s.GetPercOfMemTotal(name, server, ftsQuota)
+				server.FtsRam = ftsQuota
+			}
+			command = append(command, "--cluster-fts-ramsize", server.FtsRam)
+		}
 
 		if server.IndexStorage != "" {
 			command = append(command, "--index-storage-setting", server.IndexStorage)
@@ -475,7 +488,8 @@ func cliCommandValidator(version string, command []string) []string {
 
 		// <4.5 builds
 		if vMajor < 4.5 {
-			if arg == "--index-storage-setting" {
+			if arg == "--index-storage-setting" ||
+				arg == "--cluster-fts-ramsize" {
 				continue
 			}
 		}

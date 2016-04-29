@@ -66,6 +66,7 @@ type ServerSpec struct {
 	Count        uint8
 	Ram          string
 	IndexRam     string `yaml:"index_ram"`
+	FtsRam       string `yaml:"fts_ram"`
 	RestUsername string `yaml:"rest_username"`
 	RestPassword string `yaml:"rest_password"`
 	RestPort     string `yaml:"rest_port"`
@@ -87,9 +88,11 @@ func (s *ServerSpec) InitNodeServices() {
 	numNodes := s.Count
 	numIndexNodes := s.Services["index"]
 	numQueryNodes := s.Services["query"]
+	numFtsNodes := s.Services["fts"]
 	numDataNodes := s.Services["data"]
 	customIndexStart := s.Services["index_start"]
 	customQueryStart := s.Services["query_start"]
+	customFtsStart := s.Services["fts_start"]
 
 	s.NodeServices = make(map[string][]string)
 
@@ -107,12 +110,23 @@ func (s *ServerSpec) InitNodeServices() {
 		indexStartPos = 0
 	}
 
+	// fts defaults on same box as index machine
+	// override with fts_start
+	ftsStartPos := indexStartPos
+	if customFtsStart > 0 {
+		// override
+		ftsStartPos = customFtsStart - 1
+	}
+	if ftsStartPos > numNodes {
+		ftsStartPos = 0
+	}
+
 	queryStartPos := numNodes - numQueryNodes
 	if customQueryStart > 0 {
 		// override
 		queryStartPos = customQueryStart - 1
 	}
-	if queryStartPos < 0 {
+	if queryStartPos > numNodes {
 		queryStartPos = 0
 	}
 
@@ -122,6 +136,10 @@ func (s *ServerSpec) InitNodeServices() {
 		if i >= indexStartPos && numIndexNodes > 0 {
 			s.NodeServices[name] = append(s.NodeServices[name], "index")
 			numIndexNodes--
+		}
+		if i >= ftsStartPos && numFtsNodes > 0 {
+			s.NodeServices[name] = append(s.NodeServices[name], "fts")
+			numFtsNodes--
 		}
 		if i >= queryStartPos && numQueryNodes > 0 {
 			s.NodeServices[name] = append(s.NodeServices[name], "query")
