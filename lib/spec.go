@@ -96,7 +96,7 @@ func (s *ServerSpec) InitNodeServices() {
 	// overlapping if possible when specific
 	// number of service types provided
 	indexStartPos := numNodes - numQueryNodes - numIndexNodes
-	if indexStartPos < 0 {
+	if indexStartPos > numNodes { // ie negative
 		indexStartPos = 0
 	}
 
