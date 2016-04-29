@@ -2,10 +2,10 @@ FROM ubuntu_python
 RUN git clone git://github.com/couchbase/testrunner.git
 WORKDIR testrunner
 
-RUN pip install gevent &&\
+RUN apt-get install -y libssl-dev libffi-dev psmisc iptables
+RUN pip install paramiko &&\
+    pip install gevent &&\
     pip install boto
-RUN apt-get install -y libssl-dev libffi-dev
-RUN easy_install paramiko
 
 COPY local.ini local.ini
 COPY upgrade_local.ini upgrade_local.ini
