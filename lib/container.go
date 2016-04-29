@@ -137,7 +137,7 @@ func (cm *ContainerManager) CheckImageExists(image string) bool {
 func (cm *ContainerManager) PullImage(repo string) error {
 	fmt.Printf("%s  %s",
 		color.CyanString("\u2192"),
-		color.WhiteString("pulling image %s\n", repo))
+		color.WhiteString("pull %s\n", repo))
 
 	imgOpts := docker.PullImageOptions{
 		Repository: repo,
@@ -229,13 +229,10 @@ func (cm *ContainerManager) Run(task ContainerTask) {
 		task.Image = tagId
 	} else {
 
-		// pull/build container if necessary
-		exists := cm.CheckImageExists(task.Image)
+		// always attempt to pull image in case update is needed
+		err := cm.PullImage(task.Image)
+		logerr(err)
 
-		if exists == false {
-			err := cm.PullImage(task.Image)
-			logerr(err)
-		}
 	}
 
 	// get task options
