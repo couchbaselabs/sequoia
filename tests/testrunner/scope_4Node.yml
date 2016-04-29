@@ -11,7 +11,8 @@ servers:
 -
      name: local.st.couchbase.com
      count: 4  # create single server with link named 'local'
-     ram: 80% 
+     ram: 60%
+     fts_ram: 20% 
      rest_username: Administrator
      rest_password: password
      rest_port: 8091
@@ -22,4 +23,6 @@ servers:
        index_start: 1 # put index on fist node
        query: 1
        query_start: 1 # put query on fist node
+       fts: 1
+       fts_start: 1   # put fts on first node
      buckets: default
