@@ -71,6 +71,7 @@ type ServerSpec struct {
 	RestPassword string `yaml:"rest_password"`
 	RestPort     string `yaml:"rest_port"`
 	ViewPort     string `yaml:"view_port"`
+	QueryPort    string `yaml:"query_port"`
 	InitNodes    uint8  `yaml:"init_nodes"`
 	DataPath     string `yaml:"data_path"`
 	IndexPath    string `yaml:"index_path"`
@@ -203,6 +204,8 @@ func (s *ScopeSpec) ToAttr(attr string) string {
 		return "RestPort"
 	case "view_port":
 		return "ViewPort"
+	case "query_port":
+		return "QueryPort"
 	}
 
 	return ""

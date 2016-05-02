@@ -53,6 +53,17 @@ func NewScope(config Config, cm *ContainerManager) Scope {
 				spec.Servers[i].ViewPort = "8092"
 			}
 		}
+		if spec.Servers[i].QueryPort == "" {
+			if provider.GetType() == "dev" {
+				// query port for cluster run is based
+				// on which node has n1ql service
+				// since default behavior is to put n1ql
+				// on highest node then this is default port
+				spec.Servers[i].QueryPort = fmt.Sprintf("%d", 9500-int(spec.Servers[i].Count))
+			} else {
+				spec.Servers[i].QueryPort = "8093"
+			}
+		}
 	}
 
 	return Scope{
