@@ -88,19 +88,19 @@ func (t *TemplateResolver) Service(service string, servers []ServerSpec) []Serve
 		}
 	}
 
-    if len(serviceNodes) == 0 {
-       // try from provisioning stack
-       // it may be that server was removed from cluster
-	   for _, spec := range servers {
-            for name, services := range spec.NodeServices {
-               for _, nodeService := range services {
-                  if nodeService == service {
-					serviceNodes = append(serviceNodes, ServerSpec{Names: []string{name}})
-                  }
-               }
-            }
-       }
-    }
+	if len(serviceNodes) == 0 {
+		// try from provisioning stack
+		// it may be that server was removed from cluster
+		for _, spec := range servers {
+			for name, services := range spec.NodeServices {
+				for _, nodeService := range services {
+					if nodeService == service {
+						serviceNodes = append(serviceNodes, ServerSpec{Names: []string{name}})
+					}
+				}
+			}
+		}
+	}
 	return serviceNodes
 }
 
@@ -132,7 +132,17 @@ func (t *TemplateResolver) QueryNode() string {
 	return t.Address(0, serviceNodes)
 }
 
-// Shortcut: .ClusterNodes | .Service `n1ql` | net N
+// Shortcut: {{.ClusterNodes | .Attr `query_port`}}
+func (t *TemplateResolver) QueryPort() string {
+	nodes := t.ClusterNodes()
+	return t.Attr("query_port", nodes)
+}
+
+// Shortcut: {{.QueryNode | noport}}:{{.QueryPort}}
+func (t *TemplateResolver) QueryNodePort() string {
+	return fmt.Sprintf("%s:%s", t.NoPort(t.QueryNode()), t.QueryPort())
+}
+
 func (t *TemplateResolver) NthQueryNode(n int) string {
 	nodes := t.ClusterNodes()
 	serviceNodes := t.Service("n1ql", nodes)
