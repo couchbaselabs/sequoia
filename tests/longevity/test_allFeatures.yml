@@ -3,39 +3,39 @@
 -
    image: sequoiatools/tpcc
    requires:  "{{.Version | le 4.0 | eq .DoOnce}}"
-   command:  "./run.sh {{.QueryNode}}:8093 util/cbcrindex.sql"
+   command:  "./run.sh {{.QueryNodePort}} util/cbcrindex.sql"
    wait: true
 -
    image: sequoiatools/tpcc
    requires:  "{{.Version | le 4.0}}"
    command: "python tpcc.py --duration 259200 --client {{.Scale 1}} --warehouses 5 --no-execute n1ql
-				                    --query-url {{.QueryNode}}:8093 --userid {{.RestUsername}} --password {{.RestPassword}}"
+				                    --query-url {{.QueryNodePort}} --userid {{.RestUsername}} --password {{.RestPassword}}"
 -
    requires:  "{{.Version | le 4.0 | eq .DoOnce}}"
    command: "python tpcc.py --duration 2259200 --client {{.Scale 1}}
-                             --warehouses 5 --no-load n1ql  --query-url {{.QueryNode}}:8093"
+                             --warehouses 5 --no-load n1ql  --query-url {{.QueryNodePort}}"
 -
    image: sequoiatools/cbq
    requires:  "{{.Version | le 4.0}}"
-   command: "-e=http://{{.QueryNode}}:8093  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_rating on `default`(rating)'"
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_rating on `default`(rating)'"
 
 ###############  query index ################
 -
   requires: "{{ eq true .DoOnce}}"
   image: sequoiatools/queryloop
-  command: "{{.QueryNode}}:8093 'select SUM(rating) from default where rating > 0'"
+  command: "{{.QueryNodePort}} 'select SUM(rating) from default where rating > 0'"
   concurrency: 5
 -
-  command: "{{.QueryNode}}:8093 'select SUM(rating) from default where rating > 100'"
+  command: "{{.QueryNodePort}} 'select SUM(rating) from default where rating > 100'"
 -
-  command: "{{.QueryNode}}:8093 'select SUM(rating) from default where rating < 900'"
+  command: "{{.QueryNodePort}} 'select SUM(rating) from default where rating < 900'"
 -
   concurrency: 1  # only 1 instance of delete queries running
-  command: "{{.QueryNode}}:8093 'delete from default where rating < 300'"
+  command: "{{.QueryNodePort}} 'delete from default where rating < 300'"
 -
-  command: "{{.QueryNode}}:8093 'delete from default where rating > 700'"
+  command: "{{.QueryNodePort}} 'delete from default where rating > 700'"
 -
-  command: "{{.QueryNode}}:8093 'delete from default where rating > 300 and rating < 700'"
+  command: "{{.QueryNodePort}} 'delete from default where rating > 300 and rating < 700'"
 
 
 
@@ -56,7 +56,7 @@
 -
    image: sequoiatools/gideon
    entrypoint: "./addviews.sh"
-   command: "{{.Orchestrator}}:8092 {{.Bucket}}"
+   command: "{{.Orchestrator | noport}}:{{.ClusterNodes | .Attr `view_port`}}"
    wait: true
 -
    command: "query --host {{.Orchestrator}} --ddoc scale --view stats --concurrency {{.Scale 1}}"
@@ -66,11 +66,6 @@
    command: "query --host {{.Orchestrator}} --ddoc scale --view array --concurrency {{.Scale 1}}"
 
 
-#============ quick update batch ============
--
-   image: sequoiatools/pillowfight
-   command: "-U  {{.Orchestrator}} -I {{.Scale 1000}} -B {{.Scale 100}} -t 4 -c 100"
-   wait: true
 
 #============ rebalance out a node============
 -
