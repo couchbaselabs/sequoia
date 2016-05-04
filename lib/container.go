@@ -229,9 +229,14 @@ func (cm *ContainerManager) Run(task ContainerTask) {
 		task.Image = tagId
 	} else {
 
-		// always attempt to pull image in case update is needed
-		err := cm.PullImage(task.Image)
-		logerr(err)
+                // pull/build container if necessary
+                exists := cm.CheckImageExists(task.Image)
+ 
+                if exists == false {
+                        err := cm.PullImage(task.Image)
+                        logerr(err)
+                }
+
 
 	}
 
