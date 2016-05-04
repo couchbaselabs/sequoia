@@ -41,7 +41,7 @@ COPY scripts/run /etc/service/couchbase-server/run
 # Add bootstrap script
 COPY scripts/entrypoint.sh /
 
-EXPOSE 8091 8092 8093 11207 11210 11211 18091 18092 22
+EXPOSE 8091 8092 8093 8094 9100 9101 9102 9103 9104 9105 9998 9999 11207 11210 11211 18091 18092 22
 VOLUME /opt/couchbase/var
 
 COPY start.sh /start.sh
