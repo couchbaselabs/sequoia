@@ -1,8 +1,7 @@
-package main
+package sequoia
 
 import (
 	"flag"
-	S "github.com/couchbaselabs/sequoia/lib"
 	"os"
 	"strings"
 )
@@ -16,6 +15,9 @@ type TestFlags struct {
 	ImageName      *string
 	ImageCommand   *string
 	ImageWait      *bool
+	SkipSetup      *bool
+	SkipTest       *bool
+	SkipTearDown   *bool
 	DefaultFlagSet *flag.FlagSet
 	ImageFlagSet   *flag.FlagSet
 }
@@ -58,6 +60,9 @@ func (f *TestFlags) AddDefaultFlags(fset *flag.FlagSet) {
 	f.ScopeFile = fset.String("scope", "", "scope spec filename")
 	f.TestFile = fset.String("test", "", "test spec filename")
 	f.ConfigFile = fset.String("config", "config.yml", "test config filename")
+	f.SkipSetup = fset.Bool("skip_setup", false, "")
+	f.SkipTest = fset.Bool("skip_test", false, "")
+	f.SkipTearDown = fset.Bool("skip_teardown", false, "")
 }
 
 func (f *TestFlags) AddImageFlags(fset *flag.FlagSet) {
@@ -66,14 +71,14 @@ func (f *TestFlags) AddImageFlags(fset *flag.FlagSet) {
 	f.ImageWait = fset.Bool("wait", false, "")
 }
 
-func (f *TestFlags) TestActions(testFile string) []S.ActionSpec {
+func (f *TestFlags) TestActions(testFile string) []ActionSpec {
 	// define test actions from config
-	var actions []S.ActionSpec
+	var actions []ActionSpec
 	switch f.Mode {
 	case "image":
-		actions = S.ActionsFromArgs(*f.ImageName, *f.ImageCommand, *f.ImageWait)
+		actions = ActionsFromArgs(*f.ImageName, *f.ImageCommand, *f.ImageWait)
 	default:
-		actions = S.ActionsFromFile(testFile)
+		actions = ActionsFromFile(testFile)
 	}
 	return actions
 }

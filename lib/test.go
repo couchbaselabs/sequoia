@@ -39,6 +39,19 @@ func ActionsFromArgs(image string, command string, wait bool) []ActionSpec {
 	return []ActionSpec{action}
 }
 
+func NewTest(config Config, cm *ContainerManager, flags TestFlags) Test {
+
+	// define test actions from config and flags
+	var actions []ActionSpec
+	switch flags.Mode {
+	case "image":
+		actions = ActionsFromArgs(*flags.ImageName, *flags.ImageCommand, *flags.ImageWait)
+	default:
+		actions = ActionsFromFile(config.Test)
+	}
+	return Test{actions, config, cm}
+}
+
 func (t *Test) Run(scope Scope) {
 
 	// do optional setup
