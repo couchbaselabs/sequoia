@@ -24,13 +24,19 @@ type ActionSpec struct {
 	Duration    string
 }
 
-func NewTest(config Config, cm *ContainerManager) Test {
+func ActionsFromFile(fileName string) []ActionSpec {
 	var actions []ActionSpec
-	ReadYamlFile(config.Test, &actions)
-	return Test{actions,
-		config,
-		cm,
+	ReadYamlFile(fileName, &actions)
+	return actions
+}
+
+func ActionsFromArgs(image string, command string, wait bool) []ActionSpec {
+	action := ActionSpec{
+		Image:   image,
+		Command: command,
+		Wait:    wait,
 	}
+	return []ActionSpec{action}
 }
 
 func (t *Test) Run(scope Scope) {
