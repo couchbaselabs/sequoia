@@ -8,9 +8,9 @@ import (
 )
 
 type Test struct {
-	Actions    []ActionSpec
-	TestConfig Config
-	Cm         *ContainerManager
+	Actions []ActionSpec
+	Flags   TestFlags
+	Cm      *ContainerManager
 }
 
 type ActionSpec struct {
@@ -39,7 +39,7 @@ func ActionsFromArgs(image string, command string, wait bool) []ActionSpec {
 	return []ActionSpec{action}
 }
 
-func NewTest(config Config, cm *ContainerManager, flags TestFlags) Test {
+func NewTest(flags TestFlags, cm *ContainerManager) Test {
 
 	// define test actions from config and flags
 	var actions []ActionSpec
@@ -47,15 +47,15 @@ func NewTest(config Config, cm *ContainerManager, flags TestFlags) Test {
 	case "image":
 		actions = ActionsFromArgs(*flags.ImageName, *flags.ImageCommand, *flags.ImageWait)
 	default:
-		actions = ActionsFromFile(config.Test)
+		actions = ActionsFromFile(*flags.TestFile)
 	}
-	return Test{actions, config, cm}
+	return Test{actions, flags, cm}
 }
 
 func (t *Test) Run(scope Scope) {
 
 	// do optional setup
-	if t.TestConfig.Options.SkipSetup == false {
+	if *t.Flags.SkipSetup == false {
 		scope.TearDown()
 		scope.Setup()
 	} else if scope.Provider.GetType() != "docker" {
@@ -67,12 +67,12 @@ func (t *Test) Run(scope Scope) {
 		scope.InitCli()
 	}
 
-	if t.TestConfig.Options.SkipTest == true {
+	if *t.Flags.SkipTest == true {
 		return
 	}
 
 	// run at least <repeat> times or forever if -1
-	repeat := t.TestConfig.Options.Repeat
+	repeat := *t.Flags.Repeat
 	loops := 0
 	if repeat == -1 {
 		// run forever
@@ -175,7 +175,7 @@ func (t *Test) _run(scope Scope, loop int) {
 	}
 
 	// do optional teardown
-	if t.TestConfig.Options.SkipTeardown == false {
+	if *t.Flags.SkipTeardown == false {
 		scope.TearDown()
 	}
 }

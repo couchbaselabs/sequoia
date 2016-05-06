@@ -56,7 +56,7 @@ func (t *TemplateResolver) OddCount() bool {
 
 // apply scope scale factor to the value
 func (t *TemplateResolver) Scale(val int) string {
-	scale := t.Scope.TestConfig.Options.Scale
+	scale := *t.Scope.Flags.Scale
 	if scale == 0 {
 		scale++
 	}

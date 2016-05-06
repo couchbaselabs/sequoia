@@ -1,53 +1,8 @@
 package sequoia
 
 import (
-	"log"
 	"strings"
 )
-
-type Config struct {
-	Client   string
-	Scope    string
-	Test     string
-	Provider string
-	Build    string
-	Options  ConfigOpts
-}
-
-type ConfigOpts struct {
-	SkipSetup    bool `yaml:"skip_setup"`
-	SkipTest     bool `yaml:"skip_test"`
-	SkipTeardown bool `yaml:"skip_teardown"`
-	Repeat       int
-	Scale        int
-}
-
-func NewConfigSpec(fileName *string, scopeFile *string, testFile *string) Config {
-	var config Config
-	ReadYamlFile(*fileName, &config)
-
-	// allow overrides
-	if *scopeFile != "" {
-		config.Scope = *scopeFile
-	}
-	if *testFile != "" {
-		config.Test = *testFile
-	}
-
-	// verify
-	if config.Scope == "" {
-		log.Fatalln("Config Error: scope file required, use -scope or specify in config.yml")
-	}
-	if config.Test == "" {
-		log.Fatalln("Config Error: test file required, use -test or specify in config.yml")
-	}
-
-	if config.Build == "" {
-		config.Build = "latest"
-	}
-
-	return config
-}
 
 type BucketSpec struct {
 	Name     string

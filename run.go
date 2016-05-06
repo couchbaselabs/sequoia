@@ -6,16 +6,14 @@ import (
 
 func main() {
 
+	// parse
 	flags := S.NewTestFlags()
-
-	// parse flags
 	flags.Parse()
 
-	// define test
-	config := S.NewConfigSpec(flags.ConfigFile, flags.ScopeFile, flags.TestFile)
-	cm := S.NewContainerManager(config.Client)
-	scope := S.NewScope(config, cm)
-	test := S.NewTest(config, cm, flags)
+	// configure
+	cm := S.NewContainerManager(*flags.Client)
+	scope := S.NewScope(flags, cm)
+	test := S.NewTest(flags, cm)
 
 	// run
 	test.Run(scope)

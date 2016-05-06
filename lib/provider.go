@@ -41,13 +41,13 @@ type DockerProviderOpts struct {
 	BuildUrlOverride string `yaml:"build_url_override"`
 }
 
-func NewProvider(config Config, servers []ServerSpec) Provider {
+func NewProvider(flags TestFlags, servers []ServerSpec) Provider {
 	var provider Provider
-	providerArgs := strings.Split(config.Provider, ":")
+	providerArgs := strings.Split(*flags.Provider, ":")
 
 	switch providerArgs[0] {
 	case "docker":
-		cm := NewContainerManager(config.Client)
+		cm := NewContainerManager(*flags.Client)
 		provider = &DockerProvider{
 			cm,
 			servers,

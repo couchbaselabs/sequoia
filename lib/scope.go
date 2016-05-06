@@ -20,21 +20,21 @@ import (
 )
 
 type Scope struct {
-	Spec       ScopeSpec
-	Cm         *ContainerManager
-	Provider   Provider
-	TestConfig Config
-	Version    string
-	Aux        int
+	Spec     ScopeSpec
+	Cm       *ContainerManager
+	Provider Provider
+	Flags    TestFlags
+	Version  string
+	Aux      int
 }
 
-func NewScope(config Config, cm *ContainerManager) Scope {
+func NewScope(flags TestFlags, cm *ContainerManager) Scope {
 
 	// init from yaml
-	spec := NewScopeSpec(config.Scope)
+	spec := NewScopeSpec(*flags.ScopeFile)
 
 	// create provider of resources for scope
-	provider := NewProvider(config, spec.Servers)
+	provider := NewProvider(flags, spec.Servers)
 
 	// update defaults from spec based on provider
 	for i, _ := range spec.Servers {
@@ -70,7 +70,7 @@ func NewScope(config Config, cm *ContainerManager) Scope {
 		spec,
 		cm,
 		provider,
-		config,
+		flags,
 		"",
 		0,
 	}
