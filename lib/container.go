@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/fatih/color"
 	"github.com/fsouza/go-dockerclient"
+	"io"
 	"os"
 	"strings"
 	"time"
@@ -199,30 +200,41 @@ func (cm *ContainerManager) BuildImage(opts docker.BuildImageOptions) error {
 	return cm.Client.BuildImage(opts)
 }
 
+func (cm *ContainerManager) LogContainer(ID string, output io.Writer) {
+
+	logOpts := docker.LogsOptions{
+		Container:    ID,
+		OutputStream: output,
+		ErrorStream:  os.Stderr,
+		RawTerminal:  true,
+		Follow:       true,
+		Stdout:       true,
+		Stderr:       true,
+	}
+	go cm.Client.Logs(logOpts)
+}
+
 func (cm *ContainerManager) WaitContainer(container *docker.Container, c chan string) {
 
 	// wait for container
 	rc, _ := cm.Client.WaitContainer(container.ID)
 	if rc != 0 && rc != 137 {
 		// log on error
-		fmt.Println(color.RedString("\n\nError occurred on container"))
-		logOpts := docker.LogsOptions{
-			Container:    container.ID,
-			OutputStream: os.Stdout,
-			ErrorStream:  os.Stderr,
-			RawTerminal:  true,
-			Stdout:       true,
-			Stderr:       true,
-		}
-		cm.Client.Logs(logOpts)
+		fmt.Println(color.RedString("\n\nError occurred on container, try: 'docker logs " + container.ID + "'"))
+		cm.LogContainer(container.ID, os.Stdout)
 	}
 
+	// remove container log
 	c <- container.ID
+}
+
+func (cm *ContainerManager) ContainerLogFile(opts docker.CreateContainerOptions, ID string) string {
+	return fmt.Sprintf("%s_%s", ParseSlashString(opts.Config.Image), ID[:6])
 }
 
 func (cm *ContainerManager) RunContainer(opts docker.CreateContainerOptions) (chan string, *docker.Container) {
 	container, err := cm.Client.CreateContainer(opts)
-	chkerr(err)
+	logerr(err)
 
 	c := make(chan string)
 
@@ -232,6 +244,11 @@ func (cm *ContainerManager) RunContainer(opts docker.CreateContainerOptions) (ch
 
 	// save ID
 	cm.IDs = append(cm.IDs, container.ID)
+
+	// log
+	f := CreateFile(cm.ContainerLogFile(opts, container.ID))
+	cm.LogContainer(container.ID, f)
+
 	return c, container
 }
 

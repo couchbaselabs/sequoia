@@ -8,6 +8,7 @@ import (
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"log"
+	"os"
 	"strings"
 )
 
@@ -65,4 +66,19 @@ func ReadIniFile(filename string) *ini.File {
 	logerr(err)
 
 	return file
+}
+
+func CreateFile(filename string) *os.File {
+	logFile := fmt.Sprintf("logs/%s", filename)
+	output, err := os.Create(logFile)
+	logerr(err)
+	return output
+}
+
+func ParseSlashString(s string) string {
+	_s := strings.Split(s, "/")
+	if len(_s) > 1 {
+		return _s[1]
+	}
+	return _s[0]
 }
