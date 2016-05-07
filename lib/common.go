@@ -68,8 +68,10 @@ func ReadIniFile(filename string) *ini.File {
 	return file
 }
 
-func CreateFile(filename string) *os.File {
-	logFile := fmt.Sprintf("logs/%s", filename)
+func CreateFile(dir, filename string) *os.File {
+	err := os.MkdirAll(dir, 0777)
+	logerr(err)
+	logFile := fmt.Sprintf("%s/%s", dir, filename)
 	output, err := os.Create(logFile)
 	logerr(err)
 	return output

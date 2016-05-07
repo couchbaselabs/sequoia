@@ -22,6 +22,8 @@ type TestFlags struct {
 	SkipTeardown   *bool `yaml:"skip_teardown"`
 	Scale          *int
 	Repeat         *int
+	LogDir         *string
+	LogLevel       *int
 	DefaultFlagSet *flag.FlagSet
 	ImageFlagSet   *flag.FlagSet
 }
@@ -120,6 +122,14 @@ func (f *TestFlags) AddDefaultFlags(fset *flag.FlagSet) {
 		"repeat",
 		0,
 		"times to repeat test")
+	f.LogLevel = fset.Int(
+		"log_level",
+		1,
+		"log verbosity 0=silent, 1=file, 2=file+stdout")
+	f.LogDir = fset.String(
+		"log_dir",
+		"logs",
+		"directory to save log files")
 }
 
 func (f *TestFlags) AddImageFlags(fset *flag.FlagSet) {

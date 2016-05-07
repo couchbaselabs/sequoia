@@ -163,6 +163,8 @@ func (t *Test) _run(scope Scope, loop int) {
 			Async:       !action.Wait,
 			Duration:    taskDuration,
 			Concurrency: taskConcurrency,
+			LogLevel:    *t.Flags.LogLevel,
+			LogDir:      *t.Flags.LogDir,
 		}
 		if scope.Provider.GetType() == "docker" {
 			task.LinksTo = scope.Provider.(*DockerProvider).GetLinkPairs()

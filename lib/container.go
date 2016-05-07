@@ -23,6 +23,8 @@ type ContainerTask struct {
 	Entrypoint  []string
 	Concurrency int
 	Duration    time.Duration
+	LogLevel    int
+	LogDir      string
 }
 
 func (t *ContainerTask) GetOptions() docker.CreateContainerOptions {
@@ -211,7 +213,7 @@ func (cm *ContainerManager) LogContainer(ID string, output io.Writer) {
 		Stdout:       true,
 		Stderr:       true,
 	}
-	go cm.Client.Logs(logOpts)
+	cm.Client.Logs(logOpts)
 }
 
 func (cm *ContainerManager) WaitContainer(container *docker.Container, c chan string) {
@@ -228,8 +230,8 @@ func (cm *ContainerManager) WaitContainer(container *docker.Container, c chan st
 	c <- container.ID
 }
 
-func (cm *ContainerManager) ContainerLogFile(opts docker.CreateContainerOptions, ID string) string {
-	return fmt.Sprintf("%s_%s", ParseSlashString(opts.Config.Image), ID[:6])
+func (cm *ContainerManager) ContainerLogFile(image, ID string) string {
+	return fmt.Sprintf("%s_%s", ParseSlashString(image), ID[:6])
 }
 
 func (cm *ContainerManager) RunContainer(opts docker.CreateContainerOptions) (chan string, *docker.Container) {
@@ -244,10 +246,6 @@ func (cm *ContainerManager) RunContainer(opts docker.CreateContainerOptions) (ch
 
 	// save ID
 	cm.IDs = append(cm.IDs, container.ID)
-
-	// log
-	f := CreateFile(cm.ContainerLogFile(opts, container.ID))
-	cm.LogContainer(container.ID, f)
 
 	return c, container
 }
@@ -299,6 +297,17 @@ func (cm *ContainerManager) Run(task ContainerTask) {
 		}()
 	}
 
+	// logging
+	if task.LogLevel > 0 {
+		f := CreateFile(task.LogDir,
+			cm.ContainerLogFile(task.Image, container.ID))
+		go cm.LogContainer(container.ID, f)
+
+		// send to stdout
+		if task.LogLevel > 1 {
+			go cm.LogContainer(container.ID, os.Stdout)
+		}
+	}
 	// wait if necessary
 	if task.Async == false {
 		for _, ch := range idChans {
