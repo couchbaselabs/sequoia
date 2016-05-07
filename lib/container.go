@@ -118,6 +118,21 @@ func (cm *ContainerManager) RemoveManagedContainers() {
 		fmt.Println(color.CyanString("\u2192 "), color.WhiteString("ok remove %s", id))
 	}
 }
+
+func (cm *ContainerManager) SaveContainerLogs(logDir string) {
+	// save logs if not already saved
+	for _, id := range cm.IDs {
+		c, err := cm.Client.InspectContainer(id)
+		logerr(err)
+		i, err := cm.Client.InspectImage(c.Image)
+		logerr(err)
+		imgName := i.RepoTags[0]
+		f := CreateFile(logDir,
+			cm.ContainerLogFile(imgName, id))
+		cm.LogContainer(id, f, false)
+	}
+}
+
 func (cm *ContainerManager) ListImages() []docker.APIImages {
 
 	listOpts := docker.ListImagesOptions{
@@ -202,14 +217,14 @@ func (cm *ContainerManager) BuildImage(opts docker.BuildImageOptions) error {
 	return cm.Client.BuildImage(opts)
 }
 
-func (cm *ContainerManager) LogContainer(ID string, output io.Writer) {
+func (cm *ContainerManager) LogContainer(ID string, output io.Writer, follow bool) {
 
 	logOpts := docker.LogsOptions{
 		Container:    ID,
 		OutputStream: output,
 		ErrorStream:  os.Stderr,
 		RawTerminal:  true,
-		Follow:       true,
+		Follow:       follow,
 		Stdout:       true,
 		Stderr:       true,
 	}
@@ -223,7 +238,7 @@ func (cm *ContainerManager) WaitContainer(container *docker.Container, c chan st
 	if rc != 0 && rc != 137 {
 		// log on error
 		fmt.Println(color.RedString("\n\nError occurred on container, try: 'docker logs " + container.ID + "'"))
-		cm.LogContainer(container.ID, os.Stdout)
+		cm.LogContainer(container.ID, os.Stdout, false)
 	}
 
 	// remove container log
@@ -301,11 +316,11 @@ func (cm *ContainerManager) Run(task ContainerTask) {
 	if task.LogLevel > 0 {
 		f := CreateFile(task.LogDir,
 			cm.ContainerLogFile(task.Image, container.ID))
-		go cm.LogContainer(container.ID, f)
+		go cm.LogContainer(container.ID, f, true)
 
 		// send to stdout
 		if task.LogLevel > 1 {
-			go cm.LogContainer(container.ID, os.Stdout)
+			go cm.LogContainer(container.ID, os.Stdout, true)
 		}
 	}
 	// wait if necessary

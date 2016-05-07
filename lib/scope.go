@@ -91,6 +91,10 @@ func (s *Scope) Setup() {
 func (s *Scope) TearDown() {
 	s.Cm.RemoveManagedContainers()
 	if s.Provider.GetType() == "docker" {
+		// save logs
+		if *s.Flags.LogLevel > 0 {
+			s.Provider.(*DockerProvider).Cm.SaveContainerLogs(*s.Flags.LogDir)
+		}
 		s.Provider.(*DockerProvider).Cm.RemoveManagedContainers()
 	}
 }
