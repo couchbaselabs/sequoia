@@ -30,7 +30,7 @@ type Scope struct {
 
 func NewScope(flags TestFlags, cm *ContainerManager) Scope {
 
-	// init from yaml
+	// init from yaml or ini
 	spec := NewScopeSpec(*flags.ScopeFile)
 
 	// create provider of resources for scope

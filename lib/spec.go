@@ -1,6 +1,7 @@
 package sequoia
 
 import (
+	"fmt"
 	"strings"
 )
 
@@ -179,10 +180,20 @@ func (s *ScopeSpec) ForCluster(name string) ServerSpec {
 
 func NewScopeSpec(fileName string) ScopeSpec {
 
-	// init from yaml
 	var spec ScopeSpec
-	ReadYamlFile(fileName, &spec)
+	if strings.Index(fileName, ".ini") > 0 {
+		spec = SpecFromIni(fileName)
+	} else {
+		spec = SpecFromYaml(fileName)
+	}
 
+	return spec
+}
+
+func SpecFromYaml(fileName string) ScopeSpec {
+	var spec ScopeSpec
+	// init from yaml
+	ReadYamlFile(fileName, &spec)
 	// init bucket section of spec
 	bucketNameMap := make(map[string]BucketSpec)
 	for i, bucket := range spec.Buckets {
@@ -209,8 +220,53 @@ func NewScopeSpec(fileName string) ScopeSpec {
 		}
 		// init node services
 		spec.Servers[i].InitNodeServices()
-
 	}
 
 	return spec
+}
+
+func SpecFromIni(fileName string) ScopeSpec {
+	spec := ScopeSpec{
+		Servers: []ServerSpec{},
+		Buckets: []BucketSpec{},
+	}
+	cfg := ReadIniFile(fileName)
+
+	// clusters are sections of servers (not named [servers])
+	// servers
+	serverSpec := ServerSpec{
+		NodeServices: make(map[string][]string),
+		Names:        []string{},
+	}
+	clusterName := "test"
+	serverSpec.Name = clusterName + ".st.couchbase.com"
+	for i, serverKey := range cfg.Section("servers").Keys() {
+		serverSpec.Count = uint8(i + 1)
+		name := fmt.Sprintf("%s-%d.st.couchbase.com",
+			clusterName,
+			serverSpec.Count)
+		serverSpec.Names = append(serverSpec.Names, name)
+		section := cfg.Section(serverKey.String())
+		if username := section.Key("rest_username"); username.String() != "" {
+			serverSpec.RestUsername = username.String()
+		} else {
+			serverSpec.RestUsername = "Administrator"
+		}
+		if password := section.Key("rest_password"); password.String() != "" {
+			serverSpec.RestPassword = password.String()
+		} else {
+			serverSpec.RestPassword = "password"
+		}
+		if services := section.Key("services"); services.String() != "" {
+			svcString := services.String()
+			svcString = strings.Replace(svcString, "kv", "data", 1)
+			svcString = strings.Replace(svcString, "n1ql", "query", 1)
+			serverSpec.NodeServices[name] = strings.Split(svcString, ",")
+		}
+		serverSpec.Ram = "60%"
+	}
+	spec.Servers = append(spec.Servers, serverSpec)
+	fmt.Println(spec.Servers[0].RestUsername)
+	return spec
+
 }

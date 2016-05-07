@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/fatih/color"
+	"github.com/go-ini/ini"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"log"
@@ -56,4 +57,12 @@ func ReadYamlFile(filename string, spec interface{}) {
 	err = yaml.Unmarshal(source, spec)
 	chkerr(err)
 	fmt.Println(color.CyanString("\u2192 "), color.WhiteString("ok %s", filename))
+}
+
+func ReadIniFile(filename string) *ini.File {
+
+	file, err := ini.Load(filename)
+	logerr(err)
+
+	return file
 }
