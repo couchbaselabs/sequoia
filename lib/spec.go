@@ -1,6 +1,8 @@
 package sequoia
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"fmt"
 	"strings"
 )
@@ -238,7 +240,7 @@ func SpecFromIni(fileName string) ScopeSpec {
 		NodeServices: make(map[string][]string),
 		Names:        []string{},
 	}
-	clusterName := "test"
+	clusterName := RandStr(6)
 	serverSpec.Name = clusterName + ".st.couchbase.com"
 	for i, serverKey := range cfg.Section("servers").Keys() {
 		serverSpec.Count = uint8(i + 1)
@@ -266,7 +268,13 @@ func SpecFromIni(fileName string) ScopeSpec {
 		serverSpec.Ram = "60%"
 	}
 	spec.Servers = append(spec.Servers, serverSpec)
-	fmt.Println(spec.Servers[0].RestUsername)
 	return spec
 
+}
+
+func RandStr(size int) string {
+	rb := make([]byte, size)
+	_, err := rand.Read(rb)
+	logerr(err)
+	return base64.URLEncoding.EncodeToString(rb)
 }
