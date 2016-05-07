@@ -7,25 +7,28 @@ import (
 )
 
 type TestFlags struct {
-	Mode           string
-	Args           []string
-	Config         *string
-	ScopeFile      *string `yaml:"scope"`
-	TestFile       *string `yaml:"test"`
-	Client         *string
-	Provider       *string
-	ImageName      *string
-	ImageCommand   *string
-	ImageWait      *bool
-	SkipSetup      *bool `yaml:"skip_setup"`
-	SkipTest       *bool `yaml:"skip_test"`
-	SkipTeardown   *bool `yaml:"skip_teardown"`
-	Scale          *int
-	Repeat         *int
-	LogDir         *string
-	LogLevel       *int
-	DefaultFlagSet *flag.FlagSet
-	ImageFlagSet   *flag.FlagSet
+	Mode            string
+	Args            []string
+	Config          *string
+	ScopeFile       *string `yaml:"scope"`
+	TestFile        *string `yaml:"test"`
+	Client          *string
+	Provider        *string
+	ImageName       *string
+	ImageCommand    *string
+	ImageWait       *bool
+	SkipSetup       *bool `yaml:"skip_setup"`
+	SkipTest        *bool `yaml:"skip_test"`
+	SkipTeardown    *bool `yaml:"skip_teardown"`
+	Scale           *int
+	Repeat          *int
+	LogDir          *string
+	LogLevel        *int
+	CleanLogs       *bool
+	CleanContainers *bool
+	DefaultFlagSet  *flag.FlagSet
+	ImageFlagSet    *flag.FlagSet
+	CleanFlagSet    *flag.FlagSet
 }
 
 // parse top-level args and set test flag parsing mode
@@ -52,13 +55,16 @@ func NewTestFlags() TestFlags {
 func (f *TestFlags) SetFlagVals() {
 	switch f.Mode {
 
-	// image flagset
 	case "image":
+		// image flagset
 		f.ImageFlagSet = flag.NewFlagSet("image", flag.ExitOnError)
 		f.AddDefaultFlags(f.ImageFlagSet)
 		f.AddImageFlags(f.ImageFlagSet)
-	// default cli flags
+	case "clean":
+		f.ImageFlagSet = flag.NewFlagSet("clean", flag.ExitOnError)
+		f.AddCleanFlags(f.CleanFlagSet)
 	default:
+		// default cli flags
 		f.DefaultFlagSet = flag.NewFlagSet("default", flag.ExitOnError)
 		f.AddDefaultFlags(f.DefaultFlagSet)
 
@@ -140,4 +146,17 @@ func (f *TestFlags) AddImageFlags(fset *flag.FlagSet) {
 		"command", "",
 		"command to run in docker image")
 	f.ImageWait = fset.Bool("wait", false, "")
+}
+
+func (f *TestFlags) AddCleanFlags(fset *flag.FlagSet) {
+	f.CleanLogs = fset.Bool(
+		"logs", true,
+		"remove all logs")
+	f.CleanContainers = fset.Bool(
+		"containers", true,
+		"remove all containers")
+	f.LogDir = fset.String(
+		"log_dir",
+		"logs",
+		"directory of log files")
 }
