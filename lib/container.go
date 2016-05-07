@@ -30,8 +30,9 @@ func (t *ContainerTask) GetOptions() docker.CreateContainerOptions {
 	if len(t.LinksTo) > 0 {
 		links := strings.Split(t.LinksTo, ",")
 		pairs := []string{}
-		for _, name := range links {
-			pairs = append(pairs, name+":"+name)
+		for i, name := range links {
+			linkName := fmt.Sprintf("container-%d.st.couchbase.com", i)
+			pairs = append(pairs, name+":"+linkName)
 		}
 		hostConfig.Links = pairs
 	}
@@ -229,14 +230,13 @@ func (cm *ContainerManager) Run(task ContainerTask) {
 		task.Image = tagId
 	} else {
 
-                // pull/build container if necessary
-                exists := cm.CheckImageExists(task.Image)
- 
-                if exists == false {
-                        err := cm.PullImage(task.Image)
-                        logerr(err)
-                }
+		// pull/build container if necessary
+		exists := cm.CheckImageExists(task.Image)
 
+		if exists == false {
+			err := cm.PullImage(task.Image)
+			logerr(err)
+		}
 
 	}
 
