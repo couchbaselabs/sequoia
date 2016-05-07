@@ -159,13 +159,27 @@ func (p *DockerProvider) GetHostAddress(name string) string {
 	return ipAddress
 }
 
+func (p *DockerProvider) NumCouchbaseServers() int {
+	count := 0
+	opts := docker.ListContainersOptions{}
+	containers, err := p.Cm.Client.ListContainers(opts)
+	chkerr(err)
+	for _, c := range containers {
+		if strings.Index(c.Image, "couchbase") > -1 {
+			count++
+		}
+	}
+	return count
+}
+
 func (p *DockerProvider) ProvideCouchbaseServers(servers []ServerSpec) {
 
 	var providerOpts DockerProviderOpts
 	ReadYamlFile("providers/docker/options.yml", &providerOpts)
 	var build = providerOpts.Build
 
-	var i int = 0
+	// start based on number of containers
+	var i int = p.NumCouchbaseServers()
 	for _, server := range servers {
 		serverNameList := ExpandName(server.Name, server.Count)
 		for _, serverName := range serverNameList {
