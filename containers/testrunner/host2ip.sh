@@ -4,6 +4,7 @@ i=0
 for host in $( grep ip: $FILE | awk -F ":" '{print $2}' ); do
   addr=${CONTAINER_IPS[i]}
   echo $host."->".$addr
-  sed -i "s/$host/$addr/g" $FILE
+  sed -i "0,/$host/s//$addr/" $FILE
+
  ((i++))
 done
