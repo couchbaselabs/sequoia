@@ -56,7 +56,10 @@ func (t *Test) Run(scope Scope) {
 
 	// do optional setup
 	if *t.Flags.SkipSetup == false {
-		scope.TearDown()
+		// if in default mode purge all containers
+		if t.Flags.Mode == "" {
+			t.Cm.RemoveAllContainers()
+		}
 		scope.Setup()
 	} else if scope.Provider.GetType() != "docker" {
 		// non-dynamic IP's need to be extrapolated before test

@@ -55,6 +55,7 @@ type ContainerManager struct {
 	Client   *docker.Client
 	Endpoint string
 	TagId    map[string]string
+	IDs      []string
 }
 
 func NewContainerManager(clientUrl string) *ContainerManager {
@@ -79,6 +80,7 @@ func NewContainerManager(clientUrl string) *ContainerManager {
 		Client:   client,
 		Endpoint: clientUrl,
 		TagId:    make(map[string]string),
+		IDs:      []string{},
 	}
 }
 
@@ -104,7 +106,15 @@ func (cm *ContainerManager) RemoveAllContainers() {
 		fmt.Println(color.CyanString("\u2192 "), color.WhiteString("ok remove %s", c.Names))
 	}
 }
+func (cm *ContainerManager) RemoveManagedContainers() {
+	// teardown managed containers
+	for _, id := range cm.IDs {
+		err := cm.RemoveContainer(id)
+		chkerr(err)
 
+		fmt.Println(color.CyanString("\u2192 "), color.WhiteString("ok remove %s", id))
+	}
+}
 func (cm *ContainerManager) ListImages() []docker.APIImages {
 
 	listOpts := docker.ListImagesOptions{
@@ -220,6 +230,8 @@ func (cm *ContainerManager) RunContainer(opts docker.CreateContainerOptions) (ch
 	cm.Client.StartContainer(container.ID, nil)
 	go cm.WaitContainer(container, c)
 
+	// save ID
+	cm.IDs = append(cm.IDs, container.ID)
 	return c, container
 }
 

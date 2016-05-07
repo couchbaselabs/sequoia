@@ -89,7 +89,10 @@ func (s *Scope) Setup() {
 }
 
 func (s *Scope) TearDown() {
-	s.Cm.RemoveAllContainers()
+	s.Cm.RemoveManagedContainers()
+	if s.Provider.GetType() == "docker" {
+		s.Provider.(*DockerProvider).Cm.RemoveManagedContainers()
+	}
 }
 
 func (s *Scope) InitCli() {
