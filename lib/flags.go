@@ -7,29 +7,29 @@ import (
 )
 
 type TestFlags struct {
-	Mode               string
-	Args               []string
-	Config             *string
-	ScopeFile          *string `yaml:"scope"`
-	TestFile           *string `yaml:"test"`
-	Client             *string
-	Provider           *string
-	ImageName          *string
-	ImageContainerName *string
-	ImageCommand       *string
-	ImageWait          *bool
-	SkipSetup          *bool `yaml:"skip_setup"`
-	SkipTest           *bool `yaml:"skip_test"`
-	SkipTeardown       *bool `yaml:"skip_teardown"`
-	Scale              *int
-	Repeat             *int
-	LogDir             *string
-	LogLevel           *int
-	CleanLogs          *bool
-	CleanContainers    *bool
-	DefaultFlagSet     *flag.FlagSet
-	ImageFlagSet       *flag.FlagSet
-	CleanFlagSet       *flag.FlagSet
+	Mode            string
+	Args            []string
+	Config          *string
+	ScopeFile       *string `yaml:"scope"`
+	TestFile        *string `yaml:"test"`
+	Client          *string
+	Provider        *string
+	ImageName       *string
+	ContainerName   *string
+	ImageCommand    *string
+	ImageWait       *bool
+	SkipSetup       *bool `yaml:"skip_setup"`
+	SkipTest        *bool `yaml:"skip_test"`
+	SkipTeardown    *bool `yaml:"skip_teardown"`
+	Scale           *int
+	Repeat          *int
+	LogDir          *string
+	LogLevel        *int
+	CleanLogs       *bool
+	CleanContainers *bool
+	DefaultFlagSet  *flag.FlagSet
+	ImageFlagSet    *flag.FlagSet
+	CleanFlagSet    *flag.FlagSet
 }
 
 // parse top-level args and set test flag parsing mode
@@ -137,6 +137,9 @@ func (f *TestFlags) AddDefaultFlags(fset *flag.FlagSet) {
 		"log_dir",
 		"logs",
 		"directory to save log files")
+	f.ContainerName = fset.String(
+		"container_name", "",
+		"name container created from image")
 }
 
 func (f *TestFlags) AddImageFlags(fset *flag.FlagSet) {
@@ -147,9 +150,6 @@ func (f *TestFlags) AddImageFlags(fset *flag.FlagSet) {
 		"command", "",
 		"command to run in docker image")
 	f.ImageWait = fset.Bool("wait", false, "")
-	f.ImageContainerName = fset.String(
-		"container_name", "",
-		"name container created from image")
 }
 
 func (f *TestFlags) AddCleanFlags(fset *flag.FlagSet) {
