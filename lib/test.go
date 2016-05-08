@@ -157,6 +157,7 @@ func (t *Test) _run(scope Scope, loop int) {
 
 		// compile task
 		task := ContainerTask{
+			Name:        *t.Flags.ImageContainerName,
 			Describe:    action.Describe,
 			Image:       action.Image,
 			Command:     command,

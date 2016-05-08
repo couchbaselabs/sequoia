@@ -15,6 +15,7 @@ import (
 )
 
 type ContainerTask struct {
+	Name        string
 	Describe    string
 	Image       string
 	Command     []string
@@ -47,10 +48,17 @@ func (t *ContainerTask) GetOptions() docker.CreateContainerOptions {
 	if len(t.Entrypoint) > 0 {
 		config.Entrypoint = t.Entrypoint
 	}
-	return docker.CreateContainerOptions{
+
+	containerOpts := docker.CreateContainerOptions{
 		Config:     &config,
 		HostConfig: &hostConfig,
 	}
+
+	if t.Name != "" {
+		containerOpts.Name = t.Name
+	}
+
+	return containerOpts
 
 }
 
