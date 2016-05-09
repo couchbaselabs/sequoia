@@ -102,7 +102,7 @@ func NewContainerManager(clientUrl string) *ContainerManager {
 		Endpoint:  clientUrl,
 		TagId:     make(map[string]string),
 		IDs:       []string{},
-		TapHandle: tap.New(),
+		TapHandle: tap.New("results.tap4j"),
 	}
 }
 
@@ -200,7 +200,7 @@ func (cm *ContainerManager) CheckImageExists(image string) bool {
 }
 
 func (cm *ContainerManager) PullImage(repo string) error {
-	cm.TapHandle.Ok(true, UtilTaskMsg("[get]", repo))
+	cm.TapHandle.Ok(true, UtilTaskMsg("[pull]", repo))
 	imgOpts := docker.PullImageOptions{
 		Repository: repo,
 	} // TODO: tag
@@ -271,14 +271,13 @@ func (cm *ContainerManager) WaitContainer(container *docker.Container, c chan Ta
 
 	// get additional info about container
 	container, err := cm.Client.InspectContainer(container.ID)
-	logerr(err)
 
 	// create task result
 	tResult := TaskResult{
 		ID:      container.ID,
 		Image:   container.Config.Image,
 		Command: container.Config.Cmd,
-		Error:   nil,
+		Error:   err,
 	}
 
 	if rc != 0 && rc != 137 {
@@ -342,12 +341,12 @@ func (cm *ContainerManager) Run(task ContainerTask) {
 	ch, container := cm.RunContainer(options)
 	idChans := []chan TaskResult{ch}
 	containers := []*docker.Container{container}
-	cm.TapHandle.Ok(true, RunTaskMsg(task.Image, task.Command))
+	fmt.Println(RunTaskMsg(task.Image, task.Command))
 
 	// start additional containers with support for concurrency
 	if task.Concurrency > 0 {
 		for i := 1; i < task.Concurrency; i++ {
-			PrintDesc(task.Describe)
+			fmt.Println(RunTaskMsg(task.Image, task.Command))
 			ch, container := cm.RunContainer(options)
 			idChans = append(idChans, ch)
 			containers = append(containers, container)
@@ -391,7 +390,7 @@ func (cm *ContainerManager) HandleResults(idChans []chan TaskResult) {
 		if rc.Error == nil {
 			cm.TapHandle.Ok(true, EndTaskMsg(rc.Image, rc.Command))
 		} else {
-			cm.TapHandle.Ok(false, rc.ID[:6])
+			cm.TapHandle.Ok(false, ErrTaskMsg(rc.Image, rc.Command))
 		}
 	}
 }

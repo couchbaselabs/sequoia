@@ -98,25 +98,25 @@ func RandStr(size int) string {
 	return reg.ReplaceAllString(str, "")
 }
 
-func PrintDesc(desc string) {
-	fmt.Printf("%s  %s",
-		color.CyanString("\u2192"),
-		color.WhiteString("%s\n", desc))
-}
-
 func RunTaskMsg(image string, command []string) string {
 	return fmt.Sprintf("%s %s",
-		color.YellowString("[%s %s]", "run", image),
+		color.CyanString("[%s %s]", "run", image),
 		strings.Join(command, " "))
 }
 
 func EndTaskMsg(image string, command []string) string {
 	return fmt.Sprintf("%s %s",
-		color.GreenString("[%s %s]", "end", image),
+		color.GreenString("[%s %s]", "done", image),
 		strings.Join(command, " "))
 }
 
 func UtilTaskMsg(opt, image string) string {
 	return fmt.Sprintf("%s %s", color.CyanString(opt),
 		image)
+}
+
+func ErrTaskMsg(image string, command []string) string {
+	return fmt.Sprintf("%s %s",
+		color.RedString("[%s %s]", "error", image),
+		strings.Join(command, " "))
 }
