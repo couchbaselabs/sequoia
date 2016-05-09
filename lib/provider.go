@@ -161,7 +161,7 @@ func (p *DockerProvider) GetHostAddress(name string) string {
 
 func (p *DockerProvider) NumCouchbaseServers() int {
 	count := 0
-	opts := docker.ListContainersOptions{}
+	opts := docker.ListContainersOptions{All: true}
 	containers, err := p.Cm.Client.ListContainers(opts)
 	chkerr(err)
 	for _, c := range containers {
