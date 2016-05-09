@@ -1,5 +1,5 @@
 FROM ubuntu:14.04
-RUN apt-get update
+RUN apt-get update || true
 
 RUN apt-get install -yq runit wget python-httplib2  openssh-server libssl0.9.8   && \
     apt-get autoremove && apt-get clean && \
