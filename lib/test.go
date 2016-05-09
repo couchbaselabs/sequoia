@@ -182,6 +182,6 @@ func (t *Test) _run(scope Scope, loop int) {
 
 	// do optional teardown
 	if *t.Flags.SkipTeardown == false {
-		scope.TearDown()
+		scope.TearDown(*t.Flags.SoftTeardown)
 	}
 }

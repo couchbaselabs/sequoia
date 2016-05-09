@@ -108,6 +108,17 @@ func (cm *ContainerManager) RemoveContainer(id string) error {
 	return cm.Client.RemoveContainer(opts)
 }
 
+func (cm *ContainerManager) KillContainer(id string) error {
+	c, err := cm.Client.InspectContainer(id)
+	logerr(err)
+	// must already be running
+	if c.State.Running == true {
+		opts := docker.KillContainerOptions{ID: id}
+		err = cm.Client.KillContainer(opts)
+	}
+	return err
+}
+
 func (cm *ContainerManager) RemoveAllContainers() {
 	// teardown
 	for _, c := range cm.GetAllContainers() {
@@ -117,13 +128,18 @@ func (cm *ContainerManager) RemoveAllContainers() {
 		fmt.Println(color.CyanString("\u2192 "), color.WhiteString("ok remove %s", c.Names))
 	}
 }
-func (cm *ContainerManager) RemoveManagedContainers() {
+func (cm *ContainerManager) RemoveManagedContainers(soft bool) {
 	// teardown managed containers
 	for _, id := range cm.IDs {
-		err := cm.RemoveContainer(id)
-		chkerr(err)
-
-		fmt.Println(color.CyanString("\u2192 "), color.WhiteString("ok remove %s", id))
+		if soft == false {
+			err := cm.RemoveContainer(id)
+			chkerr(err)
+			fmt.Println(color.CyanString("\u2192 "), color.WhiteString("ok remove %s", id[:6]))
+		} else {
+			err := cm.KillContainer(id)
+			chkerr(err)
+			fmt.Println(color.CyanString("\u2192 "), color.WhiteString("ok kill %s", id[:6]))
+		}
 	}
 }
 

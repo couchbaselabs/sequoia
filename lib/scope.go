@@ -88,14 +88,14 @@ func (s *Scope) Setup() {
 	s.CreateBuckets()
 }
 
-func (s *Scope) TearDown() {
-	s.Cm.RemoveManagedContainers()
+func (s *Scope) TearDown(soft bool) {
+	s.Cm.RemoveManagedContainers(soft)
 	if s.Provider.GetType() == "docker" {
 		// save logs
 		if *s.Flags.LogLevel > 0 {
 			s.Provider.(*DockerProvider).Cm.SaveContainerLogs(*s.Flags.LogDir)
 		}
-		s.Provider.(*DockerProvider).Cm.RemoveManagedContainers()
+		s.Provider.(*DockerProvider).Cm.RemoveManagedContainers(soft)
 	}
 }
 
