@@ -249,7 +249,11 @@ func (cm *ContainerManager) WaitContainer(container *docker.Container, c chan st
 	rc, _ := cm.Client.WaitContainer(container.ID)
 	if rc != 0 && rc != 137 {
 		// log on error
-		fmt.Println(color.RedString("\n\nError occurred on container, try: 'docker logs " + container.ID + "'"))
+		emsg := fmt.Sprintf("%s%s\n%s\n",
+			"\n\nError occurred on container, try:\n",
+			"docker logs "+container.ID[:6],
+			"docker start "+container.ID[:6])
+		fmt.Println(color.RedString(emsg))
 		cm.LogContainer(container.ID, os.Stdout, false)
 	}
 
