@@ -135,9 +135,13 @@ func (cm *ContainerManager) SaveContainerLogs(logDir string) {
 		i, err := cm.Client.InspectImage(c.Image)
 		logerr(err)
 		imgName := i.RepoTags[0]
-		f := CreateFile(logDir,
-			cm.ContainerLogFile(imgName, id))
-		cm.LogContainer(id, f, false)
+		archive := fmt.Sprintf("%s.tar", cm.ContainerLogFile(imgName, id))
+		f := CreateFile(logDir, archive)
+		opts := docker.DownloadFromContainerOptions{
+			OutputStream: f,
+			Path:         "/opt/couchbase/var/lib/couchbase/logs",
+		}
+		cm.Client.DownloadFromContainer(id, opts)
 	}
 }
 
