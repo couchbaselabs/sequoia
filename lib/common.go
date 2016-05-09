@@ -11,6 +11,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"regexp"
 	"strings"
 )
 
@@ -91,5 +92,8 @@ func RandStr(size int) string {
 	rb := make([]byte, size)
 	_, err := rand.Read(rb)
 	logerr(err)
-	return base64.URLEncoding.EncodeToString(rb)
+	str := base64.URLEncoding.EncodeToString(rb)
+	reg, err := regexp.Compile("[^A-Za-z0-9]+")
+	logerr(err)
+	return reg.ReplaceAllString(str, "")
 }
