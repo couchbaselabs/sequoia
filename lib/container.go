@@ -145,12 +145,8 @@ func (cm *ContainerManager) RemoveManagedContainers(soft bool) {
 
 func (cm *ContainerManager) SaveContainerLogs(logDir string) {
 	// save logs if not already saved
-	for _, id := range cm.IDs {
-		c, err := cm.Client.InspectContainer(id)
-		logerr(err)
-		i, err := cm.Client.InspectImage(c.Image)
-		logerr(err)
-		imgName := i.RepoTags[0]
+	for n, id := range cm.IDs {
+		imgName := fmt.Sprintf("couchbase-server-%d", n)
 		archive := fmt.Sprintf("%s.tar", cm.ContainerLogFile(imgName, id))
 		f := CreateFile(logDir, archive)
 		opts := docker.DownloadFromContainerOptions{
