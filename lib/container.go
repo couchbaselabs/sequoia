@@ -110,11 +110,12 @@ func (cm *ContainerManager) RemoveContainer(id string) error {
 
 func (cm *ContainerManager) KillContainer(id string) error {
 	c, err := cm.Client.InspectContainer(id)
-	logerr(err)
-	// must already be running
-	if c.State.Running == true {
-		opts := docker.KillContainerOptions{ID: id}
-		err = cm.Client.KillContainer(opts)
+	if err == nil {
+		// must already be running
+		if c.State.Running == true {
+			opts := docker.KillContainerOptions{ID: id}
+			err = cm.Client.KillContainer(opts)
+		}
 	}
 	return err
 }
@@ -137,8 +138,9 @@ func (cm *ContainerManager) RemoveManagedContainers(soft bool) {
 			fmt.Println(color.CyanString("\u2192 "), color.WhiteString("ok remove %s", id[:6]))
 		} else {
 			err := cm.KillContainer(id)
-			chkerr(err)
-			fmt.Println(color.CyanString("\u2192 "), color.WhiteString("ok kill %s", id[:6]))
+			if err == nil {
+				fmt.Println(color.CyanString("\u2192 "), color.WhiteString("ok kill %s", id[:6]))
+			}
 		}
 	}
 }
