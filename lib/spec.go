@@ -265,6 +265,7 @@ func SpecFromIni(fileName string) ScopeSpec {
 		}
 		serverSpec.Ram = "60%"
 	}
+	serverSpec.InitNodes = serverSpec.Count
 	spec.Servers = append(spec.Servers, serverSpec)
 	return spec
 
