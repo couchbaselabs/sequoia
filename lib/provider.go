@@ -34,6 +34,7 @@ type DockerProvider struct {
 	Cm               *ContainerManager
 	Servers          []ServerSpec
 	ActiveContainers map[string]string
+	StartPort        int
 }
 
 type DockerProviderOpts struct {
@@ -52,6 +53,7 @@ func NewProvider(flags TestFlags, servers []ServerSpec) Provider {
 			cm,
 			servers,
 			make(map[string]string),
+			8091,
 		}
 	case "file":
 		provider = &FileProvider{
@@ -180,6 +182,7 @@ func (p *DockerProvider) ProvideCouchbaseServers(servers []ServerSpec) {
 
 	// start based on number of containers
 	var i int = p.NumCouchbaseServers()
+	p.StartPort = 8091 + i
 	for _, server := range servers {
 		serverNameList := ExpandName(server.Name, server.Count)
 		for _, serverName := range serverNameList {
@@ -252,7 +255,7 @@ func (p *DockerProvider) GetRestUrl(name string) string {
 	// remove port if specified
 	re := regexp.MustCompile(`:.*`)
 	host = re.ReplaceAllString(host, "")
-	port := 8091
+	port := p.StartPort
 	for _, spec := range p.Servers {
 		for i, server := range spec.Names {
 			if server == name {
