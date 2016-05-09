@@ -1,6 +1,8 @@
 package sequoia
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"github.com/fatih/color"
@@ -83,4 +85,11 @@ func ParseSlashString(s string) string {
 		return _s[1]
 	}
 	return _s[0]
+}
+
+func RandStr(size int) string {
+	rb := make([]byte, size)
+	_, err := rand.Read(rb)
+	logerr(err)
+	return base64.URLEncoding.EncodeToString(rb)
 }

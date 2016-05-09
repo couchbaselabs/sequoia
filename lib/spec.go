@@ -1,8 +1,6 @@
 package sequoia
 
 import (
-	"crypto/rand"
-	"encoding/base64"
 	"fmt"
 	"strings"
 )
@@ -270,11 +268,4 @@ func SpecFromIni(fileName string) ScopeSpec {
 	spec.Servers = append(spec.Servers, serverSpec)
 	return spec
 
-}
-
-func RandStr(size int) string {
-	rb := make([]byte, size)
-	_, err := rand.Read(rb)
-	logerr(err)
-	return base64.URLEncoding.EncodeToString(rb)
 }
