@@ -90,6 +90,7 @@ func (t *Test) Run(scope Scope) {
 		}
 	}
 
+	t.Cm.TapHandle.AutoPlan()
 }
 
 func (t *Test) _run(scope Scope, loop int) {
@@ -152,7 +153,7 @@ func (t *Test) _run(scope Scope, loop int) {
 		}
 
 		if action.Describe == "" { // use command as describe
-			action.Describe = fmt.Sprintf("%s: %s", action.Image, strings.Join(command, " "))
+			action.Describe = fmt.Sprintf("start %s: %s", action.Image, strings.Join(command, " "))
 		}
 
 		// compile task

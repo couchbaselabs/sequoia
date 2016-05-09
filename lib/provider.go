@@ -232,7 +232,7 @@ func (p *DockerProvider) ProvideCouchbaseServers(servers []ServerSpec) {
 			_, container := p.Cm.RunContainer(options)
 			p.ActiveContainers[container.Name] = container.ID
 
-			fmt.Println(color.CyanString("\u2192 "), color.WhiteString("ok %s", serverName))
+			fmt.Println(color.CyanString("\u2192 "), color.WhiteString("started %s", serverName))
 			i++
 		}
 	}

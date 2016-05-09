@@ -60,7 +60,7 @@ func ReadYamlFile(filename string, spec interface{}) {
 
 	err = yaml.Unmarshal(source, spec)
 	chkerr(err)
-	fmt.Println(color.CyanString("\u2192 "), color.WhiteString("ok %s", filename))
+	fmt.Println(color.CyanString("\u2192 "), color.WhiteString("parsed %s", filename))
 }
 
 func ReadIniFile(filename string) *ini.File {
@@ -96,4 +96,27 @@ func RandStr(size int) string {
 	reg, err := regexp.Compile("[^A-Za-z0-9]+")
 	logerr(err)
 	return reg.ReplaceAllString(str, "")
+}
+
+func PrintDesc(desc string) {
+	fmt.Printf("%s  %s",
+		color.CyanString("\u2192"),
+		color.WhiteString("%s\n", desc))
+}
+
+func RunTaskMsg(image string, command []string) string {
+	return fmt.Sprintf("%s %s",
+		color.YellowString("[%s %s]", "run", image),
+		strings.Join(command, " "))
+}
+
+func EndTaskMsg(image string, command []string) string {
+	return fmt.Sprintf("%s %s",
+		color.GreenString("[%s %s]", "end", image),
+		strings.Join(command, " "))
+}
+
+func UtilTaskMsg(opt, image string) string {
+	return fmt.Sprintf("%s %s", color.CyanString(opt),
+		image)
 }

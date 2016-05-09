@@ -5,9 +5,11 @@ package sequoia
  */
 
 import (
+	"errors"
 	"fmt"
 	"github.com/fatih/color"
 	"github.com/fsouza/go-dockerclient"
+	"github.com/tahmmee/tap.go"
 	"io"
 	"os"
 	"strings"
@@ -26,6 +28,13 @@ type ContainerTask struct {
 	Duration    time.Duration
 	LogLevel    int
 	LogDir      string
+}
+
+type TaskResult struct {
+	ID      string
+	Image   string
+	Command []string
+	Error   error
 }
 
 func (t *ContainerTask) GetOptions() docker.CreateContainerOptions {
@@ -63,10 +72,11 @@ func (t *ContainerTask) GetOptions() docker.CreateContainerOptions {
 }
 
 type ContainerManager struct {
-	Client   *docker.Client
-	Endpoint string
-	TagId    map[string]string
-	IDs      []string
+	Client    *docker.Client
+	Endpoint  string
+	TagId     map[string]string
+	IDs       []string
+	TapHandle *tap.T
 }
 
 func NewContainerManager(clientUrl string) *ContainerManager {
@@ -88,10 +98,11 @@ func NewContainerManager(clientUrl string) *ContainerManager {
 	}
 
 	return &ContainerManager{
-		Client:   client,
-		Endpoint: clientUrl,
-		TagId:    make(map[string]string),
-		IDs:      []string{},
+		Client:    client,
+		Endpoint:  clientUrl,
+		TagId:     make(map[string]string),
+		IDs:       []string{},
+		TapHandle: tap.New(),
 	}
 }
 
@@ -125,8 +136,7 @@ func (cm *ContainerManager) RemoveAllContainers() {
 	for _, c := range cm.GetAllContainers() {
 		err := cm.RemoveContainer(c.ID)
 		chkerr(err)
-
-		fmt.Println(color.CyanString("\u2192 "), color.WhiteString("ok remove %s", c.Names))
+		fmt.Println(color.CyanString("\u2192 "), color.WhiteString("remove %s", c.Names[0]))
 	}
 }
 func (cm *ContainerManager) RemoveManagedContainers(soft bool) {
@@ -135,11 +145,11 @@ func (cm *ContainerManager) RemoveManagedContainers(soft bool) {
 		if soft == false {
 			err := cm.RemoveContainer(id)
 			chkerr(err)
-			fmt.Println(color.CyanString("\u2192 "), color.WhiteString("ok remove %s", id[:6]))
+			fmt.Println(color.CyanString("\u2192 "), color.WhiteString("remove %s", id[:6]))
 		} else {
 			err := cm.KillContainer(id)
 			if err == nil {
-				fmt.Println(color.CyanString("\u2192 "), color.WhiteString("ok kill %s", id[:6]))
+				fmt.Println(color.CyanString("\u2192 "), color.WhiteString("kill %s", id[:6]))
 			}
 		}
 	}
@@ -190,10 +200,7 @@ func (cm *ContainerManager) CheckImageExists(image string) bool {
 }
 
 func (cm *ContainerManager) PullImage(repo string) error {
-	fmt.Printf("%s  %s",
-		color.CyanString("\u2192"),
-		color.WhiteString("pull %s\n", repo))
-
+	cm.TapHandle.Ok(true, UtilTaskMsg("[get]", repo))
 	imgOpts := docker.PullImageOptions{
 		Repository: repo,
 	} // TODO: tag
@@ -257,10 +264,23 @@ func (cm *ContainerManager) LogContainer(ID string, output io.Writer, follow boo
 	cm.Client.Logs(logOpts)
 }
 
-func (cm *ContainerManager) WaitContainer(container *docker.Container, c chan string) {
+func (cm *ContainerManager) WaitContainer(container *docker.Container, c chan TaskResult) {
 
 	// wait for container
 	rc, _ := cm.Client.WaitContainer(container.ID)
+
+	// get additional info about container
+	container, err := cm.Client.InspectContainer(container.ID)
+	logerr(err)
+
+	// create task result
+	tResult := TaskResult{
+		ID:      container.ID,
+		Image:   container.Config.Image,
+		Command: container.Config.Cmd,
+		Error:   nil,
+	}
+
 	if rc != 0 && rc != 137 {
 		// log on error
 		emsg := fmt.Sprintf("%s%s\n%s\n",
@@ -269,24 +289,27 @@ func (cm *ContainerManager) WaitContainer(container *docker.Container, c chan st
 			"docker start "+container.ID[:6])
 		fmt.Println(color.RedString(emsg))
 		cm.LogContainer(container.ID, os.Stdout, false)
+		tResult.Error = errors.New(fmt.Sprintf("%d", rc))
 	}
 
 	// remove container log
-	c <- container.ID
+	c <- tResult
 }
 
 func (cm *ContainerManager) ContainerLogFile(image, ID string) string {
 	return fmt.Sprintf("%s_%s", ParseSlashString(image), ID[:6])
 }
 
-func (cm *ContainerManager) RunContainer(opts docker.CreateContainerOptions) (chan string, *docker.Container) {
+func (cm *ContainerManager) RunContainer(opts docker.CreateContainerOptions) (chan TaskResult, *docker.Container) {
 	container, err := cm.Client.CreateContainer(opts)
 	logerr(err)
 
-	c := make(chan string)
+	c := make(chan TaskResult)
 
 	// start container
-	cm.Client.StartContainer(container.ID, nil)
+	err = cm.Client.StartContainer(container.ID, nil)
+	logerr(err)
+
 	go cm.WaitContainer(container, c)
 
 	// save ID
@@ -316,15 +339,15 @@ func (cm *ContainerManager) Run(task ContainerTask) {
 	options := task.GetOptions()
 
 	// run container
-	printDesc(task.Describe)
 	ch, container := cm.RunContainer(options)
-	idChans := []chan string{ch}
+	idChans := []chan TaskResult{ch}
 	containers := []*docker.Container{container}
+	cm.TapHandle.Ok(true, RunTaskMsg(task.Image, task.Command))
 
 	// start additional containers with support for concurrency
 	if task.Concurrency > 0 {
 		for i := 1; i < task.Concurrency; i++ {
-			printDesc(task.Describe)
+			PrintDesc(task.Describe)
 			ch, container := cm.RunContainer(options)
 			idChans = append(idChans, ch)
 			containers = append(containers, container)
@@ -353,16 +376,22 @@ func (cm *ContainerManager) Run(task ContainerTask) {
 			go cm.LogContainer(container.ID, os.Stdout, true)
 		}
 	}
+
 	// wait if necessary
 	if task.Async == false {
-		for _, ch := range idChans {
-			<-ch
-		}
+		cm.HandleResults(idChans)
+	} else {
+		go cm.HandleResults(idChans)
 	}
 }
 
-func printDesc(desc string) {
-	fmt.Printf("%s  %s",
-		color.CyanString("\u2192"),
-		color.WhiteString("%s\n", desc))
+func (cm *ContainerManager) HandleResults(idChans []chan TaskResult) {
+	for _, ch := range idChans {
+		rc := <-ch
+		if rc.Error == nil {
+			cm.TapHandle.Ok(true, EndTaskMsg(rc.Image, rc.Command))
+		} else {
+			cm.TapHandle.Ok(false, rc.ID[:6])
+		}
+	}
 }
