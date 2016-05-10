@@ -20,11 +20,11 @@
    command: "{{.Orchestrator | noport}}:{{.ClusterNodes | .Attr `view_port`}} {{.Bucket}}"
    wait: true
 -
-   command: "query --host {{.Orchestrator}} --ddoc scale --view stats --concurrency {{.Scale 10}}"
+   command: "query --host {{.Orchestrator}} --ddoc scale --view stats --concurrency {{.Scale 1}}"
 -
-   command: "query --host {{.NthDataNode 4}} --ddoc scale --view padd --concurrency {{.Scale 10}}"
+   command: "query --host {{.NthDataNode 4}} --ddoc scale --view padd --concurrency {{.Scale 1}}"
 -
-   command: "query --host {{.NthDataNode 5}} --ddoc scale --view array --concurrency {{.Scale 10}}"
+   command: "query --host {{.NthDataNode 5}} --ddoc scale --view array --concurrency {{.Scale 1}}"
 
 
 #============ load 10k items at 1xScale============

@@ -16,13 +16,13 @@ buckets:
 servers: # each server tag represents a cluster
   -
       name: local
-      count: 6
+      count: 8
       ram: 40% 
       rest_username: Administrator
       rest_password: password
       data_path: "/data"
       index_path: "/data"
-      init_nodes: 6
+      init_nodes: 8
       buckets: default,other
   -
       name: remote
