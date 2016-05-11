@@ -56,7 +56,7 @@
 -
    image: sequoiatools/gideon
    entrypoint: "./addviews.sh"
-   command: "{{.Orchestrator | noport}}:{{.ClusterNodes | .Attr `view_port`}}"
+   command: "{{.Orchestrator | noport}}:{{.ClusterNodes | .Attr `view_port`}} {{.Bucket}}"
    wait: true
 -
    command: "query --host {{.Orchestrator}} --ddoc scale --view stats --concurrency {{.Scale 1}}"
