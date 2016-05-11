@@ -143,9 +143,11 @@ func (cm *ContainerManager) RemoveManagedContainers(soft bool) {
 	// teardown managed containers
 	for _, id := range cm.IDs {
 		if soft == false {
-			err := cm.RemoveContainer(id)
-			chkerr(err)
-			fmt.Println(color.CyanString("\u2192 "), color.WhiteString("remove %s", id[:6]))
+			if err := cm.RemoveContainer(id); err != nil {
+			  fmt.Println(color.RedString("\u2192 "),
+                                      color.RedString("error removing %s: %s", id[:6], err))
+                        } else {
+			  fmt.Println(color.CyanString("\u2192 "), color.WhiteString("remove %s", id[:6]))                     }
 		} else {
 			err := cm.KillContainer(id)
 			if err == nil {
