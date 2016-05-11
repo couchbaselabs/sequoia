@@ -1,0 +1,411 @@
+#===Load TPCC and sprint first + create index + build index ===============#
+
+-
+  image: sequoiatools/spring
+  command: "-c 100  -o {{.Scale 1000000}} -n 50 cb://{{.Orchestrator}}:8091/default"
+  wait: true
+
+-
+   image: sequoiatools/tpcc
+   requires:  "{{.Version | le 4.0}}"
+   command: "python tpcc.py --duration 3600 --client {{.Scale 20}} --warehouses {{.Scale 2}} --no-execute n1ql
+				                    --query-url {{.QueryNode}}:8093 --userid {{.RestUsername}} --password {{.RestPassword}}"
+-
+   image: sequoiatools/cbq
+   requires: "{{.Version | le 4.0}}"
+   command: "-e=http://{{.QueryNode}}:8093  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index email on `default`(email) with  {\"defer_build\":true}'"
+
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "{{.Scale 50}}"
+   wait: true
+
+-
+  image: sequoiatools/spring
+  command: "-c 100  -o {{.Scale 1000000}} -n 50 -c 100  -i {{.Scale 1000000}} cb://{{.Orchestrator}}:8091/default"
+  wait: true
+
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "{{.Scale 50}}"
+   wait: true
+
+-
+   image: sequoiatools/cbq
+   command: "-e=http://{{.QueryNode}}:8093  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index achievements on default( DISTINCT ARRAY v FOR v IN achievements END ) with  {\"defer_build\":true}'"
+   wait: true
+
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "{{.Scale 50}}"
+   wait: true
+
+-
+   image: sequoiatools/cbq
+   command: "-e=http://{{.QueryNode}}:8093  -u={{.RestUsername}} -p={{.RestPassword}} -script='BUILD INDEX on default(email,achievements)'"
+   wait: true
+
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "{{.Scale 50}}"
+   wait: true
+
+-
+   image: sequoiatools/tpcc
+   requires:  "{{.Version | le 4.0 | eq .DoOnce}}"
+   command:  "./run.sh {{.QueryNode}}:8093 util/cbcrindex.sql"
+
+-
+   image: sequoiatools/tpcc
+   requires:  "{{.Version | le 4.0}}"
+   command: "python tpcc.py --duration 3600 --client {{.Scale 1}}
+                             --warehouses {{.Scale 1}} --no-load n1ql  --query-url {{.QueryNode}}:8093"
+
+
+-
+  # run 10 instances each a total of 100 queries
+  image: sequoiatools/queryloop
+  command: "{{.QueryNode}}:8093 'select count(*) from default use index (achievements) where (any v in achievements satisfies v> 32 end)'" #(100 queries)
+  concurrency: 10 # x10
+  duration: 7200
+
+-
+  # run 10 instances each a total of 100 queries
+  image: sequoiatools/queryloop
+  command: "{{.QueryNode}}:8093 'select count(*) from default use index (email) where email != \"RITAM\"'" #(100 queries)
+  concurrency: 10 # x10
+  duration: 7200
+
+
+#==== Rebalance out a data node ==============#
+-
+   image: sequoiatools/couchbase-cli
+   command:  "rebalance -c  {{.Orchestrator}} --server-remove {{.NthDataNode 1}}  -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   wait: true
+
+
+#==== Starting querying on the tpcc data and update default bucket with creates and updates ==============#
+
+-
+   image: sequoiatools/tpcc
+   requires:  "{{.Version | le 4.0}}"
+   command: "python tpcc.py --duration 3600 --client {{.Scale 20}}
+                             --warehouses {{.Scale 2}} --no-load n1ql  --query-url {{.QueryNode}}:8093"
+
+-
+  image: sequoiatools/spring
+  command: "-c 50 -u 25 -d 25 -o {{.Scale 1000000}} -i {{.Scale 500000}}  -n 50 cb://{{.Orchestrator}}:8091/default"
+  wait: true
+
+#========Add the removed data node and rebalance ===============#
+-
+   image: sequoiatools/couchbase-cli
+   command: "server-add -c  {{.Orchestrator}}
+       --server-add  {{.NthDataNode 1}}
+       -u  {{.RestUsername}} -p  {{.RestPassword}}
+       --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
+   wait: true
+
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "{{.Scale 50}}"
+   wait: true
+
+-
+   command:  "rebalance -c  {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   wait: true
+
+
+#==== Starting querying on the tpcc data and update default bucket with creates and updates ==============#
+
+-
+   image: sequoiatools/tpcc
+   requires:  "{{.Version | le 4.0}}"
+   command: "python tpcc.py --duration 3600 --client {{.Scale 20}}
+                             --warehouses {{.Scale 2}} --no-load n1ql  --query-url {{.QueryNode}}:8093"
+
+-
+  image: sequoiatools/spring
+  command: "-c 25 -u 50 -d 25 -o {{.Scale 1000000}} -i {{.Scale 1000000}} -n 50 cb://{{.Orchestrator}}:8091/default"
+  wait: true
+
+-
+   image: sequoiatools/tpcc
+   requires:  "{{.Version | le 4.0}}"
+   command: "python tpcc.py --duration 3600 --client {{.Scale 20}}
+                             --warehouses {{.Scale 2}} --no-load n1ql  --query-url {{.QueryNode}}:8093"
+
+
+#==== Failover index node and add back with recovery=full and rebalance ==============#
+-
+   image: sequoiatools/couchbase-cli
+   command: "failover -c {{.Orchestrator}}
+       --server-failover=10.6.2.195
+       -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+   wait: true
+
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "{{.Scale 50}}"
+   wait: true
+
+-
+   command: "server-readd -c {{.Orchestrator}}
+       --server-add=10.6.2.195
+       -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   wait: true
+
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "{{.Scale 50}}"
+   wait: true
+
+-
+   command: "recovery -c {{.Orchestrator}}
+       --server-recovery=10.6.2.195
+       --recovery-type=full
+       -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   wait: true
+
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "{{.Scale 50}}"
+   wait: true
+
+-
+   command:  "rebalance -c  {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   wait: true
+
+
+#==== Starting querying on the tpcc data and update default bucket with creates and updates ==============#
+
+-
+  image: sequoiatools/spring
+  command: "-c 100 -o {{.Scale 2000000}} -i {{.Scale 2000000}} -n 50 cb://{{.Orchestrator}}:8091/default"
+
+-
+   image: sequoiatools/tpcc
+   requires:  "{{.Version | le 4.0}}"
+   command: "python tpcc.py --duration 3600 --client {{.Scale 20}}
+                             --warehouses {{.Scale 2}} --no-load n1ql  --query-url {{.QueryNode}}:8093"
+
+-
+   image: sequoiatools/tpcc
+   requires:  "{{.Version | le 4.0}}"
+   command: "python tpcc.py --duration 3600 --client {{.Scale 1}}
+                             --warehouses {{.Scale 5}} --no-load n1ql  --query-url {{.QueryNode}}:8093"
+
+#======= Swap rebalance a data node =======#
+
+-
+   image: sequoiatools/couchbase-cli
+   command:  "rebalance -c  {{.Orchestrator}} --server-remove {{.NthDataNode 1}}  -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   wait: true
+
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "{{.Scale 50}}"
+   wait: true
+
+-
+   image: sequoiatools/couchbase-cli
+   command: "server-add -c  {{.Orchestrator}}
+       --server-add {{.NthDataNode 1}}
+       -u  {{.RestUsername}} -p  {{.RestPassword}}
+       --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
+   wait: true
+
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "{{.Scale 50}}"
+   wait: true
+
+-
+   command:  "rebalance -c  {{.Orchestrator}}
+    --server-remove {{.NthDataNode 2}}
+    -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   wait: true
+
+#========= Add and update the data using spring and tpcc ========#
+
+-
+  image: sequoiatools/spring
+  command: "-c 25 -u 50 -d 25 -o {{.Scale 1000000}} -i {{.Scale 1000000}} -n 50 cb://{{.Orchestrator}}:8091/default"
+
+-
+   image: sequoiatools/tpcc
+   requires:  "{{.Version | le 4.0}}"
+   command: "python tpcc.py --duration 3600 --client {{.Scale 20}} --warehouses {{.Scale 4}} --no-execute n1ql
+				                    --query-url {{.QueryNode}}:8093 --userid {{.RestUsername}} --password {{.RestPassword}}"
+
+
+#====== Drop the indexes on default and recreate ====== #
+
+-
+   image: sequoiatools/cbq
+   command: "-e=http://{{.QueryNode}}:8093  -u={{.RestUsername}} -p={{.RestPassword}} -script='drop index default.achievements'"
+   wait: true
+
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "{{.Scale 50}}"
+   wait: true
+
+-
+   image: sequoiatools/cbq
+   command: "-e=http://{{.QueryNode}}:8093  -u={{.RestUsername}} -p={{.RestPassword}} -script='drop index default.email'"
+   wait: true
+
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "{{.Scale 50}}"
+   wait: true
+
+-
+   command: "-e=http://{{.QueryNode}}:8093  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index email_new on `default`(email) WITH  {\"defer_build\":true}'"
+   wait: true
+
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "{{.Scale 50}}"
+   wait: true
+
+-
+   command: "-e=http://{{.QueryNode}}:8093  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index achievements_new on `default`(achievements) WITH {\"defer_build\":true}'"
+   wait: true
+
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "{{.Scale 50}}"
+   wait: true
+
+-
+   command: "-e=http://{{.QueryNode}}:8093  -u={{.RestUsername}} -p={{.RestPassword}} -script='BUILD INDEX on default(email_new,achievements_new)'"
+   wait: true
+
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "{{.Scale 50}}"
+   wait: true
+
+-
+   image: sequoiatools/tpcc
+   requires:  "{{.Version | le 4.0}}"
+   command: "python tpcc.py --duration 3600 --client {{.Scale 1}}
+                             --warehouses {{.Scale 5}} --no-load n1ql  --query-url {{.QueryNode}}:8093"
+
+
+#======= Swap rebalance a data node =======#
+
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "{{.Scale 50}}"
+   wait: true
+
+-
+   image: sequoiatools/couchbase-cli
+   command: "server-add -c  {{.Orchestrator}}
+       --server-add {{.NthDataNode 2}}
+       -u  {{.RestUsername}} -p  {{.RestPassword}}
+       --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
+   wait: true
+
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "{{.Scale 50}}"
+   wait: true
+
+-
+   command:  "rebalance -c  {{.Orchestrator}}
+    --server-remove {{.NthDataNode 1}}
+    -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   wait: true
+
+
+#========= Add and update the data using cbworkloadgen and tpcc ========#
+
+-
+  image: sequoiatools/spring
+  command: "-c 25 -u 50 -d 25 -o {{.Scale 1000000}} -i {{.Scale 1000000}} -n 50 cb://{{.Orchestrator}}:8091/default"
+  wait: true
+
+
+-
+   image: sequoiatools/tpcc
+   requires:  "{{.Version | le 4.0}}"
+   command: "python tpcc.py --duration 3600 --client {{.Scale 20}} --warehouses {{.Scale 5}} --no-execute n1ql
+				                    --query-url {{.QueryNode}}:8093 --userid {{.RestUsername}} --password {{.RestPassword}}"
+
+-
+   image: sequoiatools/tpcc
+   requires:  "{{.Version | le 4.0}}"
+   command: "python tpcc.py --duration 3600 --client {{.Scale 20}} --warehouses {{.Scale 3}} --no-execute n1ql
+				                    --query-url {{.QueryNode}}:8093 --userid {{.RestUsername}} --password {{.RestPassword}}"
+
+
+
+#==== Failover index node and add back with recovery=full and rebalance ==============#
+
+-
+  image: sequoiatools/spring
+  command: "-c 25 -u 50 -d 25 -o {{.Scale 1000000}} -i {{.Scale 1000000}} -n 50 cb://{{.Orchestrator}}:8091/default"
+
+
+-
+   image: sequoiatools/couchbase-cli
+   command: "failover -c {{.Orchestrator}}
+       --server-failover=10.6.2.195
+       -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+   wait: true
+
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "{{.Scale 50}}"
+   wait: true
+
+-
+   command: "server-readd -c {{.Orchestrator}}
+       --server-add=10.6.2.195
+       -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   wait: true
+
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "{{.Scale 50}}"
+   wait: true
+
+-
+   command: "recovery -c {{.Orchestrator}}
+       --server-recovery=10.6.2.195
+       --recovery-type=full
+       -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   wait: true
+
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "{{.Scale 50}}"
+   wait: true
+
+-
+   command:  "rebalance -c  {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   wait: true
