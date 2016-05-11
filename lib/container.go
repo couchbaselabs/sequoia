@@ -266,11 +266,15 @@ func (cm *ContainerManager) LogContainer(ID string, output io.Writer, follow boo
 
 func (cm *ContainerManager) WaitContainer(container *docker.Container, c chan TaskResult) {
 
-	// wait for container
-	rc, _ := cm.Client.WaitContainer(container.ID)
 
 	// get additional info about container
-	container, err := cm.Client.InspectContainer(container.ID)
+	_c, err := cm.Client.InspectContainer(container.ID)
+        if err == nil && _c.Config != nil {
+           container = _c
+        }
+
+	// wait for container
+	rc, _ := cm.Client.WaitContainer(container.ID)
 
 	// create task result
 	tResult := TaskResult{
