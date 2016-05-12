@@ -7,7 +7,6 @@ package sequoia
 import (
 	"errors"
 	"fmt"
-	"github.com/fatih/color"
 	"github.com/fsouza/go-dockerclient"
 	"github.com/tahmmee/tap.go"
 	"io"
@@ -137,7 +136,7 @@ func (cm *ContainerManager) RemoveAllContainers() {
 	for _, c := range cm.GetAllContainers() {
 		err := cm.RemoveContainer(c.ID)
 		chkerr(err)
-		fmt.Println(color.CyanString("\u2192 "), color.WhiteString("remove %s", c.Names[0]))
+		colorsay("remove " + c.Names[0])
 	}
 }
 func (cm *ContainerManager) RemoveManagedContainers(soft bool) {
@@ -145,15 +144,14 @@ func (cm *ContainerManager) RemoveManagedContainers(soft bool) {
 	for _, id := range cm.IDs {
 		if soft == false {
 			if err := cm.RemoveContainer(id); err != nil {
-				fmt.Println(color.RedString("\u2192 "),
-					color.RedString("error removing %s: %s", id[:6], err))
+				ecolorsay(fmt.Sprintf("error removing %s: %s", id[:6], err))
 			} else {
-				fmt.Println(color.CyanString("\u2192 "), color.WhiteString("remove %s", id[:6]))
+				colorsay("remove " + id[:6])
 			}
 		} else {
 			err := cm.KillContainer(id)
 			if err == nil {
-				fmt.Println(color.CyanString("\u2192 "), color.WhiteString("kill %s", id[:6]))
+				colorsay("kill" + id[:6])
 			}
 		}
 	}
@@ -248,9 +246,7 @@ func (cm *ContainerManager) PullTaggedImage(repo, tag string) {
 }
 
 func (cm *ContainerManager) BuildImage(opts docker.BuildImageOptions) error {
-	fmt.Printf("%s  %s",
-		color.CyanString("\u2192"),
-		color.WhiteString("building image %s\n", opts.Name))
+	colorsay("building image " + opts.Name)
 
 	// hookup io
 	opts.OutputStream = os.Stdout
@@ -300,7 +296,7 @@ func (cm *ContainerManager) WaitContainer(container *docker.Container, c chan Ta
 			"\n\nError occurred on container, try:\n",
 			"docker logs "+container.ID[:6],
 			"docker start "+container.ID[:6])
-		fmt.Println(color.RedString(emsg))
+		ecolorsay(emsg)
 		cm.LogContainer(container.ID, os.Stdout, false)
 		tResult.Error = errors.New(fmt.Sprintf("%d", rc))
 	}

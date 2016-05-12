@@ -6,7 +6,6 @@ package sequoia
 
 import (
 	"fmt"
-	"github.com/fatih/color"
 	"github.com/fsouza/go-dockerclient"
 	"net/url"
 	"regexp"
@@ -231,8 +230,7 @@ func (p *DockerProvider) ProvideCouchbaseServers(servers []ServerSpec) {
 
 			_, container := p.Cm.RunContainer(options)
 			p.ActiveContainers[container.Name] = container.ID
-
-			fmt.Println(color.CyanString("\u2192 "), color.WhiteString("started %s", serverName))
+			colorsay("start couchbase http://" + p.GetRestUrl(serverName))
 			i++
 		}
 	}

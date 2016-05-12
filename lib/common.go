@@ -33,6 +33,9 @@ func logerrstr(err string) {
 func colorsay(msg string) {
 	fmt.Println(color.CyanString("\u2192 "), color.WhiteString("%s", msg))
 }
+func ecolorsay(msg string) {
+	fmt.Println(color.RedString("\u2192 "), color.WhiteString("%s", msg))
+}
 
 func ExpandName(name string, count uint8) []string {
 	var names []string
@@ -112,7 +115,7 @@ func MakeTaskMsg(image, id string, command []string, is_err bool) string {
 }
 
 func UtilTaskMsg(opt, image string) string {
-	return fmt.Sprintf("%s %s", color.YellowString(opt),
+	return fmt.Sprintf("%s %s", color.CyanString(opt),
 		image)
 }
 
