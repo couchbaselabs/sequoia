@@ -20,6 +20,7 @@ type ContainerTask struct {
 	Name        string
 	Describe    string
 	Image       string
+	ImageAlias  string
 	Command     []string
 	LinksTo     string
 	Async       bool
@@ -332,8 +333,13 @@ func (cm *ContainerManager) RunContainer(opts docker.CreateContainerOptions) (ch
 
 func (cm *ContainerManager) Run(task ContainerTask) {
 
+	// save image as alias in case it resolves to a
+	// commit hash
+	task.ImageAlias = task.Image
+
 	// use repo tag if exists
 	if tagId, ok := cm.TagId[task.Image]; ok {
+		task.ImageAlias = task.Image
 		task.Image = tagId
 	} else {
 
@@ -354,12 +360,12 @@ func (cm *ContainerManager) Run(task ContainerTask) {
 	ch, container := cm.RunContainer(options)
 	idChans := []chan TaskResult{ch}
 	containers := []*docker.Container{container}
-	fmt.Println(RunTaskMsg(task.Image, task.Command))
+	fmt.Println(MakeTaskMsg(task.ImageAlias, container.ID, task.Command, false))
 
 	// start additional containers with support for concurrency
 	if task.Concurrency > 0 {
 		for i := 1; i < task.Concurrency; i++ {
-			fmt.Println(RunTaskMsg(task.Image, task.Command))
+			fmt.Println(MakeTaskMsg(task.ImageAlias, container.ID, task.Command, false))
 			ch, container := cm.RunContainer(options)
 			idChans = append(idChans, ch)
 			containers = append(containers, container)
@@ -401,9 +407,9 @@ func (cm *ContainerManager) HandleResults(idChans *[]chan TaskResult) {
 	for _, ch := range *idChans {
 		rc := <-ch
 		if rc.Error == nil {
-			cm.TapHandle.Ok(true, EndTaskMsg(rc.Image, rc.Command))
+			cm.TapHandle.Ok(true, MakeTaskMsg(rc.Image, rc.ID, rc.Command, false))
 		} else {
-			cm.TapHandle.Ok(false, ErrTaskMsg(rc.Image, rc.Command))
+			cm.TapHandle.Ok(false, MakeTaskMsg(rc.Image, rc.ID, rc.Command, true))
 		}
 		close(ch)
 	}

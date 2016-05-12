@@ -99,30 +99,21 @@ func RandStr(size int) string {
 	return reg.ReplaceAllString(str, "")
 }
 
-func RunTaskMsg(image string, command []string) string {
+func MakeTaskMsg(image, id string, command []string, is_err bool) string {
 	ts := TimeStamp()
-	return fmt.Sprintf("%s %s",
-		color.CyanString("[%s:%s, %s]", "run", image, ts),
-		strings.Join(command, " "))
-}
-
-func EndTaskMsg(image string, command []string) string {
-	ts := TimeStamp()
-	return fmt.Sprintf("%s %s",
-		color.GreenString("[%s:%s, %s]", "done", image, ts),
-		strings.Join(command, " "))
+	cmd := strings.Join(command, " ")
+	meta := fmt.Sprintf("[%s, %s:%s]", ts, image, id[:6])
+	if is_err == true {
+		meta = color.RedString(meta)
+	} else {
+		meta = color.CyanString(meta)
+	}
+	return fmt.Sprintf("%s %s", meta, cmd)
 }
 
 func UtilTaskMsg(opt, image string) string {
 	return fmt.Sprintf("%s %s", color.YellowString(opt),
 		image)
-}
-
-func ErrTaskMsg(image string, command []string) string {
-	ts := TimeStamp()
-	return fmt.Sprintf("%s %s",
-		color.RedString("[%s:%s, %s]", "error", image),
-		strings.Join(command, " "), ts)
 }
 
 func TimeStamp() string {
