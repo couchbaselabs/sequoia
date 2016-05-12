@@ -13,6 +13,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"time"
 )
 
 func chkerr(err error) {
@@ -99,24 +100,32 @@ func RandStr(size int) string {
 }
 
 func RunTaskMsg(image string, command []string) string {
+	ts := TimeStamp()
 	return fmt.Sprintf("%s %s",
-		color.CyanString("[%s %s]", "run", image),
+		color.CyanString("[%s:%s, %s]", "run", image, ts),
 		strings.Join(command, " "))
 }
 
 func EndTaskMsg(image string, command []string) string {
+	ts := TimeStamp()
 	return fmt.Sprintf("%s %s",
-		color.GreenString("[%s %s]", "done", image),
+		color.GreenString("[%s:%s, %s]", "done", image, ts),
 		strings.Join(command, " "))
 }
 
 func UtilTaskMsg(opt, image string) string {
-	return fmt.Sprintf("%s %s", color.CyanString(opt),
+	return fmt.Sprintf("%s %s", color.YellowString(opt),
 		image)
 }
 
 func ErrTaskMsg(image string, command []string) string {
+	ts := TimeStamp()
 	return fmt.Sprintf("%s %s",
-		color.RedString("[%s %s]", "error", image),
-		strings.Join(command, " "))
+		color.RedString("[%s:%s, %s]", "error", image),
+		strings.Join(command, " "), ts)
+}
+
+func TimeStamp() string {
+	now := time.Now()
+	return now.Format(time.RFC3339)
 }

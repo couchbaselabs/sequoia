@@ -204,11 +204,13 @@ func (cm *ContainerManager) CheckImageExists(image string) bool {
 }
 
 func (cm *ContainerManager) PullImage(repo string) error {
-	cm.TapHandle.Ok(true, UtilTaskMsg("[pull]", repo))
+	msg := UtilTaskMsg("[pull]", repo)
+	cm.TapHandle.Ok(true, msg)
 	imgOpts := docker.PullImageOptions{
 		Repository: repo,
 	} // TODO: tag
 
+	fmt.Println(msg)
 	return cm.Client.PullImage(imgOpts, docker.AuthConfiguration{})
 }
 
