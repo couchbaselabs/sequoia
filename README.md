@@ -23,17 +23,14 @@ go build
 
 ## Testing
 
-In Sequoia a test consists of a scope spec and a test spec.  The top-level config.yml file denotes which files to use for the test.  These defaults can be overridden via -scope and -test options on the command line.
+In Sequoia a test consists of a scope spec and a test spec.  The top-level config.yml file denotes which files to use for the test.  Alternetaively, command line args can be used to provide -scope and -test to run. 
 
 ```bash
 # use defaults from config.yml
-./sequoia  
+./sequoia -config config.xml
 
-# override scope file from config.yml
-./sequoia -scope tests/simple/scope_medium.yml
-
-# override both scope and test file
-./sequoia -scope tests/longevity/scope_8x4.yml -test tests/longevity/test_allFeatures.yml 
+# run with command line args
+./sequoia -scope tests/simple/scope_medium.yml -test tests/simple/test_small.yml
 ```
 
 Refer to [Test Syntax](https://github.com/couchbaselabs/sequoia/wiki/Test-Syntax) for more information about how to build out your test and scopes.
