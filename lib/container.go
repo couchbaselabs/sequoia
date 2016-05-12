@@ -144,10 +144,11 @@ func (cm *ContainerManager) RemoveManagedContainers(soft bool) {
 	for _, id := range cm.IDs {
 		if soft == false {
 			if err := cm.RemoveContainer(id); err != nil {
-			  fmt.Println(color.RedString("\u2192 "),
-                                      color.RedString("error removing %s: %s", id[:6], err))
-                        } else {
-			  fmt.Println(color.CyanString("\u2192 "), color.WhiteString("remove %s", id[:6]))                     }
+				fmt.Println(color.RedString("\u2192 "),
+					color.RedString("error removing %s: %s", id[:6], err))
+			} else {
+				fmt.Println(color.CyanString("\u2192 "), color.WhiteString("remove %s", id[:6]))
+			}
 		} else {
 			err := cm.KillContainer(id)
 			if err == nil {
@@ -163,6 +164,7 @@ func (cm *ContainerManager) SaveContainerLogs(logDir string) {
 		imgName := fmt.Sprintf("couchbase-server-%d", n)
 		archive := fmt.Sprintf("%s.tar", cm.ContainerLogFile(imgName, id))
 		f := CreateFile(logDir, archive)
+		defer f.Close()
 		opts := docker.DownloadFromContainerOptions{
 			OutputStream: f,
 			Path:         "/opt/couchbase/var/lib/couchbase/logs",
@@ -264,16 +266,19 @@ func (cm *ContainerManager) LogContainer(ID string, output io.Writer, follow boo
 		Stderr:       true,
 	}
 	cm.Client.Logs(logOpts)
+	if f, ok := output.(*os.File); ok {
+		f.Close()
+	}
+
 }
 
 func (cm *ContainerManager) WaitContainer(container *docker.Container, c chan TaskResult) {
 
-
 	// get additional info about container
 	_c, err := cm.Client.InspectContainer(container.ID)
-        if err == nil && _c.Config != nil {
-           container = _c
-        }
+	if err == nil && _c.Config != nil {
+		container = _c
+	}
 
 	// wait for container
 	rc, _ := cm.Client.WaitContainer(container.ID)
@@ -384,19 +389,20 @@ func (cm *ContainerManager) Run(task ContainerTask) {
 
 	// wait if necessary
 	if task.Async == false {
-		cm.HandleResults(idChans)
+		cm.HandleResults(&idChans)
 	} else {
-		go cm.HandleResults(idChans)
+		go cm.HandleResults(&idChans)
 	}
 }
 
-func (cm *ContainerManager) HandleResults(idChans []chan TaskResult) {
-	for _, ch := range idChans {
+func (cm *ContainerManager) HandleResults(idChans *[]chan TaskResult) {
+	for _, ch := range *idChans {
 		rc := <-ch
 		if rc.Error == nil {
 			cm.TapHandle.Ok(true, EndTaskMsg(rc.Image, rc.Command))
 		} else {
 			cm.TapHandle.Ok(false, ErrTaskMsg(rc.Image, rc.Command))
 		}
+		close(ch)
 	}
 }
