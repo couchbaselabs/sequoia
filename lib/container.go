@@ -382,7 +382,7 @@ func (cm *ContainerManager) Run(task ContainerTask) {
 	// logging
 	if task.LogLevel > 0 {
 		f := CreateFile(task.LogDir,
-			cm.ContainerLogFile(task.Image, container.ID))
+			cm.ContainerLogFile(task.ImageAlias, container.ID))
 		go cm.LogContainer(container.ID, f, true)
 
 		// send to stdout
