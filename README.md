@@ -23,7 +23,7 @@ go build
 
 ## Testing
 
-In Sequoia a test consists of a scope spec and a test spec.  The top-level config.yml file denotes which files to use for the test.  Alternetaively, command line args can be used to provide -scope and -test to run. 
+In Sequoia a test consists of a scope spec and a test spec.  The top-level config.yml file denotes which files to use for the test.  Alternetaively, command line args can be used to explicitely specify which scope and test to use when testing. 
 
 ```bash
 # use defaults from config.yml
