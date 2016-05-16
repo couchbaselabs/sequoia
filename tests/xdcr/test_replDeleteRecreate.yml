@@ -6,7 +6,7 @@
   command: "kv --ops {{.Scale 5000}} --create 100  --hosts {{.Nodes | .Cluster 1 | net 0}} --bucket {{.Bucket}}"
 -
   command: "kv --ops {{.Scale 5000}} --create 100  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
-  duration: 10
+  duration: 60
   wait: true
 
 
@@ -50,7 +50,7 @@
 #============ get replication id ============
 -
   image:  appropriate/curl
-  command: "-s http://{{.RestUsername}}:{{.RestPassword}}@{{.Orchestrator}}:8091/pools/default/remoteClusters"
+  command: "-s http://{{.RestUsername}}:{{.RestPassword}}@{{.Orchestrator | noport}}:{{.ClusterNodes | .Attr `rest_port`}}/pools/default/remoteClusters"
   save: ReplId
   wait: true
 
@@ -58,7 +58,7 @@
 -
   image: sequoiatools/gideon
   command: "kv --ops {{.Scale 5000}} --create 100  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
-  duration: 10
+  duration: 60
   wait: true
 
 #============ pause xdcr replications ============
@@ -94,15 +94,15 @@
 
 
 #============ remote add ============
- -
-    image: sequoiatools/couchbase-cli
-    command: "server-add -c  {{.Nodes | .Cluster 1 | net 0}}
-        --server-add {{.Nodes | .Cluster 1 | net 1}}
-        -u  {{.RestUsername}} -p  {{.RestPassword}}
-        --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
-    wait: true
- -
-    command:  "rebalance -c  {{.Nodes | .Cluster 1 | net 0}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
+-
+   image: sequoiatools/couchbase-cli
+   command: "server-add -c  {{.Nodes | .Cluster 1 | net 0}}
+       --server-add {{.Nodes | .Cluster 1 | net 1}}
+       -u  {{.RestUsername}} -p  {{.RestPassword}}
+       --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
+   wait: true
+-
+   command:  "rebalance -c  {{.Nodes | .Cluster 1 | net 0}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
 
 #============ remote setup xdcr replications ============
 -
@@ -132,7 +132,7 @@
 -
   image: sequoiatools/gideon
   command: "kv --ops {{.Scale 5000}} --create 100  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
-  duration: 10
+  duration: 60
   wait: true
 
 #============ delete xdcr replications ============
