@@ -5,6 +5,7 @@ package sequoia
  */
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"github.com/fsouza/go-dockerclient"
@@ -253,6 +254,21 @@ func (cm *ContainerManager) BuildImage(opts docker.BuildImageOptions) error {
 	return cm.Client.BuildImage(opts)
 }
 
+// get logs as string
+func (cm *ContainerManager) GetLogs(ID string) string {
+	buf := new(bytes.Buffer)
+	logOpts := docker.LogsOptions{
+		Container:    ID,
+		OutputStream: buf,
+		ErrorStream:  os.Stderr,
+		Follow:       false,
+		Stdout:       true,
+	}
+	cm.Client.Logs(logOpts)
+	return buf.String()
+}
+
+// logging to file or io
 func (cm *ContainerManager) LogContainer(ID string, output io.Writer, follow bool) {
 
 	logOpts := docker.LogsOptions{
@@ -327,7 +343,7 @@ func (cm *ContainerManager) RunContainer(opts docker.CreateContainerOptions) (ch
 	return c, container
 }
 
-func (cm *ContainerManager) Run(task ContainerTask) {
+func (cm *ContainerManager) Run(task ContainerTask) string {
 
 	// save image as alias in case it resolves to a
 	// commit hash
@@ -397,6 +413,8 @@ func (cm *ContainerManager) Run(task ContainerTask) {
 	} else {
 		go cm.HandleResults(&idChans)
 	}
+
+	return container.ID
 }
 
 func (cm *ContainerManager) HandleResults(idChans *[]chan TaskResult) {

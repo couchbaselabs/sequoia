@@ -7,6 +7,7 @@ package sequoia
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -26,6 +27,7 @@ func ParseTemplate(s *Scope, command string) string {
 		"net":    tResolv.Address,
 		"bucket": tResolv.BucketName,
 		"noport": tResolv.NoPort,
+		"json":   tResolv.ToJson,
 	}
 	tmpl, err := template.New("t").Funcs(netFunc).Parse(command)
 	logerr(err)
@@ -225,4 +227,23 @@ func (t *TemplateResolver) NthBucket(n int) string {
 // strip port from addr
 func (t *TemplateResolver) NoPort(addr string) string {
 	return strings.Split(addr, ":")[0]
+}
+
+func (t *TemplateResolver) Var(key string) string {
+	var val string
+
+	// check if key exist in scope vars
+	if id, ok := t.Scope.Vars[key]; ok == true {
+		// get containers return log
+		val = t.Scope.Cm.GetLogs(id)
+	}
+	return val
+}
+
+func (t *TemplateResolver) ToJson(data string) interface{} {
+	var kv interface{}
+	blob := []byte(data)
+	err := json.Unmarshal(blob, &kv)
+	logerr(err)
+	return kv
 }

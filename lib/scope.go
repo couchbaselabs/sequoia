@@ -25,6 +25,7 @@ type Scope struct {
 	Provider Provider
 	Flags    TestFlags
 	Version  string
+	Vars     map[string]string
 	Aux      int
 }
 
@@ -72,6 +73,7 @@ func NewScope(flags TestFlags, cm *ContainerManager) Scope {
 		provider,
 		flags,
 		"",
+		make(map[string]string),
 		0,
 	}
 }

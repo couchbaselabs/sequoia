@@ -22,6 +22,7 @@ type ActionSpec struct {
 	Requires    string
 	Concurrency string
 	Duration    string
+	Save        string
 }
 
 func ActionsFromFile(fileName string) []ActionSpec {
@@ -176,7 +177,10 @@ func (t *Test) _run(scope Scope, loop int) {
 		}
 
 		// run
-		t.Cm.Run(task)
+		cid := t.Cm.Run(task)
+		if action.Save != "" {
+			scope.Vars[action.Save] = cid
+		}
 
 		lastAction = action
 	}
