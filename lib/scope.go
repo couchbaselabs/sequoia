@@ -42,6 +42,7 @@ func NewScope(flags TestFlags, cm *ContainerManager) Scope {
 		// set default port services
 		if spec.Servers[i].RestPort == "" {
 			if provider.GetType() == "dev" {
+				spec.Servers[i].RestPort = "9000"
 			} else {
 				spec.Servers[i].RestPort = "8091"
 			}
