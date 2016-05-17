@@ -29,7 +29,7 @@
 -
    image: sequoiatools/couchbase-cli
    command: "server-add -c  {{.Orchestrator}}
-       --server-add {{.NthDataNode 3}}
+       --server-add {{.NthDataNode 5}}
        -u  {{.RestUsername}} -p  {{.RestPassword}}
        --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
    wait: true
@@ -85,7 +85,7 @@
    wait: true
 -
    command: "failover -c {{.Orchestrator}}
-       --server-failover {{.NthDataNode 3}}
+       --server-failover {{.NthDataNode 5}}
        -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
    wait: true
 -
@@ -97,7 +97,7 @@
 -
    image: sequoiatools/couchbase-cli
    command: "server-add -c  {{.Nodes | .Cluster 1 | net 0}}
-       --server-add {{.Nodes | .Cluster 1 | net 1}}
+       --server-add {{.Nodes | .Cluster 1 | net 3}}
        -u  {{.RestUsername}} -p  {{.RestPassword}}
        --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
    wait: true
@@ -158,7 +158,7 @@
     interval: 5
   image: sequoiatools/couchbase-cli
   command: "failover -c {{.Nodes | .Cluster 1 | net 0}}
-       --server-failover {{.Nodes | .Cluster 1 | net 1}}
+       --server-failover {{.Nodes | .Cluster 1 | net 3}}
        -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
   wait: true
 -
