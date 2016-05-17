@@ -1,0 +1,26 @@
+- 
+  ###############
+  # start data and save container id
+  ###############
+  image: sequoiatools/pillowfight
+  command: "-U  {{.Orchestrator}} -B 100 -t 1 -c 100"
+  save: KvContainer
+
+-
+  ###############
+  # rebalance when pillowfight container finishes 
+  ###############
+  image: sequoiatools/couchbase-cli
+  when:
+    eval: "{{.Status `KvContainer` | eq `exited`}}"
+    timeout: 60 # default forever
+    interval: 1 # default 1
+  command:  "rebalance -c  {{.Orchestrator}}  --server-remove {{.NthDataNode 1}}  -u  {{.RestUsername}} -p  {{.RestPassword}}"
+- 
+  ###############
+  # start data and save container id
+  ###############
+  image: sequoiatools/pillowfight
+  command: "-U  {{.Orchestrator}} -B 100 -t 1 -c 1000"
+  wait: true
+

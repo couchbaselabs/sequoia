@@ -1,0 +1,23 @@
+---
+buckets: # define single default bucket
+  -
+    name: default
+    ram: 30% 
+
+servers:
+  -
+     name: local
+     ram: 40% 
+     count: 2
+     rest_username: Administrator
+     rest_password: password
+     init_nodes: 2
+     buckets: default
+  -
+     name: remote 
+     ram: 40% 
+     count: 2
+     rest_username: Administrator
+     rest_password: password
+     init_nodes: 1
+     buckets: default
