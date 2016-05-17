@@ -15,6 +15,7 @@ servers:
       rest_password: password
       init_nodes: 3
       buckets: default
+      data_path: "/data"
   -
       name: remote
       count: 2
@@ -23,3 +24,4 @@ servers:
       rest_password: password
       init_nodes: 1
       buckets: default
+      data_path: "/data"
