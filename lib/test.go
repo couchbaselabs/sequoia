@@ -18,11 +18,18 @@ type ActionSpec struct {
 	Image       string
 	Command     string
 	Wait        bool
+	When        *WhenSpec
 	Entrypoint  string
 	Requires    string
 	Concurrency string
 	Duration    string
 	Save        string
+}
+
+type WhenSpec struct {
+	Eval     string
+	Timeout  uint64
+	Interval uint64
 }
 
 func ActionsFromFile(fileName string) []ActionSpec {
@@ -135,6 +142,30 @@ func (t *Test) _run(scope Scope, loop int) {
 		// resolve command
 		command := scope.CompileCommand(action.Command)
 
+		// if command has 'when' then cannot start processing until ready
+		if action.When != nil {
+			var ready = false
+			var err error
+			var elapsed uint64 = 0
+			for ready == false {
+				when := ParseTemplate(&scope, action.When.Eval)
+				ready, err = strconv.ParseBool(when)
+				logerr(err)
+				interval := action.When.Interval
+				if interval == 0 {
+					interval = 1
+				}
+				time.Sleep(time.Duration(interval) * time.Second)
+				elapsed += interval
+				if action.When.Timeout > 0 &&
+					elapsed > action.When.Timeout {
+					// timeout
+					ecolorsay("timed out waiting for: " + action.When.Eval)
+					ready = true
+				}
+			}
+
+		}
 		// resolve duration and concurrency
 		var taskDuration time.Duration = 0
 		var taskConcurrency = 0
@@ -169,6 +200,7 @@ func (t *Test) _run(scope Scope, loop int) {
 			LogLevel:    *t.Flags.LogLevel,
 			LogDir:      *t.Flags.LogDir,
 		}
+
 		if scope.Provider.GetType() == "docker" {
 			task.LinksTo = scope.Provider.(*DockerProvider).GetLinkPairs()
 		}
