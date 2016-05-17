@@ -268,6 +268,15 @@ func (cm *ContainerManager) GetLogs(ID string) string {
 	return buf.String()
 }
 
+// get container status
+func (cm *ContainerManager) GetStatus(ID string) (string, error) {
+	container, err := cm.Client.InspectContainer(ID)
+	if err != nil {
+		return "", err
+	}
+	return container.State.Status, nil
+}
+
 // logging to file or io
 func (cm *ContainerManager) LogContainer(ID string, output io.Writer, follow bool) {
 

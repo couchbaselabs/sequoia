@@ -247,3 +247,14 @@ func (t *TemplateResolver) ToJson(data string) interface{} {
 	logerr(err)
 	return kv
 }
+
+// returns status string of container id
+func (t *TemplateResolver) Status(idRef string) string {
+	var status string
+	var err error
+	if ID, ok := t.Scope.Vars[idRef]; ok == true {
+		status, err = t.Scope.Cm.GetStatus(ID)
+		logerr(err)
+	}
+	return status
+}
