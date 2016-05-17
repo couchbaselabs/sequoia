@@ -150,3 +150,16 @@
    command:  "xdcr-setup -c {{.Orchestrator}} --delete --xdcr-cluster-name remote
                             -u {{.RestUsername}} -p {{.RestPassword}}"
    wait: true
+
+#============ hard failover remote node when remote finished rebalance-in ============
+-
+  when:
+    eval: "{{.Status `RemoteRebalance` | eq `exited`}}"
+    interval: 5
+  image: sequoiatools/couchbase-cli
+  command: "failover -c {{.Nodes | .Cluster 1 | net 0}}
+       --server-failover {{.Nodes | .Cluster 1 | net 1}}
+       -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+-
+  command:  "rebalance -c  {{.Nodes | .Cluster 1 | net 0}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
