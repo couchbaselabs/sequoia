@@ -274,7 +274,7 @@ func (cm *ContainerManager) GetStatus(ID string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return container.State.Status, nil
+	return container.State.StateString(), nil
 }
 
 // logging to file or io
