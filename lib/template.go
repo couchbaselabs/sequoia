@@ -229,7 +229,7 @@ func (t *TemplateResolver) NoPort(addr string) string {
 	return strings.Split(addr, ":")[0]
 }
 
-func (t *TemplateResolver) Var(key string) string {
+func (t *TemplateResolver) Logs(key string) string {
 	var val string
 
 	// check if key exist in scope vars

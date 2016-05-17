@@ -66,7 +66,7 @@
    image: sequoiatools/couchbase-cli
    command: "xdcr-replicate -c {{.Orchestrator}} --pause
                             -u {{.RestUsername}} -p {{.RestPassword}}
-                            --xdcr-replicator={{(index (.Var `ReplId` | json) 0).uuid }}/default/{{.Bucket}}"
+                            --xdcr-replicator={{(index (.Logs `ReplId` | json) 0).uuid }}/default/{{.Bucket}}"
 
 #============ swap add back ============
 -
@@ -103,6 +103,7 @@
    wait: true
 -
    command:  "rebalance -c  {{.Nodes | .Cluster 1 | net 0}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   save: RemoteRebalance
 
 #============ remote setup xdcr replications ============
 -
@@ -125,7 +126,7 @@
    image: sequoiatools/couchbase-cli
    command: "xdcr-replicate -c {{.Orchestrator}} --resume
                             -u {{.RestUsername}} -p {{.RestPassword}}
-                            --xdcr-replicator={{(index (.Var `ReplId` | json) 0).uuid }}/default/{{.Bucket}}"
+                            --xdcr-replicator={{(index (.Logs `ReplId` | json) 0).uuid }}/default/{{.Bucket}}"
    wait: true
 
 #============ data loading ============
@@ -140,7 +141,7 @@
    image: sequoiatools/couchbase-cli
    command: "xdcr-replicate -c {{.Orchestrator}} --delete
                             -u {{.RestUsername}} -p {{.RestPassword}}
-                            --xdcr-replicator={{(index (.Var `ReplId` | json) 0).uuid }}/default/{{.Bucket}}"
+                            --xdcr-replicator={{(index (.Logs `ReplId` | json) 0).uuid }}/default/{{.Bucket}}"
    wait: true
 
 #============ delete xdcr config ============
