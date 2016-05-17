@@ -88,20 +88,20 @@ func (t *Test) Run(scope Scope) {
 	if repeat == -1 {
 		// run forever
 		for {
-			t._run(scope, loops)
+			t.runTest(scope, loops)
 			loops++
 		}
 	} else {
 		repeat++
 		for loops = 0; loops < repeat; loops++ {
-			t._run(scope, loops)
+			t.runTest(scope, loops)
 		}
 	}
 
 	t.Cm.TapHandle.AutoPlan()
 }
 
-func (t *Test) _run(scope Scope, loop int) {
+func (t *Test) runTest(scope Scope, loop int) {
 
 	var lastAction ActionSpec
 	scope.Aux = loop
@@ -142,30 +142,6 @@ func (t *Test) _run(scope Scope, loop int) {
 		// resolve command
 		command := scope.CompileCommand(action.Command)
 
-		// if command has 'when' then cannot start processing until ready
-		if action.When != nil {
-			var ready = false
-			var err error
-			var elapsed uint64 = 0
-			for ready == false {
-				when := ParseTemplate(&scope, action.When.Eval)
-				ready, err = strconv.ParseBool(when)
-				logerr(err)
-				interval := action.When.Interval
-				if interval == 0 {
-					interval = 1
-				}
-				time.Sleep(time.Duration(interval) * time.Second)
-				elapsed += interval
-				if action.When.Timeout > 0 &&
-					elapsed > action.When.Timeout {
-					// timeout
-					ecolorsay("timed out waiting for: " + action.When.Eval)
-					ready = true
-				}
-			}
-
-		}
 		// resolve duration and concurrency
 		var taskDuration time.Duration = 0
 		var taskConcurrency = 0
@@ -208,10 +184,11 @@ func (t *Test) _run(scope Scope, loop int) {
 			task.Entrypoint = []string{action.Entrypoint}
 		}
 
-		// run
-		cid := t.Cm.Run(task)
-		if action.Save != "" {
-			scope.Vars[action.Save] = cid
+		// run task
+		if task.Async == true {
+			go t.runTask(&scope, task, action.When, action.Save)
+		} else {
+			t.runTask(&scope, task, action.When, action.Save)
 		}
 
 		lastAction = action
@@ -220,5 +197,41 @@ func (t *Test) _run(scope Scope, loop int) {
 	// do optional teardown
 	if *t.Flags.SkipTeardown == false {
 		scope.TearDown(*t.Flags.SoftTeardown)
+	}
+}
+
+func (t *Test) runTask(scope *Scope,
+	task ContainerTask,
+	actionWhen *WhenSpec,
+	saveKey string) {
+
+	// if command has 'when' then cannot start processing until ready
+	if actionWhen != nil {
+		var ready = false
+		var err error
+		var elapsed uint64 = 0
+		for ready == false {
+			when := ParseTemplate(scope, actionWhen.Eval)
+			ready, err = strconv.ParseBool(when)
+			logerr(err)
+			interval := actionWhen.Interval
+			if interval == 0 {
+				interval = 1
+			}
+			time.Sleep(time.Duration(interval) * time.Second)
+			elapsed += interval
+			if actionWhen.Timeout > 0 &&
+				elapsed > actionWhen.Timeout {
+				// timeout
+				ecolorsay("timed out waiting for: " + actionWhen.Eval)
+				ready = true
+			}
+		}
+	}
+
+	// run
+	cid := t.Cm.Run(task)
+	if saveKey != "" {
+		scope.Vars[saveKey] = cid
 	}
 }
