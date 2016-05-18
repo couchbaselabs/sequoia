@@ -1,0 +1,17 @@
+-
+  # create another ddoc
+  image:  appropriate/curl
+  command: "-X PUT -u {{.RestUsername}}:{{.RestPassword}} -H Content-Type:application/json
+    http://{{.Orchestrator}}:8092/{{.Bucket}}/_design/all -d '{{.DDoc `all`}}'"
+  wait: true 
+- 
+  # load data
+  image: sequoiatools/gideon
+  command: "kv --ops {{.Scale 100}} --create 30 --get 70 --delete 10 --expire 100 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+-
+  # view queries for 30s 
+  image: sequoiatools/curloop
+  command: "view.sh {{.Orchestrator}}:8092 default scale array limit=6&skip=0&stale=false"
+  duration: 30 # run data loading for 15 seconds
+  wait: true
+

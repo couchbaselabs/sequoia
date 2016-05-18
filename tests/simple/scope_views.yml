@@ -3,16 +3,20 @@ views: # define 3 views on the 'scale' design-doc
   -
     ddoc: scale
     view: stats
-    map: "function (doc, meta) { if(doc.profile){ if((doc.rating > 500) && (doc.rating < 520)){ emit(meta.id, doc.ops_sec); }}}"
+    map: "if(doc.profile){ if((doc.rating > 500) && (doc.rating < 520)){ emit(meta.id, doc.ops_sec); }}"
     reduce: "_stats"
   -
     ddoc: scale
     view: padd 
-    map: "function (doc, meta) { if(doc.profile){ if (doc.rating < 200){ emit(meta.id, doc.padding); }}}"
+    map: "if(doc.profile){ if (doc.rating < 200){ emit(meta.id, doc.padding); }}"
   -
     ddoc: scale
     view: array
-    map: "function (doc, meta) { if(doc.profile){ if((doc.rating > 200) && (doc.rating< 300)){ emit(doc.active_hosts, null); }}}"
+    map: "if(doc.profile){ if((doc.rating > 200) && (doc.rating< 300)){ emit(doc.active_hosts, null); }}"
+  -
+    ddoc: all 
+    view: all_ids
+    map: "emit(meta.id, null)"
 
 buckets: # define 1 bucket with 'scale' design-doc
   -
