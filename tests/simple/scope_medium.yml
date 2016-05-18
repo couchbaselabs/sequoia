@@ -16,8 +16,8 @@ servers: # define 4 servers
      rest_password: password
      rest_port: 8091
      init_nodes: 4
-     index_storage: forestdb
+     index_storage: memory_optimized 
      services:
-        query: 2
-        index: 2
+        query: 1
+        index: 1
      buckets: default
