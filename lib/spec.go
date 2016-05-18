@@ -14,8 +14,8 @@ type BucketSpec struct {
 	Type      string
 	Sasl      string
 	Eviction  string
-	DDoc      string
-	DDocViews map[string][]ViewSpec
+	DDocs     string
+	DDocSpecs []DDocSpec
 }
 
 type ServerSpec struct {
@@ -42,16 +42,22 @@ type ServerSpec struct {
 }
 
 type ViewSpec struct {
-	DDoc   string
-	View   string
+	Name   string
 	Map    string
 	Reduce string
+}
+
+type DDocSpec struct {
+	Name      string
+	Views     string
+	ViewSpecs []ViewSpec
 }
 
 type ScopeSpec struct {
 	Buckets []BucketSpec
 	Servers []ServerSpec
 	Views   []ViewSpec
+	DDocs   []DDocSpec `yaml:"ddocs"`
 }
 
 func (s *ServerSpec) InitNodeServices() {
@@ -205,11 +211,20 @@ func SpecFromYaml(fileName string) ScopeSpec {
 	// init from yaml
 	ReadYamlFile(fileName, &spec)
 
-	// map ddocs to views
-	ddocViewMap := make(map[string][]ViewSpec)
+	// map views to name
+	viewNameMap := make(map[string]ViewSpec)
 	for _, view := range spec.Views {
-		// add views to this ddoc
-		ddocViewMap[view.DDoc] = append(ddocViewMap[view.DDoc], view)
+		viewNameMap[view.Name] = view
+	}
+	// map ddocs to views
+	ddocNameMap := make(map[string]DDocSpec)
+	for i, ddoc := range spec.DDocs {
+		for _, viewName := range CommaStrToList(ddoc.Views) {
+			if view, ok := viewNameMap[viewName]; ok == true {
+				spec.DDocs[i].ViewSpecs = append(spec.DDocs[i].ViewSpecs, view)
+			}
+		}
+		ddocNameMap[ddoc.Name] = spec.DDocs[i]
 	}
 
 	// init bucket section of spec
@@ -222,10 +237,12 @@ func SpecFromYaml(fileName string) ScopeSpec {
 		if spec.Buckets[i].Replica == 0 {
 			spec.Buckets[i].Replica = 1
 		}
-		spec.Buckets[i].DDocViews = make(map[string][]ViewSpec)
-		if bucket.DDoc != "" {
-			if views, ok := ddocViewMap[bucket.DDoc]; ok == true {
-				spec.Buckets[i].DDocViews[bucket.DDoc] = views
+		if bucket.DDocs != "" {
+			ddocNames := CommaStrToList(bucket.DDocs)
+			for _, ddocName := range ddocNames {
+				if views, ok := ddocNameMap[ddocName]; ok == true {
+					spec.Buckets[i].DDocSpecs = append(spec.Buckets[i].DDocSpecs, views)
+				}
 			}
 		}
 		bucketNameMap[bucket.Name] = spec.Buckets[i]
@@ -236,7 +253,7 @@ func SpecFromYaml(fileName string) ScopeSpec {
 		spec.Servers[i].Names = ExpandName(server.Name, server.Count)
 		spec.Servers[i].BucketSpecs = make([]BucketSpec, 0)
 		// map server buckets to bucket objects
-		bucketList := strings.Split(spec.Servers[i].Buckets, ",")
+		bucketList := CommaStrToList(spec.Servers[i].Buckets)
 		for _, bucketName := range bucketList {
 			if bucketSpec, ok := bucketNameMap[bucketName]; ok {
 				spec.Servers[i].BucketSpecs = append(spec.Servers[i].BucketSpecs, bucketSpec)
@@ -285,7 +302,7 @@ func SpecFromIni(fileName string) ScopeSpec {
 			svcString := services.String()
 			svcString = strings.Replace(svcString, "kv", "data", 1)
 			svcString = strings.Replace(svcString, "n1ql", "query", 1)
-			serverSpec.NodeServices[name] = strings.Split(svcString, ",")
+			serverSpec.NodeServices[name] = CommaStrToList(svcString)
 		}
 		serverSpec.Ram = "60%"
 	}

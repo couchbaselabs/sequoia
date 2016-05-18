@@ -124,13 +124,13 @@ func TimeStamp() string {
 	return now.Format(time.RFC3339)
 }
 
-func DDocViewsToJson(ddoc []ViewSpec) string {
+func DDocToJson(ddoc DDocSpec) string {
 
 	var views string
 	var ddocDef string = "<no_views_defined>"
-	for _, view := range ddoc {
+	for _, view := range ddoc.ViewSpecs {
 		viewDef := fmt.Sprintf(`"%s":{"map":"function(doc, meta){ %s }"}`,
-			view.View, view.Map)
+			view.Name, view.Map)
 		if len(views) > 0 {
 			views = views + ","
 		}
@@ -140,4 +140,12 @@ func DDocViewsToJson(ddoc []ViewSpec) string {
 		ddocDef = fmt.Sprintf(`{"views":{%s}}`, views)
 	}
 	return ddocDef
+}
+
+func CommaStrToList(str string) []string {
+	parts := []string{}
+	for _, s := range strings.Split(str, ",") {
+		parts = append(parts, strings.TrimSpace(s))
+	}
+	return parts
 }

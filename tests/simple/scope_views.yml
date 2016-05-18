@@ -1,22 +1,32 @@
 ---
-views: # define 3 views on the 'scale' design-doc
+views: # define some views 
   -
-    ddoc: scale
-    view: stats
+    name: stats
     map: "if(doc.profile){ if((doc.rating > 500) && (doc.rating < 520)){ emit(meta.id, doc.ops_sec); }}"
     reduce: "_stats"
   -
-    ddoc: scale
-    view: padd 
+    name: padd 
     map: "if(doc.profile){ if (doc.rating < 200){ emit(meta.id, doc.padding); }}"
   -
-    ddoc: scale
-    view: array
+    name: array
     map: "if(doc.profile){ if((doc.rating > 200) && (doc.rating< 300)){ emit(doc.active_hosts, null); }}"
   -
-    ddoc: all 
-    view: all_ids
+    name: all_ids
     map: "emit(meta.id, null)"
+  -
+    name: live_ratings 
+    map: "emit(meta.id, doc.rating)"
+
+ddocs:  # add views to design docs
+  -
+   name: scale
+   views: stats, padd, array
+  -
+   name: live 
+   views: live_ratings
+  -
+   name: all 
+   views: all_ids 
 
 buckets: # define 1 bucket with 'scale' design-doc
   -
@@ -24,7 +34,7 @@ buckets: # define 1 bucket with 'scale' design-doc
     ram: 75% 
     replica: 1
     type: couchbase
-    ddoc: scale
+    ddocs: scale, live 
 
 servers: # define 4 servers
   -

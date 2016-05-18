@@ -260,11 +260,11 @@ func (t *TemplateResolver) Status(idRef string) string {
 }
 
 func (t *TemplateResolver) DDoc(name string) string {
-	viewSpecs := []ViewSpec{}
-	for _, view := range t.Scope.Spec.Views {
-		if view.DDoc == name {
-			viewSpecs = append(viewSpecs, view)
+	val := "<ddoc_not_found>"
+	for _, ddoc := range t.Scope.Spec.DDocs {
+		if ddoc.Name == name {
+			val = DDocToJson(ddoc)
 		}
 	}
-	return DDocViewsToJson(viewSpecs)
+	return val
 }
