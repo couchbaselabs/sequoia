@@ -15,17 +15,15 @@
 
 #============ start view queries  ============
 -
-   image: sequoiatools/gideon
-   entrypoint: "./addviews.sh"
-   command: "{{.Orchestrator | noport}}:{{.ClusterNodes | .Attr `view_port`}} {{.Bucket}}"
-   wait: true
+  image: sequoiatools/curloop
+  command: "view.sh {{.Orchestrator}}:8092 default scale status limit=10&stale=false"
+  concurrency: 5 
 -
-   command: "query --host {{.Orchestrator}} --ddoc scale --view stats --concurrency {{.Scale 10}}"
+  command: "view.sh {{.Orchestrator}}:8092 default scale padd limit=10&stale=update_after"
+  concurrency: 5
 -
-   command: "query --host {{.NthDataNode 4}} --ddoc scale --view padd --concurrency {{.Scale 10}}"
--
-   command: "query --host {{.NthDataNode 5}} --ddoc scale --view array --concurrency {{.Scale 10}}"
-
+  command: "view.sh {{.Orchestrator}}:8092 default scale array stale=update_after"
+  concurrency: 5
 
 #============ load 10k items at 1xScale============
 -
