@@ -1,0 +1,40 @@
+---
+views: # define 3 views on the 'scale' design-doc
+  -
+    ddoc: scale
+    view: stats
+    map: "function (doc, meta) { if(doc.profile){ if((doc.rating > 500) && (doc.rating < 520)){ emit(meta.id, doc.ops_sec); }}}"
+    reduce: "_stats"
+  -
+    ddoc: scale
+    view: padd 
+    map: "function (doc, meta) { if(doc.profile){ if (doc.rating < 200){ emit(meta.id, doc.padding); }}}"
+  -
+    ddoc: scale
+    view: array
+    map: "function (doc, meta) { if(doc.profile){ if((doc.rating > 200) && (doc.rating< 300)){ emit(doc.active_hosts, null); }}}"
+
+buckets: # define 1 bucket with 'scale' design-doc
+  -
+    name: default
+    ram: 75% 
+    replica: 1
+    type: couchbase
+    ddoc: scale
+
+servers: # define 4 servers
+  -
+     name: local.st.couchbase.com
+     ram: 40% 
+     index_ram: 10% 
+     count: 4
+     rest_username: Administrator
+     rest_password: password
+     rest_port: 8091
+     init_nodes: 4
+     index_storage: memory_optimized 
+     services:
+        query: 1
+        index: 1
+     buckets: default
+

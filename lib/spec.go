@@ -6,14 +6,16 @@ import (
 )
 
 type BucketSpec struct {
-	Name     string
-	Names    []string
-	Count    uint8
-	Ram      string
-	Replica  uint8
-	Type     string
-	Sasl     string
-	Eviction string
+	Name      string
+	Names     []string
+	Count     uint8
+	Ram       string
+	Replica   uint8
+	Type      string
+	Sasl      string
+	Eviction  string
+	DDoc      string
+	DDocViews map[string][]ViewSpec
 }
 
 type ServerSpec struct {
@@ -37,6 +39,19 @@ type ServerSpec struct {
 	NodesActive  uint8
 	Services     map[string]uint8
 	NodeServices map[string][]string
+}
+
+type ViewSpec struct {
+	DDoc   string
+	View   string
+	Map    string
+	Reduce string
+}
+
+type ScopeSpec struct {
+	Buckets []BucketSpec
+	Servers []ServerSpec
+	Views   []ViewSpec
 }
 
 func (s *ServerSpec) InitNodeServices() {
@@ -116,11 +131,6 @@ func (s *ServerSpec) InitNodeServices() {
 	}
 }
 
-type ScopeSpec struct {
-	Buckets []BucketSpec
-	Servers []ServerSpec
-}
-
 func (s *ScopeSpec) ApplyToAllServers(operation func(string, *ServerSpec)) {
 	s.ApplyToServers(operation, 0, 0)
 }
@@ -194,6 +204,14 @@ func SpecFromYaml(fileName string) ScopeSpec {
 	var spec ScopeSpec
 	// init from yaml
 	ReadYamlFile(fileName, &spec)
+
+	// map ddocs to views
+	ddocViewMap := make(map[string][]ViewSpec)
+	for _, view := range spec.Views {
+		// add views to this ddoc
+		ddocViewMap[view.DDoc] = append(ddocViewMap[view.DDoc], view)
+	}
+
 	// init bucket section of spec
 	bucketNameMap := make(map[string]BucketSpec)
 	for i, bucket := range spec.Buckets {
@@ -203,6 +221,12 @@ func SpecFromYaml(fileName string) ScopeSpec {
 		}
 		if spec.Buckets[i].Replica == 0 {
 			spec.Buckets[i].Replica = 1
+		}
+		spec.Buckets[i].DDocViews = make(map[string][]ViewSpec)
+		if bucket.DDoc != "" {
+			if views, ok := ddocViewMap[bucket.DDoc]; ok == true {
+				spec.Buckets[i].DDocViews[bucket.DDoc] = views
+			}
 		}
 		bucketNameMap[bucket.Name] = spec.Buckets[i]
 	}
