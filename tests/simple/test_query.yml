@@ -8,8 +8,9 @@
   wait: true 
 
 -
-  # run 10 instances each a total of 100 queries
+  # run 10 instances of queries for 30s 
   image: sequoiatools/curloop
-  command: "n1ql.sh {{.QueryNode}}:8093 'select SUM(rating) from default where rating > 0' 100" #(100 queries)
-  concurrency: 10 # x10
+  command: "n1ql.sh {{.QueryNode}}:8093 'select SUM(rating) from default where rating > 0'"
+  concurrency: 10
+  duration: 30
   wait: true
