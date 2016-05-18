@@ -551,19 +551,11 @@ func (s *Scope) CreateViews() {
 				for _, ddoc := range bucket.DDocViews {
 
 					// combine ddoc views
-					var views string
-					for _, view := range ddoc {
-						viewDef := fmt.Sprintf(`"%s":{"map":"%s"}`, view.View, view.Map)
-						if len(views) > 0 {
-							views = views + ","
-						}
-						views = views + viewDef
-					}
+					var ddocDef = DDocViewsToJson(ddoc)
 
 					// compose view create command
 					viewUrl := fmt.Sprintf("http://%s:%d/%s/_design/%s",
 						ip, 8092, bucketName, ddoc[0].DDoc)
-					ddocDef := fmt.Sprintf(`{"views":{%s}}`, views)
 					command := []string{"-s", "-X", "PUT",
 						"-u", server.RestUsername + ":" + server.RestPassword,
 						"-H", "Content-Type:application/json",

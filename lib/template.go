@@ -258,3 +258,13 @@ func (t *TemplateResolver) Status(idRef string) string {
 	}
 	return status
 }
+
+func (t *TemplateResolver) DDoc(name string) string {
+	viewSpecs := []ViewSpec{}
+	for _, view := range t.Scope.Spec.Views {
+		if view.DDoc == name {
+			viewSpecs = append(viewSpecs, view)
+		}
+	}
+	return DDocViewsToJson(viewSpecs)
+}
