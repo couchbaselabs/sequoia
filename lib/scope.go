@@ -89,6 +89,7 @@ func (s *Scope) Setup() {
 	s.AddNodes()
 	s.RebalanceClusters()
 	s.CreateBuckets()
+	s.CreateViews()
 }
 
 func (s *Scope) TearDown(soft bool) {
@@ -531,4 +532,61 @@ func cliCommandValidator(version string, command []string) []string {
 	}
 
 	return result
+}
+
+func (s *Scope) CreateViews() {
+
+	var image = "appropriate/curl"
+
+	operation := func(name string, server *ServerSpec) {
+
+		orchestrator := server.Names[0]
+		ip := s.Provider.GetHostAddress(orchestrator)
+
+		// for each bucket name
+		for _, bucket := range server.BucketSpecs {
+			for _, bucketName := range bucket.Names {
+
+				// add ddocs to bucket
+				for _, ddoc := range bucket.DDocViews {
+
+					// combine ddoc views
+					var views string
+					for _, view := range ddoc {
+						viewDef := fmt.Sprintf(`"%s":{"map":"%s"}`, view.View, view.Map)
+						if len(views) > 0 {
+							views = views + ","
+						}
+						views = views + viewDef
+					}
+
+					// compose view create command
+					viewUrl := fmt.Sprintf("http://%s:%d/%s/_design/%s",
+						ip, 8092, bucketName, ddoc[0].DDoc)
+					ddocDef := fmt.Sprintf(`{"views":{%s}}`, views)
+					command := []string{"-s", "-X", "PUT",
+						"-u", server.RestUsername + ":" + server.RestPassword,
+						"-H", "Content-Type:application/json",
+						viewUrl,
+						"-d", ddocDef,
+					}
+					desc := "views create" + bucketName
+					task := ContainerTask{
+						Describe: desc,
+						Image:    image,
+						Command:  command,
+						Async:    false,
+					}
+					if s.Provider.GetType() == "docker" {
+						task.LinksTo = orchestrator
+					}
+					s.Cm.Run(task)
+				}
+			}
+		}
+	}
+
+	// apply only to orchestrator
+	s.Spec.ApplyToServers(operation, 0, 1)
+
 }
