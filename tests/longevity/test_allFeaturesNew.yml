@@ -22,7 +22,7 @@
 ###############  query index ################
 -
   requires: "{{ eq true .DoOnce}}"
-  image: sequoiatool/curloop
+  image: sequoiatools/curloop
   command: "{{.QueryNodePort}} 'select SUM(rating) from default where rating > 0'"
   concurrency: 5
 -
