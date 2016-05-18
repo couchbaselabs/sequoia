@@ -125,10 +125,12 @@ func TimeStamp() string {
 }
 
 func DDocViewsToJson(ddoc []ViewSpec) string {
+
 	var views string
 	var ddocDef string = "<no_views_defined>"
 	for _, view := range ddoc {
-		viewDef := fmt.Sprintf(`"%s":{"map":"%s"}`, view.View, view.Map)
+		viewDef := fmt.Sprintf(`"%s":{"map":"function(doc, meta){ %s }"}`,
+			view.View, view.Map)
 		if len(views) > 0 {
 			views = views + ","
 		}
