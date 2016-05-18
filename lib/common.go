@@ -129,8 +129,12 @@ func DDocToJson(ddoc DDocSpec) string {
 	var views string
 	var ddocDef string = "<no_views_defined>"
 	for _, view := range ddoc.ViewSpecs {
-		viewDef := fmt.Sprintf(`"%s":{"map":"function(doc, meta){ %s }"}`,
-			view.Name, view.Map)
+		mapReduce := fmt.Sprintf(`"map":"function(doc, meta){ %s }"`, view.Map)
+		if view.Reduce != "" {
+			mapReduce = fmt.Sprintf(`%s, "reduce": "%s"`, mapReduce, view.Reduce)
+		}
+		viewDef := fmt.Sprintf(`"%s":{%s}`,
+			view.Name, mapReduce)
 		if len(views) > 0 {
 			views = views + ","
 		}
