@@ -97,8 +97,12 @@ func (t *Test) Run(scope Scope) {
 			t.runTest(scope, loops)
 		}
 	}
-
 	t.Cm.TapHandle.AutoPlan()
+
+	// do optional teardown
+	if *t.Flags.SkipTeardown == false {
+		scope.TearDown(*t.Flags.SoftTeardown)
+	}
 }
 
 func (t *Test) runTest(scope Scope, loop int) {
@@ -194,10 +198,9 @@ func (t *Test) runTest(scope Scope, loop int) {
 		lastAction = action
 	}
 
-	// do optional teardown
-	if *t.Flags.SkipTeardown == false {
-		scope.TearDown(*t.Flags.SoftTeardown)
-	}
+	// kill test containers
+	scope.Cm.RemoveManagedContainers(true)
+
 }
 
 func (t *Test) runTask(scope *Scope,
