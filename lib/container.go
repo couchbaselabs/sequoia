@@ -289,11 +289,10 @@ func (cm *ContainerManager) LogContainer(ID string, output io.Writer, follow boo
 		Stdout:       true,
 		Stderr:       true,
 	}
-	cm.Client.Logs(logOpts)
 	if f, ok := output.(*os.File); ok {
-		f.Close()
+		defer f.Close()
 	}
-
+	cm.Client.Logs(logOpts)
 }
 
 func (cm *ContainerManager) WaitContainer(container *docker.Container, c chan TaskResult) {
