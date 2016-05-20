@@ -286,6 +286,10 @@ func SpecFromIni(fileName string) ScopeSpec {
 		name := fmt.Sprintf("%s-%d.st.couchbase.com",
 			clusterName,
 			serverSpec.Count)
+		if len(cfg.Section("servers").Keys()) == 1 {
+			name = fmt.Sprintf("%s.st.couchbase.com", clusterName)
+
+		}
 		serverSpec.Names = append(serverSpec.Names, name)
 		section := cfg.Section(serverKey.String())
 		if username := section.Key("rest_username"); username.String() != "" {
