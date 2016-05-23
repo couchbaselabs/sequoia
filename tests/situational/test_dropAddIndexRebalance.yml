@@ -165,8 +165,8 @@
 -
   image: sequoiatools/pillowfight
   command: "-U {{.Orchestrator}} -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 4  --rate-limit {{.Scale 2000}}"
-  duration: 3600  # 1 hour of data loading 
-
+  duration: 600  # 10 min data loading
+  wait: true
 
 ######  failover recently added index nodes  ######
 -
