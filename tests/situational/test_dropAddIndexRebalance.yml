@@ -43,7 +43,6 @@
 
 # ###############  query index ################
 -
-  requires: "{{ eq true .DoOnce}}"
   image: sequoiatools/curloop
   command: "n1ql.sh {{.QueryNodePort}} 'select SUM(rating) from default where rating > 0'"
 -
