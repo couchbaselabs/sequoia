@@ -1,13 +1,13 @@
 ############### data loading ################
 -
   image: sequoiatools/gideon
-  command: "kv --ops {{.Scale 100}} --create 30 --get 70 --delete 10     --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+  command: "kv --ops {{.Scale 5000}} --create 30 --get 70 --delete 10     --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
 -
-  command: "kv --ops {{.Scale 100}} --create 60 --get 40 --sizes 64 96   --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
+  command: "kv --ops {{.Scale 2000}} --create 60 --get 40 --sizes 64 96   --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
 -
-  command: "kv --ops {{.Scale 100}} --create 60 --get 40 --sizes 64 96   --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}}"
+  command: "kv --ops {{.Scale 2000}} --create 60 --get 40 --sizes 64 96   --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}}"
 -
-  command: "kv --ops {{.Scale 100}} --create 20 --sizes 102048  --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}}"
+  command: "kv --ops {{.Scale 1000}} --create 20 --sizes 102048  --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}}"
 
 
 ###############  create indexes ################
