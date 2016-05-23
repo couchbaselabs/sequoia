@@ -1,0 +1,31 @@
+---
+buckets:
+  -
+      name: default
+      ram: 50% 
+      eviction: fullEviction
+  -
+      name: other
+      count: 3 
+      ram: 10% 
+      replica: 2
+
+
+servers: # each server tag represents a cluster
+  -
+      name: local
+      count: 8
+      ram: 40% 
+      index_ram: 50% 
+      index_storage: forestdb # memory_optimized
+      services:
+        index: 2
+        index_start: 5
+        query: 2
+        query_start: 1
+      rest_username: Administrator
+      rest_password: password
+      data_path: "/data"
+      index_path: "/data"
+      init_nodes: 6
+      buckets: default,other
