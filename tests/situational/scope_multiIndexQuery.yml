@@ -7,16 +7,15 @@ buckets:
   -
       name: other
       count: 3 
-      ram: 10% 
-      replica: 2
+      ram: 15%
 
 
 servers: # each server tag represents a cluster
   -
       name: local
       count: 8
-      ram: 40% 
-      index_ram: 50% 
+      ram: 70%
+      index_ram: 20%
       index_storage: forestdb # memory_optimized
       services:
         index: 2
