@@ -108,11 +108,11 @@
 
 
 
-###############  swap failover(orchestrator.index) ################
+###############  swap hard-failover(orchestrator.index) ################
 -
    image: sequoiatools/couchbase-cli
    command: "failover -c {{.Orchestrator}}
-       --server-failover {{.Nodes | .Service `index` | net 0}}
+       --server-failover {{.Nodes | .Service `index` | net 0}} --force
        -u  {{.RestUsername}} -p  {{.RestPassword}}"
    wait: true
 -
@@ -171,11 +171,11 @@
   duration: 600  # 10 min data loading
   wait: true
 
-######  hard-failover recently added index nodes  ######
+######  failover recently added index nodes  ######
 -
    image: sequoiatools/couchbase-cli
    command: "failover -c  {{.Orchestrator}}
-       --server-failover {{.ClusterNodes | net 6}} --force
+       --server-failover {{.ClusterNodes | net 6}}
        -u  {{.RestUsername}} -p  {{.RestPassword}}"
    wait: true
 -
