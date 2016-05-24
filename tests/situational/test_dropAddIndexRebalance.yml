@@ -179,7 +179,7 @@
        -u  {{.RestUsername}} -p  {{.RestPassword}}"
    wait: true
 -
-   command:  "rebalance -c  --server-remove {{.ClusterNodes | net 7}} {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   command:  "rebalance -c  {{.Orchestrator}}  --server-remove {{.ClusterNodes | net 7}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
    wait: true
 
 
