@@ -19,6 +19,7 @@
    command: "python tpcc.py --duration 259200 --client {{.Scale 1}} --warehouses 5 --no-execute n1ql
 				                    --query-url {{.QueryNodePort}} --userid {{.RestUsername}} --password {{.RestPassword}}"
 -
+   image: sequoiatools/tpcc
    command: "python tpcc.py --duration 2259200 --client {{.Scale 1}}
                              --warehouses 5 --no-load n1ql  --query-url {{.QueryNodePort}}"
 -
