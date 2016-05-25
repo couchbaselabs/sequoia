@@ -15,9 +15,12 @@
 #============ start tpcc indexing  ============
 -
    image: sequoiatools/tpcc
-   requires:  "{{.Version | le 4.0}}"
+   requires:  "{{eq true .OddCount}}"
    command: "python tpcc.py --duration 259200 --client {{.Scale 1}} --warehouses 5 --no-execute n1ql
 				                    --query-url {{.QueryNodePort}} --userid {{.RestUsername}} --password {{.RestPassword}}"
+-
+   command: "python tpcc.py --duration 2259200 --client {{.Scale 1}}
+                             --warehouses 5 --no-load n1ql  --query-url {{.QueryNodePort}}"
 -
    image: sequoiatools/cbq
    requires:  "{{.Version | le 4.0}}"
