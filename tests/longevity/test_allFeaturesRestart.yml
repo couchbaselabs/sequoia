@@ -2,8 +2,9 @@
 ---
 #============ doc deleting after first pass ============
 -
-  requires: "{{ eq false .DoOnce}}"
+  requires: "{{ eq false .DoOnce}}" # only do after first pass
   duration: 7200 # 2 hrs
+  wait: true
   command: "{{.QueryNodePort}} 'delete from default where rating < 300'"
 -
   command: "{{.QueryNodePort}} 'delete from default where rating > 700'"
