@@ -2,6 +2,7 @@
 ---
 #============ doc deleting after first pass ============
 -
+  image: sequoiatools/queryloop
   requires: "{{ eq false .DoOnce}}" # only do after first pass
   duration: 7200 # 2 hrs
   wait: true
