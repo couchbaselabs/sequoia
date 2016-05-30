@@ -25,7 +25,7 @@
    command: "python tpcc.py --duration 259200 --client {{.Scale 1}} --warehouses 5 --no-execute n1ql
 				                    --query-url {{.QueryNodePort}} --userid {{.RestUsername}} --password {{.RestPassword}}"
 -
-   requires:  "{{.Version | le 4.0 | eq .DoOnce}}"
+   requires:  "{{.Version | le 4.0}}"
    command: "python tpcc.py --duration 2259200 --client {{.Scale 1}}
                              --warehouses 5 --no-load n1ql  --query-url {{.QueryNodePort}}"
 -
@@ -35,7 +35,6 @@
 
 ###############  query index ################
 -
-  requires: "{{ eq true .DoOnce}}"
   image: sequoiatools/queryloop
   command: "{{.QueryNodePort}} 'select SUM(rating) from default where rating > 0'"
   concurrency: 5
