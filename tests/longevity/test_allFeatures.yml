@@ -1,4 +1,18 @@
 ---
+
+#============ delete phase ============
+-
+  image: sequoiatools/queryloop
+  requires: "{{ eq false .DoOnce}}" # only after first pass
+  duration: 3600 # 1 hr
+  command: "{{.QueryNodePort}} 'delete from default where rating < 300'"
+-
+  command: "{{.QueryNodePort}} 'delete from default where rating > 700'"
+-
+  command: "{{.QueryNodePort}} 'delete from default where rating > 300 and rating < 700'"
+  wait: true
+
+
 #============ start tpcc indexing  ============
 -
    image: sequoiatools/tpcc
