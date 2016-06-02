@@ -6,7 +6,7 @@ RUN apt-get install -yq runit wget python-httplib2  openssh-server libssl0.9.8  
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 ARG VERSION=4.5.0
-ARG BUILD_NO=2585
+ARG BUILD_NO=2600
 ARG FLAVOR=watson
 ARG BUILD_PKG=couchbase-server-enterprise_$VERSION-$BUILD_NO-ubuntu14.04_amd64.deb
 
