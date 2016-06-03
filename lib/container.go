@@ -289,9 +289,7 @@ func (cm *ContainerManager) LogContainer(ID string, output io.Writer, follow boo
 		Stdout:       true,
 		Stderr:       true,
 	}
-	if f, ok := output.(*os.File); ok {
-		defer f.Close()
-	}
+
 	cm.Client.Logs(logOpts)
 }
 
@@ -333,6 +331,10 @@ func (cm *ContainerManager) ContainerLogFile(image, ID string) string {
 	return fmt.Sprintf("%s_%s", ParseSlashString(image), ID[:6])
 }
 
+func (cm *ContainerManager) StartContainer(id string, hostConfig *docker.HostConfig) error {
+	return cm.Client.StartContainer(id, hostConfig)
+}
+
 func (cm *ContainerManager) RunContainer(opts docker.CreateContainerOptions) (chan TaskResult, *docker.Container) {
 	container, err := cm.Client.CreateContainer(opts)
 	logerr(err)
@@ -340,7 +342,7 @@ func (cm *ContainerManager) RunContainer(opts docker.CreateContainerOptions) (ch
 	c := make(chan TaskResult)
 
 	// start container
-	err = cm.Client.StartContainer(container.ID, nil)
+	err = cm.StartContainer(container.ID, nil)
 	logerr(err)
 
 	go cm.WaitContainer(container, c)
@@ -408,6 +410,7 @@ func (cm *ContainerManager) Run(task ContainerTask) string {
 		f := CreateFile(task.LogDir,
 			cm.ContainerLogFile(task.ImageAlias, container.ID))
 		go cm.LogContainer(container.ID, f, true)
+		defer f.Close()
 
 		// send to stdout
 		if task.LogLevel > 1 {
