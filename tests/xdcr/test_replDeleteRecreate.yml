@@ -153,9 +153,7 @@
 
 #============ hard failover remote node when remote finished rebalance-in ============
 -
-  when:
-    eval: "{{.Status `RemoteRebalance` | eq `exited`}}"
-    interval: 5
+  before: "{{.Status `RemoteRebalance` | eq `exited`}}"
   image: sequoiatools/couchbase-cli
   command: "failover -c {{.Nodes | .Cluster 1 | net 0}}
        --server-failover {{.Nodes | .Cluster 1 | net 3}}

@@ -91,10 +91,8 @@
 
 
 ###############  'when' swap rebalance is done add back some and drop others ################
--
-   when:
-    eval: "{{.Status `SwapRebId` | eq `exited`}}"
-    interval: 5
+-  
+   before: "{{.Status `SwapRebId` | eq `exited`}}"
    image: sequoiatools/cbq
    wait: true
    command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create primary index on `default`'"
@@ -128,9 +126,7 @@
 
 ###############  'when' hard failover is done add back all indexes ################
 -
-   when:
-    eval: "{{.Status `SwapFailId` | eq `exited`}}"
-    interval: 5
+   before: "{{.Status `SwapFailId` | eq `exited`}}"
    image: sequoiatools/cbq
    command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_rating on `default`(rating)'"
 -

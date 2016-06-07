@@ -1,26 +1,37 @@
+# start data and save container id
 - 
-  ###############
-  # start data and save container id
-  ###############
   image: sequoiatools/pillowfight
   command: "-U  {{.Orchestrator}} -B 100 -t 1 -c 100"
   save: KvContainer
 
+# rebalance when pillowfight container finishes 
 -
-  ###############
-  # rebalance when pillowfight container finishes 
-  ###############
+  before: "{{.Status `KvContainer` | eq `exited`}}"
   image: sequoiatools/couchbase-cli
-  when:
-    eval: "{{.Status `KvContainer` | eq `exited`}}"
-    timeout: 60 # default forever
-    interval: 1 # default 1
   command:  "rebalance -c  {{.Orchestrator}}  --server-remove {{.NthDataNode 1}}  -u  {{.RestUsername}} -p  {{.RestPassword}}"
+
+# monitor rebalance using until
+-
+  image: appropriate/curl
+  command: "-s -u {{.RestUsername}}:{{.RestPassword}} {{.Orchestrator}}:8091/pools/default/rebalanceProgress"
+  repeat: -1
+  until: "{{if .AllLogs `__self__`}}{{eq `none` (.TailLogs `__self__` 1 | json).status}}{{else}}{{false}}{{end}}"
+  wait: true
+
+# start data and save container id
 - 
-  ###############
-  # start data and save container id
-  ###############
   image: sequoiatools/pillowfight
   command: "-U  {{.Orchestrator}} -B 100 -t 1 -c 1000"
   wait: true
 
+# add back 
+-
+   image: sequoiatools/couchbase-cli
+   command: "server-add -c  {{.Orchestrator}} 
+       --server-add {{.NthDataNode 1}} 
+       -u  {{.RestUsername}} -p  {{.RestPassword}}
+       --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
+   wait: true
+-
+   command:  "rebalance -c  {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   wait: true

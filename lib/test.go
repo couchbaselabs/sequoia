@@ -18,18 +18,14 @@ type ActionSpec struct {
 	Image       string
 	Command     string
 	Wait        bool
-	When        *WhenSpec
+	Before      string
 	Entrypoint  string
 	Requires    string
 	Concurrency string
 	Duration    string
 	Save        string
-}
-
-type WhenSpec struct {
-	Eval     string
-	Timeout  uint64
-	Interval uint64
+	Repeat      int
+	Until       string
 }
 
 func ActionsFromFile(fileName string) []ActionSpec {
@@ -179,6 +175,7 @@ func (t *Test) runTest(scope Scope, loop int) {
 			Concurrency: taskConcurrency,
 			LogLevel:    *t.Flags.LogLevel,
 			LogDir:      *t.Flags.LogDir,
+			CIDs:        []string{},
 		}
 
 		if scope.Provider.GetType() == "docker" {
@@ -190,12 +187,13 @@ func (t *Test) runTest(scope Scope, loop int) {
 
 		// run task
 		if task.Async == true {
-			go t.runTask(&scope, task, action.When, action.Save)
+			go t.runTask(&scope, &task, &action)
 		} else {
-			t.runTask(&scope, task, action.When, action.Save)
+			t.runTask(&scope, &task, &action)
 		}
 
 		lastAction = action
+		time.Sleep(5 * time.Second)
 	}
 
 	// kill test containers
@@ -203,38 +201,106 @@ func (t *Test) runTest(scope Scope, loop int) {
 
 }
 
-func (t *Test) runTask(scope *Scope,
-	task ContainerTask,
-	actionWhen *WhenSpec,
-	saveKey string) {
+func (t *Test) runTask(scope *Scope, task *ContainerTask, action *ActionSpec) {
 
-	// if command has 'when' then cannot start processing until ready
-	if actionWhen != nil {
+	actionBefore := action.Before
+	repeat := action.Repeat
+	rChan := make(chan bool) // repeat chan
+	uChan := make(chan bool) // until chan
+
+	// generate save key if not specified
+	saveKey := action.Save
+	if saveKey == "" {
+		saveKey = RandStr(6)
+	}
+
+	// if command has 'before' then cannot start processing until ready
+	if actionBefore != "" {
 		var ready = false
 		var err error
-		var elapsed uint64 = 0
 		for ready == false {
-			when := ParseTemplate(scope, actionWhen.Eval)
-			ready, err = strconv.ParseBool(when)
+			before := ParseTemplate(scope, actionBefore)
+			ready, err = strconv.ParseBool(before)
 			logerr(err)
-			interval := actionWhen.Interval
-			if interval == 0 {
-				interval = 1
-			}
-			time.Sleep(time.Duration(interval) * time.Second)
-			elapsed += interval
-			if actionWhen.Timeout > 0 &&
-				elapsed > actionWhen.Timeout {
-				// timeout
-				ecolorsay("timed out waiting for: " + actionWhen.Eval)
-				ready = true
-			}
 		}
 	}
 
-	// run
-	cid := t.Cm.Run(task)
-	if saveKey != "" {
-		scope.Vars[saveKey] = cid
+	if action.Command == "" {
+		// noop
+		return
 	}
+
+	if action.Until != "" {
+		// start until watcher
+		go t.watchTask(scope, task, saveKey, action.Until, uChan)
+	}
+
+	// run once
+	cid := t.Cm.Run(task)
+	scope.SetVarsKV(saveKey, cid)
+
+	go t.RepeatTask(scope, cid, repeat, rChan)
+	if repeat > 0 {
+		// waiting on finite number of repeats
+		<-rChan
+		t.KillTaskContainers(task)
+	}
+
+	if action.Until != "" {
+		// waiting for until condition satisfied
+		<-uChan
+		t.KillTaskContainers(task)
+	}
+
+}
+
+func (t *Test) KillTaskContainers(task *ContainerTask) {
+	// until removes task containers when reached
+	for _, id := range task.CIDs {
+		t.Cm.RemoveContainer(id)
+	}
+}
+
+func (t *Test) RepeatTask(scope *Scope, cid string, repeat int, done chan bool) {
+	// run repeat num times
+	for repeat != 0 {
+		// only start if it stopped
+		if status, err := scope.Cm.GetStatus(cid); err == nil {
+			if status == "exited" {
+				scope.Cm.StartContainer(cid, nil)
+				if repeat > 0 {
+					repeat--
+				}
+			}
+		} else {
+			// container has been removed
+			break
+		}
+		time.Sleep(1 * time.Second)
+	}
+	done <- true
+
+}
+
+func (t *Test) watchTask(scope *Scope, task *ContainerTask, saveKey string, condition string, done chan bool) {
+	var _done bool
+	var err error
+
+	// replace instances of self with savekey
+	for _done == false {
+
+		id, ok := scope.GetVarsKV(saveKey)
+		if ok == true {
+			// make sure we have not been killed by 'duration' or 'repeat' conditions
+			if _, err := scope.Cm.GetStatus(id); err != nil {
+				break
+			}
+			condition = strings.Replace(condition, "__self__", saveKey, -1)
+			rv := ParseTemplate(scope, condition)
+			_done, err = strconv.ParseBool(rv)
+			logerr(err)
+			time.Sleep(1 * time.Second)
+		}
+	}
+	done <- true
 }

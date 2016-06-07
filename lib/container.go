@@ -29,6 +29,7 @@ type ContainerTask struct {
 	Duration    time.Duration
 	LogLevel    int
 	LogDir      string
+	CIDs        []string
 }
 
 type TaskResult struct {
@@ -255,7 +256,7 @@ func (cm *ContainerManager) BuildImage(opts docker.BuildImageOptions) error {
 }
 
 // get logs as string
-func (cm *ContainerManager) GetLogs(ID string) string {
+func (cm *ContainerManager) GetLogs(ID, tail string) string {
 	buf := new(bytes.Buffer)
 	logOpts := docker.LogsOptions{
 		Container:    ID,
@@ -263,6 +264,7 @@ func (cm *ContainerManager) GetLogs(ID string) string {
 		ErrorStream:  os.Stderr,
 		Follow:       false,
 		Stdout:       true,
+		Tail:         tail,
 	}
 	cm.Client.Logs(logOpts)
 	return buf.String()
@@ -353,7 +355,7 @@ func (cm *ContainerManager) RunContainer(opts docker.CreateContainerOptions) (ch
 	return c, container
 }
 
-func (cm *ContainerManager) Run(task ContainerTask) string {
+func (cm *ContainerManager) Run(task *ContainerTask) string {
 
 	// save image as alias in case it resolves to a
 	// commit hash
@@ -382,6 +384,7 @@ func (cm *ContainerManager) Run(task ContainerTask) string {
 	ch, container := cm.RunContainer(options)
 	idChans := []chan TaskResult{ch}
 	containers := []*docker.Container{container}
+	task.CIDs = append(task.CIDs, container.ID)
 	fmt.Println(MakeTaskMsg(task.ImageAlias, container.ID, task.Command, false))
 
 	// start additional containers with support for concurrency
@@ -391,6 +394,7 @@ func (cm *ContainerManager) Run(task ContainerTask) string {
 			ch, container := cm.RunContainer(options)
 			idChans = append(idChans, ch)
 			containers = append(containers, container)
+			task.CIDs = append(task.CIDs, container.ID)
 		}
 	}
 
@@ -399,6 +403,7 @@ func (cm *ContainerManager) Run(task ContainerTask) string {
 		go func() {
 			time.Sleep(task.Duration * time.Second)
 			// remove container
+			fmt.Println("DURATION BELLA!")
 			for _, c := range containers {
 				cm.RemoveContainer(c.ID)
 			}

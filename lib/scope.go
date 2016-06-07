@@ -17,6 +17,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 type Scope struct {
@@ -27,6 +28,7 @@ type Scope struct {
 	Version  string
 	Vars     map[string]string
 	Aux      int
+	VarsMtx  sync.RWMutex
 }
 
 func NewScope(flags TestFlags, cm *ContainerManager) Scope {
@@ -67,7 +69,7 @@ func NewScope(flags TestFlags, cm *ContainerManager) Scope {
 			}
 		}
 	}
-
+	var mtx sync.RWMutex
 	return Scope{
 		spec,
 		cm,
@@ -76,6 +78,7 @@ func NewScope(flags TestFlags, cm *ContainerManager) Scope {
 		"",
 		make(map[string]string),
 		0,
+		mtx,
 	}
 }
 
@@ -144,7 +147,7 @@ func (s *Scope) WaitForNodes() {
 			task.LinksTo = name
 		}
 
-		s.Cm.Run(task)
+		s.Cm.Run(&task)
 	}
 
 	// verify nodes
@@ -181,7 +184,7 @@ func (s *Scope) InitNodes() {
 			task.LinksTo = name
 		}
 
-		s.Cm.Run(task)
+		s.Cm.Run(&task)
 	}
 
 	// verify nodes
@@ -264,7 +267,7 @@ func (s *Scope) InitCluster() {
 		if s.Provider.GetType() == "docker" {
 			task.LinksTo = orchestrator
 		}
-		s.Cm.Run(task)
+		s.Cm.Run(&task)
 		server.NodesActive++
 
 	}
@@ -316,7 +319,7 @@ func (s *Scope) AddNodes() {
 			task.LinksTo = orchestrator
 		}
 
-		s.Cm.Run(task)
+		s.Cm.Run(&task)
 		server.NodesActive++
 
 	}
@@ -350,7 +353,7 @@ func (s *Scope) RebalanceClusters() {
 			task.LinksTo = orchestrator
 		}
 
-		s.Cm.Run(task)
+		s.Cm.Run(&task)
 	}
 
 	// apply only to orchestrator
@@ -404,7 +407,7 @@ func (s *Scope) CreateBuckets() {
 					task.LinksTo = orchestrator
 				}
 
-				s.Cm.Run(task)
+				s.Cm.Run(&task)
 			}
 		}
 	}
@@ -572,7 +575,7 @@ func (s *Scope) CreateViews() {
 					if s.Provider.GetType() == "docker" {
 						task.LinksTo = orchestrator
 					}
-					s.Cm.Run(task)
+					s.Cm.Run(&task)
 				}
 			}
 		}
@@ -581,4 +584,17 @@ func (s *Scope) CreateViews() {
 	// apply only to orchestrator
 	s.Spec.ApplyToServers(operation, 0, 1)
 
+}
+
+func (s *Scope) SetVarsKV(key, id string) {
+	s.VarsMtx.Lock()
+	s.Vars[key] = id
+	s.VarsMtx.Unlock()
+}
+
+func (s *Scope) GetVarsKV(key string) (string, bool) {
+	s.VarsMtx.RLock()
+	val, ok := s.Vars[key]
+	s.VarsMtx.RUnlock()
+	return val, ok
 }

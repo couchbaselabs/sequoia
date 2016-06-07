@@ -24,10 +24,11 @@ func ParseTemplate(s *Scope, command string) string {
 	tResolv := TemplateResolver{s}
 
 	netFunc := template.FuncMap{
-		"net":    tResolv.Address,
-		"bucket": tResolv.BucketName,
-		"noport": tResolv.NoPort,
-		"json":   tResolv.ToJson,
+		"net":      tResolv.Address,
+		"bucket":   tResolv.BucketName,
+		"noport":   tResolv.NoPort,
+		"json":     tResolv.ToJson,
+		"contains": tResolv.Contains,
 	}
 	tmpl, err := template.New("t").Funcs(netFunc).Parse(command)
 	logerr(err)
@@ -229,22 +230,41 @@ func (t *TemplateResolver) NoPort(addr string) string {
 	return strings.Split(addr, ":")[0]
 }
 
-func (t *TemplateResolver) Logs(key string) string {
+func (t *TemplateResolver) TailLogs(key string, tail int) string {
+	var val string
+	tailStr := strconv.Itoa(tail)
+
+	// check if key exist in scope vars
+	if id, ok := t.Scope.GetVarsKV(key); ok == true {
+		// get containers return log
+		val = t.Scope.Cm.GetLogs(id, tailStr)
+	}
+	return val
+}
+
+func (t *TemplateResolver) AllLogs(key string) string {
 	var val string
 
 	// check if key exist in scope vars
-	if id, ok := t.Scope.Vars[key]; ok == true {
+	if id, ok := t.Scope.GetVarsKV(key); ok == true {
 		// get containers return log
-		val = t.Scope.Cm.GetLogs(id)
+		val = t.Scope.Cm.GetLogs(id, "all")
 	}
 	return val
+}
+
+func (t *TemplateResolver) Contains(key, str string) bool {
+	return strings.Contains(str, key)
 }
 
 func (t *TemplateResolver) ToJson(data string) interface{} {
 	var kv interface{}
 	blob := []byte(data)
 	err := json.Unmarshal(blob, &kv)
-	logerr(err)
+	if err != nil {
+		fmt.Println("warning using 'json' filter: ", err)
+		kv = nil
+	}
 	return kv
 }
 
@@ -252,7 +272,7 @@ func (t *TemplateResolver) ToJson(data string) interface{} {
 func (t *TemplateResolver) Status(idRef string) string {
 	var status string
 	var err error
-	if ID, ok := t.Scope.Vars[idRef]; ok == true {
+	if ID, ok := t.Scope.GetVarsKV(idRef); ok == true {
 		status, err = t.Scope.Cm.GetStatus(ID)
 		logerr(err)
 	}
