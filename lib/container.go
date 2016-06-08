@@ -403,7 +403,6 @@ func (cm *ContainerManager) Run(task *ContainerTask) string {
 		go func() {
 			time.Sleep(task.Duration * time.Second)
 			// remove container
-			fmt.Println("DURATION BELLA!")
 			for _, c := range containers {
 				cm.RemoveContainer(c.ID)
 			}
