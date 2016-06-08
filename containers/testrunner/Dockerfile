@@ -2,7 +2,7 @@ FROM ubuntu_python
 RUN git clone git://github.com/couchbase/testrunner.git
 WORKDIR testrunner
 
-RUN apt-get install -y libssl-dev libffi-dev psmisc iptables
+RUN apt-get install -y libssl-dev libffi-dev psmisc iptables zip unzip
 RUN pip install paramiko &&\
     pip install gevent &&\
     pip install boto
