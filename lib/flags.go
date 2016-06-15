@@ -24,6 +24,7 @@ type TestFlags struct {
 	SoftTeardown    *bool
 	Continue        *bool
 	StopOnError     *bool
+	CollectOnError  *bool
 	Scale           *int
 	Repeat          *int
 	LogDir          *string
@@ -136,6 +137,10 @@ func (f *TestFlags) AddDefaultFlags(fset *flag.FlagSet) {
 		"stop_on_error",
 		false,
 		"stop running test when error occurs")
+	f.CollectOnError = fset.Bool(
+		"collect_on_error",
+		false,
+		"run cbcollect when error occurs")
 	f.Scale = fset.Int(
 		"scale",
 		1,

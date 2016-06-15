@@ -239,7 +239,7 @@ func (t *Test) runTask(scope *Scope, task *ContainerTask, action *ActionSpec) {
 	// run once
 	cid, echan := t.Cm.Run(task)
 	scope.SetVarsKV(saveKey, cid)
-	go t.WatchErrorChan(echan, task.Concurrency)
+	go t.WatchErrorChan(echan, task.Concurrency, scope)
 
 	go t.RepeatTask(scope, cid, repeat, rChan)
 	if repeat > 0 {
@@ -256,12 +256,16 @@ func (t *Test) runTask(scope *Scope, task *ContainerTask, action *ActionSpec) {
 
 }
 
-func (t *Test) WatchErrorChan(echan chan error, n int) {
+func (t *Test) WatchErrorChan(echan chan error, n int, scope *Scope) {
 	if n == 0 {
 		n = 1
 	}
 	for i := 0; i < n; i++ {
 		if err := <-echan; err != nil {
+			if *t.Flags.CollectOnError == true {
+				scope.CollectInfo()
+			}
+
 			if *t.Flags.StopOnError == true {
 				// print test results
 				t.Cm.TapHandle.AutoPlan()
