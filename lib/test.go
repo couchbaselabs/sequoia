@@ -208,7 +208,7 @@ func (t *Test) runTest(scope Scope, loop int) {
 	}
 
 	// kill test containers
-	scope.Cm.RemoveManagedContainers(false)
+	scope.Cm.RemoveManagedContainers(*t.Flags.SoftTeardown)
 
 }
 
