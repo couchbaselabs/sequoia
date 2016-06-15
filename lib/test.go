@@ -80,8 +80,18 @@ func (t *Test) Run(scope Scope) {
 	}
 
 	// run at least <repeat> times or forever if -1
+	// run can be terminated if Duration flag set
 	repeat := *t.Flags.Repeat
 	loops := 0
+	duration := *t.Flags.Duration
+
+	if duration > 0 {
+		go t.ExitAfterDuration(duration)
+		if repeat == 0 {
+			repeat = -1 // ensure test runs entire duration
+		}
+	}
+
 	if repeat == -1 {
 		// run forever
 		for {
@@ -326,4 +336,13 @@ func (t *Test) watchTask(scope *Scope, task *ContainerTask, saveKey string, cond
 		}
 	}
 	done <- true
+}
+
+func (t *Test) ExitAfterDuration(sec int) {
+	// wait
+	time.Sleep(time.Duration(sec) * time.Second)
+	// print test results
+	t.Cm.TapHandle.AutoPlan()
+	// exit
+	os.Exit(0)
 }

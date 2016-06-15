@@ -27,6 +27,7 @@ type TestFlags struct {
 	CollectOnError  *bool
 	Scale           *int
 	Repeat          *int
+	Duration        *int
 	LogDir          *string
 	LogLevel        *int
 	CleanLogs       *bool
@@ -149,6 +150,10 @@ func (f *TestFlags) AddDefaultFlags(fset *flag.FlagSet) {
 		"repeat",
 		0,
 		"times to repeat test")
+	f.Duration = fset.Int(
+		"duration",
+		0,
+		"duration of test; repeats test if necessary")
 	f.LogLevel = fset.Int(
 		"log_level",
 		1,
