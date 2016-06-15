@@ -22,6 +22,7 @@ type TestFlags struct {
 	SkipTest        *bool `yaml:"skip_test"`
 	SkipTeardown    *bool `yaml:"skip_teardown"`
 	SoftTeardown    *bool
+	Continue        *bool
 	Scale           *int
 	Repeat          *int
 	LogDir          *string
@@ -126,6 +127,10 @@ func (f *TestFlags) AddDefaultFlags(fset *flag.FlagSet) {
 		"soft_teardown",
 		false,
 		"kill containers but do not remove")
+	f.Continue = fset.Bool(
+		"continue",
+		false,
+		"test is continuing after stopping/exiting")
 	f.Scale = fset.Int(
 		"scale",
 		1,

@@ -70,6 +70,11 @@ func NewScope(flags TestFlags, cm *ContainerManager) Scope {
 		}
 	}
 	var mtx sync.RWMutex
+	var loops = 0
+	if *flags.Continue == true {
+		loops++ // we've already done first pass
+	}
+
 	return Scope{
 		spec,
 		cm,
@@ -77,7 +82,7 @@ func NewScope(flags TestFlags, cm *ContainerManager) Scope {
 		flags,
 		"",
 		make(map[string]string),
-		0,
+		loops,
 		mtx,
 	}
 }

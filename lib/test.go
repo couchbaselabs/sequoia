@@ -104,7 +104,7 @@ func (t *Test) Run(scope Scope) {
 func (t *Test) runTest(scope Scope, loop int) {
 
 	var lastAction ActionSpec
-	scope.Loops = loop
+	scope.Loops = scope.Loops + loop
 
 	// run all actions in test
 	for _, action := range t.Actions {
