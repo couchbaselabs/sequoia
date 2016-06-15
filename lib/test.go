@@ -197,7 +197,7 @@ func (t *Test) runTest(scope Scope, loop int) {
 	}
 
 	// kill test containers
-	scope.Cm.RemoveManagedContainers(true)
+	scope.Cm.RemoveManagedContainers(false)
 
 }
 

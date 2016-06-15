@@ -144,6 +144,9 @@ func (cm *ContainerManager) RemoveAllContainers() {
 func (cm *ContainerManager) RemoveManagedContainers(soft bool) {
 	// teardown managed containers
 	for _, id := range cm.IDs {
+		if cm.CheckContainerExists(id) == false {
+			continue // container was already removed
+		}
 		if soft == false {
 			if err := cm.RemoveContainer(id); err != nil {
 				ecolorsay(fmt.Sprintf("error removing %s: %s", id[:6], err))
@@ -157,6 +160,9 @@ func (cm *ContainerManager) RemoveManagedContainers(soft bool) {
 			}
 		}
 	}
+
+	// clear ids
+	cm.IDs = []string{}
 }
 
 func (cm *ContainerManager) SaveContainerLogs(logDir string) {
@@ -183,6 +189,11 @@ func (cm *ContainerManager) ListImages() []docker.APIImages {
 	logerr(err)
 
 	return apiImages
+}
+
+func (cm *ContainerManager) CheckContainerExists(id string) bool {
+	_, err := cm.Client.InspectContainer(id)
+	return err == nil
 }
 
 func (cm *ContainerManager) CheckImageExists(image string) bool {
