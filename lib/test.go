@@ -2,6 +2,7 @@ package sequoia
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -236,8 +237,9 @@ func (t *Test) runTask(scope *Scope, task *ContainerTask, action *ActionSpec) {
 	}
 
 	// run once
-	cid := t.Cm.Run(task)
+	cid, echan := t.Cm.Run(task)
 	scope.SetVarsKV(saveKey, cid)
+	go t.WatchErrorChan(echan, task.Concurrency)
 
 	go t.RepeatTask(scope, cid, repeat, rChan)
 	if repeat > 0 {
@@ -252,6 +254,23 @@ func (t *Test) runTask(scope *Scope, task *ContainerTask, action *ActionSpec) {
 		t.KillTaskContainers(task)
 	}
 
+}
+
+func (t *Test) WatchErrorChan(echan chan error, n int) {
+	if n == 0 {
+		n = 1
+	}
+	for i := 0; i < n; i++ {
+		if err := <-echan; err != nil {
+			if *t.Flags.StopOnError == true {
+				// print test results
+				t.Cm.TapHandle.AutoPlan()
+				// exit
+				os.Exit(1)
+			}
+		}
+	}
+	close(echan)
 }
 
 func (t *Test) KillTaskContainers(task *ContainerTask) {

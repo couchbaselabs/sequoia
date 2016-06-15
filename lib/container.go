@@ -366,7 +366,7 @@ func (cm *ContainerManager) RunContainer(opts docker.CreateContainerOptions) (ch
 	return c, container
 }
 
-func (cm *ContainerManager) Run(task *ContainerTask) string {
+func (cm *ContainerManager) Run(task *ContainerTask) (string, chan error) {
 
 	// save image as alias in case it resolves to a
 	// commit hash
@@ -434,16 +434,17 @@ func (cm *ContainerManager) Run(task *ContainerTask) string {
 	}
 
 	// wait if necessary
+	echan := make(chan error, task.Concurrency)
 	if task.Async == false {
-		cm.HandleResults(&idChans)
+		cm.HandleResults(&idChans, echan)
 	} else {
-		go cm.HandleResults(&idChans)
+		go cm.HandleResults(&idChans, echan)
 	}
 
-	return container.ID
+	return container.ID, echan
 }
 
-func (cm *ContainerManager) HandleResults(idChans *[]chan TaskResult) {
+func (cm *ContainerManager) HandleResults(idChans *[]chan TaskResult, echan chan error) {
 	for _, ch := range *idChans {
 		rc := <-ch
 		if rc.Error == nil {
@@ -451,6 +452,9 @@ func (cm *ContainerManager) HandleResults(idChans *[]chan TaskResult) {
 		} else {
 			cm.TapHandle.Ok(false, MakeTaskMsg(rc.Image, rc.ID, rc.Command, true))
 		}
+		go func() {
+			echan <- rc.Error
+		}()
 		close(ch)
 	}
 }
