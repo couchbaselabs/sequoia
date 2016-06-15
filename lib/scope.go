@@ -27,7 +27,7 @@ type Scope struct {
 	Flags    TestFlags
 	Version  string
 	Vars     map[string]string
-	Aux      int
+	Loops    int
 	VarsMtx  sync.RWMutex
 }
 

@@ -46,11 +46,11 @@ func (t *TemplateResolver) Version() float64 {
 }
 
 func (t *TemplateResolver) DoOnce() bool {
-	return t.Scope.Aux == 0
+	return t.Scope.Loops == 0
 }
 
 func (t *TemplateResolver) EvenCount() bool {
-	return (t.Scope.Aux % 2) == 0
+	return (t.Scope.Loops % 2) == 0
 }
 
 func (t *TemplateResolver) OddCount() bool {
