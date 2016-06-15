@@ -89,7 +89,6 @@ func NewScope(flags TestFlags, cm *ContainerManager) Scope {
 
 func (s *Scope) Setup() {
 
-	s.Provider.ProvideCouchbaseServers(s.Spec.Servers)
 	s.WaitForNodes()
 	s.InitCli()
 	s.InitNodes()
@@ -100,15 +99,10 @@ func (s *Scope) Setup() {
 	s.CreateViews()
 }
 
-func (s *Scope) TearDown(soft bool) {
-	s.Cm.RemoveManagedContainers(soft)
-	if s.Provider.GetType() == "docker" {
-		// save logs
-		if *s.Flags.LogLevel > 0 {
-			s.Provider.(*DockerProvider).Cm.SaveContainerLogs(*s.Flags.LogDir)
-		}
-		s.Provider.(*DockerProvider).Cm.RemoveManagedContainers(soft)
-	}
+func (s *Scope) Teardown() {
+	// descope
+	s.DeleteBuckets()
+	s.RemoveNodes()
 }
 
 func (s *Scope) InitCli() {
@@ -623,6 +617,86 @@ func (s *Scope) CreateViews() {
 	// apply only to orchestrator
 	s.Spec.ApplyToServers(operation, 0, 1)
 
+}
+
+func (s *Scope) DeleteBuckets() {
+
+	var image = "sequoiatools/couchbase-cli"
+
+	// configure rebalance operation
+	operation := func(name string, server *ServerSpec) {
+
+		orchestrator := server.Names[0]
+		ip := s.Provider.GetHostAddress(orchestrator)
+
+		for _, bucket := range server.BucketSpecs {
+			for _, bucketName := range bucket.Names {
+
+				command := []string{"bucket-delete", "-c", ip,
+					"-u", server.RestUsername, "-p", server.RestPassword,
+					"--bucket", bucketName,
+				}
+
+				desc := "bucket delete" + bucketName
+				task := ContainerTask{
+					Describe: desc,
+					Image:    image,
+					Command:  command,
+					Async:    false,
+				}
+				if s.Provider.GetType() == "docker" {
+					task.LinksTo = orchestrator
+				}
+
+				s.Cm.Run(&task)
+			}
+		}
+	}
+
+	// apply only to orchestrator
+	s.Spec.ApplyToServers(operation, 0, 1)
+
+}
+
+func (s *Scope) RemoveNodes() {
+
+	var image = "sequoiatools/couchbase-cli"
+
+	rmNodesOp := func(name string, server *ServerSpec) {
+
+		orchestrator := server.Names[0]
+		orchestratorIp := s.Provider.GetHostAddress(orchestrator)
+		ip := s.Provider.GetHostAddress(name)
+
+		if name == orchestrator {
+			return // not removing self
+		}
+
+		command := []string{"rebalance",
+			"-c", orchestratorIp,
+			"-u", server.RestUsername,
+			"-p", server.RestPassword,
+			"--server-remove", ip,
+		}
+
+		desc := "remove node " + ip
+		command = cliCommandValidator(s.Version, command)
+
+		task := ContainerTask{
+			Describe: desc,
+			Image:    image,
+			Command:  command,
+			Async:    false,
+		}
+		if s.Provider.GetType() == "docker" {
+			task.LinksTo = orchestrator
+		}
+
+		s.Cm.Run(&task)
+	}
+
+	// add nodes
+	s.Spec.ApplyToAllServers(rmNodesOp)
 }
 
 func (s *Scope) SetVarsKV(key, id string) {

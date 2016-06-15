@@ -21,7 +21,8 @@ type TestFlags struct {
 	SkipSetup       *bool `yaml:"skip_setup"`
 	SkipTest        *bool `yaml:"skip_test"`
 	SkipTeardown    *bool `yaml:"skip_teardown"`
-	SoftTeardown    *bool
+	SkipCleanup     *bool `yaml:"skip_cleanup"`
+	SoftCleanup     *bool `yaml:"soft_cleanup"`
 	Continue        *bool
 	StopOnError     *bool
 	CollectOnError  *bool
@@ -125,11 +126,15 @@ func (f *TestFlags) AddDefaultFlags(fset *flag.FlagSet) {
 	f.SkipTeardown = fset.Bool(
 		"skip_teardown",
 		false,
-		"skip container teardown")
-	f.SoftTeardown = fset.Bool(
-		"soft_teardown",
+		"skip cluster teardown")
+	f.SkipCleanup = fset.Bool(
+		"skip_cleanup",
 		false,
-		"kill containers but do not remove")
+		"skip container cleanup")
+	f.SoftCleanup = fset.Bool(
+		"soft_cleanup",
+		false,
+		"kill containers on cleanup instead of remove")
 	f.Continue = fset.Bool(
 		"continue",
 		false,

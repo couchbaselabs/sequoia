@@ -62,8 +62,9 @@ func (t *Test) Run(scope Scope) {
 	// do optional setup
 	if *t.Flags.SkipSetup == false {
 		// if in default mode purge all containers
-		if t.Flags.Mode == "" {
+		if t.Flags.Mode == "" && *t.Flags.SkipCleanup == false {
 			t.Cm.RemoveAllContainers()
+			scope.Provider.ProvideCouchbaseServers(scope.Spec.Servers)
 		}
 		scope.Setup()
 	} else if scope.Provider.GetType() != "docker" {
@@ -106,9 +107,14 @@ func (t *Test) Run(scope Scope) {
 	}
 	t.Cm.TapHandle.AutoPlan()
 
-	// do optional teardown
+	// do optional cluster teardown
 	if *t.Flags.SkipTeardown == false {
-		scope.TearDown(*t.Flags.SoftTeardown)
+		scope.Teardown()
+	}
+
+	// do optional cleanup
+	if *t.Flags.SkipCleanup == false {
+		t.Cleanup(scope)
 	}
 }
 
@@ -208,7 +214,7 @@ func (t *Test) runTest(scope Scope, loop int) {
 	}
 
 	// kill test containers
-	scope.Cm.RemoveManagedContainers(*t.Flags.SoftTeardown)
+	scope.Cm.RemoveManagedContainers(*t.Flags.SoftCleanup)
 
 }
 
@@ -345,4 +351,16 @@ func (t *Test) ExitAfterDuration(sec int) {
 	t.Cm.TapHandle.AutoPlan()
 	// exit
 	os.Exit(0)
+}
+
+func (t *Test) Cleanup(s Scope) {
+	soft := *t.Flags.SoftCleanup
+	s.Cm.RemoveManagedContainers(soft)
+	if s.Provider.GetType() == "docker" {
+		// save logs
+		if *t.Flags.LogLevel > 0 {
+			s.Provider.(*DockerProvider).Cm.SaveContainerLogs(*t.Flags.LogDir)
+		}
+		s.Provider.(*DockerProvider).Cm.RemoveManagedContainers(soft)
+	}
 }
