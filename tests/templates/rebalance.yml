@@ -1,0 +1,52 @@
+# rebalance out a single node
+-
+  name: rebalance_out
+  actions:
+    -
+      image: sequoiatools/couchbase-cli
+      command: "rebalance -c  {{.Orchestrator}} --server-remove $0  -u  {{.RestUsername}} -p  {{.RestPassword}}"
+
+# rebalance in a single node
+-
+  name: rebalance_in 
+  actions:
+    -
+      image: sequoiatools/couchbase-cli
+      command: "server-add -c  {{.Orchestrator}} 
+           --server-add $0
+           -u  {{.RestUsername}} -p  {{.RestPassword}}
+           --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
+      wait: true 
+    -
+      image: sequoiatools/couchbase-cli
+      command:  "rebalance -c  {{.Orchestrator}}
+                -u  {{.RestUsername}} -p  {{.RestPassword}}"
+
+
+# swap rebalance 1x1 node 
+-
+  name: rebalance_swap
+  actions:
+    -
+      image: sequoiatools/couchbase-cli
+      command: "server-add -c  {{.Orchestrator}} 
+           --server-add $0
+           -u  {{.RestUsername}} -p  {{.RestPassword}}
+           --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
+      wait: true 
+    -
+      image: sequoiatools/couchbase-cli
+      command:  "rebalance -c  {{.Orchestrator}}
+        --server-remove $1
+        -u  {{.RestUsername}} -p  {{.RestPassword}}"
+
+# waits for any current rebalance to finish
+-
+  name: wait_for_rebalance
+  actions:
+    -
+      image: appropriate/curl
+      command: "-s -u {{.RestUsername}}:{{.RestPassword}} {{.Orchestrator}}:8091/pools/default/rebalanceProgress"
+      repeat: -1
+      until: "{{if .AllLogs `__self__`}}{{eq `none` (.TailLogs `__self__` 1 | json).status}}{{else}}{{false}}{{end}}"
+      wait: true

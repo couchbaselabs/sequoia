@@ -1,0 +1,18 @@
+-
+  include: tests/templates/rebalance.yml
+- 
+  image: sequoiatools/pillowfight
+  command: "-U  {{.Orchestrator}} -B 100 -t 1 -c 10"
+  wait: true
+-
+  template: rebalance_out
+  args: "{{.NthDataNode 1}}"
+  wait: true 
+- 
+  image: sequoiatools/pillowfight
+  command: "-U  {{.Orchestrator}} -B 100 -t 1 -c 10"
+  wait: true
+-
+  template: rebalance_in
+  args: "{{.NthDataNode 1}}"
+  wait: true 

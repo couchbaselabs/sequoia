@@ -9,9 +9,10 @@ import (
 )
 
 type Test struct {
-	Actions []ActionSpec
-	Flags   TestFlags
-	Cm      *ContainerManager
+	Templates map[string][]ActionSpec
+	Actions   []ActionSpec
+	Flags     TestFlags
+	Cm        *ContainerManager
 }
 
 type ActionSpec struct {
@@ -27,6 +28,14 @@ type ActionSpec struct {
 	Save        string
 	Repeat      int
 	Until       string
+	Include     string
+	Template    string
+	Args        string
+}
+
+type TemplateSpec struct {
+	Name    string
+	Actions []ActionSpec
 }
 
 func ActionsFromFile(fileName string) []ActionSpec {
@@ -47,6 +56,7 @@ func ActionsFromArgs(image string, command string, wait bool) []ActionSpec {
 func NewTest(flags TestFlags, cm *ContainerManager) Test {
 
 	// define test actions from config and flags
+	var templates = make(map[string][]ActionSpec)
 	var actions []ActionSpec
 	switch flags.Mode {
 	case "image":
@@ -54,7 +64,7 @@ func NewTest(flags TestFlags, cm *ContainerManager) Test {
 	default:
 		actions = ActionsFromFile(*flags.TestFile)
 	}
-	return Test{actions, flags, cm}
+	return Test{templates, actions, flags, cm}
 }
 
 func (t *Test) Run(scope Scope) {
@@ -96,13 +106,17 @@ func (t *Test) Run(scope Scope) {
 	if repeat == -1 {
 		// run forever
 		for {
-			t.runTest(scope, loops)
+			t.runActions(scope, loops, t.Actions)
+			// kill test containers
+			scope.Cm.RemoveManagedContainers(*t.Flags.SoftCleanup)
 			loops++
 		}
 	} else {
 		repeat++
 		for loops = 0; loops < repeat; loops++ {
-			t.runTest(scope, loops)
+			t.runActions(scope, loops, t.Actions)
+			// kill test containers
+			scope.Cm.RemoveManagedContainers(*t.Flags.SoftCleanup)
 		}
 	}
 	t.Cm.TapHandle.AutoPlan()
@@ -118,13 +132,32 @@ func (t *Test) Run(scope Scope) {
 	}
 }
 
-func (t *Test) runTest(scope Scope, loop int) {
+func (t *Test) runActions(scope Scope, loop int, actions []ActionSpec) {
 
 	var lastAction ActionSpec
 	scope.Loops = scope.Loops + loop
 
 	// run all actions in test
-	for _, action := range t.Actions {
+	for _, action := range actions {
+
+		if action.Include != "" {
+			// include template file
+			var spec []TemplateSpec
+			ReadYamlFile(action.Include, &spec)
+			t.CacheIncludedTemplate(spec)
+			continue
+		}
+
+		if action.Template != "" {
+			// run template actions
+			if templateActions, ok := t.Templates[action.Template]; ok {
+				templateActions = t.ResolveTemplateActions(scope, action)
+				t.runActions(scope, loop, templateActions)
+			} else {
+				ecolorsay("WARNING template not found: " + action.Template)
+			}
+			continue
+		}
 
 		if action.Image == "" {
 			// reuse last action image
@@ -213,9 +246,6 @@ func (t *Test) runTest(scope Scope, loop int) {
 		time.Sleep(5 * time.Second)
 	}
 
-	// kill test containers
-	scope.Cm.RemoveManagedContainers(*t.Flags.SoftCleanup)
-
 }
 
 func (t *Test) runTask(scope *Scope, task *ContainerTask, action *ActionSpec) {
@@ -270,6 +300,59 @@ func (t *Test) runTask(scope *Scope, task *ContainerTask, action *ActionSpec) {
 		t.KillTaskContainers(task)
 	}
 
+}
+
+func (t *Test) CacheIncludedTemplate(spec []TemplateSpec) {
+
+	for _, template := range spec {
+		t.Templates[template.Name] = template.Actions
+	}
+}
+
+// resolve args from include and cache for referencing
+func (t *Test) ResolveTemplateActions(scope Scope, action ActionSpec) []ActionSpec {
+
+	var resolvedActions = []ActionSpec{}
+	var cachedActions = t.Templates[action.Template]
+
+	for _, subAction := range cachedActions {
+		// replace generics args ie $1, $2 with test values
+		args := ParseTemplate(&scope, action.Args)
+		allArgs := strings.Split(args, ",")
+		for i, arg := range allArgs {
+			idx := fmt.Sprintf("$%d", i)
+			subAction.Command = strings.Replace(subAction.Command, idx, arg, 1)
+		}
+
+		// allow inheritance
+		if subAction.Wait == false {
+			subAction.Wait = action.Wait
+		}
+		if subAction.Before == "" {
+			subAction.Before = action.Before
+		}
+		if subAction.Requires == "" {
+			subAction.Requires = action.Requires
+		}
+		if subAction.Concurrency == "" {
+			subAction.Concurrency = action.Concurrency
+		}
+		if subAction.Duration == "" {
+			subAction.Duration = action.Duration
+		}
+		if subAction.Save == "" {
+			subAction.Save = action.Save
+		}
+		if subAction.Repeat == 0 {
+			subAction.Repeat = action.Repeat
+		}
+		if subAction.Until == "" {
+			subAction.Until = action.Until
+		}
+		resolvedActions = append(resolvedActions, subAction)
+	}
+
+	return resolvedActions
 }
 
 func (t *Test) WatchErrorChan(echan chan error, n int, scope *Scope) {

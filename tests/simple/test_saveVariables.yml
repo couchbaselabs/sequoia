@@ -1,3 +1,7 @@
+# include
+-
+  include: tests/templates/rebalance.yml
+
 # start data and save container id
 - 
   image: sequoiatools/pillowfight
@@ -7,16 +11,13 @@
 # rebalance when pillowfight container finishes 
 -
   before: "{{.Status `KvContainer` | eq `exited`}}"
-  image: sequoiatools/couchbase-cli
-  command:  "rebalance -c  {{.Orchestrator}}  --server-remove {{.NthDataNode 1}}  -u  {{.RestUsername}} -p  {{.RestPassword}}"
+  template: rebalance_out
+  args: "{{.NthDataNode 1}}"
 
-# monitor rebalance using until
+
+# wait_for_rebalance 
 -
-  image: appropriate/curl
-  command: "-s -u {{.RestUsername}}:{{.RestPassword}} {{.Orchestrator}}:8091/pools/default/rebalanceProgress"
-  repeat: -1
-  until: "{{if .AllLogs `__self__`}}{{eq `none` (.TailLogs `__self__` 1 | json).status}}{{else}}{{false}}{{end}}"
-  wait: true
+  template: wait_for_rebalance
 
 # start data and save container id
 - 
@@ -26,12 +27,6 @@
 
 # add back 
 -
-   image: sequoiatools/couchbase-cli
-   command: "server-add -c  {{.Orchestrator}} 
-       --server-add {{.NthDataNode 1}} 
-       -u  {{.RestUsername}} -p  {{.RestPassword}}
-       --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
-   wait: true
--
-   command:  "rebalance -c  {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
-   wait: true
+  template: rebalance_in
+  args: "{{.NthDataNode 1}}"
+  wait: true
