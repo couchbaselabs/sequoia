@@ -141,10 +141,12 @@ func (t *Test) runActions(scope Scope, loop int, actions []ActionSpec) {
 	for _, action := range actions {
 
 		if action.Include != "" {
-			// include template file
-			var spec []TemplateSpec
-			ReadYamlFile(action.Include, &spec)
-			t.CacheIncludedTemplate(spec)
+			for _, includeFile := range strings.Split(action.Include, ",") {
+				// include template file
+				var spec []TemplateSpec
+				ReadYamlFile(includeFile, &spec)
+				t.CacheIncludedTemplate(spec)
+			}
 			continue
 		}
 

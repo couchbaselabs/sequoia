@@ -1,32 +1,28 @@
-# include
 -
-  include: tests/templates/rebalance.yml
+  # include kv and rebalance template
+  include: tests/templates/rebalance.yml,tests/templates/kv.yml
 
-# start data and save container id
-- 
-  image: sequoiatools/pillowfight
-  command: "-U  {{.Orchestrator}} -B 100 -t 1 -c 100"
+-
+  # start data and save container id
+  template: pillowfight_small
   save: KvContainer
 
-# rebalance when pillowfight container finishes 
 -
+  # rebalance when pillowfight container finishes
   before: "{{.Status `KvContainer` | eq `exited`}}"
   template: rebalance_out
   args: "{{.NthDataNode 1}}"
 
-
-# wait_for_rebalance 
 -
+  # wait_for_rebalance
   template: wait_for_rebalance
 
-# start data and save container id
 - 
-  image: sequoiatools/pillowfight
-  command: "-U  {{.Orchestrator}} -B 100 -t 1 -c 1000"
+  template: pillowfight_small
   wait: true
 
-# add back 
 -
+  # add back
   template: rebalance_in
   args: "{{.NthDataNode 1}}"
   wait: true
