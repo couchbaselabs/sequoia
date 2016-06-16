@@ -125,7 +125,7 @@ func (f *TestFlags) AddDefaultFlags(fset *flag.FlagSet) {
 		"skip test")
 	f.SkipTeardown = fset.Bool(
 		"skip_teardown",
-		false,
+		true,
 		"skip cluster teardown")
 	f.SkipCleanup = fset.Bool(
 		"skip_cleanup",
