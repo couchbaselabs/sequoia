@@ -33,11 +33,17 @@ type ActionSpec struct {
 	Args        string
 	Test        string
 	Scope       string
+	Client      ClientActionSpec
 }
 
 type TemplateSpec struct {
 	Name    string
 	Actions []ActionSpec
+}
+
+type ClientActionSpec struct {
+	Op        string
+	Container string
 }
 
 func ActionsFromFile(fileName string) []ActionSpec {
@@ -141,6 +147,26 @@ func (t *Test) runActions(scope Scope, loop int, actions []ActionSpec) {
 
 	// run all actions in test
 	for _, action := range actions {
+
+		if action.Client.Op != "" {
+			// is a client op
+			switch action.Client.Op {
+			case "kill":
+				key := action.Client.Container
+				if id, ok := scope.GetVarsKV(key); ok {
+					t.Cm.KillContainer(id)
+					colorsay("kill" + key)
+				}
+			case "rm":
+				key := action.Client.Container
+				if id, ok := scope.GetVarsKV(key); ok {
+					t.Cm.RemoveContainer(id)
+					colorsay("remove " + key)
+				}
+
+			}
+			continue
+		}
 
 		if action.Scope != "" {
 			// transform cluster scope

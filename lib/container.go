@@ -157,7 +157,7 @@ func (cm *ContainerManager) RemoveManagedContainers(soft bool) {
 		} else {
 			err := cm.KillContainer(id)
 			if err == nil {
-				colorsay("kill" + id[:6])
+				colorsay("kill " + id[:6])
 			}
 		}
 	}

@@ -3,6 +3,14 @@
 -
    image: sequoiatools/gideon
    command: "kv --ops {{.Scale 10000}} --size 512 --bucket {{.Bucket}} --create 100  --hosts {{.Orchestrator}}"
+   save: DocLoader
 -
    template: wait_for_dgm
    args: "{{.Bucket}}, 90"
+-
+   client:
+     op: rm
+     container: DocLoader
+-
+   template: pillowfight_small
+   wait: true
