@@ -142,6 +142,7 @@ func (cm *ContainerManager) RemoveAllContainers() {
 	}
 }
 func (cm *ContainerManager) RemoveManagedContainers(soft bool) {
+
 	// teardown managed containers
 	for _, id := range cm.IDs {
 		if cm.CheckContainerExists(id) == false {

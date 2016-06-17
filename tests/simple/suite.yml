@@ -1,0 +1,14 @@
+-
+  test: tests/simple/test_simple.yml
+-
+  scope: tests/simple/scope_medium.yml
+  test: tests/simple/test_saveVariables.yml
+-
+  test: tests/simple/test_useTemplate.yml
+-
+  test: tests/simple/test_views.yml
+-
+  test: tests/simple/test_query.yml
+-
+  test: tests/simple/test_kvquery.yml
+

@@ -37,23 +37,36 @@ func ecolorsay(msg string) {
 	fmt.Println(color.RedString("\u2192 "), color.WhiteString("%s", msg))
 }
 
-func ExpandName(name string, count uint8) []string {
+func ExpandServerName(name string, count, offset uint8) []string {
+	if count <= 1 {
+		name = fmt.Sprintf("%s-1.st.couchbase.com", name)
+		return []string{name}
+	} else {
+		return ExpandName(name, count, offset)
+	}
+}
+
+func ExpandBucketName(name string, count, offset uint8) []string {
+	if count <= 1 {
+		return []string{name}
+	} else {
+		return ExpandName(name, count, offset)
+	}
+}
+
+func ExpandName(name string, count, offset uint8) []string {
 	var names []string
 
-	if count <= 1 {
-		names = []string{name}
-	} else {
-		names = make([]string, count)
-		var i uint8
-		for i = 1; i <= count; i++ {
-			parts := strings.Split(name, ".")
-			fqn := fmt.Sprintf("%s-%d", parts[0], i)
-			if len(parts) > 1 {
-				parts[0] = fqn
-				fqn = strings.Join(parts, ".")
-			}
-			names[i-1] = fqn
+	names = make([]string, count)
+	var i uint8
+	for i = offset; i < count+offset; i++ {
+		parts := strings.Split(name, ".")
+		fqn := fmt.Sprintf("%s-%d", parts[0], i)
+		if len(parts) > 1 {
+			parts[0] = fqn
+			fqn = strings.Join(parts, ".")
 		}
+		names[i-offset] = fqn
 	}
 	return names
 }

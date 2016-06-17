@@ -31,6 +31,8 @@ type ActionSpec struct {
 	Include     string
 	Template    string
 	Args        string
+	Test        string
+	Scope       string
 }
 
 type TemplateSpec struct {
@@ -139,6 +141,57 @@ func (t *Test) runActions(scope Scope, loop int, actions []ActionSpec) {
 
 	// run all actions in test
 	for _, action := range actions {
+
+		if action.Scope != "" {
+			// transform cluster scope
+			newSpec := NewScopeSpec(action.Scope)
+			scope.Teardown()
+			if scope.Provider.GetType() == "docker" {
+				for i, s := range newSpec.Servers {
+					if i <= len(scope.Spec.Servers) { // same num of clusters
+						s.Count -= scope.Spec.Servers[i].Count
+						s.InitNodes -= scope.Spec.Servers[i].InitNodes
+						if s.Count < 0 {
+							s.Count = 0
+						}
+						if s.InitNodes < 0 {
+							s.InitNodes = 0
+						}
+						offset := newSpec.Servers[i].Count - s.Count
+						newSpec.Servers[i].CountOffset = offset
+						newSpec.Servers[i].Count = s.Count
+						newSpec.Servers[i].InitNodes = s.InitNodes
+					}
+				}
+			}
+			scope.Spec = newSpec
+			scope.Provider.ProvideCouchbaseServers(scope.Spec.Servers)
+			scope.Setup()
+		}
+		if action.Test != "" {
+			// referencing external test
+			testActions := ActionsFromFile(action.Test)
+			t.Actions = testActions
+
+			// save test options
+			setup := t.Flags.SkipSetup
+			teardown := t.Flags.SkipTeardown
+			cleanup := t.Flags.SkipCleanup
+
+			ok := true
+			t.Flags.SkipSetup = &ok
+			t.Flags.SkipTeardown = &ok
+			t.Flags.SkipCleanup = &ok
+
+			// run test
+			t.Run(scope)
+
+			// restore options
+			t.Flags.SkipSetup = setup
+			t.Flags.SkipTeardown = teardown
+			t.Flags.SkipCleanup = cleanup
+			continue
+		}
 
 		if action.Include != "" {
 			for _, includeFile := range strings.Split(action.Include, ",") {

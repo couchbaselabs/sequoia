@@ -183,9 +183,9 @@ func (p *DockerProvider) ProvideCouchbaseServers(servers []ServerSpec) {
 	var i int = p.NumCouchbaseServers()
 	p.StartPort = 8091 + i
 	for _, server := range servers {
-		serverNameList := ExpandName(server.Name, server.Count)
-		for _, serverName := range serverNameList {
+		serverNameList := ExpandServerName(server.Name, server.Count, server.CountOffset+1)
 
+		for _, serverName := range serverNameList {
 			portStr := fmt.Sprintf("%d", 8091+i)
 			port := docker.Port("8091/tcp")
 			binding := make([]docker.PortBinding, 1)

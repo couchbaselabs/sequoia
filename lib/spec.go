@@ -22,6 +22,7 @@ type ServerSpec struct {
 	Name         string
 	Names        []string
 	Count        uint8
+	CountOffset  uint8
 	Ram          string
 	IndexRam     string `yaml:"index_ram"`
 	FtsRam       string `yaml:"fts_ram"`
@@ -230,7 +231,7 @@ func SpecFromYaml(fileName string) ScopeSpec {
 	// init bucket section of spec
 	bucketNameMap := make(map[string]BucketSpec)
 	for i, bucket := range spec.Buckets {
-		spec.Buckets[i].Names = ExpandName(bucket.Name, bucket.Count)
+		spec.Buckets[i].Names = ExpandBucketName(bucket.Name, bucket.Count, 1)
 		if spec.Buckets[i].Type == "" {
 			spec.Buckets[i].Type = "couchbase"
 		}
@@ -250,7 +251,7 @@ func SpecFromYaml(fileName string) ScopeSpec {
 
 	// init server section of spec
 	for i, server := range spec.Servers {
-		spec.Servers[i].Names = ExpandName(server.Name, server.Count)
+		spec.Servers[i].Names = ExpandServerName(server.Name, server.Count, 1)
 		spec.Servers[i].BucketSpecs = make([]BucketSpec, 0)
 		// map server buckets to bucket objects
 		bucketList := CommaStrToList(spec.Servers[i].Buckets)
