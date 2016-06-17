@@ -74,7 +74,7 @@
 -
    image: sequoiatools/couchbase-cli
    command:  "rebalance -c  {{.Orchestrator}} --server-remove {{.Nodes | .Service `index` | net 1}}  -u  {{.RestUsername}} -p  {{.RestPassword}}"
-   save: SwapRebId
+   alias: SwapRebId
 
 
 ###############  drop indexes during rebalance ################
@@ -122,7 +122,7 @@
    wait: true
 -
    command:  "rebalance -c {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
-   save: SwapFailId
+   alias: SwapFailId
 
 ###############  'when' hard failover is done add back all indexes ################
 -

@@ -5,7 +5,7 @@
 -
   # start data and save container id
   template: pillowfight_small
-  save: KvContainer
+  alias: KvContainer
 
 -
   # rebalance when pillowfight container finishes

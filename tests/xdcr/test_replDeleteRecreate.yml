@@ -51,7 +51,7 @@
 -
   image:  appropriate/curl
   command: "-s http://{{.RestUsername}}:{{.RestPassword}}@{{.Orchestrator | noport}}:{{.ClusterNodes | .Attr `rest_port`}}/pools/default/remoteClusters"
-  save: ReplId
+  alias: ReplId
   wait: true
 
 #============ data loading ============
@@ -103,7 +103,7 @@
    wait: true
 -
    command:  "rebalance -c  {{.Nodes | .Cluster 1 | net 0}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
-   save: RemoteRebalance
+   alias: RemoteRebalance
 
 #============ remote setup xdcr replications ============
 -

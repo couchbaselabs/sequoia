@@ -25,7 +25,7 @@ type ActionSpec struct {
 	Requires    string
 	Concurrency string
 	Duration    string
-	Save        string
+	Alias       string
 	Repeat      int
 	Until       string
 	Include     string
@@ -336,10 +336,10 @@ func (t *Test) runTask(scope *Scope, task *ContainerTask, action *ActionSpec) {
 	rChan := make(chan bool) // repeat chan
 	uChan := make(chan bool) // until chan
 
-	// generate save key if not specified
-	saveKey := action.Save
-	if saveKey == "" {
-		saveKey = RandStr(6)
+	// generate alias key if not specified
+	aliasKey := action.Alias
+	if aliasKey == "" {
+		aliasKey = RandStr(6)
 	}
 
 	// if command has 'before' then cannot start processing until ready
@@ -360,12 +360,12 @@ func (t *Test) runTask(scope *Scope, task *ContainerTask, action *ActionSpec) {
 
 	if action.Until != "" {
 		// start until watcher
-		go t.watchTask(scope, task, saveKey, action.Until, uChan)
+		go t.watchTask(scope, task, aliasKey, action.Until, uChan)
 	}
 
 	// run once
 	cid, echan := t.Cm.Run(task)
-	scope.SetVarsKV(saveKey, cid)
+	scope.SetVarsKV(aliasKey, cid)
 	go t.WatchErrorChan(echan, task.Concurrency, scope)
 
 	go t.RepeatTask(scope, cid, repeat, rChan)
@@ -424,8 +424,8 @@ func (t *Test) ResolveTemplateActions(scope Scope, action ActionSpec) []ActionSp
 		if subAction.Duration == "" {
 			subAction.Duration = action.Duration
 		}
-		if subAction.Save == "" {
-			subAction.Save = action.Save
+		if subAction.Alias == "" {
+			subAction.Alias = action.Alias
 		}
 		if subAction.Repeat == 0 {
 			subAction.Repeat = action.Repeat
@@ -488,20 +488,20 @@ func (t *Test) RepeatTask(scope *Scope, cid string, repeat int, done chan bool) 
 
 }
 
-func (t *Test) watchTask(scope *Scope, task *ContainerTask, saveKey string, condition string, done chan bool) {
+func (t *Test) watchTask(scope *Scope, task *ContainerTask, aliasKey string, condition string, done chan bool) {
 	var _done bool
 	var err error
 
 	// replace instances of self with savekey
 	for _done == false {
 
-		id, ok := scope.GetVarsKV(saveKey)
+		id, ok := scope.GetVarsKV(aliasKey)
 		if ok == true {
 			// make sure we have not been killed by 'duration' or 'repeat' conditions
 			if _, err := scope.Cm.GetStatus(id); err != nil {
 				break
 			}
-			condition = strings.Replace(condition, "__self__", saveKey, -1)
+			condition = strings.Replace(condition, "__self__", aliasKey, -1)
 			rv := ParseTemplate(scope, condition)
 			rv = strings.TrimSpace(rv)
 			_done, err = strconv.ParseBool(rv)
