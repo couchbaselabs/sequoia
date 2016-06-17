@@ -28,6 +28,8 @@ func ParseTemplate(s *Scope, command string) string {
 		"bucket":   tResolv.BucketName,
 		"noport":   tResolv.NoPort,
 		"json":     tResolv.ToJson,
+		"ftoint":   tResolv.FloatToInt,
+		"last":     tResolv.LastItem,
 		"contains": tResolv.Contains,
 	}
 	tmpl, err := template.New("t").Funcs(netFunc).Parse(command)
@@ -266,6 +268,20 @@ func (t *TemplateResolver) ToJson(data string) interface{} {
 		kv = nil
 	}
 	return kv
+}
+
+// returns status string of container id
+func (t *TemplateResolver) FloatToInt(v float64) int {
+	return int(v)
+}
+
+// returns last item of a collection
+func (t *TemplateResolver) LastItem(li []interface{}) interface{} {
+	var item interface{}
+	if len(li) > 0 {
+		item = li[len(li)-1]
+	}
+	return item
 }
 
 // returns status string of container id

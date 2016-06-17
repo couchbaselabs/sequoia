@@ -1,0 +1,8 @@
+-
+   include: tests/templates/kv.yml
+-
+   image: sequoiatools/gideon
+   command: "kv --ops {{.Scale 10000}} --size 512 --bucket {{.Bucket}} --create 100  --hosts {{.Orchestrator}}"
+-
+   template: wait_for_dgm
+   args: "{{.Bucket}}, 90"

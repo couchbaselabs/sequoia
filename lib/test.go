@@ -377,6 +377,9 @@ func (t *Test) ResolveTemplateActions(scope Scope, action ActionSpec) []ActionSp
 		for i, arg := range allArgs {
 			idx := fmt.Sprintf("$%d", i)
 			subAction.Command = strings.Replace(subAction.Command, idx, arg, 1)
+			if subAction.Until != "" {
+				subAction.Until = strings.Replace(subAction.Until, idx, arg, 1)
+			}
 		}
 
 		// allow inheritance
@@ -474,6 +477,7 @@ func (t *Test) watchTask(scope *Scope, task *ContainerTask, saveKey string, cond
 			}
 			condition = strings.Replace(condition, "__self__", saveKey, -1)
 			rv := ParseTemplate(scope, condition)
+			rv = strings.TrimSpace(rv)
 			_done, err = strconv.ParseBool(rv)
 			logerr(err)
 			time.Sleep(1 * time.Second)

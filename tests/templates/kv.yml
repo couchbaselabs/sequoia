@@ -4,3 +4,20 @@
     -
       image: sequoiatools/pillowfight
       command: "-U  {{.Orchestrator}} -B 100 -t 1 -c 100"
+
+-
+  name: wait_for_dgm
+  actions:
+    -
+      image: appropriate/curl
+      command: "-s -u {{.RestUsername}}:{{.RestPassword}} {{.Orchestrator}}:8091/pools/default/buckets/$0/stats"
+      repeat: -1
+      # wait until active_item ratio (as $ratio) reaches value proved by arg $1 on bucket $0
+      # this check saves current ratio into a variable as $ratio and then performs checking
+      # checking is only initiated 'if .AllLogs' is returning stats
+      until: "{{if .AllLogs `__self__`}}
+                  {{with $ratio:=ftoint (last (.TailLogs `__self__` 1 | json).op.samples.vb_active_resident_items_ratio)}}
+                     {{lt $ratio $1}}
+                  {{end}}
+              {{else}}{{false}}{{end}}"
+      wait: true
