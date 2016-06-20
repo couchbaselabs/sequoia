@@ -22,6 +22,7 @@ type Provider interface {
 type FileProvider struct {
 	Servers      []ServerSpec
 	ServerNameIp map[string]string
+    HostFile     string
 }
 type ClusterRunProvider struct {
 	Servers      []ServerSpec
@@ -55,9 +56,14 @@ func NewProvider(flags TestFlags, servers []ServerSpec) Provider {
 			8091,
 		}
 	case "file":
+		hostFile := "default.yml"
+		if len(providerArgs) == 2 {
+			hostFile = providerArgs[1]
+		}
 		provider = &FileProvider{
 			servers,
 			make(map[string]string),
+            hostFile,
 		}
 	case "dev":
 		endpoint := "127.0.0.1"
@@ -87,7 +93,7 @@ func (p *FileProvider) GetRestUrl(name string) string {
 
 func (p *FileProvider) ProvideCouchbaseServers(servers []ServerSpec) {
 	var hostNames string
-	hostFile := "providers/file/default.yml"
+	hostFile := fmt.Sprintf("providers/file/%s", p.HostFile)
 	ReadYamlFile(hostFile, &hostNames)
 	hosts := strings.Split(hostNames, " ")
 	var i int
