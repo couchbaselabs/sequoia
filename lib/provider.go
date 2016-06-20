@@ -87,7 +87,7 @@ func (p *FileProvider) GetRestUrl(name string) string {
 
 func (p *FileProvider) ProvideCouchbaseServers(servers []ServerSpec) {
 	var hostNames string
-	hostFile := "providers/file/hosts.yml"
+	hostFile := "providers/file/default.yml"
 	ReadYamlFile(hostFile, &hostNames)
 	hosts := strings.Split(hostNames, " ")
 	var i int
