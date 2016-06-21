@@ -221,6 +221,8 @@ func (t *Test) runActions(scope Scope, loop int, actions []ActionSpec) {
 
 		if action.Include != "" {
 			for _, includeFile := range strings.Split(action.Include, ",") {
+				includeFile = strings.TrimSpace(includeFile)
+
 				// include template file
 				var spec []TemplateSpec
 				ReadYamlFile(includeFile, &spec)
