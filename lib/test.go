@@ -406,6 +406,9 @@ func (t *Test) ResolveTemplateActions(scope Scope, action ActionSpec) []ActionSp
 			if subAction.Until != "" {
 				subAction.Until = strings.Replace(subAction.Until, idx, arg, 1)
 			}
+			if subAction.Args != "" {
+				subAction.Args = strings.Replace(subAction.Args, idx, arg, 1)
+			}
 		}
 
 		// allow inheritance
