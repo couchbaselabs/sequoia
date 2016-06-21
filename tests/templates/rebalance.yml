@@ -1,4 +1,14 @@
+# rebalance the cluster
+-
+  name: rebalance
+  actions:
+    -
+      image: sequoiatools/couchbase-cli
+      command:  "rebalance -c  {{.Orchestrator}}
+                -u  {{.RestUsername}} -p  {{.RestPassword}}"
+
 # rebalance out a single node
+# $0 = server to remove
 -
   name: rebalance_out
   actions:
@@ -7,35 +17,33 @@
       command: "rebalance -c  {{.Orchestrator}} --server-remove $0  -u  {{.RestUsername}} -p  {{.RestPassword}}"
 
 # rebalance in a single node
+# $0 = server to add
 -
-  name: rebalance_in 
+  name: rebalance_in
   actions:
     -
       image: sequoiatools/couchbase-cli
-      command: "server-add -c  {{.Orchestrator}} 
+      command: "server-add -c  {{.Orchestrator}}
            --server-add $0
            -u  {{.RestUsername}} -p  {{.RestPassword}}
            --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
-      wait: true 
+      wait: true
     -
-      image: sequoiatools/couchbase-cli
-      command:  "rebalance -c  {{.Orchestrator}}
-                -u  {{.RestUsername}} -p  {{.RestPassword}}"
+      template: rebalance
 
-
-# swap rebalance 1x1 node 
+# swap rebalance 1x1 node
 # $0 server to add
-# $1 server to remove 
+# $1 server to remove
 -
   name: rebalance_swap
   actions:
     -
       image: sequoiatools/couchbase-cli
-      command: "server-add -c  {{.Orchestrator}} 
+      command: "server-add -c  {{.Orchestrator}}
            --server-add $0
            -u  {{.RestUsername}} -p  {{.RestPassword}}
            --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
-      wait: true 
+      wait: true
     -
       image: sequoiatools/couchbase-cli
       command:  "rebalance -c  {{.Orchestrator}}
@@ -55,23 +63,23 @@
 
 # failover node
 -
-  name: failover_node 
+  name: failover_node
   actions:
     -
       image: sequoiatools/couchbase-cli
       command: "failover -c {{.Orchestrator}}
-          --server-failover $0 
+          --server-failover $0
           -u  {{.RestUsername}} -p  {{.RestPassword}}"
       wait: true
-        
-# failover node with --force 
+
+# failover node with --force
 -
-  name: hard_failover_node 
+  name: failover_node_forced
   actions:
     -
       image: sequoiatools/couchbase-cli
       command: "failover -c {{.Orchestrator}}
-          --server-failover $0 
+          --server-failover $0
           -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
       wait: true
 
@@ -79,13 +87,13 @@
 # $0 = node to recover
 # $1 = recovery type, delta or full
 -
-  name: recover_node 
+  name: recover_node
   actions:
     -
       image: sequoiatools/couchbase-cli
       command: "recovery -c {{.Orchestrator}}
-          --server-recovery $0 
-          --recovery-type $1 
+          --server-recovery $0
+          --recovery-type $1
           -u  {{.RestUsername}} -p  {{.RestPassword}}"
 
 # failover node and recover then rebalance
@@ -95,15 +103,12 @@
   name: failover_and_recover
   actions:
     -
-      template: failover_node 
+      template: failover_node
       args: "$0"
-      wait: true 
+      wait: true
     -
-      template: recover_node 
+      template: recover_node
       args: "$0, $1"
-      wait: true 
+      wait: true
     -
-      image: sequoiatools/couchbase-cli
-      command:  "rebalance -c  {{.Orchestrator}}
-                -u  {{.RestUsername}} -p  {{.RestPassword}}"
-
+      template: rebalance
