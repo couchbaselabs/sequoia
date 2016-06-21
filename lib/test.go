@@ -402,8 +402,33 @@ func (t *Test) ResolveTemplateActions(scope Scope, action ActionSpec) []ActionSp
 		// replace generics args ie $1, $2 with test values
 		args := ParseTemplate(&scope, action.Args)
 		allArgs := strings.Split(args, ",")
+		multiArg := false
+		lastArg := ""
+		argOffset := 0
 		for i, arg := range allArgs {
-			idx := fmt.Sprintf("$%d", i)
+			arg = strings.TrimSpace(arg)
+			if strings.Index(arg, "(") != -1 {
+				// this is a multi arg string
+				// concatentate until we reach ")"
+				multiArg = true
+				lastArg = strings.Replace(arg, "(", "", 1)
+				argOffset++
+				continue
+			}
+			if multiArg == true {
+				arg = fmt.Sprintf("%s,%s", lastArg, arg)
+				lastArg = arg
+				if strings.Index(arg, ")") != -1 {
+					// end of multi arg string
+					arg = strings.Replace(arg, ")", "", 1)
+					multiArg = false
+				} else {
+					argOffset++
+					continue // still building arg
+				}
+			}
+
+			idx := fmt.Sprintf("$%d", i-argOffset)
 			subAction.Command = strings.Replace(subAction.Command, idx, arg, 1)
 			if subAction.Until != "" {
 				subAction.Until = strings.Replace(subAction.Until, idx, arg, 1)
