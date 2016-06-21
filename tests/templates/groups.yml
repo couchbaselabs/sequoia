@@ -1,0 +1,69 @@
+# create a group
+# $0 = group name
+-
+  name: group_create
+  actions:
+    -
+      image: sequoiatools/couchbase-cli
+      command: "group-manage -c  {{.Orchestrator}}
+        --create --group-name $0
+        -u  {{.RestUsername}} -p  {{.RestPassword}}"
+      wait: true
+
+# delete an empty group
+# $0 = group name
+-
+  name: group_delete
+  actions:
+    -
+      image: sequoiatools/couchbase-cli
+      command: "group-manage -c  {{.Orchestrator}}
+        --delete --group-name $0
+        -u  {{.RestUsername}} -p  {{.RestPassword}}"
+      wait: true
+
+# rename a group
+# $0 = old group name
+# $1 = new group name
+-
+  name: group_rename
+  actions:
+    -
+      image: sequoiatools/couchbase-cli
+      command: "group-manage -c  {{.Orchestrator}}
+        --rename $1 --group-name $0
+        -u  {{.RestUsername}} -p  {{.RestPassword}}"
+      wait: true
+
+# add servers to group
+# $0 = group
+# $1 = services for nodes in group
+# $2 = list of nodes to add 10.1.1.1:8091 10.1.1.2:8091
+-
+  name: group_add_servers
+  actions:
+    -
+      image: sequoiatools/couchbase-cli
+      command: "group-manage -c  {{.Orchestrator}}
+        --add-servers $2 --group-name $0
+        --server-add-username {{.RestUsername}}
+        --server-add-password {{.RestPassword}}
+        --services $1
+        -u  {{.RestUsername}} -p  {{.RestPassword}}"
+      wait: true
+
+# move servers between groups
+# $0 = old group name
+# $1 = new group name
+# $2 = list of nodes to move 10.1.1.1:8091 10.1.1.2:8091
+-
+  name: group_move_servers
+  actions:
+    -
+      image: sequoiatools/couchbase-cli
+      command: "group-manage -c  {{.Orchestrator}}
+        --move-servers $2
+        --from-group $0
+        --to-group $1
+        -u  {{.RestUsername}} -p  {{.RestPassword}}"
+      wait: true
