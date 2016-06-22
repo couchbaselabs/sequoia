@@ -36,27 +36,50 @@
   args: "{{.NthDataNode 1}}"
   wait: true
 -
+  # sync
+  wait: true
+  duration: 60
+-
   #  swap rebalance 2 nodes
   template: rebalance_swap
   args: "{{.NthDataNode 1}}, {{.NthDataNode 2}}"
   wait: true
 -
-  template: rebalance_in
-  args: "{{.NthDataNode 2}}"
+  # sync
+  wait: true
+  duration: 60
+-
+  # add back to group
+  template: group_add_servers
+  args: "kvgroup1, data, {{.NthDataNode 2}}"
   wait: true
 -
-  # create another group and move nodes from group 1 into it
+  # create another group
+  requires:  "{{eq true .DoOnce }}"
   template: group_create
   args: "kvgroup2"
 -
+  # move to group2 without rebalance
   template: group_move_servers
-  args: "kvgroup1, kvgroup2,  ({{.NthDataNode 1}}, {{.NthDataNode 2}})"
+  args: "kvgroup1, kvgroup2, {{.NthDataNode 2}}"
 -
   # remove empty group 1
   template: group_delete
   args: "kvgroup1"
 -
+  # rebalance into group 2
+  template: rebalance
+  wait: true
+-
   # failover and full recover a node
   template: failover_and_recover
   args: "{{.NthDataNode 2}}, full"
   wait: true
+-
+  # back to default group
+  template: group_move_servers
+  args: "kvgroup2, 'Group 1', {{.NthDataNode 2}}"
+-
+  # remove empty group 2
+  template: group_delete
+  args: "kvgroup2"
