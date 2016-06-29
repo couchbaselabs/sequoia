@@ -39,7 +39,10 @@ func ecolorsay(msg string) {
 
 func ExpandServerName(name string, count, offset uint8) []string {
 	if count <= 1 {
-		name = fmt.Sprintf("%s-1.st.couchbase.com", name)
+		parts := strings.Split(name, ".")
+		if len(parts) == 1 {
+			name = fmt.Sprintf("%s-1.st.couchbase.com", name)
+		}
 		return []string{name}
 	} else {
 		return ExpandName(name, count, offset)
