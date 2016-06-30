@@ -590,8 +590,9 @@ func (s *Scope) CreateViews() {
 					var ddocDef = DDocToJson(ddoc)
 
 					// compose view create command
-					viewUrl := fmt.Sprintf("http://%s:%d/%s/_design/%s",
-						ip, 8092, bucketName, ddoc.Name)
+					ip = strings.Split(ip, ":")[0]
+					viewUrl := fmt.Sprintf("http://%s:%s/%s/_design/%s",
+						ip, server.ViewPort, bucketName, ddoc.Name)
 					command := []string{"-s", "-X", "PUT",
 						"-u", server.RestUsername + ":" + server.RestPassword,
 						"-H", "Content-Type:application/json",
