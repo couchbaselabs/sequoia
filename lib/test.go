@@ -352,6 +352,7 @@ func (t *Test) runTask(scope *Scope, task *ContainerTask, action *ActionSpec) {
 			before := ParseTemplate(scope, actionBefore)
 			ready, err = strconv.ParseBool(before)
 			logerr(err)
+			time.Sleep(5 * time.Second)
 		}
 	}
 
