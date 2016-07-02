@@ -66,7 +66,7 @@
    image: sequoiatools/couchbase-cli
    command: "xdcr-replicate -c {{.Orchestrator}} --pause
                             -u {{.RestUsername}} -p {{.RestPassword}}
-                            --xdcr-replicator={{(index (.Logs `ReplId` | json) 0).uuid }}/default/{{.Bucket}}"
+                            --xdcr-replicator={{(index (.AllLogs `ReplId` | json) 0).uuid }}/default/{{.Bucket}}"
 
 #============ swap add back ============
 -
@@ -126,7 +126,7 @@
    image: sequoiatools/couchbase-cli
    command: "xdcr-replicate -c {{.Orchestrator}} --resume
                             -u {{.RestUsername}} -p {{.RestPassword}}
-                            --xdcr-replicator={{(index (.Logs `ReplId` | json) 0).uuid }}/default/{{.Bucket}}"
+                            --xdcr-replicator={{(index (.AllLogs `ReplId` | json) 0).uuid }}/default/{{.Bucket}}"
    wait: true
 
 #============ data loading ============
@@ -141,7 +141,7 @@
    image: sequoiatools/couchbase-cli
    command: "xdcr-replicate -c {{.Orchestrator}} --delete
                             -u {{.RestUsername}} -p {{.RestPassword}}
-                            --xdcr-replicator={{(index (.Logs `ReplId` | json) 0).uuid }}/default/{{.Bucket}}"
+                            --xdcr-replicator={{(index (.AllLogs `ReplId` | json) 0).uuid }}/default/{{.Bucket}}"
    wait: true
 
 #============ delete xdcr config ============
