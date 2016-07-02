@@ -483,7 +483,7 @@ func (t *Test) WatchErrorChan(echan chan error, n int, scope *Scope) {
 				// print test results
 				t.Cm.TapHandle.AutoPlan()
 				// exit
-				os.Exit(1)
+				os.Exit(0)
 			}
 		}
 	}
