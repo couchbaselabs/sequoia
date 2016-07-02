@@ -50,7 +50,7 @@
 #============ swap rebalance ============
 -
   template: rebalance_swap
-  args: "{{.NthDataNode 1}} {{.NthDataNode 2}}"
+  args: "{{.NthDataNode 1}}, {{.NthDataNode 2}}"
 -
   template: wait_for_rebalance
 
