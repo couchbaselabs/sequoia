@@ -1,4 +1,7 @@
 ---
+-
+  include: tests/templates/rebalance.yml
+
 #============ continous kv loading a minimum of 1.5M items  at 1xScale============
 -
    image: sequoiatools/pillowfight
@@ -10,20 +13,18 @@
 -
    image: sequoiatools/gideon
    command: "kv --ops {{.Scale 1000}} --create 30 --get 70 --delete 10 --expire 20 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 16000"
--
-   command: "kv --ops {{.Scale 1000}} --create 30 --get 70 --delete 10 --expire 20 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
 
 #============ start view queries  ============
 -
   image: sequoiatools/curloop
   command: "view.sh {{.Orchestrator}}:8092 default scale status limit=10&stale=false"
-  concurrency: 5 
+  concurrency: "{{.Scale 1}}"
 -
   command: "view.sh {{.Orchestrator}}:8092 default scale padd limit=10&stale=update_after"
-  concurrency: 5
+  concurrency: "{{.Scale 1}}"
 -
   command: "view.sh {{.Orchestrator}}:8092 default scale array stale=update_after"
-  concurrency: 5
+  concurrency: "{{.Scale 1}}" 
 
 #============ load 10k items at 1xScale============
 -
@@ -34,52 +35,31 @@
 
 #============ rebalance out a node============
 -
-    image: sequoiatools/couchbase-cli
-    command:  "rebalance -c  {{.Orchestrator}} --server-remove {{.NthDataNode 1}}  -u  {{.RestUsername}} -p  {{.RestPassword}}"
-    wait: true
-
-#============ start xdcr replications ============
+  template: rebalance_out
+  args: "{{.NthDataNode 1}}"
 -
-   image: sequoiatools/couchbase-cli
-   requires:  "{{eq true .DoOnce }}"
-   command:  "xdcr-setup -c {{.Orchestrator}} --create --xdcr-cluster-name remote 
-        --xdcr-hostname {{.Nodes | .Cluster 1 | net 0}}
-        --xdcr-username {{.Nodes | .Cluster 1 | .Attr `rest_username`}} 
-        --xdcr-password {{.Nodes | .Cluster 1 | .Attr `rest_password`}}"
-   wait: true
--
-   command: "xdcr-replicate -c {{.Orchestrator}}
-        --xdcr-cluster-name remote 
-        --xdcr-from-bucket {{.Bucket}} 
-        --xdcr-to-bucket {{.Nodes | .Cluster 1 | bucket 0}}"
-   wait: true
+  template: wait_for_rebalance
 
 #============ load 100k items at 1xScale============
 -
-   image: sequoiatools/pillowfight
-   command: "-U  {{.Orchestrator}} -I {{.Scale 100000}} -B 100 -c {{.Scale 1000}}"
-   wait: true
+  image: sequoiatools/pillowfight
+  command: "-U  {{.Orchestrator}} -I {{.Scale 100000}} -B 100 -c {{.Scale 1000}}"
+  wait: true
 
 
 #============ swap rebalance ============
 -
-   image: sequoiatools/couchbase-cli
-   command: "server-add -c  {{.Orchestrator}} 
-       --server-add {{.NthDataNode 1}} 
-       -u  {{.RestUsername}} -p  {{.RestPassword}}
-       --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
-   wait: true
+  template: rebalance_swap
+  args: "{{.NthDataNode 1}} {{.NthDataNode 2}}"
 -
-   command:  "rebalance -c  {{.Orchestrator}}
-    --server-remove {{.NthDataNode 2}}
-    -u  {{.RestUsername}} -p  {{.RestPassword}}"
-   wait: true
+  template: wait_for_rebalance
+
 
 #============ update 100k items at 1xScale============
 -
-   image: sequoiatools/pillowfight
-   command: "-U  {{.Orchestrator}} -I {{.Scale 100000}} -B 100 -c {{.Scale 1000}}"
-   wait: true
+  image: sequoiatools/pillowfight
+  command: "-U  {{.Orchestrator}} -I {{.Scale 100000}} -B 100 -c {{.Scale 1000}}"
+  wait: true
 
 #============ swap failover ============
 -
@@ -95,8 +75,9 @@
        -u  {{.RestUsername}} -p  {{.RestPassword}}"
    wait: true
 -
-   command:  "rebalance -c  {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
-   wait: true
+  template: rebalance
+-
+  template: wait_for_rebalance
 
 #============ update 100k items at 1xScale============
 -
@@ -124,8 +105,10 @@
       -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
    wait: true
 -
-   command:  "rebalance -c  {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
-   wait: true
+  template: rebalance
+-
+  template: wait_for_rebalance
+
 
 
 
@@ -150,5 +133,6 @@
        --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
    wait: true
 -
-   command:  "rebalance -c  {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
-   wait: true
+  template: rebalance
+-
+  template: wait_for_rebalance
