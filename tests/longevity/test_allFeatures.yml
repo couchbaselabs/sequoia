@@ -1,4 +1,6 @@
 ---
+-
+  include: tests/templates/rebalance.yml
 
 #============ delete phase ============
 -
@@ -82,9 +84,10 @@
 
 #============ rebalance out a node============
 -
-    image: sequoiatools/couchbase-cli
-    command:  "rebalance -c  {{.Orchestrator}} --server-remove {{.NthDataNode 1}}  -u  {{.RestUsername}} -p  {{.RestPassword}}"
-    wait: true
+  template: rebalance_out
+  args: "{{.NthDataNode 1}}"
+-
+  template: wait_for_rebalance
 
 #============ start xdcr replications ============
 -
@@ -111,17 +114,10 @@
 
 #============ swap rebalance ============
 -
-   image: sequoiatools/couchbase-cli
-   command: "server-add -c  {{.Orchestrator}} 
-       --server-add {{.NthDataNode 1}} 
-       -u  {{.RestUsername}} -p  {{.RestPassword}}
-       --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
-   wait: true
+  template: rebalance_swap
+  args: "{{.NthDataNode 1}}, {{.NthDataNode 2}}"
 -
-   command:  "rebalance -c  {{.Orchestrator}}
-    --server-remove {{.NthDataNode 2}}
-    -u  {{.RestUsername}} -p  {{.RestPassword}}"
-   wait: true
+  template: wait_for_rebalance
 
 #============ quick update batch ============
 -
@@ -143,8 +139,9 @@
        -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
    wait: true
 -
-   command:  "rebalance -c  {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
-   wait: true
+   template: rebalance
+-
+   template: wait_for_rebalance
 
 #============ quick update batch ============
 -
@@ -172,8 +169,9 @@
       -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
    wait: true
 -
-   command:  "rebalance -c  {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
-   wait: true
+   template: rebalance
+-
+   template: wait_for_rebalance
 
 
 
@@ -198,5 +196,6 @@
        --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
    wait: true
 -
-   command:  "rebalance -c  {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
-   wait: true
+   template: rebalance
+-
+   template: wait_for_rebalance
