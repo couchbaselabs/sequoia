@@ -1,5 +1,0 @@
----  # xdcr sanity test
--
-   image: sequoiatools/testrunner
-   command: "-i local.ini  -t xdcr.biXDCR.bidirectional.load_with_async_ops,replicas=1,items=1000,ctopology=chain,rdirection=bidirection,update=C1-C2,delete=C1-C2"
-   wait: true

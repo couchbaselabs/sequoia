@@ -1,5 +1,0 @@
---- 
--
-   image: sequoiatools/testrunner
-   command: "-i local.ini -c conf/py-4node-sanity.conf"
-   wait: true

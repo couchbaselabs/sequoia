@@ -1,6 +1,0 @@
---- 
-# example running a single test from testrunner
--
-   image: sequoiatools/testrunner
-   command: "-i local.ini -t tuqquery.tuq_index.QueriesViewsTests.test_primary_create_delete_index,doc-per-day=3,force_clean=True,reload_data=False,nodes_init=1,services_init=kv;n1ql;index"
-   wait: true
