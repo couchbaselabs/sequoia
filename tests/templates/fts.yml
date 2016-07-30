@@ -1,0 +1,24 @@
+
+# create index
+# $0 = bucket
+# $1 = name of the index
+-
+  name: create_index
+  actions:
+    -
+      image:  appropriate/curl
+      command: "-X PUT -u {{.RestUsername}}:{{.RestPassword}} -H Content-Type:application/json
+         http://{{.Nodes | .Service `fts` | net 0}}:8094/api/index/$1 -d '{ \"type\": \"fulltext-index\", \"sourceType\": \"couchbase\", \"sourceName\": \"$0\"}'"
+
+# query index using match field
+# $0 = name of the index
+# $1 = field to match on
+-
+  name: query_index_field
+  actions:
+    -
+      image:  appropriate/curl
+      command: "-s -u {{.RestUsername}}:{{.RestPassword}} -X POST -H Content-Type: application/json
+               http://{{.Nodes | .Service `fts` | net 0}}:8094/api/index/$0/query -d '{ \"from\": 0, \"indexName\": \"$0\", \"fields\": [\"*\"], \"explain\": false, \"ctl\": {\"timeout\": 0, \"consistency\": {\"vectors\": {}, \"level\": \"\"}}, \"query\": { \"match\": \"$1\"}, \"size\": 1000}'"
+      repeat: -1
+
