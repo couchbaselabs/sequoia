@@ -430,12 +430,12 @@ func (t *Test) ResolveTemplateActions(scope Scope, action ActionSpec) []ActionSp
 			}
 
 			idx := fmt.Sprintf("$%d", i-argOffset)
-			subAction.Command = strings.Replace(subAction.Command, idx, arg, 1)
+			subAction.Command = strings.Replace(subAction.Command, idx, arg, -1)
 			if subAction.Until != "" {
-				subAction.Until = strings.Replace(subAction.Until, idx, arg, 1)
+				subAction.Until = strings.Replace(subAction.Until, idx, arg, -1)
 			}
 			if subAction.Args != "" {
-				subAction.Args = strings.Replace(subAction.Args, idx, arg, 1)
+				subAction.Args = strings.Replace(subAction.Args, idx, arg, -1)
 			}
 		}
 
