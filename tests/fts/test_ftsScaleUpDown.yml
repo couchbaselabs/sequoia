@@ -8,13 +8,13 @@
    command: "-U  {{.Orchestrator}} -B {{.Scale 100}} -I {{.Scale 100000}} -t 1"
 -
    image: sequoiatools/gideon
-   command: "kv --ops {{.Scale 1000}} --create 90 --get 10 --expire 20 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 16000"
+   command: "kv --ops {{.Scale 1000}} --create 10 --get 90 --expire 20 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 16000"
 -
-   command: "kv --ops {{.Scale 10000}} --create 30 --get 70 --delete 10   --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+   command: "kv --ops {{.Scale 1000}} --create 30 --get 70 --delete 10   --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
 -
-   command: "kv --ops {{.Scale 10000}} --create 60 --get 20 --delete 10 --expire 10 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
+   command: "kv --ops {{.Scale 1000}} --create 20 --get 80 --delete 10 --expire 10 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
 -
-   command: "kv --ops {{.Scale 10000}} --create 60 --get 20 --delete 10 --expire 10 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}}"
+   command: "kv --ops {{.Scale 1000}} --create 60 --get 20 --delete 10 --expire 10 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}}"
 
 # create index on buckets
 -
