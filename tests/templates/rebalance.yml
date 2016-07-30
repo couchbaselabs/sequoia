@@ -31,6 +31,21 @@
     -
       template: rebalance
 
+# add a node to cluster
+# $0 server to add
+# $1 node services
+-
+  name: add_node 
+  actions:
+    -
+      image: sequoiatools/couchbase-cli
+      command: "server-add -c  {{.Orchestrator}}
+           --server-add $0
+           --services $1 
+           -u  {{.RestUsername}} -p  {{.RestPassword}}
+           --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
+      wait: true
+
 # swap rebalance 1x1 node
 # $0 server to add
 # $1 server to remove
