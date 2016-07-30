@@ -1,0 +1,109 @@
+---
+-
+  include: tests/templates/rebalance.yml, tests/templates/fts.yml
+
+# start json and binary data loading
+-
+   image: sequoiatools/pillowfight
+   command: "-U  {{.Orchestrator}} -B {{.Scale 100}} -I {{.Scale 100000}} -t 1"
+-
+   image: sequoiatools/gideon
+   command: "kv --ops {{.Scale 1000}} --create 90 --get 10 --expire 20 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 16000"
+-
+   command: "kv --ops {{.Scale 10000}} --create 30 --get 70 --delete 10   --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+-
+   command: "kv --ops {{.Scale 10000}} --create 60 --get 20 --delete 10 --expire 10 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
+-
+   command: "kv --ops {{.Scale 10000}} --create 60 --get 20 --delete 10 --expire 10 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}}"
+
+# create index on buckets
+-
+  template: create_index
+  args: "default, st_index"
+  wait: true
+
+# run field matching queries
+-
+  template: query_index_field
+  args: "st_index, 5F"
+-
+  template: query_index_field
+  args: "st_index, 0B"
+-
+  template: query_index_field
+  args: "st_index, C5"
+
+# scale cluster up
+-
+  template: add_node
+  args: "{{.NthDataNode 2}}, data"
+-
+  template: add_node
+  args: "{{.NthDataNode 3}}, (data,fts)"
+-
+  template: rebalance
+
+# make some more indexes across buckets
+-
+  template: create_index
+  args: "{{.NthBucket 1}}, st_index02"
+  wait: true
+-
+  template: create_index
+  args: "{{.NthBucket 2}}, st_index03"
+  wait: true
+-
+  template: create_index
+  args: "default, st_index04"
+  wait: true
+
+# scale cluster up more
+-
+  template: add_node
+  args: "{{.NthDataNode 4}}, data"
+-
+  template: add_node
+  args: "{{.NthDataNode 5}}, (data,fts)"
+-
+  template: rebalance
+
+# start queries on new indexes
+-
+  template: query_index_field
+  args: "st_index02, C5"
+-
+  template: query_index_field
+  args: "st_index03, C5"
+-
+  template: query_index_field
+  args: "st_index04, C5"
+
+# scale back down
+-
+  template: rebalance_out
+  args: "{{.NthDataNode 1}}"
+-
+  template: wait_for_rebalance
+
+# failover an fts node
+-
+  template: failover_node_forced
+  args: "{{.Nodes | .Service `fts` | net 0}}"
+-
+  template: rebalance
+-
+  template: wait_for_rebalance
+
+# rebalance out more nodes
+-
+  template: rebalance_out
+  args: "{{.NthDataNode 2}}"
+-
+  template: wait_for_rebalance
+-
+  template: rebalance_out
+  args: "{{.NthDataNode 3}}"
+-
+  template: wait_for_rebalance
+
+
