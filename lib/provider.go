@@ -38,8 +38,13 @@ type DockerProvider struct {
 }
 
 type DockerProviderOpts struct {
-	Build            string
-	BuildUrlOverride string `yaml:"build_url_override"`
+	Build             string
+	BuildUrlOverride  string `yaml:"build_url_override"`
+	CPUPeriod         int64
+	CPUQuota          int64
+	Memory            int64
+	MemorySwap        int64
+	Ulimits           []docker.ULimit
 }
 
 func NewProvider(flags TestFlags, servers []ServerSpec) Provider {
@@ -203,6 +208,20 @@ func (p *DockerProvider) ProvideCouchbaseServers(servers []ServerSpec) {
 			portBindings[port] = binding
 			hostConfig := docker.HostConfig{
 				PortBindings: portBindings,
+				Ulimits:      providerOpts.Ulimits,
+			}
+
+			if providerOpts.CPUPeriod > 0 {
+			        hostConfig.CPUPeriod = providerOpts.CPUPeriod
+			}
+			if providerOpts.CPUQuota > 0 {
+			        hostConfig.CPUQuota = providerOpts.CPUQuota
+		    }
+			if providerOpts.Memory > 0 {
+				hostConfig.Memory = providerOpts.Memory
+			}
+			if providerOpts.MemorySwap != 0 {
+				hostConfig.MemorySwap = providerOpts.MemorySwap
 			}
 
 			// check if build version exists
