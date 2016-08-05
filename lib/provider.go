@@ -9,6 +9,7 @@ import (
 	"github.com/fsouza/go-dockerclient"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -46,6 +47,10 @@ type DockerProviderOpts struct {
 	Memory            int64
 	MemorySwap        int64
 	Ulimits           []docker.ULimit
+}
+
+func (opts *DockerProviderOpts) MemoryMB() int {
+	return int(opts.Memory/1000000)  // B -> MB
 }
 
 func NewProvider(flags TestFlags, servers []ServerSpec) Provider {
@@ -316,7 +321,16 @@ func BuildArgsForVersion(opts *DockerProviderOpts) []docker.BuildArg {
 		Name:  "FLAVOR",
 		Value: versionFlavor(ver),
 	}
+
 	buildArgs = []docker.BuildArg{versionArg, buildNoArg, flavorArg}
+	if opts.Memory > 0 {
+		ramMB := strconv.Itoa(opts.MemoryMB())
+		var memArg = docker.BuildArg{
+			Name:  "MEMBASE_RAM_MEGS",
+			Value: ramMB,
+		}
+		buildArgs = append(buildArgs, memArg)
+	}
 
 	// add build url override if applicable
 	if opts.BuildUrlOverride != "" {

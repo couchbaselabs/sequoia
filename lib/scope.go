@@ -464,7 +464,7 @@ func (s *Scope) ClusterMemTotal(name string, server *ServerSpec) int {
 	if s.Provider.GetType() == "docker" {
 		p := s.Provider.(*DockerProvider)
 		if p.Opts.Memory > 0 {
-			mem = int(p.Opts.Memory/1000000) // B -> MB
+			mem = p.Opts.MemoryMB()
 		}
 	}
 	return mem

@@ -44,6 +44,11 @@ COPY scripts/entrypoint.sh /
 EXPOSE 8091 8092 8093 8094 9100 9101 9102 9103 9104 9105 9998 9999 11207 11210 11211 18091 18092 22
 VOLUME /opt/couchbase/var
 
+# Conditional replace MEMBASE_RAM_MEGS
+# if specified as build arg
+ARG MEMBASE_RAM_MEGS=0
+RUN bash -c '[[ $MEMBASE_RAM_MEGS != 0 ]] && sed  -i "s/export PATH/export PATH\nMEMBASE_RAM_MEGS=$MEMBASE_RAM_MEGS\nexport MEMBASE_RAM_MEGS/" /opt/couchbase/bin/couchbase-server || true'
+
 COPY start.sh /start.sh
 CMD "./start.sh"
 
