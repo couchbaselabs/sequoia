@@ -461,6 +461,12 @@ func (s *Scope) GetPercOfMemTotal(name string, server *ServerSpec, quota string)
 func (s *Scope) ClusterMemTotal(name string, server *ServerSpec) int {
 	rest := s.Provider.GetRestUrl(name)
 	mem := GetMemTotal(rest, server.RestUsername, server.RestPassword)
+	if s.Provider.GetType() == "docker" {
+		p := s.Provider.(*DockerProvider)
+		if p.Opts.Memory > 0 {
+			mem = int(p.Opts.Memory/1000000) // B -> MB
+		}
+	}
 	return mem
 }
 

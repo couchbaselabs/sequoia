@@ -35,6 +35,7 @@ type DockerProvider struct {
 	Servers          []ServerSpec
 	ActiveContainers map[string]string
 	StartPort        int
+	Opts             *DockerProviderOpts
 }
 
 type DockerProviderOpts struct {
@@ -59,6 +60,7 @@ func NewProvider(flags TestFlags, servers []ServerSpec) Provider {
 			servers,
 			make(map[string]string),
 			8091,
+			nil,
 		}
 	case "file":
 		hostFile := "default.yml"
@@ -188,7 +190,8 @@ func (p *DockerProvider) ProvideCouchbaseServers(servers []ServerSpec) {
 
 	var providerOpts DockerProviderOpts
 	ReadYamlFile("providers/docker/options.yml", &providerOpts)
-	var build = providerOpts.Build
+	p.Opts = &providerOpts
+	var build = p.Opts.Build
 
 	// start based on number of containers
 	var i int = p.NumCouchbaseServers()
@@ -208,20 +211,20 @@ func (p *DockerProvider) ProvideCouchbaseServers(servers []ServerSpec) {
 			portBindings[port] = binding
 			hostConfig := docker.HostConfig{
 				PortBindings: portBindings,
-				Ulimits:      providerOpts.Ulimits,
+				Ulimits:      p.Opts.Ulimits,
 			}
 
-			if providerOpts.CPUPeriod > 0 {
-			        hostConfig.CPUPeriod = providerOpts.CPUPeriod
+			if p.Opts.CPUPeriod > 0 {
+			        hostConfig.CPUPeriod = p.Opts.CPUPeriod
 			}
-			if providerOpts.CPUQuota > 0 {
-			        hostConfig.CPUQuota = providerOpts.CPUQuota
+			if p.Opts.CPUQuota > 0 {
+			        hostConfig.CPUQuota = p.Opts.CPUQuota
 		    }
-			if providerOpts.Memory > 0 {
-				hostConfig.Memory = providerOpts.Memory
+			if p.Opts.Memory > 0 {
+				hostConfig.Memory = p.Opts.Memory
 			}
-			if providerOpts.MemorySwap != 0 {
-				hostConfig.MemorySwap = providerOpts.MemorySwap
+			if p.Opts.MemorySwap != 0 {
+				hostConfig.MemorySwap = p.Opts.MemorySwap
 			}
 
 			// check if build version exists
@@ -229,7 +232,7 @@ func (p *DockerProvider) ProvideCouchbaseServers(servers []ServerSpec) {
 			exists := p.Cm.CheckImageExists(imgName)
 			if exists == false {
 
-				var buildArgs = BuildArgsForVersion(providerOpts)
+				var buildArgs = BuildArgsForVersion(p.Opts)
 				var buildOpts = docker.BuildImageOptions{
 					Name:           imgName,
 					ContextDir:     "containers/couchbase/",
@@ -290,7 +293,7 @@ func (p *DockerProvider) GetRestUrl(name string) string {
 	return strings.TrimSpace(host)
 }
 
-func BuildArgsForVersion(opts DockerProviderOpts) []docker.BuildArg {
+func BuildArgsForVersion(opts *DockerProviderOpts) []docker.BuildArg {
 
 	// create options based on provider settings and build
 	var buildArgs []docker.BuildArg
