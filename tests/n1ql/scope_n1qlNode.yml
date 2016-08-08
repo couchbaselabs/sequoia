@@ -9,17 +9,17 @@ buckets:
 servers: # each server tag represents a cluster
   -
       name: local
-      count: 4
+      count: 10 
       ram: 40% 
       index_ram: 50% 
       index_storage: memory_optimized
       services:
-        query: 1
-        index: 1
+        query: 2
+        index: 2
       rest_username: Administrator
       rest_password: password
       data_path: "/data"
       index_path: "/data"
-      init_nodes: 4
+      init_nodes: 10 
       buckets: default
  
