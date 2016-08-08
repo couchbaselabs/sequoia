@@ -1,6 +1,11 @@
 -
   include: tests/templates/kv.yml
 
+###############  num slicewriters = 1 ################
+-
+  image: appropriate/curl
+  command: "-v -u Administrator:password -H Content-Type:application/json -X POST
+           http://{{.Nodes | .Service `index` | net 0}}:9102/settings -d '{\"indexer.numSliceWriters\" : 1}'"
 
 ###############  create indexes ################
 -
@@ -46,4 +51,3 @@
    client:
      op: rm
      container: DocLoader
-
