@@ -21,3 +21,20 @@
                   {{end}}
               {{else}}{{false}}{{end}}"
       wait: true
+
+-
+  name: wait_for_items
+  actions:
+    -
+      image: appropriate/curl
+      command: "-s -u {{.RestUsername}}:{{.RestPassword}} {{.Orchestrator}}:8091/pools/default/buckets/$0/stats"
+      repeat: -1
+      # wait until active_item ratio (as $ratio) reaches value proved by arg $1 on bucket $0
+      # this check saves current ratio into a variable as $ratio and then performs checking
+      # checking is only initiated 'if .AllLogs' is returning stats
+      until: "{{if .AllLogs `__self__`}}
+                  {{with $val:=ftoint (last (.TailLogs `__self__` 1 | json).op.samples.curr_items)}}
+                     {{lt $1 $val}}
+                  {{end}}
+              {{else}}{{false}}{{end}}"
+      wait: true
