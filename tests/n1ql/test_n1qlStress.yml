@@ -15,30 +15,26 @@
    command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_claims on `default`(claim)'"
 -
    command: "-e=http://{{.Nodes | .Service `n1ql` | net 1 | noport}}:{{.QueryPort}} -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_result on `default`(result)'"
--
-   command: "-e=http://{{.Nodes | .Service `n1ql` | net 1 | noport}}:{{.QueryPort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create primary index on `default`'"
-   wait: true
+
 
 ###############  start data loading ################
 -
   image: sequoiatools/gideon
-  command: "kv --ops {{.Scale 10000}} --create 70 --get 10 --delete 20  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
-  alias: DocLoader
+  command: "kv --ops 10000 --sizes 64 --create 70 --get 10 --delete 20  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+  concurrency: "{{.Scale 1}}"
 -
   image: sequoiatools/gideon
-  command: "kv --ops {{.Scale 20000}} --size 64 --create 100  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
-  alias: SmallDocLoader
+  command: "kv --ops 20000 --sizes 64 --create 100  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+  concurrency: "{{.Scale 1}}" 
 
 # ###############  query both query nodes ################
 -
   image: sequoiatools/curloop
-  command: "n1ql.sh {{.QueryNodePort}} 'select SUM(rating) from default where rating > 0 limit 50'"
+  command: "n1ql.sh {{.QueryNodePort}} 'select * from default where rating > 0 limit 50'"
 -
-  command: "n1ql.sh {{.QueryNodePort}} 'select result from default where result = SUCCESS limit 50'"
+  command: "n1ql.sh {{.QueryNodePort}} 'select * from default where result is not null limit 20'"
 -
-  command: "n1ql.sh {{.Nodes | .Service `n1ql` | net 1 | noport}}:{{.QueryPort}} 'select claim from default where claim like A% limit 20'"
--
-  command: "n1ql.sh {{.Nodes | .Service `n1ql` | net 1 | noport}}:{{.QueryPort}} 'select * from default where rating < 100  limit 20'"
+  command: "n1ql.sh {{.Nodes | .Service `n1ql` | net 1 | noport}}:{{.QueryPort}} 'select * from default where claim is not null limit 100'"
 -
   command: "n1ql.sh {{.QueryNodePort}} 'delete from default where rating < 300'"
 -
@@ -51,11 +47,4 @@
 -
    template: wait_for_items
    args: "{{.Bucket}}, 100000000"
--
-   client:
-     op: rm
-     container: DocLoader
--
-   client:
-     op: rm
-     container: SmallDocLoader
+
