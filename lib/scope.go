@@ -713,8 +713,8 @@ func (s *Scope) SetVarsKV(key, id string) {
 }
 
 func (s *Scope) GetVarsKV(key string) (string, bool) {
-	s.VarsMtx.RLock()
+	s.VarsMtx.Lock()
 	val, ok := s.Vars[key]
-	s.VarsMtx.RUnlock()
+	s.VarsMtx.Unlock()
 	return val, ok
 }
