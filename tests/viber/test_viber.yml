@@ -1,0 +1,306 @@
+-
+  # include rebalance and group templates
+  include: tests/templates/rebalance.yml, tests/templates/groups.yml
+#-
+  # data loading
+  #image: sequoiatools/pillowfight
+  #command: "-U  {{.Orchestrator}} -B {{.Scale 100}} -I {{.Scale 100000}} -t 1"
+#-
+  # create group and add 2 nodes to it
+#  template: group_create
+#  args: "kvgroup1"
+-
+   image: sequoiatools/viber
+   command: " > LOGS"
+   wait: false
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "{{.Scale 100}}"
+   wait: true
+#============ start xdcr replications ============
+-
+   image: sequoiatools/couchbase-cli
+   requires:  "{{eq true .DoOnce }}"
+   command:  "xdcr-setup -c {{.Orchestrator}} --create --xdcr-cluster-name remote
+        --xdcr-hostname {{.Nodes | .Cluster 1 | net 0}}
+        --xdcr-username {{.Nodes | .Cluster 1 | .Attr `rest_username`}}
+        --xdcr-password {{.Nodes | .Cluster 1 | .Attr `rest_password`}}"
+   wait: true
+-
+   command: "xdcr-replicate -c {{.Orchestrator}}
+        --xdcr-cluster-name remote
+        --xdcr-from-bucket {{.Nodes | .Cluster 0 | bucket 0}}
+        --xdcr-to-bucket {{.Nodes | .Cluster 1 | bucket 0}}"
+   wait: true
+-
+   command: "xdcr-replicate -c {{.Orchestrator}}
+        --xdcr-cluster-name remote
+        --xdcr-from-bucket {{.Nodes | .Cluster 0 | bucket 1}}
+        --xdcr-to-bucket {{.Nodes | .Cluster 1 | bucket 1}}"
+   wait: true
+-
+   command: "xdcr-replicate -c {{.Orchestrator}}
+        --xdcr-cluster-name remote
+        --xdcr-from-bucket {{.Nodes | .Cluster 0 | bucket 2}}
+        --xdcr-to-bucket {{.Nodes | .Cluster 1 | bucket 2}}"
+-
+   command: "xdcr-replicate -c {{.Orchestrator}}
+        --xdcr-cluster-name remote
+        --xdcr-from-bucket {{.Nodes | .Cluster 0 | bucket 3}}
+        --xdcr-to-bucket {{.Nodes | .Cluster 1 | bucket 3}}"
+
+
+#============ rebalance in a node============
+
+-
+   image: sequoiatools/couchbase-cli
+   command: "server-add -c  {{.Orchestrator}}
+       --server-add  {{.NthDataNode 3}}
+       -u  {{.RestUsername}} -p  {{.RestPassword}}
+       --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
+   wait: true
+-
+   image: sequoiatools/couchbase-cli
+   command: "server-add -c  {{.Nodes | .Cluster 1 | net 0}}
+       --server-add  {{.Nodes | .Cluster 1 | net 3}}
+       -u  {{.RestUsername}} -p  {{.RestPassword}}
+       --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
+   wait: true
+-
+  template: rebalance
+-
+  template: rebalance_by_ip
+  args: "{{.Nodes | .Cluster 1 | net 0}}"
+-
+  template: wait_for_rebalance
+-
+  template: wait_for_rebalance_by_ip
+  args: "{{.Nodes | .Cluster 1 | net 0}}"
+-
+  # failover with delta recovery
+  template: failover_and_recover
+  args: "{{.Nodes | .Cluster 0 | net 3}}, delta"
+  wait: true
+
+-
+  # failover with full recovery
+  template: failover_and_recover
+  args: "{{.NthDataNode 3}}, full"
+  wait: true
+-
+   template: rebalance_out
+   args: "{{.NthDataNode 3}}, full"
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "{{.Scale 10}}"
+   wait: true
+-
+   image: sequoiatools/couchbase-cli
+   command: "rebalance-stop -c {{.Orchestrator}}:8091
+        -u {{.RestUsername}} -p  {{.RestPassword}}"
+#-
+#   image: sequoiatools/couchbase-cli
+#   command: "server-add -c  {{.Orchestrator}}
+#       --server-add  {{.NthDataNode 3}}
+#       -u  {{.RestUsername}} -p  {{.RestPassword}}
+#       --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
+#   wait: true
+-
+  template: rebalance
+-
+  template: wait_for_rebalance
+
+#============ rebalance in a node============
+
+-
+   image: sequoiatools/couchbase-cli
+   command: "rebalance -c  {{.Orchestrator}}
+       --server-remove {{.Nodes | .Cluster 0 | net 3}}
+       -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   wait: true
+-
+   image: sequoiatools/couchbase-cli
+   command: "rebalance -c  {{.Nodes | .Cluster 1 | net 0}}
+       --server-remove  {{.Nodes | .Cluster 1 | net 3}}
+       -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   wait: true
+-
+  template: rebalance
+-
+  template: rebalance_by_ip
+  args: "{{.Nodes | .Cluster 1 | net 0}}"
+-
+  template: wait_for_rebalance
+-
+  template: wait_for_rebalance_by_ip
+  args: "{{.Nodes | .Cluster 1 | net 0}}"
+
+
+
+#8 rebalance in 2 nodes on cluster A
+-
+   image: sequoiatools/couchbase-cli
+   command: "server-add -c  {{.Orchestrator}}
+       --server-add  {{.Nodes | .Cluster 0 | net 3}}
+       -u  {{.RestUsername}} -p  {{.RestPassword}}
+       --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
+   wait: true
+-
+   image: sequoiatools/couchbase-cli
+   command: "server-add -c  {{.Orchestrator}}
+       --server-add  {{.Nodes | .Cluster 1 | net 3}}
+       -u  {{.RestUsername}} -p  {{.RestPassword}}
+       --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
+   wait: true
+-
+  template: rebalance
+-
+  template: wait_for_rebalance
+
+
+#==== Failover index node and add back with recovery=full and rebalance ==============#
+
+#-
+#  image: sequoiatools/spring
+#  command: "-c 25 -u 50 -d 25 -o {{.Scale 1000000}} -i {{.Scale 1000000}} -n 50 cb://{{.Orchestrator}}:8091/default"
+#
+#
+#-
+#   image: sequoiatools/couchbase-cli
+#   command: "failover -c {{.Orchestrator}}
+#       --server-failover=10.6.2.195
+#       -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+#   wait: true
+#
+#-
+#   image: sequoiatools/cmd
+#   entrypoint: sleep
+#   command: "{{.Scale 50}}"
+#   wait: true
+#
+#-
+#   command: "server-readd -c {{.Orchestrator}}
+#       --server-add=10.6.2.195
+#       -u  {{.RestUsername}} -p  {{.RestPassword}}"
+#   wait: true
+#
+#-
+#   image: sequoiatools/cmd
+#   entrypoint: sleep
+#   command: "{{.Scale 50}}"
+#   wait: true
+#
+#-
+#   command: "recovery -c {{.Orchestrator}}
+#       --server-recovery=10.6.2.195
+#       --recovery-type=full
+#       -u  {{.RestUsername}} -p  {{.RestPassword}}"
+#   wait: true
+#
+#-
+#   image: sequoiatools/cmd
+#   entrypoint: sleep
+#   command: "{{.Scale 50}}"
+#   wait: true
+#
+#-
+#   command:  "rebalance -c  {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
+#   wait: true
+#
+#
+#
+#
+#-
+#   image: sequoiatools/couchbase-cli
+#   command: "failover -c {{.Orchestrator}}
+#       --server-failover=10.6.2.195
+#       -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+#   wait: true
+#
+#-
+#   image: sequoiatools/cmd
+#   entrypoint: sleep
+#   command: "{{.Scale 50}}"
+#   wait: true
+
+#-
+#  template: rebalance_in
+#  args: {{.NthDataNode 3}}"
+#-
+#  template: wait_for_rebalance
+
+
+#
+#
+#-
+#  template: failover_node_forced
+#  args: "{{.NthDataNode 2}}"
+#  wait: true
+#-
+#  template: rebalance
+#  wait: true
+#-
+#  template: group_add_servers
+#  args: "kvgroup1, data, ({{.NthDataNode 1}}, {{.NthDataNode 2}})"
+#-
+#  template: rebalance
+#  wait: true
+#-
+#  # failover with delta recovery
+#  template: failover_and_recover
+#  args: "{{.NthDataNode 1}}, delta"
+#  wait: true
+#-
+#  template: rebalance_out
+#  args: "{{.NthDataNode 1}}"
+#  wait: true
+#-
+#  # sync
+#  wait: true
+#  duration: 60
+#-
+#  #  swap rebalance 2 nodes
+#  template: rebalance_swap
+#  args: "{{.NthDataNode 1}}, {{.NthDataNode 2}}"
+#  wait: true
+#-
+#  # sync
+#  wait: true
+#  duration: 60
+#-
+#  # add back to group
+#  template: group_add_servers
+#  args: "kvgroup1, data, {{.NthDataNode 2}}"
+#  wait: true
+#-
+#  # create another group
+#  requires:  "{{eq true .DoOnce }}"
+#  template: group_create
+#  args: "kvgroup2"
+#-
+#  # move to group2 without rebalance
+#  template: group_move_servers
+#  args: "kvgroup1, kvgroup2, {{.NthDataNode 2}}"
+#-
+#  # remove empty group 1
+#  template: group_delete
+#  args: "kvgroup1"
+#-
+#  # rebalance into group 2
+#  template: rebalance
+#  wait: true
+#-
+#  # failover and full recover a node
+#  template: failover_and_recover
+#  args: "{{.NthDataNode 2}}, full"
+#  wait: true
+#-
+#  # back to default group
+#  template: group_move_servers
+#  args: "kvgroup2, 'Group 1', {{.NthDataNode 2}}"
+#-
+#  # remove empty group 2
+#  template: group_delete
+#  args: "kvgroup2"

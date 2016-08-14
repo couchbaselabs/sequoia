@@ -7,6 +7,16 @@
       command:  "rebalance -c  {{.Orchestrator}}
                 -u  {{.RestUsername}} -p  {{.RestPassword}}"
 
+# rebalance the cluster by IP
+# $0 = server to rebalance
+-
+  name: rebalance_by_ip
+  actions:
+    -
+      image: sequoiatools/couchbase-cli
+      command:  "rebalance -c  $0
+                -u  {{.RestUsername}} -p  {{.RestPassword}}"
+
 # rebalance out a single node
 # $0 = server to remove
 -
@@ -72,6 +82,17 @@
     -
       image: appropriate/curl
       command: "-s -u {{.RestUsername}}:{{.RestPassword}} {{.Orchestrator}}:8091/pools/default/rebalanceProgress"
+      repeat: -1
+      until: "{{if .AllLogs `__self__`}}{{eq `none` (.TailLogs `__self__` 1 | json).status}}{{else}}{{false}}{{end}}"
+      wait: true
+
+# waits for current rebalance to finish on the cluster by IP
+-
+  name: wait_for_rebalance_by_ip
+  actions:
+    -
+      image: appropriate/curl
+      command: "-s -u {{.RestUsername}}:{{.RestPassword}} $0:8091/pools/default/rebalanceProgress"
       repeat: -1
       until: "{{if .AllLogs `__self__`}}{{eq `none` (.TailLogs `__self__` 1 | json).status}}{{else}}{{false}}{{end}}"
       wait: true
