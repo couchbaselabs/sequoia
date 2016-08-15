@@ -8,7 +8,7 @@
 -
    image: sequoiatools/cmd
    entrypoint: sleep
-   command: "{{.Scale 72000}}"
+   command: "{{.Scale 720}}"
    wait: true
 #============ start xdcr replications ============
 -
