@@ -8,11 +8,11 @@
    command: " > LOGS"
    wait: false
 
-#============ only loading in 8 hours ============
+#============ only loading in 10 hours ============
 -
    image: sequoiatools/cmd
    entrypoint: sleep
-   command: "{{.Scale 5760}}"
+   command: "{{.Scale 7200}}"
    wait: true
 
 #============ 2 start xdcr replications ============
