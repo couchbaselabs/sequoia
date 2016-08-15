@@ -1,16 +1,21 @@
 -
   # include rebalance and group templates
   include: tests/templates/rebalance.yml, tests/templates/groups.yml
+
+#============ 1 start loader for 36 hours ============
 -
    image: sequoiatools/viber
    command: " > LOGS"
    wait: false
+
+#============ only loading in 20 hours ============
 -
    image: sequoiatools/cmd
    entrypoint: sleep
-   command: "{{.Scale 720}}"
+   command: "{{.Scale 14400}}"
    wait: true
-#============ start xdcr replications ============
+
+#============ 2 start xdcr replications ============
 -
    image: sequoiatools/couchbase-cli
    requires:  "{{eq true .DoOnce }}"
@@ -42,9 +47,7 @@
         --xdcr-from-bucket {{.Nodes | .Cluster 0 | bucket 3}}
         --xdcr-to-bucket {{.Nodes | .Cluster 1 | bucket 3}}"
 
-
-#============ rebalance in a node============
-
+#============ 3 rebalance in at cluster A and B ============
 -
    image: sequoiatools/couchbase-cli
    command: "server-add -c  {{.Orchestrator}}
@@ -69,17 +72,20 @@
 -
   template: wait_for_rebalance_by_ip
   args: "{{.Nodes | .Cluster 1 | net 0}}"
+
+#============ 4 failover with delta recovery at cluster A============
 -
-  # failover with delta recovery
   template: failover_and_recover
   args: "{{.Nodes | .Cluster 0 | net 3}}, delta"
   wait: true
 
+#============ 5 failover with full recovery at cluster A============
 -
-  # failover with full recovery
   template: failover_and_recover
   args: "{{.NthDataNode 3}}, full"
   wait: true
+
+#============ 6 remove node in cluster A, stop rebalance. Cancel removing node and rebalance============
 -
    template: rebalance_out
    args: "{{.NthDataNode 3}}, full"
@@ -92,20 +98,12 @@
    image: sequoiatools/couchbase-cli
    command: "rebalance-stop -c {{.Orchestrator}}:8091
         -u {{.RestUsername}} -p  {{.RestPassword}}"
-#-
-#   image: sequoiatools/couchbase-cli
-#   command: "server-add -c  {{.Orchestrator}}
-#       --server-add  {{.NthDataNode 3}}
-#       -u  {{.RestUsername}} -p  {{.RestPassword}}
-#       --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
-#   wait: true
 -
   template: rebalance
 -
   template: wait_for_rebalance
 
-#============ rebalance in a node============
-
+#============ 7 rebalance out 1 node on cluster A & B============
 -
    image: sequoiatools/couchbase-cli
    command: "rebalance -c  {{.Orchestrator}}
@@ -130,7 +128,7 @@
   args: "{{.Nodes | .Cluster 1 | net 0}}"
 
 
-#8 rebalance in 2 nodes on cluster A
+#============ 8 rebalance in 2 nodes on cluster A ============
 -
    image: sequoiatools/couchbase-cli
    command: "server-add -c  {{.Orchestrator}}
