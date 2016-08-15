@@ -1,12 +1,8 @@
-#client:  https://172.23.106.239:2376
-#client:  https://172.23.99.156:2375
 client:  https://192.168.99.100:2376
-scope:  tests/viber/scope_viber_4x4.yml
-test: tests/viber/test_viber.yml
-provider: file:viber_provider.yml
+scope:  tests/simple/scope_small.yml
+test: tests/simple/test_simple.yml
+provider: docker
 scale: 1
 skip_setup: false
 skip_teardown: false
-log_level: 2
 repeat: 0
-
