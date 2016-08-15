@@ -11,6 +11,7 @@ RUN ../cmake/configure --prefix=/usr && \
       make && \
       make install
 
+WORKDIR /
 RUN git clone git://github.com/couchbase/testrunner.git
 WORKDIR testrunner
 
