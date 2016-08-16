@@ -33,7 +33,30 @@ type ActionSpec struct {
 	Args        string
 	Test        string
 	Scope       string
+	ForEach     string
 	Client      ClientActionSpec
+}
+
+// returns yaml formattable string
+func (a *ActionSpec) String() string {
+	return fmt.Sprintf(
+		`-
+ image: %s
+ command: %s
+ wait: %t
+ before: %s
+ entrypoint: %s
+ requires: %s
+ concurrency: %s
+ duration: %s
+ alias: %s
+ repeat: %d
+ until: %s
+ template: %s
+ args: %s
+`, a.Image, a.Command, a.Wait, a.Before, a.Entrypoint, a.Requires,
+		a.Concurrency, a.Duration, a.Alias, a.Repeat, a.Until,
+		a.Template, a.Args)
 }
 
 type TemplateSpec struct {
@@ -94,6 +117,9 @@ func (t *Test) Run(scope Scope) {
 		scope.InitCli()
 	}
 
+	//scope.CollectInfo()
+	//scope.CopyLogs()
+	//return
 	if *t.Flags.SkipTest == true {
 		return
 	}
@@ -228,6 +254,14 @@ func (t *Test) runActions(scope Scope, loop int, actions []ActionSpec) {
 				ReadYamlFile(includeFile, &spec)
 				t.CacheIncludedTemplate(spec)
 			}
+			continue
+		}
+
+		if action.ForEach != "" {
+			// resolve foreach template (must result in an iterable)
+			// create actions with '.' as the output of the range
+			rangeActions := t.ResolveRangeActions(scope, action)
+			t.runActions(scope, loop, rangeActions)
 			continue
 		}
 
@@ -468,6 +502,26 @@ func (t *Test) ResolveTemplateActions(scope Scope, action ActionSpec) []ActionSp
 	}
 
 	return resolvedActions
+}
+
+func (t *Test) ResolveRangeActions(scope Scope, action ActionSpec) []ActionSpec {
+
+	var resolvedActions = []ActionSpec{}
+
+	// convert the contextual action spec to a string
+	actionStr := fmt.Sprintf("%s", &action)
+
+	// update the range template with the action a spec appended
+	rangeTemplate := fmt.Sprintf("%s%s{{end}}", action.ForEach, actionStr)
+
+	// compile the range template with nested action spec
+	compiledTemplate := ParseTemplate(&scope, rangeTemplate)
+
+	// convert the result from yaml back to action array
+	DoUnmarshal([]byte(compiledTemplate), &resolvedActions)
+
+	return resolvedActions
+
 }
 
 func (t *Test) WatchErrorChan(echan chan error, n int, scope *Scope) {
