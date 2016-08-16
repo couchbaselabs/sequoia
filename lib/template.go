@@ -133,6 +133,18 @@ func (t *TemplateResolver) NodeNames(servers []ServerSpec) []string {
 	return names
 }
 
+// Retreive just addresses from ServerSpec object
+func (t *TemplateResolver) NodeAddresses(servers []ServerSpec) []string {
+
+	ips := []string{}
+	names := t.NodeNames(servers)
+	for _, name := range names {
+		ip := t.Scope.Provider.GetHostAddress(name)
+		ips = append(ips, ip)
+	}
+	return ips
+}
+
 // Shortcut: .ClusterNodes | net 0
 func (t *TemplateResolver) Orchestrator() string {
 	nodes := t.ClusterNodes()
