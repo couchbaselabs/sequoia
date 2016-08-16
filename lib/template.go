@@ -122,6 +122,17 @@ func (t *TemplateResolver) ClusterNodes() []ServerSpec {
 	return t.Cluster(0, t.Nodes())
 }
 
+// Retreive just hostnames from ServerSpec object
+func (t *TemplateResolver) NodeNames(servers []ServerSpec) []string {
+	names := []string{}
+	for _, spec := range servers {
+		for _, n := range spec.Names {
+			names = append(names, n)
+		}
+	}
+	return names
+}
+
 // Shortcut: .ClusterNodes | net 0
 func (t *TemplateResolver) Orchestrator() string {
 	nodes := t.ClusterNodes()
