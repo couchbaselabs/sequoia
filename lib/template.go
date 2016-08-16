@@ -202,6 +202,18 @@ func (t *TemplateResolver) RestPassword() string {
 	return t.Attr("rest_password", nodes)
 }
 
+// Shortcut:  .ClusterNodes | .Attr `ssh_username`
+func (t *TemplateResolver) SSHUsername() string {
+	nodes := t.ClusterNodes()
+	return t.Attr("ssh_username", nodes)
+}
+
+// Shortcut:  .ClusterNodes | .Attr `ssh_password`
+func (t *TemplateResolver) SSHPassword() string {
+	nodes := t.ClusterNodes()
+	return t.Attr("ssh_password", nodes)
+}
+
 // Template function: `net`
 func (t *TemplateResolver) Address(index int, servers []ServerSpec) string {
 	if len(servers) == 0 || len(servers[0].Names) <= index {

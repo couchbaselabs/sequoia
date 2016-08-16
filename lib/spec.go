@@ -28,6 +28,8 @@ type ServerSpec struct {
 	FtsRam       string `yaml:"fts_ram"`
 	RestUsername string `yaml:"rest_username"`
 	RestPassword string `yaml:"rest_password"`
+	SSHUsername  string `yaml:"ssh_username"`
+	SSHPassword  string `yaml:"ssh_password"`
 	RestPort     string `yaml:"rest_port"`
 	ViewPort     string `yaml:"view_port"`
 	QueryPort    string `yaml:"query_port"`
@@ -169,6 +171,10 @@ func (s *ScopeSpec) ToAttr(attr string) string {
 		return "RestUsername"
 	case "rest_password":
 		return "RestPassword"
+	case "ssh_username":
+		return "SSHUsername"
+	case "ssh_password":
+		return "SSHPassword"
 	case "name":
 		return "Name"
 	case "ram":
@@ -303,6 +309,17 @@ func SpecFromIni(fileName string) ScopeSpec {
 		} else {
 			serverSpec.RestPassword = "password"
 		}
+		if username := section.Key("ssh_username"); username.String() != "" {
+			serverSpec.SSHUsername = username.String()
+		} else {
+			serverSpec.SSHUsername = "root"
+		}
+		if password := section.Key("ssh_password"); password.String() != "" {
+			serverSpec.SSHPassword = password.String()
+		} else {
+			serverSpec.SSHPassword = "couchbase"
+		}
+
 		if services := section.Key("services"); services.String() != "" {
 			svcString := services.String()
 			svcString = strings.Replace(svcString, "kv", "data", 1)
