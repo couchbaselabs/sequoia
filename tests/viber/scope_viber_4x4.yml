@@ -26,22 +26,22 @@ buckets:
       ram: 8%
   -
       name: MsgsCalls
-      ram: 8%
+      ram: 6%
   -
       name: RevAB
-      ram: 70%
+      ram: 75%
   -
       name: UserInfo
-      ram: 8%
+      ram: 6%
   -
       name: AbRegNums2
       ram: 8%
   -
       name: MsgsCalls2
-      ram: 8%
+      ram: 6%
   -
       name: RevAB2
-      ram: 70%
+      ram: 75%
   -
       name: UserInfo2
-      ram: 8%
+      ram: 6%
