@@ -23,25 +23,25 @@ servers: # each server tag represents a cluster
 buckets:
   -
       name: AbRegNums
-      ram: 10%
+      ram: 8%
   -
       name: MsgsCalls
-      ram: 10% 
+      ram: 8%
   -
       name: RevAB
-      ram: 60%
+      ram: 70%
   -
       name: UserInfo
-      ram: 10%
+      ram: 8%
   -
       name: AbRegNums2
-      ram: 10%
+      ram: 8%
   -
       name: MsgsCalls2
-      ram: 10%
+      ram: 8%
   -
       name: RevAB2
-      ram: 60%
+      ram: 70%
   -
       name: UserInfo2
-      ram: 10%
+      ram: 8%
