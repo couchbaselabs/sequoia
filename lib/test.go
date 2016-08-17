@@ -592,6 +592,13 @@ func (t *Test) WatchErrorChan(echan chan error, n int, scope *Scope) {
 }
 
 func (t *Test) CollectInfo(scope Scope) {
+
+	// disable collect on where when collecting
+	oldFlagVal := t.Flags.CollectOnError
+	disabledFlagVal := false
+	t.Flags.CollectOnError = &disabledFlagVal
+
+	// construst a collect action
 	actionStr := `
 -
   include: tests/templates/util.yml
@@ -599,7 +606,10 @@ func (t *Test) CollectInfo(scope Scope) {
   template: cbcollect_all_linux_nodes
   wait: true`
 	actions := ActionsFromString(actionStr)
+
+	// start collection
 	t.runActions(scope, 0, actions)
+	t.Flags.CollectOnError = oldFlagVal
 }
 
 func (t *Test) KillTaskContainers(task *ContainerTask) {
