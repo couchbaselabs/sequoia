@@ -1,0 +1,17 @@
+# Demonstrate calling cbcollect info and using ssh to copy files to local docker machine
+#
+# NOTE: this is effectively calling 'cbcollect_all_linux_nodes' template
+#
+-
+ include: tests/templates/util.yml
+-
+  # runs cbcollect against all nodes
+  template: collect_info
+  wait: true
+-
+  # copies collect info into the test machine's logs/ directory
+  # uses 'foreach' directive to iterate across all node ips
+  foreach: "{{range .ClusterNodes | .NodeAddresses}}"
+  template: copy_files
+  args: "{{.}}, /opt/couchbase/var/lib/couchbase/tmp/collectinfo*.zip, logs/"
+  wait: true
