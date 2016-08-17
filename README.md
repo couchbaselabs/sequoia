@@ -24,10 +24,13 @@ In Sequoia a test consists of a scope spec and a test spec.  The top-level confi
 
 ```bash
 # MAC: defaults from config.yml are setup for docker-machine
-./sequoia  -scope tests/simple/scope_simple.yml -test tests/simple/test_small.yml
+./sequoia  
 
 # Linux: override client to point to local host
-./sequoia -client unix:///var/run/docker.sock  -scope tests/simple/scope_simple.yml -test tests/simple/test_small.yml
+./sequoia -client unix:///var/run/docker.sock 
+
+# Changing scope and tests
+ ./sequoia -scope tests/simple/scope_medium.yml -test tests/simple/test_views.yml
 
 ```
 
