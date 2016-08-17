@@ -23,7 +23,7 @@ type Provider interface {
 type FileProvider struct {
 	Servers      []ServerSpec
 	ServerNameIp map[string]string
-    HostFile     string
+	HostFile     string
 }
 type ClusterRunProvider struct {
 	Servers      []ServerSpec
@@ -40,17 +40,17 @@ type DockerProvider struct {
 }
 
 type DockerProviderOpts struct {
-	Build             string
-	BuildUrlOverride  string `yaml:"build_url_override"`
-	CPUPeriod         int64
-	CPUQuota          int64
-	Memory            int64
-	MemorySwap        int64
-	Ulimits           []docker.ULimit
+	Build            string
+	BuildUrlOverride string `yaml:"build_url_override"`
+	CPUPeriod        int64
+	CPUQuota         int64
+	Memory           int64
+	MemorySwap       int64
+	Ulimits          []docker.ULimit
 }
 
 func (opts *DockerProviderOpts) MemoryMB() int {
-	return int(opts.Memory/1000000)  // B -> MB
+	return int(opts.Memory / 1000000) // B -> MB
 }
 
 func NewProvider(flags TestFlags, servers []ServerSpec) Provider {
@@ -75,7 +75,7 @@ func NewProvider(flags TestFlags, servers []ServerSpec) Provider {
 		provider = &FileProvider{
 			servers,
 			make(map[string]string),
-            hostFile,
+			hostFile,
 		}
 	case "dev":
 		endpoint := "127.0.0.1"
@@ -220,11 +220,11 @@ func (p *DockerProvider) ProvideCouchbaseServers(servers []ServerSpec) {
 			}
 
 			if p.Opts.CPUPeriod > 0 {
-			        hostConfig.CPUPeriod = p.Opts.CPUPeriod
+				hostConfig.CPUPeriod = p.Opts.CPUPeriod
 			}
 			if p.Opts.CPUQuota > 0 {
-			        hostConfig.CPUQuota = p.Opts.CPUQuota
-		    }
+				hostConfig.CPUQuota = p.Opts.CPUQuota
+			}
 			if p.Opts.Memory > 0 {
 				hostConfig.Memory = p.Opts.Memory
 			}
