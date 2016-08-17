@@ -41,22 +41,23 @@ type ActionSpec struct {
 func (a *ActionSpec) String() string {
 	return fmt.Sprintf(
 		`-
- image: %s
- command: %s
+ image: "%s"
+ command: "%s"
  wait: %t
- before: %s
- entrypoint: %s
- requires: %s
- concurrency: %s
- duration: %s
- alias: %s
+ before: "%s"
+ entrypoint: "%s"
+ requires: "%s"
+ concurrency: "%s"
+ duration: "%s"
+ alias: "%s"
  repeat: %d
- until: %s
- template: %s
- args: %s
+ until: "%s"
+ template: "%s"
+ args: "%s"
+ client: %v
 `, a.Image, a.Command, a.Wait, a.Before, a.Entrypoint, a.Requires,
 		a.Concurrency, a.Duration, a.Alias, a.Repeat, a.Until,
-		a.Template, a.Args)
+		a.Template, a.Args, a.Client)
 }
 
 type TemplateSpec struct {
@@ -67,6 +68,22 @@ type TemplateSpec struct {
 type ClientActionSpec struct {
 	Op        string
 	Container string
+	FileName  string
+	FromPath  string
+	ToPath    string
+}
+
+func (c ClientActionSpec) String() string {
+
+	return fmt.Sprintf(`
+    op: "%s"
+    container: "%s"
+    filename: "%s"
+    frompath: "%s"
+    topath: "%s"`,
+		c.Op, c.Container,
+		c.FileName, c.FromPath,
+		c.ToPath)
 }
 
 func ActionsFromFile(fileName string) []ActionSpec {
@@ -82,6 +99,12 @@ func ActionsFromArgs(image string, command string, wait bool) []ActionSpec {
 		Wait:    wait,
 	}
 	return []ActionSpec{action}
+}
+
+func ActionsFromString(actionStr string) []ActionSpec {
+	var resolvedActions = []ActionSpec{}
+	DoUnmarshal([]byte(actionStr), &resolvedActions)
+	return resolvedActions
 }
 
 func NewTest(flags TestFlags, cm *ContainerManager) Test {
@@ -117,9 +140,6 @@ func (t *Test) Run(scope Scope) {
 		scope.InitCli()
 	}
 
-	//scope.CollectInfo()
-	//scope.CopyLogs()
-	//return
 	if *t.Flags.SkipTest == true {
 		return
 	}
@@ -182,14 +202,32 @@ func (t *Test) runActions(scope Scope, loop int, actions []ActionSpec) {
 				if id, ok := scope.GetVarsKV(key); ok {
 					t.Cm.KillContainer(id)
 					colorsay("kill" + key)
+				} else {
+					ecolorsay("no such container alias " + key)
 				}
 			case "rm":
 				key := action.Client.Container
 				if id, ok := scope.GetVarsKV(key); ok {
 					t.Cm.RemoveContainer(id)
 					colorsay("remove " + key)
+				} else {
+					ecolorsay("no such container alias " + key)
 				}
-
+			case "cp":
+				key := action.Client.Container
+				if id, ok := scope.GetVarsKV(key); ok {
+					t.Cm.CopyFromContainer(id,
+						action.Client.FileName,
+						action.Client.FromPath,
+						action.Client.ToPath)
+					msg := fmt.Sprintf("copying files from %s:%s to %s",
+						id[:6],
+						action.Client.FromPath,
+						action.Client.ToPath)
+					colorsay(msg)
+				} else {
+					ecolorsay("no such container alias " + key)
+				}
 			}
 			continue
 		}
@@ -464,13 +502,20 @@ func (t *Test) ResolveTemplateActions(scope Scope, action ActionSpec) []ActionSp
 			}
 
 			idx := fmt.Sprintf("$%d", i-argOffset)
-			subAction.Command = strings.Replace(subAction.Command, idx, arg, -1)
-			if subAction.Until != "" {
-				subAction.Until = strings.Replace(subAction.Until, idx, arg, -1)
-			}
-			if subAction.Args != "" {
-				subAction.Args = strings.Replace(subAction.Args, idx, arg, -1)
-			}
+
+			// reformat action to string
+			actionStr := fmt.Sprintf("%s", &subAction)
+
+			// replace any magic vars ... ie $0, $1 with args
+			actionStr = strings.Replace(actionStr, idx, arg, -1)
+
+			// unmarshal string back to action array
+			var resolvedActions = []ActionSpec{}
+			DoUnmarshal([]byte(actionStr), &resolvedActions)
+			resolvedSubAction := resolvedActions[0]
+			// restore foreach which is lost during unmarshal
+			resolvedSubAction.ForEach = subAction.ForEach
+			subAction = resolvedSubAction
 		}
 
 		// allow inheritance
@@ -498,6 +543,7 @@ func (t *Test) ResolveTemplateActions(scope Scope, action ActionSpec) []ActionSp
 		if subAction.Until == "" {
 			subAction.Until = action.Until
 		}
+
 		resolvedActions = append(resolvedActions, subAction)
 	}
 
@@ -531,7 +577,7 @@ func (t *Test) WatchErrorChan(echan chan error, n int, scope *Scope) {
 	for i := 0; i < n; i++ {
 		if err := <-echan; err != nil {
 			if *t.Flags.CollectOnError == true {
-				scope.CollectInfo()
+				t.CollectInfo(*scope)
 			}
 
 			if *t.Flags.StopOnError == true {
@@ -543,6 +589,17 @@ func (t *Test) WatchErrorChan(echan chan error, n int, scope *Scope) {
 		}
 	}
 	close(echan)
+}
+
+func (t *Test) CollectInfo(scope Scope) {
+	actionStr := `
+-
+  include: tests/templates/util.yml
+-
+  template: cbcollect_all_linux_nodes
+  wait: true`
+	actions := ActionsFromString(actionStr)
+	t.runActions(scope, 0, actions)
 }
 
 func (t *Test) KillTaskContainers(task *ContainerTask) {
@@ -612,7 +669,7 @@ func (t *Test) Cleanup(s Scope) {
 	if s.Provider.GetType() == "docker" {
 		// save logs
 		if *t.Flags.LogLevel > 0 {
-			s.Provider.(*DockerProvider).Cm.SaveContainerLogs(*t.Flags.LogDir)
+			s.Provider.(*DockerProvider).Cm.SaveCouchbaseContainerLogs(*t.Flags.LogDir)
 		}
 		s.Provider.(*DockerProvider).Cm.RemoveManagedContainers(soft)
 	}

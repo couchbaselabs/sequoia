@@ -416,40 +416,6 @@ func (s *Scope) CreateBuckets() {
 
 }
 
-func (s *Scope) CollectInfo() {
-
-	var image = "sequoiatools/couchbase-cli"
-
-	// do cbcollect on all clusters
-	operation := func(name string, server *ServerSpec) {
-
-		orchestrator := server.Names[0]
-		orchestratorIp := s.Provider.GetHostAddress(orchestrator)
-
-		command := []string{"collect-logs-start",
-			"-c", orchestratorIp,
-			"-u", server.RestUsername,
-			"-p", server.RestPassword,
-			"--all-nodes",
-		}
-		desc := "collect info" + orchestratorIp
-		task := ContainerTask{
-			Describe: desc,
-			Image:    image,
-			Command:  command,
-			Async:    false,
-		}
-		if s.Provider.GetType() == "docker" {
-			task.LinksTo = orchestrator
-		}
-
-		s.Cm.Run(&task)
-	}
-
-	// apply only to orchestrator
-	s.Spec.ApplyToServers(operation, 0, 1)
-}
-
 func (s *Scope) GetPercOfMemTotal(name string, server *ServerSpec, quota string) string {
 	memTotal := s.ClusterMemTotal(name, server)
 	ramQuota := strings.Replace(quota, "%", "", 1)

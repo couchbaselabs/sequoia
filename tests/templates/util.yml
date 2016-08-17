@@ -1,0 +1,59 @@
+-
+  # run cluster wide cbcollect_info
+  # and wait for completion
+  name: collect_info
+  actions:
+    -
+      image: sequoiatools/couchbase-cli
+      command: "collect-logs-start
+                -c {{.Orchestrator}}
+                -u {{.RestUsername}}
+                -p {{.RestPassword}}
+                --all-nodes"
+    -
+      # loop until status is 'collected'
+      image: sequoiatools/couchbase-cli
+      command: "collect-logs-status
+                -c {{.Orchestrator}}
+                -u {{.RestUsername}}
+                -p {{.RestPassword}}"
+      repeat: -1
+      until: "{{.AllLogs `__self__` | contains `completed`}}"
+      wait: true
+
+-
+  # copy files from remote nodes to local machine via scp
+  #   $0 = hostname... ie can be scope var {{.Orchestrator}}
+  #   $1 = remote dir from the couchbase server
+  #   $2 = local dir to copy files into
+  name: copy_files
+  actions:
+    -
+      image: "vijayviji/sshpass"
+      command: "sshpass -p {{.SSHPassword}}
+                  scp -o StrictHostKeyChecking=no
+                  {{.SSHUsername}}@$0:$1
+                  /opt/"
+      alias: _CopyContainer
+    -
+      client:
+        op: cp
+        container: _CopyContainer
+        filename: "$0.zip"
+        frompath: "/opt"
+        topath: "$2"
+
+-
+  # shortcut for running cbcollect on all nodes
+  # and copying the collect info files from nodes into logs dir
+  #   -- no args --
+  name: cbcollect_all_linux_nodes
+  actions:
+    -
+      template: collect_info
+      wait: true
+    -
+      foreach: "{{range .ClusterNodes | .NodeAddresses}}"
+      template: copy_files
+      args: "{{.}}, /opt/couchbase/var/lib/couchbase/tmp/collectinfo*.zip, logs/"
+      wait: true

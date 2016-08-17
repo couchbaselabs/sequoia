@@ -259,6 +259,8 @@ func SpecFromYaml(fileName string) ScopeSpec {
 	for i, server := range spec.Servers {
 		spec.Servers[i].Names = ExpandServerName(server.Name, server.Count, 1)
 		spec.Servers[i].BucketSpecs = make([]BucketSpec, 0)
+		SetYamlSpecDefaults(&spec.Servers[i])
+
 		// map server buckets to bucket objects
 		bucketList := CommaStrToList(spec.Servers[i].Buckets)
 		for _, bucketName := range bucketList {
@@ -271,6 +273,23 @@ func SpecFromYaml(fileName string) ScopeSpec {
 	}
 
 	return spec
+
+}
+
+// some common defaults when not defined in yaml scope
+func SetYamlSpecDefaults(spec *ServerSpec) {
+	if spec.RestUsername == "" {
+		spec.RestUsername = "Administrator"
+	}
+	if spec.RestPassword == "" {
+		spec.RestPassword = "password"
+	}
+	if spec.SSHUsername == "" {
+		spec.SSHUsername = "root"
+	}
+	if spec.SSHPassword == "" {
+		spec.SSHPassword = "couchbase"
+	}
 }
 
 func SpecFromIni(fileName string) ScopeSpec {

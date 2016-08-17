@@ -166,18 +166,25 @@ func (cm *ContainerManager) RemoveManagedContainers(soft bool) {
 	cm.IDs = []string{}
 }
 
-func (cm *ContainerManager) SaveContainerLogs(logDir string) {
+func (cm *ContainerManager) CopyFromContainer(id, archive, fromPath, toPath string) {
+
+	// save logs if not already saved
+	f := CreateFile(toPath, archive)
+	defer f.Close()
+	opts := docker.DownloadFromContainerOptions{
+		OutputStream: f,
+		Path:         fromPath,
+	}
+	cm.Client.DownloadFromContainer(id, opts)
+}
+
+func (cm *ContainerManager) SaveCouchbaseContainerLogs(logDir string) {
 	// save logs if not already saved
 	for n, id := range cm.IDs {
 		imgName := fmt.Sprintf("couchbase-server-%d", n)
 		archive := fmt.Sprintf("%s.tar", cm.ContainerLogFile(imgName, id))
-		f := CreateFile(logDir, archive)
-		defer f.Close()
-		opts := docker.DownloadFromContainerOptions{
-			OutputStream: f,
-			Path:         "/opt/couchbase/var/lib/couchbase/logs",
-		}
-		cm.Client.DownloadFromContainer(id, opts)
+		fromPath := "/opt/couchbase/var/lib/couchbase/logs"
+		cm.CopyFromContainer(id, archive, fromPath, logDir)
 	}
 }
 
