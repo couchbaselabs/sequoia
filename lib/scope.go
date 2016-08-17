@@ -69,7 +69,7 @@ func NewScope(flags TestFlags, cm *ContainerManager) Scope {
 			}
 		}
 	}
-	var mtx sync.RWMutex
+	var mtx sync.Mutex
 	var loops = 0
 	if *flags.Continue == true {
 		loops++ // we've already done first pass
