@@ -1,8 +1,5 @@
 # sequoia
 Scalable couchbase testing with docker
-<p align="center">
-  <img src="arch.png" width="350"/>
-</p>
 
 **Install Docker**
 * Mac - https://docs.docker.com/mac/
@@ -26,11 +23,15 @@ go build
 In Sequoia a test consists of a scope spec and a test spec.  The top-level config.yml file denotes which files to use for the test.  Alternetaively, command line args can be used to explicitely specify which scope and test to use when testing. 
 
 ```bash
-# use defaults from config.yml
-./sequoia -config config.xml
+# MAC: defaults from config.yml are setup for docker-machine
+./sequoia  
 
-# run with command line args
-./sequoia -scope tests/simple/scope_medium.yml -test tests/simple/test_small.yml
+# Linux: override client to point to local host
+./sequoia -client unix:///var/run/docker.sock 
+
+# Changing scope and tests
+ ./sequoia -scope tests/simple/scope_medium.yml -test tests/simple/test_views.yml
+
 ```
 
 Refer to [Test Syntax](https://github.com/couchbaselabs/sequoia/wiki/Test-Syntax) for more information about how to build out your test and scopes.
