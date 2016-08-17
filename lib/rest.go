@@ -19,6 +19,18 @@ type NodeSelf struct {
 	Version           string
 }
 
+type NodeStatuses struct {
+	Statuses map[string]NodeStatus
+}
+
+type NodeStatus struct {
+	Status      map[string]string
+	Healthy     map[string]string
+	OtpNode     map[string]string
+	Replication map[string]int
+	Dataless    map[string]bool
+}
+
 func GetMemTotal(host, user, password string) int {
 	var n NodeSelf
 
@@ -90,6 +102,19 @@ func GetServerVersion(host, user, password string) string {
 	}
 
 	return q
+}
+
+func NodeIsSingle(host, user, password string) bool {
+
+	var n interface{}
+	err := getNodeStatus(host, user, password, &n)
+	chkerr(err)
+	s := n.(map[string]interface{})
+	return len(s) == 1
+}
+
+func getNodeStatus(host, user, password string, v interface{}) error {
+	return _jsonRequest("http://%s/nodeStatuses", host, user, password, v)
 }
 
 func getNodeSelf(host, user, password string, v interface{}) error {

@@ -68,7 +68,7 @@ func (t *TemplateResolver) Scale(val int) string {
 	return strconv.Itoa(val * scale)
 }
 
-// resolve nodes with specified service
+// resolve nodes with specified service, ie..
 // .Nodes | .Service `n1ql` | net 0
 func (t *TemplateResolver) Service(service string, servers []ServerSpec) []ServerSpec {
 
@@ -224,6 +224,25 @@ func (t *TemplateResolver) SSHUsername() string {
 func (t *TemplateResolver) SSHPassword() string {
 	nodes := t.ClusterNodes()
 	return t.Attr("ssh_password", nodes)
+}
+
+// Get nodes from Cluster Spec that are not active
+func (t *TemplateResolver) SingleNodes(servers []ServerSpec) []string {
+
+	ips := []string{}
+	for _, spec := range servers {
+		for _, name := range spec.Names {
+			rest := t.Scope.Provider.GetRestUrl(name)
+			ok := NodeIsSingle(rest, spec.RestUsername, spec.RestPassword)
+			if ok == true {
+				ip := t.Scope.Provider.GetHostAddress(name)
+				ips = append(ips, ip)
+			}
+		}
+	}
+
+	return ips
+
 }
 
 // Template function: `net`
