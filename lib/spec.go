@@ -241,9 +241,7 @@ func SpecFromYaml(fileName string) ScopeSpec {
 		if spec.Buckets[i].Type == "" {
 			spec.Buckets[i].Type = "couchbase"
 		}
-		if spec.Buckets[i].Replica == 0 {
-			spec.Buckets[i].Replica = 1
-		}
+
 		if bucket.DDocs != "" {
 			ddocNames := CommaStrToList(bucket.DDocs)
 			for _, ddocName := range ddocNames {
