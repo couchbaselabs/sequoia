@@ -4,6 +4,11 @@
 #
 -
  include: tests/templates/util.yml
+
+-
+  # do cbcollect on nodes not in cluster
+  template: collect_info_missing_nodes
+  wait: true
 -
   # runs cbcollect against all nodes
   template: collect_info
@@ -14,4 +19,9 @@
   foreach: "{{range .ClusterNodes | .NodeAddresses}}"
   template: copy_files
   args: "{{.}}, /opt/couchbase/var/lib/couchbase/tmp/collectinfo*.zip, logs/"
+  wait: true
+
+-
+  # verify via shortcut as well
+  template: cbcollect_all_linux_nodes
   wait: true

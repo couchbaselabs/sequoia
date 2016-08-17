@@ -215,6 +215,21 @@ func (t *TemplateResolver) RestPassword() string {
 	return t.Attr("rest_password", nodes)
 }
 
+// Shortcut:  .ClusterNodes | .Attr `ram`
+// Note this value adjusted by setup if %
+// but if setup was not run then 256 is returned
+func (t *TemplateResolver) Ram() string {
+	nodes := t.ClusterNodes()
+	ram := t.Attr("ram", nodes)
+
+	// if value is still a percent then
+	// resort to lowest value
+	if strings.Index(ram, "%") > -1 {
+		ram = "256"
+	}
+	return ram
+}
+
 // Shortcut:  .ClusterNodes | .Attr `ssh_username`
 func (t *TemplateResolver) SSHUsername() string {
 	nodes := t.ClusterNodes()

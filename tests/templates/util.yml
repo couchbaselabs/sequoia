@@ -18,7 +18,42 @@
                 -u {{.RestUsername}}
                 -p {{.RestPassword}}"
       repeat: -1
-      until: "{{.AllLogs `__self__` | contains `completed`}}"
+      until: "{{with .AllLogs `__self__`}}{{contains `completed` .}}{{else}}{{true}}{{end}}"
+      wait: true
+
+-
+  # run cluster cbcollect_info on nodes not part of cluster
+  # and wait for completion
+  #  (requires node to be re-init)
+  name: collect_info_missing_nodes
+  foreach: "{{range .Nodes | .SingleNodes}}"
+  actions:
+    -
+      image: sequoiatools/couchbase-cli
+      command: "cluster-init
+                  -c {{.}}
+                  -u {{$.RestUsername}}
+                  -p {{$.RestPassword}}
+                  --cluster-username {{$.RestUsername}}
+                  --cluster-password {{$.RestPassword}}
+                  --cluster-ramsize {{$.Ram}}"
+      wait: true
+    -
+      image: sequoiatools/couchbase-cli
+      command: "collect-logs-start
+                -c {{.}}
+                -u {{$.RestUsername}}
+                -p {{$.RestPassword}}
+                --nodes={{.}}"
+    -
+      # loop until status is 'collected'
+      image: sequoiatools/couchbase-cli
+      command: "collect-logs-status
+                -c {{.}}
+                -u {{$.RestUsername}}
+                -p {{$.RestPassword}}"
+      repeat: -1
+      until: "{{with .AllLogs `__self__`}}{{contains `completed` .}}{{else}}{{true}}{{end}}"
       wait: true
 
 -
@@ -51,6 +86,9 @@
   actions:
     -
       template: collect_info
+      wait: true
+    -
+      template: collect_info_missing_nodes
       wait: true
     -
       foreach: "{{range .ClusterNodes | .NodeAddresses}}"
