@@ -28,7 +28,7 @@ type Scope struct {
 	Version  string
 	Vars     map[string]string
 	Loops    int
-	VarsMtx  sync.RWMutex
+	VarsMtx  sync.Mutex
 }
 
 func NewScope(flags TestFlags, cm *ContainerManager) Scope {
