@@ -287,13 +287,15 @@ func (p *DockerProvider) GetRestUrl(name string) string {
 	re := regexp.MustCompile(`:.*`)
 	host = re.ReplaceAllString(host, "")
 	port := p.StartPort
-	for _, spec := range p.Servers {
-		for i, server := range spec.Names {
+	step := len(p.Servers)
+	for i, spec := range p.Servers {
+		for j, server := range spec.Names {
 			if server == name {
-				port = port + i
+				port = port + i + j*step
 			}
 		}
 	}
+
 	host = fmt.Sprintf("%s:%d\n", host, port)
 	return strings.TrimSpace(host)
 }
