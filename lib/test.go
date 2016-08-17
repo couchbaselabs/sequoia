@@ -51,18 +51,18 @@ func (a *ActionSpec) String() string {
  duration: "%s"
  alias: "%s"
  repeat: %d
- until: "%s"
  template: "%s"
  args: "%s"
  client: %v
 `, a.Image, a.Command, a.Wait, a.Before, a.Entrypoint, a.Requires,
-		a.Concurrency, a.Duration, a.Alias, a.Repeat, a.Until,
+		a.Concurrency, a.Duration, a.Alias, a.Repeat,
 		a.Template, a.Args, a.Client)
 }
 
 type TemplateSpec struct {
 	Name    string
 	Actions []ActionSpec
+	ForEach string
 }
 
 type ClientActionSpec struct {
@@ -290,7 +290,7 @@ func (t *Test) runActions(scope Scope, loop int, actions []ActionSpec) {
 				// include template file
 				var spec []TemplateSpec
 				ReadYamlFile(includeFile, &spec)
-				t.CacheIncludedTemplate(spec)
+				t.CacheIncludedTemplate(scope, spec)
 			}
 			continue
 		}
@@ -298,7 +298,7 @@ func (t *Test) runActions(scope Scope, loop int, actions []ActionSpec) {
 		if action.ForEach != "" {
 			// resolve foreach template (must result in an iterable)
 			// create actions with '.' as the output of the range
-			rangeActions := t.ResolveRangeActions(scope, action)
+			rangeActions := t.ResolveSingleRangeActions(scope, action)
 			t.runActions(scope, loop, rangeActions)
 			continue
 		}
@@ -458,9 +458,14 @@ func (t *Test) runTask(scope *Scope, task *ContainerTask, action *ActionSpec) {
 
 }
 
-func (t *Test) CacheIncludedTemplate(spec []TemplateSpec) {
+func (t *Test) CacheIncludedTemplate(scope Scope, spec []TemplateSpec) {
 
 	for _, template := range spec {
+		if template.ForEach != "" {
+			// this template is within a range loop
+			// so extrapolate actions
+			template.Actions = t.ResolveTemplateRangeActions(scope, template.Actions, template.ForEach)
+		}
 		t.Templates[template.Name] = template.Actions
 	}
 }
@@ -472,6 +477,7 @@ func (t *Test) ResolveTemplateActions(scope Scope, action ActionSpec) []ActionSp
 	var cachedActions = t.Templates[action.Template]
 
 	for _, subAction := range cachedActions {
+
 		// replace generics args ie $1, $2 with test values
 		args := ParseTemplate(&scope, action.Args)
 		allArgs := strings.Split(args, ",")
@@ -513,8 +519,10 @@ func (t *Test) ResolveTemplateActions(scope Scope, action ActionSpec) []ActionSp
 			var resolvedActions = []ActionSpec{}
 			DoUnmarshal([]byte(actionStr), &resolvedActions)
 			resolvedSubAction := resolvedActions[0]
-			// restore foreach which is lost during unmarshal
+
+			// restore keys lost during unmarshal
 			resolvedSubAction.ForEach = subAction.ForEach
+			t.RestoreConditionalValues(subAction, &resolvedSubAction)
 			subAction = resolvedSubAction
 		}
 
@@ -550,24 +558,59 @@ func (t *Test) ResolveTemplateActions(scope Scope, action ActionSpec) []ActionSp
 	return resolvedActions
 }
 
-func (t *Test) ResolveRangeActions(scope Scope, action ActionSpec) []ActionSpec {
+func (t *Test) ResolveSingleRangeActions(scope Scope, action ActionSpec) []ActionSpec {
+	return t.ResolveTemplateRangeActions(scope, []ActionSpec{action}, action.ForEach)
+}
+
+func (t *Test) ResolveTemplateRangeActions(scope Scope, actions []ActionSpec, rangeStr string) []ActionSpec {
 
 	var resolvedActions = []ActionSpec{}
 
-	// convert the contextual action spec to a string
-	actionStr := fmt.Sprintf("%s", &action)
+	// begin range templat
+	rangeTemplate := rangeStr
 
-	// update the range template with the action a spec appended
-	rangeTemplate := fmt.Sprintf("%s%s{{end}}", action.ForEach, actionStr)
+	// convert each contextual action spec to a string
+	for _, a := range actions {
+		actionStr := fmt.Sprintf("%s", &a)
+
+		// append the range template with the action a spec appended
+		rangeTemplate = fmt.Sprintf("%s\n%s", rangeTemplate, actionStr)
+	}
+
+	// close range template
+	rangeTemplate = fmt.Sprintf("%s\n{{end}}", rangeTemplate)
 
 	// compile the range template with nested action spec
 	compiledTemplate := ParseTemplate(&scope, rangeTemplate)
-
 	// convert the result from yaml back to action array
 	DoUnmarshal([]byte(compiledTemplate), &resolvedActions)
 
+	// restore conditional specs which are not inlcuded in the marshlling
+	t.RestoreConditionalValuesRange(actions, &resolvedActions)
 	return resolvedActions
+}
 
+func (t *Test) RestoreConditionalValuesRange(originalActions []ActionSpec, actions *[]ActionSpec) {
+
+	// when creating templates from a range, certain conditions are removed
+	// to prevent the template compiler from operating on them.
+	// this method restores them for run time
+	step := len(originalActions)
+	offset := 0
+	for i, a := range originalActions {
+		for j, _ := range *actions {
+			offset = i + j*step
+			if offset < len(*actions) {
+				t.RestoreConditionalValues(a, &(*actions)[offset])
+			}
+		}
+	}
+}
+
+func (t *Test) RestoreConditionalValues(originalAction ActionSpec, action *ActionSpec) {
+	action.Until = originalAction.Until
+	action.Before = originalAction.Before
+	action.Requires = originalAction.Requires
 }
 
 func (t *Test) WatchErrorChan(echan chan error, n int, scope *Scope) {
