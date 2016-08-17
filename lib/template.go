@@ -31,6 +31,7 @@ func ParseTemplate(s *Scope, command string) string {
 		"ftoint":   tResolv.FloatToInt,
 		"last":     tResolv.LastItem,
 		"contains": tResolv.Contains,
+		"excludes": tResolv.Excludes,
 	}
 	tmpl, err := template.New("t").Funcs(netFunc).Parse(command)
 	logerr(err)
@@ -311,6 +312,10 @@ func (t *TemplateResolver) AllLogs(key string) string {
 
 func (t *TemplateResolver) Contains(key, str string) bool {
 	return strings.Contains(str, key)
+}
+
+func (t *TemplateResolver) Excludes(key, str string) bool {
+	return !strings.Contains(str, key)
 }
 
 func (t *TemplateResolver) ToJson(data string) interface{} {
