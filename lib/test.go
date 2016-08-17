@@ -514,6 +514,9 @@ func (t *Test) ResolveTemplateActions(scope Scope, action ActionSpec) []ActionSp
 
 			// replace any magic vars ... ie $0, $1 with args
 			actionStr = strings.Replace(actionStr, idx, arg, -1)
+			subAction.Until = strings.Replace(subAction.Until, idx, arg, -1)
+			subAction.Before = strings.Replace(subAction.Before, idx, arg, -1)
+			subAction.Requires = strings.Replace(subAction.Requires, idx, arg, -1)
 
 			// unmarshal string back to action array
 			var resolvedActions = []ActionSpec{}
