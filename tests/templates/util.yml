@@ -22,6 +22,30 @@
       wait: true
 
 -
+  # run cbcollect_info on all nodes in all clusters
+  # and wait for completion
+  name: collect_info_all_clusters
+  foreach: "{{range .Nodes}}"
+  actions:
+    -
+      image: sequoiatools/couchbase-cli
+      command: "collect-logs-start
+                -c {{. | tolist | net 0}}
+                -u {{. | tolist | $.Attr `rest_username`}}
+                -p {{. | tolist | $.Attr `rest_password`}}
+                --all-nodes"
+    -
+      # wait for collect to finish
+      image: sequoiatools/couchbase-cli
+      command: "collect-logs-status
+                -c {{. | tolist | net 0}}
+                -u {{. | tolist | $.Attr `rest_username`}}
+                -p {{. | tolist | $.Attr `rest_password`}}"
+      repeat: -1
+      until: "{{with $.AllLogs `__self__`}}{{contains `completed` .}}{{else}}{{true}}{{end}}"
+      wait: true
+
+-
   # run cluster cbcollect_info on nodes not part of cluster
   # and wait for completion
   #  (requires node to be re-init)
@@ -85,13 +109,13 @@
   name: cbcollect_all_linux_nodes
   actions:
     -
-      template: collect_info
+      template: collect_info_all_clusters
       wait: true
     -
       template: collect_info_missing_nodes
       wait: true
     -
-      foreach: "{{range .ClusterNodes | .NodeAddresses}}"
+      foreach: "{{range .Nodes | .NodeAddresses}}"
       template: copy_files
       args: "{{.}}, /opt/couchbase/var/lib/couchbase/tmp/collectinfo*.zip, logs/"
       wait: true

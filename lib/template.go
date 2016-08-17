@@ -32,6 +32,7 @@ func ParseTemplate(s *Scope, command string) string {
 		"last":     tResolv.LastItem,
 		"contains": tResolv.Contains,
 		"excludes": tResolv.Excludes,
+		"tolist":   tResolv.ToList,
 	}
 	tmpl, err := template.New("t").Funcs(netFunc).Parse(command)
 	logerr(err)
@@ -342,6 +343,10 @@ func (t *TemplateResolver) ToJson(data string) interface{} {
 		kv = nil
 	}
 	return kv
+}
+
+func (t *TemplateResolver) ToList(spec ServerSpec) []ServerSpec {
+	return []ServerSpec{spec}
 }
 
 // returns status string of container id
