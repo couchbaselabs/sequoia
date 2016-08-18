@@ -41,18 +41,18 @@ type ActionSpec struct {
 func (a *ActionSpec) String() string {
 	return fmt.Sprintf(
 		`-
- image: "%s"
- command: "%s"
+ image: %q
+ command: %q
  wait: %t
- before: "%s"
- entrypoint: "%s"
- requires: "%s"
- concurrency: "%s"
- duration: "%s"
- alias: "%s"
+ before: %q
+ entrypoint: %q
+ requires: %q
+ concurrency: %q
+ duration: %q
+ alias: %q
  repeat: %d
- template: "%s"
- args: "%s"
+ template: %q
+ args: %q
  client: %v
 `, a.Image, a.Command, a.Wait, a.Before, a.Entrypoint, a.Requires,
 		a.Concurrency, a.Duration, a.Alias, a.Repeat,
@@ -76,11 +76,11 @@ type ClientActionSpec struct {
 func (c ClientActionSpec) String() string {
 
 	return fmt.Sprintf(`
-    op: "%s"
-    container: "%s"
-    filename: "%s"
-    frompath: "%s"
-    topath: "%s"`,
+    op: %q
+    container: %q
+    filename: %q
+    frompath: %q
+    topath: %q`,
 		c.Op, c.Container,
 		c.FileName, c.FromPath,
 		c.ToPath)
