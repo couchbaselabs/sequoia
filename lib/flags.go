@@ -14,6 +14,7 @@ type TestFlags struct {
 	TestFile        *string `yaml:"test"`
 	Client          *string
 	Provider        *string
+	Platform        *string
 	ImageName       *string
 	ContainerName   *string
 	ImageCommand    *string
@@ -108,6 +109,10 @@ func (f *TestFlags) AddDefaultFlags(fset *flag.FlagSet) {
 		"provider",
 		"docker",
 		"couchbase provider")
+	f.Platform = fset.String(
+		"platform",
+		"linux",
+		"couchbase platform <linux, windows>")
 	f.ScopeFile = fset.String(
 		"scope",
 		"tests/simple/scope_small.yml",

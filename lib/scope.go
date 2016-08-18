@@ -673,6 +673,10 @@ func (s *Scope) RemoveNodes() {
 	s.Spec.ApplyToAllServers(rmNodesOp)
 }
 
+func (s *Scope) GetPlatform() string {
+	return *s.Flags.Platform
+}
+
 func (s *Scope) SetVarsKV(key, id string) {
 	s.Vars.Set(key, id)
 }
