@@ -191,11 +191,20 @@ func (t *Test) runActions(scope Scope, loop int, actions []ActionSpec) {
 	// run all actions in test
 	for _, action := range actions {
 
+		if action.ForEach != "" {
+			// resolve foreach template (must result in an iterable)
+			// create actions with '.' as the output of the range
+			rangeActions := t.ResolveSingleRangeActions(scope, action)
+			t.runActions(scope, loop, rangeActions)
+			continue
+		}
+
 		if action.Client.Op != "" {
+			key := action.Client.Container
+
 			// is a client op
 			switch action.Client.Op {
 			case "kill":
-				key := action.Client.Container
 				if id, ok := scope.GetVarsKV(key); ok {
 					t.Cm.KillContainer(id)
 					colorsay("kill" + key)
@@ -203,7 +212,6 @@ func (t *Test) runActions(scope Scope, loop int, actions []ActionSpec) {
 					ecolorsay("no such container alias " + key)
 				}
 			case "rm":
-				key := action.Client.Container
 				if id, ok := scope.GetVarsKV(key); ok {
 					t.Cm.RemoveContainer(id)
 					colorsay("remove " + key)
@@ -211,7 +219,6 @@ func (t *Test) runActions(scope Scope, loop int, actions []ActionSpec) {
 					ecolorsay("no such container alias " + key)
 				}
 			case "cp":
-				key := action.Client.Container
 				if id, ok := scope.GetVarsKV(key); ok {
 					t.Cm.CopyFromContainer(id,
 						PathToFilename(action.Client.ToPath),
@@ -289,14 +296,6 @@ func (t *Test) runActions(scope Scope, loop int, actions []ActionSpec) {
 				ReadYamlFile(includeFile, &spec)
 				t.CacheIncludedTemplate(scope, spec)
 			}
-			continue
-		}
-
-		if action.ForEach != "" {
-			// resolve foreach template (must result in an iterable)
-			// create actions with '.' as the output of the range
-			rangeActions := t.ResolveSingleRangeActions(scope, action)
-			t.runActions(scope, loop, rangeActions)
 			continue
 		}
 
@@ -411,6 +410,9 @@ func (t *Test) runTask(scope *Scope, task *ContainerTask, action *ActionSpec) {
 	aliasKey := action.Alias
 	if aliasKey == "" {
 		aliasKey = RandStr(6)
+	} else {
+		// parse alias
+		aliasKey = ParseTemplate(scope, aliasKey)
 	}
 
 	// if command has 'before' then cannot start processing until ready
