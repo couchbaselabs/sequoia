@@ -14,10 +14,10 @@ package sequoia
 
 import (
 	"fmt"
+	"github.com/streamrail/concurrent-map"
 	"regexp"
 	"strconv"
 	"strings"
-	"sync"
 )
 
 type Scope struct {
@@ -26,9 +26,8 @@ type Scope struct {
 	Provider Provider
 	Flags    TestFlags
 	Version  string
-	Vars     map[string]string
+	Vars     cmap.ConcurrentMap
 	Loops    int
-	VarsMtx  sync.Mutex
 }
 
 func NewScope(flags TestFlags, cm *ContainerManager) Scope {
@@ -69,7 +68,6 @@ func NewScope(flags TestFlags, cm *ContainerManager) Scope {
 			}
 		}
 	}
-	var mtx sync.Mutex
 	var loops = 0
 	if *flags.Continue == true {
 		loops++ // we've already done first pass
@@ -81,9 +79,8 @@ func NewScope(flags TestFlags, cm *ContainerManager) Scope {
 		provider,
 		flags,
 		"",
-		make(map[string]string),
+		cmap.New(),
 		loops,
-		mtx,
 	}
 }
 
@@ -673,14 +670,13 @@ func (s *Scope) RemoveNodes() {
 }
 
 func (s *Scope) SetVarsKV(key, id string) {
-	s.VarsMtx.Lock()
-	s.Vars[key] = id
-	s.VarsMtx.Unlock()
+	s.Vars.Set(key, id)
 }
 
 func (s *Scope) GetVarsKV(key string) (string, bool) {
-	s.VarsMtx.Lock()
-	val, ok := s.Vars[key]
-	s.VarsMtx.Unlock()
-	return val, ok
+	if val, ok := s.Vars.Get(key); ok {
+		return val.(string), ok
+	} else {
+		return "", false
+	}
 }
