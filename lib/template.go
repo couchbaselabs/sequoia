@@ -33,6 +33,7 @@ func ParseTemplate(s *Scope, command string) string {
 		"contains": tResolv.Contains,
 		"excludes": tResolv.Excludes,
 		"tolist":   tResolv.ToList,
+		"mkrange":  tResolv.MkRange,
 	}
 	tmpl, err := template.New("t").Funcs(netFunc).Parse(command)
 	logerr(err)
@@ -369,6 +370,19 @@ func (t *TemplateResolver) ToJson(data string) interface{} {
 
 func (t *TemplateResolver) ToList(spec ServerSpec) []ServerSpec {
 	return []ServerSpec{spec}
+}
+
+func (t *TemplateResolver) MkRange(args ...int) []int {
+	s := []int{}
+	step := 1
+	if len(args) == 3 {
+		step = args[2]
+	}
+	for i := args[0]; i <= args[1]; i += step {
+		s = append(s, i)
+	}
+
+	return s
 }
 
 // returns status string of container id
