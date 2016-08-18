@@ -1,0 +1,39 @@
+-
+  # run attack against a view
+  # $0 duration 
+  # $1 host
+  # $2 bucket 
+  # $3 ddoc 
+  # $4 view 
+  # $5 params 
+  name: attack_view 
+  actions:
+    -
+      image: danihodovic/vegeta
+      command: "bash -c 'echo GET \"http://$1:8092/$2/_design/$3/_view/$4?$5\" | vegeta attack -duration=$0 > results.bin && vegeta report -inputs=results.bin  >  results.txt && vegeta report -inputs=results.bin -reporter=plot > plot.html'"
+
+
+-
+  # save results from vegeta attack 
+  # $0 container 
+  name: save_attack_results 
+  actions:
+    -
+      # wait for each attack to finish
+      before: "{{.Status `$0` | eq `exited`}}"
+      wait: true
+    -
+      # save graphs 
+      client:
+        op: cp
+        container: "$0"
+        frompath: "/app/plot.html"
+        topath: "logs/plot$0.html"
+    
+    -
+      # save text results
+      client:
+        op: cp
+        container: "$0"
+        frompath: "/app/results.txt"
+        topath: "logs/results$0.txt"
