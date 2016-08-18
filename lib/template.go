@@ -208,6 +208,7 @@ func (t *TemplateResolver) Attr(key string, servers []ServerSpec) string {
 func (t *TemplateResolver) RestUsername() string {
 	nodes := t.ClusterNodes()
 	return t.Attr("rest_username", nodes)
+
 }
 
 // Shortcut:  .ClusterNodes | .Attr `rest_password`
@@ -234,13 +235,34 @@ func (t *TemplateResolver) Ram() string {
 // Shortcut:  .ClusterNodes | .Attr `ssh_username`
 func (t *TemplateResolver) SSHUsername() string {
 	nodes := t.ClusterNodes()
-	return t.Attr("ssh_username", nodes)
+	username := t.Attr("ssh_username", nodes)
+	if username == "" {
+		switch *t.Scope.Flags.Platform {
+		case "windows":
+			username = "Administrator"
+		default:
+			username = "root"
+		}
+	}
+
+	return username
+
 }
 
 // Shortcut:  .ClusterNodes | .Attr `ssh_password`
 func (t *TemplateResolver) SSHPassword() string {
 	nodes := t.ClusterNodes()
-	return t.Attr("ssh_password", nodes)
+	password := t.Attr("ssh_password", nodes)
+	if password == "" {
+		switch t.Scope.GetPlatform() {
+		case "windows":
+			password = "Membase123"
+		default:
+			password = "couchbase"
+		}
+	}
+
+	return password
 }
 
 // Get nodes from Cluster Spec that are not active

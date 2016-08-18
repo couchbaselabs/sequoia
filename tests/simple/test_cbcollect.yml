@@ -20,8 +20,3 @@
   template: copy_files
   args: "{{.}}, /opt/couchbase/var/lib/couchbase/tmp/collectinfo*.zip, logs/"
   wait: true
-
--
-  # verify via shortcut as well
-  template: cbcollect_all_linux_nodes
-  wait: true

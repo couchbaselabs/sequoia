@@ -103,10 +103,9 @@
         topath: "$2"
 
 -
-  # shortcut for running cbcollect on all nodes
-  # and copying the collect info files from nodes into logs dir
-  #   -- no args --
-  name: cbcollect_all_linux_nodes
+  # run cbcollect on all nodes and copy into local machine
+  # $0 remote path
+  name: cbcollect_and_copy_all_nodes
   actions:
     -
       template: collect_info_all_clusters
@@ -117,5 +116,28 @@
     -
       foreach: "{{range .Nodes | .NodeAddresses}}"
       template: copy_files
-      args: "{{.}}, /opt/couchbase/var/lib/couchbase/tmp/collectinfo*.zip, logs/"
+      args: "{{.}}, $0, logs/"
       wait: true
+
+-
+  # shortcut for running cbcollect on all nodes
+  # and copying the collect info files from nodes into logs dir
+  #   -- no args --
+  name: cbcollect_all_linux_nodes
+  actions:
+    -
+      template: cbcollect_and_copy_all_nodes
+      args: "/opt/couchbase/var/lib/couchbase/tmp/collectinfo*.zip"
+      wait: true
+
+-
+  # shortcut for running cbcollect on all nodes
+  # and copying the collect info files from nodes into logs dir
+  #   -- no args --
+  name: cbcollect_all_windows_nodes
+  actions:
+    -
+      template: cbcollect_and_copy_all_nodes
+      args: "/cygdrive/c/Program*Files/Couchbase/Server/var/lib/couchbase/tmp/*zip"
+      wait: true
+

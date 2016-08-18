@@ -645,12 +645,13 @@ func (t *Test) CollectInfo(scope Scope) {
 	t.Flags.CollectOnError = &disabledFlagVal
 
 	// construst a collect action
-	actionStr := `
+	platform := scope.GetPlatform()
+	actionStr := fmt.Sprintf(`
 -
   include: tests/templates/util.yml
 -
-  template: cbcollect_all_linux_nodes
-  wait: true`
+  template: cbcollect_all_%s_nodes
+  wait: true`, platform)
 	actions := ActionsFromString(actionStr)
 
 	// start collection

@@ -13,8 +13,6 @@ servers: # define a single server with link named 'local'
      count: 1
      rest_username: Administrator
      rest_password: password
-     ssh_username: root
-     ssh_password: couchbase
      rest_port: 8091
      init_nodes: 1
      buckets: default
