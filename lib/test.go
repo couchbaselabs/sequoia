@@ -68,7 +68,6 @@ type TemplateSpec struct {
 type ClientActionSpec struct {
 	Op        string
 	Container string
-	FileName  string
 	FromPath  string
 	ToPath    string
 }
@@ -78,12 +77,10 @@ func (c ClientActionSpec) String() string {
 	return fmt.Sprintf(`
     op: %q
     container: %q
-    filename: %q
     frompath: %q
     topath: %q`,
 		c.Op, c.Container,
-		c.FileName, c.FromPath,
-		c.ToPath)
+		c.FromPath, c.ToPath)
 }
 
 func ActionsFromFile(fileName string) []ActionSpec {
@@ -217,9 +214,9 @@ func (t *Test) runActions(scope Scope, loop int, actions []ActionSpec) {
 				key := action.Client.Container
 				if id, ok := scope.GetVarsKV(key); ok {
 					t.Cm.CopyFromContainer(id,
-						action.Client.FileName,
+						PathToFilename(action.Client.ToPath),
 						action.Client.FromPath,
-						action.Client.ToPath)
+						PathToDir(action.Client.ToPath))
 					msg := fmt.Sprintf("copying files from %s:%s to %s",
 						id[:6],
 						action.Client.FromPath,

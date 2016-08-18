@@ -92,14 +92,13 @@
       command: "sshpass -p {{.SSHPassword}}
                   scp -o StrictHostKeyChecking=no
                   {{.SSHUsername}}@$0:$1
-                  /opt/"
+                  /opt/tmpfile"
       alias: _CopyContainer
     -
       client:
         op: cp
         container: _CopyContainer
-        filename: "$0.zip"
-        frompath: "/opt"
+        frompath: "/opt/tmpfile"
         topath: "$2"
 
 -
@@ -116,7 +115,7 @@
     -
       foreach: "{{range .Nodes | .NodeAddresses}}"
       template: copy_files
-      args: "{{.}}, $0, logs/"
+      args: "{{.}}, $0, logs/{{.}}.zip"
       wait: true
 
 -

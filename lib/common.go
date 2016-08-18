@@ -11,6 +11,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path"
 	"regexp"
 	"strings"
 	"time"
@@ -172,4 +173,12 @@ func CommaStrToList(str string) []string {
 		parts = append(parts, strings.TrimSpace(s))
 	}
 	return parts
+}
+
+func PathToFilename(p string) string {
+	return path.Base(p)
+}
+
+func PathToDir(p string) string {
+	return path.Dir(p)
 }
