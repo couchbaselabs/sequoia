@@ -377,12 +377,16 @@ func (s *Scope) CreateBuckets() {
 					nodeRam, _ := strconv.Atoi(server.Ram)
 					ramQuota = strconv.Itoa((nodeRam * ramVal) / 100)
 				}
+				var replica uint8 = 1
+				if bucket.Replica != nil {
+					replica = *bucket.Replica
+				}
 				command := []string{"bucket-create", "-c", ip,
 					"-u", server.RestUsername, "-p", server.RestPassword,
 					"--bucket", bucketName,
 					"--bucket-ramsize", ramQuota,
 					"--bucket-type", bucket.Type,
-					"--bucket-replica", strconv.Itoa(int(bucket.Replica)),
+					"--bucket-replica", strconv.Itoa(int(replica)),
 					"--enable-flush", "1", "--wait",
 				}
 				if bucket.Sasl != "" {

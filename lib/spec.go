@@ -10,7 +10,7 @@ type BucketSpec struct {
 	Names     []string
 	Count     uint8
 	Ram       string
-	Replica   uint8
+	Replica   *uint8
 	Type      string
 	Sasl      string
 	Eviction  string
