@@ -1,0 +1,47 @@
+-
+  include: tests/templates/kv.yml, tests/templates/vegeta.yml
+
+###############  num slicewriters = 1 ################
+-
+  image: appropriate/curl
+  command: "-v -u Administrator:password -H Content-Type:application/json -X POST
+           http://{{.Nodes | .Service `index` | net 0}}:9102/settings -d '{\"indexer.numSliceWriters\" : 1}'"
+
+###############  create index ################
+-
+   image: sequoiatools/cbq
+   command: "-e=http://{{.QueryNodePort}}
+             -u={{.RestUsername}}
+             -p={{.RestPassword}}
+             -script='create primary index on default'"
+
+###############  start data loading ################
+-
+  image: sequoiatools/gideon
+  command: "kv --ops 10000 --sizes 64 --create 70 --get 10 --delete 20  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+  concurrency: "{{.Scale 1}}"
+-
+  image: sequoiatools/gideon
+  command: "kv --ops 20000 --sizes 64 --create 100  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+  concurrency: "{{.Scale 1}}" 
+
+# ###############  stress all query nodes ################
+-
+  foreach: "{{range $i, $node := (index (.Service `n1ql` .Nodes) 0).Names}}"
+  template: attack_query
+  args: "10s, 100, {{$node | to_ip }},
+        select * from default where rating > 0 limit 50"
+  alias: "N1ql_{{$i}}"
+-
+  # save reports 
+  foreach: "{{range $i, $node := (index (.Service `n1ql` .Nodes) 0).Names}}"
+  template: save_attack_results 
+  args: "N1ql_{{$i}}"
+  wait: true
+
+
+### until 500M items ######
+-
+   template: wait_for_items
+   args: "{{.Bucket}}, 500000000"
+
