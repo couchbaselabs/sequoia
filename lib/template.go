@@ -34,6 +34,7 @@ func ParseTemplate(s *Scope, command string) string {
 		"excludes": tResolv.Excludes,
 		"tolist":   tResolv.ToList,
 		"mkrange":  tResolv.MkRange,
+		"to_ip":    tResolv.ToIp,
 	}
 	tmpl, err := template.New("t").Funcs(netFunc).Parse(command)
 	logerr(err)
@@ -146,6 +147,10 @@ func (t *TemplateResolver) NodeAddresses(servers []ServerSpec) []string {
 		ips = append(ips, ip)
 	}
 	return ips
+}
+
+func (t *TemplateResolver) ToIp(name string) string {
+	return t.Scope.Provider.GetHostAddress(name)
 }
 
 // Shortcut: .ClusterNodes | net 0
