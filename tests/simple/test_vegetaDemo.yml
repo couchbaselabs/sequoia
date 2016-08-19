@@ -10,7 +10,7 @@
   # run http attacks against view with various skip param 
   foreach: "{{range $i, $skip := mkrange 0 40 10}}"
   template: attack_view
-  args: "5s, {{$.Orchestrator}},
+  args: "5s, 50, {{$.Orchestrator}},
          {{$.Bucket}},
          live,
          live_ratings,   
