@@ -1,35 +1,56 @@
 -
   # run attack against a view
-  # $0 duration 
-  # $1 host
-  # $2 bucket 
-  # $3 ddoc 
-  # $4 view 
-  # $5 params 
-  name: attack_view 
+  # $0 attack duration
+  # $1 attack rate
+  #
+  # $2 host
+  # $3 bucket
+  # $4 ddoc
+  # $5 view
+  # $6 params
+  name: attack_view
   actions:
     -
       image: danihodovic/vegeta
-      command: "bash -c 'echo GET \"http://$1:8092/$2/_design/$3/_view/$4?$5\" | vegeta attack -duration=$0 > results.bin && vegeta report -inputs=results.bin  >  results.txt && vegeta report -inputs=results.bin -reporter=plot > plot.html'"
+      command: "bash -c 'echo GET \"http://$2:8092/$3/_design/$4/_view/$5?$6\" | vegeta attack -duration=$0 -rate=$1> results.bin && vegeta report -inputs=results.bin  >  results.txt && vegeta report -inputs=results.bin -reporter=plot > plot.html'"
 
 
 -
-  # save results from vegeta attack 
-  # $0 container 
-  name: save_attack_results 
+  # run attack against a query node
+  # $0 attack duration
+  # $1 attack rate
+  #
+  # $2 host
+  # $3 query statement
+  name: attack_query
+  actions:
+    -
+      image: danihodovic/vegeta
+      command: "bash -c
+          'echo \"$3\" > query.txt;
+           echo -e POST http://$2/query/service
+               | vegeta attack -duration=$0 -rate=$1 -body=query.txt > results.bin;
+                 vegeta report -inputs=results.bin  >  results.txt;
+                 vegeta report -inputs=results.bin -reporter=plot > plot.html'"
+
+
+-
+  # save results from vegeta attack
+  # $0 container
+  name: save_attack_results
   actions:
     -
       # wait for each attack to finish
       before: "{{.Status `$0` | eq `exited`}}"
       wait: true
     -
-      # save graphs 
+      # save graphs
       client:
         op: cp
         container: "$0"
         frompath: "/app/plot.html"
         topath: "logs/plot$0.html"
-    
+
     -
       # save text results
       client:
