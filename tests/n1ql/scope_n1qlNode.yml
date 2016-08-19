@@ -2,23 +2,26 @@
 buckets:
   -
       name: default
-      ram: 90% 
+      ram: 90%
       eviction: fullEviction
+      replica: 0
 
 servers: # each server tag represents a cluster
   -
       name: local
-      count: 10 
-      ram: 40% 
-      index_ram: 95% 
+      count: 10
+      ram: 70%
+      index_ram: 95%
       index_storage: memory_optimized
       services:
         query: 2
-        index: 3
+        index: 2
+        query_start: 7
+        index_start: 9
       rest_username: Administrator
       rest_password: password
       data_path: "/data"
       index_path: "/data"
-      init_nodes: 10 
+      init_nodes: 10
       buckets: default
- 
+
