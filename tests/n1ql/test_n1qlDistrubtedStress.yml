@@ -17,7 +17,7 @@
    command: "-e=http://{{.QueryNodePort}}
 	     -u={{.RestUsername}}
 	     -p={{.RestPassword}}
-	     -script='create primary index on default'"
+	     -script='create index default_rating on `default`(rating)'"
 - 
    command: "-e=http://{{.Nodes | .Service `n1ql` | net 1 | noport}}:{{.QueryPort}} -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_result on `default`(result)'"
 
