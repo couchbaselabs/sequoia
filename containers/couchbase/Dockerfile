@@ -1,7 +1,7 @@
 FROM ubuntu:14.04
 RUN apt-get update || true
 
-RUN apt-get install -yq runit wget python-httplib2  openssh-server libssl0.9.8 zip unzip tcpdump && \
+RUN apt-get install -yq runit wget python-httplib2  openssh-server libssl0.9.8 zip unzip tcpdump iptables psmisc && \
     apt-get autoremove && apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
