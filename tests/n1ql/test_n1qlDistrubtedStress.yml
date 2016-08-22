@@ -47,6 +47,12 @@
         select * from default where result is not null limit 20"
   alias: "N1ql_q2_{{$i}}"
 
+-
+  foreach: "{{range $i, $node := (index (.Service `n1ql` .Nodes) 0).Names}}"
+  template: attack_query
+  args: "0, 100, {{$node | to_ip }}:{{$.QueryPort}},
+        delete from default where rating > 0 limit 500"
+
 ### until 500M items ######
 -
    template: wait_for_items
