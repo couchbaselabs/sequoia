@@ -1,26 +1,59 @@
 -
   include: tests/templates/vegeta.yml
 
-- 
+-
   # load data
   image: sequoiatools/gideon
   command: "kv --ops {{.Scale 100}} --create 30 --get 70 --delete 10 --expire 100 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
 
 -
-  # run http attacks against view with various skip param 
+  # run http attacks against view with various skip param
   foreach: "{{range $i, $skip := mkrange 0 40 10}}"
   template: attack_view
-  args: "5s, 50, {{$.Orchestrator}},
+  args: "30s, 50, {{$.Orchestrator}},
          {{$.Bucket}},
          live,
-         live_ratings,   
+         live_ratings,
          connection_timeout=60000&inclusive_end=true&limit=6&skip={{$skip}}&stale=false"
   alias: "ViewQ{{$i}}"
 
 -
-  # save reports 
+   # create query index
+   image: sequoiatools/cbq
+   command: "-e=http://{{.QueryNodePort}}
+       -u={{.RestUsername}}
+       -p={{.RestPassword}}
+       -script='create index default_rating on `default`(rating)'"
+
+
+-
+  # some background deletes across n1ql nodes
+  foreach: "{{range $i, $offset := mkrange 0 500 100}}"
+  template: attack_query_all_nodes
+  args: "10s, 10,
+        delete from default where rating > 0 limit 10 offset {{$offset}}"
+
+-
+  # run attacks against query nodes
+  foreach: "{{range $i, $offset := mkrange 0 500 100}}"
+  template: attack_query_all_nodes
+  args: "10s, 10,
+        select * from default where rating > 100 limit 100 offset {{$offset}}"
+  alias: "N1qlQ{{$i}}"
+
+
+-
+  # save reports
+  foreach: "{{range $i, $skip := mkrange 0 4}}"
+  template: save_attack_results
+  args: "N1qlQ{{$i}}"
+  wait: true
+
+
+-
+  # save reports
   foreach: "{{range $i, $skip := mkrange 0 3}}"
-  template: save_attack_results 
+  template: save_attack_results
   args: "ViewQ{{$i}}"
   wait: true
 

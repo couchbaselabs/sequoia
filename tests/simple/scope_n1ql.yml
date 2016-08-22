@@ -1,0 +1,23 @@
+---
+buckets: # define single default bucket
+  -
+    name: default
+    ram: 75% 
+    replica: 1
+    type: couchbase
+
+servers: # define 4 servers
+  -
+     name: local.st.couchbase.com
+     ram: 40% 
+     index_ram: 10% 
+     count: 4
+     rest_username: Administrator
+     rest_password: password
+     rest_port: 8091
+     init_nodes: 4
+     services:
+       query: 2
+       index: 1
+     index_storage: memory_optimized 
+     buckets: default

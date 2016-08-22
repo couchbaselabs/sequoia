@@ -34,6 +34,21 @@
                  vegeta report -inputs=results.bin -reporter=plot > plot.html'"
 
 
+
+-
+  # run attack against all query nodes
+  # $0 attack duration
+  # $1 attack rate
+  #
+  # $2 query statement
+  name: attack_query_all_nodes
+  actions:
+    -
+      foreach: "{{range $i, $node := (index (.Service `n1ql` .Nodes) 0).Names}}"
+      template: attack_query
+      args: "$0, $1, {{$node | to_ip }}:{{$.QueryPort}}, $2"
+
+
 -
   # save results from vegeta attack
   # $0 container
