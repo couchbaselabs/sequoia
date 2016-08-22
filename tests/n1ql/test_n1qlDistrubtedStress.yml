@@ -1,16 +1,6 @@
 -
   include: tests/templates/kv.yml, tests/templates/vegeta.yml
 
-###############  num slicewriters = 1 ################
--
-  image: appropriate/curl
-  command: "-v -u Administrator:password -H Content-Type:application/json -X POST
-	   http://{{.Nodes | .Service `index` | net 0}}:9102/settings -d '{\"indexer.numSliceWriters\" : 1}'"
--
-  image: appropriate/curl
-  command: "-v -u Administrator:password -H Content-Type:application/json -X POST
-	   http://{{.Nodes | .Service `index` | net 1}}:9102/settings -d '{\"indexer.numSliceWriters\" : 1}'"
-
 ###############  create index ################
 -
    image: sequoiatools/cbq
@@ -32,12 +22,21 @@
   command: "kv --ops 20000 --sizes 64 --create 100  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
   concurrency: "{{.Scale 1}}" 
 
-# ###############  stress all query nodes ################
+
 -
-  foreach: "{{range $i, $node := (index (.Service `n1ql` .Nodes) 0).Names}}"
-  template: attack_query
-  args: "0, 100, {{$node | to_ip }}:{{$.QueryPort}},
-        select * from default where rating > 0 limit 50"
+  # some background deletes across n1ql nodes
+  foreach: "{{range $i, $offset := mkrange 0 500 100}}"
+  template: attack_query_all_nodes
+  args: "0, 20,
+        delete from default where rating >  {{$offset}} limit 500"
+
+-
+  # ###############  stress all query nodes ################
+  # with various offsets 
+  foreach: "{{range $i, $offset := mkrange 0 500 100}}"
+  template: attack_query_all_nodes
+  args: "0, 20,
+        select * from default where rating > 100 limit 100 offset {{$offset}}"
   alias: "N1ql_q1_{{$i}}"
 
 -
@@ -47,16 +46,11 @@
         select * from default where result is not null limit 20"
   alias: "N1ql_q2_{{$i}}"
 
--
-  foreach: "{{range $i, $node := (index (.Service `n1ql` .Nodes) 0).Names}}"
-  template: attack_query
-  args: "0, 100, {{$node | to_ip }}:{{$.QueryPort}},
-        delete from default where rating > 0 limit 500"
 
 ### until 500M items ######
 -
    template: wait_for_items
-   args: "{{.Bucket}}, 500000000"
+   args: "{{.Bucket}}, {{.Scale 100000000}}"
    wait: true
 
 ### stop queries ######

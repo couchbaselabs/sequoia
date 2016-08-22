@@ -31,7 +31,7 @@
   foreach: "{{range $i, $offset := mkrange 0 500 100}}"
   template: attack_query_all_nodes
   args: "10s, 10,
-        delete from default where rating > 0 limit 10 offset {{$offset}}"
+        delete from default where rating > {{$offset}} limit 100"
 
 -
   # run attacks against query nodes
