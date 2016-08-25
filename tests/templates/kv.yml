@@ -16,8 +16,10 @@
       # this check saves current ratio into a variable as $ratio and then performs checking
       # checking is only initiated 'if .AllLogs' is returning stats
       until: "{{if .AllLogs `__self__`}}
-                  {{with $ratio:=ftoint (last (.TailLogs `__self__` 1 | json).op.samples.vb_active_resident_items_ratio)}}
-                     {{lt $ratio $1}}
+                  {{with $sample:=(.TailLogs `__self__` 1 | json)}}
+                    {{with $ratio:=ftoint (last $sample.op.samples.vb_active_resident_items_ratio)}}
+                       {{lt $ratio $1}}
+                    {{end}}
                   {{end}}
               {{else}}{{false}}{{end}}"
       wait: true
@@ -33,8 +35,10 @@
       # this check saves current ratio into a variable as $ratio and then performs checking
       # checking is only initiated 'if .AllLogs' is returning stats
       until: "{{if .AllLogs `__self__`}}
-                  {{with $val:=ftoint (last (.TailLogs `__self__` 1 | json).op.samples.curr_items)}}
-                     {{lt $1 $val}}
+                  {{with $sample:=(.TailLogs `__self__` 1 | json)}}
+                    {{with $val:=ftoint (last $sample.op.samples.curr_items)}}
+                       {{lt $1 $val}}
+                    {{end}}
                   {{end}}
               {{else}}{{false}}{{end}}"
       wait: true

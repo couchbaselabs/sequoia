@@ -73,7 +73,15 @@
       image: appropriate/curl
       command: "-s -u {{.RestUsername}}:{{.RestPassword}} {{.Orchestrator}}:8091/pools/default/rebalanceProgress"
       repeat: -1
-      until: "{{if .AllLogs `__self__`}}{{eq `none` (.TailLogs `__self__` 1 | json).status}}{{else}}{{false}}{{end}}"
+      until: "{{if .AllLogs `__self__`}}
+                {{with $sample:=(.TailLogs `__self__` 1 | json)}}
+                  {{eq `none` $sample.status}}
+                {{else}}
+                  {{false}}
+                {{end}}
+              {{else}}
+                {{false}}
+              {{end}}"
       wait: true
 
 # failover node
