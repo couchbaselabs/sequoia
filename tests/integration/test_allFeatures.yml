@@ -37,21 +37,17 @@
 
 ###############  query index ################
 -
-  image: sequoiatools/queryloop
-  command: "{{.QueryNodePort}} 'select SUM(rating) from default where rating > 0'"
-  concurrency: 5
+  # run http attacks against view with various skip param
+  foreach: "{{range $i, $offset := mkrange 0 500 100}}"
+  template: attack_query
+  args: "0, 10, {{$.QueryNodePort}},
+        delete from default where rating > {{$offset}} limit 100"
 -
-  command: "{{.QueryNodePort}} 'select SUM(rating) from default where rating > 100'"
--
-  command: "{{.QueryNodePort}} 'select SUM(rating) from default where rating < 900'"
--
-  concurrency: 1  # only 1 instance of delete queries running
-  command: "{{.QueryNodePort}} 'delete from default where rating < 300'"
--
-  command: "{{.QueryNodePort}} 'delete from default where rating > 700'"
--
-  command: "{{.QueryNodePort}} 'delete from default where rating > 300 and rating < 700'"
-
+  foreach: "{{range $i, $offset := mkrange 0 500 100}}"
+  template: attack_query
+  args: "0, 100, {{$.QueryNodePort}},
+        select * from default where rating > 100 limit 100 offset {{$offset}}"
+  alias: "N1qlQ{{$i}}"
 
 
 #============ continous kv loading ============
@@ -79,8 +75,33 @@
    command: "query --host {{.Orchestrator}} --ddoc scale --view padd --concurrency {{.Scale 1}}"
 -
    command: "query --host {{.Orchestrator}} --ddoc scale --view array --concurrency {{.Scale 1}}"
-
-
+-
+  # run http attacks against view with various skip param
+  foreach: "{{range $i, $skip := mkrange 0 1000 200}}"
+  template: attack_view
+  args: "30s, 50, {{$.Orchestrator}},
+         {{$.Bucket}},
+         scale,
+         stats,
+         connection_timeout=60000&inclusive_end=true&skip={{$skip}}&stale=false"
+-
+  # run http attacks against view with various skip param
+  foreach: "{{range $i, $skip := mkrange 0 1000 200}}"
+  template: attack_view
+  args: "30s, 50, {{$.Orchestrator}},
+         {{$.Bucket}},
+         scale,
+         array,
+         connection_timeout=60000&inclusive_end=true&limit=100&skip={{$skip}}&stale=update_after"
+-
+  # run http attacks against view with various skip param
+  foreach: "{{range $i, $skip := mkrange 0 1000 200}}"
+  template: attack_view
+  args: "30s, 50, {{$.Orchestrator}},
+         {{$.Bucket}},
+         scale,
+         array,
+         connection_timeout=60000&inclusive_end=true&limit=100&skip={{$skip}}&stale=ok"
 
 #============ rebalance out a node============
 -
