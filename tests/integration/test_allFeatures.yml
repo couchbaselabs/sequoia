@@ -71,7 +71,7 @@
          {{$.Bucket}},
          scale,
          {{$view}},
-         limit=1000&stale=false"
+         limit={{$.Scale 100}}&stale=update_after"
 
 #============ rebalance out a node============
 -
