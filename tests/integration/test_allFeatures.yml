@@ -67,7 +67,7 @@
   # run http attacks against view with various skip param
   foreach: "{{range $i, $view := strlist `stats` `array` `padd`}}"
   template: attack_view
-  args: "0, 50, {{$.Orchestrator}},
+  args: "0, 25, {{$.NthDataNode $i}},
          {{$.Bucket}},
          scale,
          {{$view}},
