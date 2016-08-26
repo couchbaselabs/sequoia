@@ -20,6 +20,7 @@ type ActionSpec struct {
 	Image       string
 	Command     string
 	Wait        bool
+	CondWait    string
 	Before      string
 	Entrypoint  string
 	Requires    string
@@ -44,6 +45,7 @@ func (a *ActionSpec) String() string {
  image: %q
  command: %q
  wait: %t
+ condwait: %q
  before: %q
  entrypoint: %q
  requires: %q
@@ -54,7 +56,7 @@ func (a *ActionSpec) String() string {
  template: %q
  args: %q
  client: %v
-`, a.Image, a.Command, a.Wait, a.Before, a.Entrypoint, a.Requires,
+`, a.Image, a.Command, a.Wait, a.CondWait, a.Before, a.Entrypoint, a.Requires,
 		a.Concurrency, a.Duration, a.Alias, a.Repeat,
 		a.Template, a.Args, a.Client)
 }
@@ -337,6 +339,14 @@ func (t *Test) runActions(scope Scope, loop int, actions []ActionSpec) {
 				colorsay("skipping due to requirements: " + action.Requires)
 				lastAction = action
 				continue
+			}
+		}
+
+		if action.CondWait != "" {
+			ok := ParseTemplate(&scope, action.CondWait)
+			ok = strings.TrimSpace(ok)
+			if wait, err := strconv.ParseBool(ok); err == nil {
+				action.Wait = wait
 			}
 		}
 

@@ -82,8 +82,7 @@
 -
   template: rebalance_out
   args: "{{.NthDataNode 1}}"
--
-  template: wait_for_rebalance
+  wait: true
 
 # failover an fts node
 -
@@ -91,19 +90,14 @@
   args: "{{.Nodes | .Service `fts` | net 0}}"
 -
   template: rebalance
--
-  template: wait_for_rebalance
+  wait: true
 
 # rebalance out more nodes
 -
   template: rebalance_out
   args: "{{.NthDataNode 2}}"
--
-  template: wait_for_rebalance
+  wait: true
 -
   template: rebalance_out
   args: "{{.NthDataNode 3}}"
--
-  template: wait_for_rebalance
-
-
+  wait: true

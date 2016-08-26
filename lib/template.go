@@ -210,11 +210,15 @@ func (t *TemplateResolver) Attr(key string, servers []ServerSpec) string {
 	return val
 }
 
+// return test level platform
+func (t *TemplateResolver) Platform() string {
+	return *t.Scope.Flags.Platform
+}
+
 // Shortcut:  .ClusterNodes | .Attr `rest_username`
 func (t *TemplateResolver) RestUsername() string {
 	nodes := t.ClusterNodes()
 	return t.Attr("rest_username", nodes)
-
 }
 
 // Shortcut:  .ClusterNodes | .Attr `rest_password`

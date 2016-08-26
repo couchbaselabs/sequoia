@@ -12,10 +12,7 @@
   before: "{{.Status `KvContainer` | eq `exited`}}"
   template: rebalance_out
   args: "{{.NthDataNode 1}}"
-
--
-  # wait_for_rebalance
-  template: wait_for_rebalance
+  wait: true
 
 - 
   template: pillowfight_small

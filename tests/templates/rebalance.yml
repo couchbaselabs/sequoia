@@ -6,6 +6,13 @@
       image: sequoiatools/couchbase-cli
       command:  "rebalance -c  {{.Orchestrator}}
                 -u  {{.RestUsername}} -p  {{.RestPassword}}"
+      condwait: "{{if eq `windows` .Platform }}
+                    false
+                 {{end}}"
+    -
+      # windows requires special status watching
+      requires: "{{ eq `windows` .Platform}}"
+      template: wait_for_rebalance
 
 # rebalance out a single node
 # $0 = server to remove
@@ -15,6 +22,13 @@
     -
       image: sequoiatools/couchbase-cli
       command: "rebalance -c  {{.Orchestrator}} --server-remove $0  -u  {{.RestUsername}} -p  {{.RestPassword}}"
+      condwait: "{{if eq `windows` .Platform }}
+                    false
+                 {{end}}"
+    -
+      # windows requires special status watching
+      requires: "{{ eq `windows` .Platform}}"
+      template: wait_for_rebalance
 
 # rebalance in a single node
 # $0 = server to add
@@ -35,13 +49,13 @@
 # $0 server to add
 # $1 node services
 -
-  name: add_node 
+  name: add_node
   actions:
     -
       image: sequoiatools/couchbase-cli
       command: "server-add -c  {{.Orchestrator}}
            --server-add $0
-           --services $1 
+           --services $1
            -u  {{.RestUsername}} -p  {{.RestPassword}}
            --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
       wait: true
@@ -64,6 +78,10 @@
       command:  "rebalance -c  {{.Orchestrator}}
         --server-remove $1
         -u  {{.RestUsername}} -p  {{.RestPassword}}"
+    -
+      # windows requires special status watching
+      requires: "{{ eq `windows` .Platform}}"
+      template: wait_for_rebalance
 
 # waits for any current rebalance to finish
 -
@@ -82,7 +100,6 @@
               {{else}}
                 {{false}}
               {{end}}"
-      wait: true
 
 # failover node
 -

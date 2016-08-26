@@ -37,8 +37,7 @@
 -
   template: rebalance_out
   args: "{{.NthDataNode 1}}"
--
-  template: wait_for_rebalance
+  wait: true
 
 #============ load 100k items at 1xScale============
 -
@@ -51,8 +50,7 @@
 -
   template: rebalance_swap
   args: "{{.NthDataNode 1}}, {{.NthDataNode 2}}"
--
-  template: wait_for_rebalance
+  wait: true
 
 
 #============ update 100k items at 1xScale============
@@ -76,8 +74,7 @@
    wait: true
 -
   template: rebalance
--
-  template: wait_for_rebalance
+  wait: true
 
 #============ update 100k items at 1xScale============
 -
@@ -106,8 +103,7 @@
    wait: true
 -
   template: rebalance
--
-  template: wait_for_rebalance
+  wait: true
 
 
 
@@ -134,5 +130,4 @@
    wait: true
 -
   template: rebalance
--
-  template: wait_for_rebalance
+  wait: true
