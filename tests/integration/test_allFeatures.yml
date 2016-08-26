@@ -1,6 +1,6 @@
 ---
 -
-  include: tests/templates/rebalance.yml
+  include: tests/templates/rebalance.yml, tests/templates/vegeta.yml
 
 #============ delete phase ============
 -
@@ -25,7 +25,7 @@
    image: sequoiatools/tpcc
    requires:  "{{.Version | le 4.0}}"
    command: "python tpcc.py --duration 259200 --client {{.Scale 1}} --warehouses 5 --no-execute n1ql
-				                    --query-url {{.QueryNodePort}} --userid {{.RestUsername}} --password {{.RestPassword}}"
+                            --query-url {{.QueryNodePort}} --userid {{.RestUsername}} --password {{.RestPassword}}"
 -
    requires:  "{{.Version | le 4.0}}"
    command: "python tpcc.py --duration 2259200 --client {{.Scale 1}}
@@ -38,10 +38,9 @@
 ###############  query index ################
 -
   # run http attacks against view with various skip param
-  foreach: "{{range $i, $offset := mkrange 0 500 100}}"
   template: attack_query
   args: "0, 10, {{$.QueryNodePort}},
-        delete from default where rating > {{$offset}} limit 100"
+        delete from default where rating > 0 limit 100"
 -
   foreach: "{{range $i, $offset := mkrange 0 500 100}}"
   template: attack_query
@@ -65,43 +64,14 @@
 
 #============ start view queries  ============
 -
-   image: sequoiatools/gideon
-   entrypoint: "./addviews.sh"
-   command: "{{.Orchestrator | noport}}:{{.ClusterNodes | .Attr `view_port`}} {{.Bucket}}"
-   wait: true
--
-   command: "query --host {{.Orchestrator}} --ddoc scale --view stats --concurrency {{.Scale 1}}"
--
-   command: "query --host {{.Orchestrator}} --ddoc scale --view padd --concurrency {{.Scale 1}}"
--
-   command: "query --host {{.Orchestrator}} --ddoc scale --view array --concurrency {{.Scale 1}}"
--
   # run http attacks against view with various skip param
-  foreach: "{{range $i, $skip := mkrange 0 1000 200}}"
+  foreach: "{{range $i, $view := strlist `stats` `array` `padd`}}"
   template: attack_view
-  args: "30s, 50, {{$.Orchestrator}},
+  args: "0, 50, {{$.Orchestrator}},
          {{$.Bucket}},
          scale,
-         stats,
-         connection_timeout=60000&inclusive_end=true&skip={{$skip}}&stale=false"
--
-  # run http attacks against view with various skip param
-  foreach: "{{range $i, $skip := mkrange 0 1000 200}}"
-  template: attack_view
-  args: "30s, 50, {{$.Orchestrator}},
-         {{$.Bucket}},
-         scale,
-         array,
-         connection_timeout=60000&inclusive_end=true&limit=100&skip={{$skip}}&stale=update_after"
--
-  # run http attacks against view with various skip param
-  foreach: "{{range $i, $skip := mkrange 0 1000 200}}"
-  template: attack_view
-  args: "30s, 50, {{$.Orchestrator}},
-         {{$.Bucket}},
-         scale,
-         array,
-         connection_timeout=60000&inclusive_end=true&limit=100&skip={{$skip}}&stale=ok"
+         {{$view}},
+         limit=1000&stale=false"
 
 #============ rebalance out a node============
 -

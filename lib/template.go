@@ -33,6 +33,7 @@ func ParseTemplate(s *Scope, command string) string {
 		"contains": tResolv.Contains,
 		"excludes": tResolv.Excludes,
 		"tolist":   tResolv.ToList,
+		"strlist":  tResolv.StrList,
 		"mkrange":  tResolv.MkRange,
 		"to_ip":    tResolv.ToIp,
 	}
@@ -379,6 +380,10 @@ func (t *TemplateResolver) ToJson(data string) interface{} {
 
 func (t *TemplateResolver) ToList(spec ServerSpec) []ServerSpec {
 	return []ServerSpec{spec}
+}
+
+func (t *TemplateResolver) StrList(args ...string) []string {
+	return args
 }
 
 func (t *TemplateResolver) MkRange(args ...int) []int {
