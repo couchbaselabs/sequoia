@@ -18,7 +18,7 @@ cd $GOPATH/src/github.com/couchbaselabs/sequoia/
 go build
 ```
 
-## Testing
+## Getting Started
 
 In Sequoia a test consists of a scope spec and a test spec.  The top-level config.yml file denotes which files to use for the test.  Alternetaively, command line args can be used to explicitely specify which scope and test to use when testing. 
 
