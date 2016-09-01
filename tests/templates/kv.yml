@@ -6,6 +6,14 @@
       command: "-U  {{.Orchestrator}} -B 100 -t 1 -c 100"
 
 -
+  name: pillowfight_hi
+  actions:
+    -
+      image: sequoiatools/pillowfight
+      command: "-U  {{.Orchestrator}} -I {{.Scale 1000}} -B {{.Scale 100}} -t 4 -c 100"
+
+
+-
   name: wait_for_dgm
   actions:
     -
