@@ -18,19 +18,25 @@ cd $GOPATH/src/github.com/couchbaselabs/sequoia/
 go build
 ```
 
-## Testing
+## Getting Started
 
 In Sequoia a test consists of a scope spec and a test spec.  The top-level config.yml file denotes which files to use for the test.  Alternetaively, command line args can be used to explicitely specify which scope and test to use when testing. 
 
 ```bash
-# MAC: defaults from config.yml are setup for docker-machine
-./sequoia  
+# create a docker client
+docker-machine create -d virtualbox local
+eval "$(docker-machine env local)"
+```
 
-# Linux: override client to point to local host
-./sequoia -client unix:///var/run/docker.sock 
+```bash
+# run simple test
+./sequoia
 
-# Changing scope and tests
- ./sequoia -scope tests/simple/scope_medium.yml -test tests/simple/test_views.yml
+# override the default client endpoint
+./sequoia -client unix:///var/run/docker.sock
+
+# override the default test and scope
+./sequoia -scope tests/simple/scope_medium.yml -test tests/simple/test_views.yml
 
 ```
 
