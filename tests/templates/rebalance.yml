@@ -152,3 +152,12 @@
       wait: true
     -
       template: rebalance
+
+-
+  name: rebalance_stop
+  actions:
+    -
+      image: sequoiatools/couchbase-cli
+      command:  "rebalance-stop -c  {{.Orchestrator}}
+                -u  {{.RestUsername}} -p  {{.RestPassword}}"
+      wait: true
