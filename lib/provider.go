@@ -39,6 +39,10 @@ type DockerProvider struct {
 	Opts             *DockerProviderOpts
 }
 
+type SwarmProvider struct {
+	DockerProvider
+}
+
 type DockerProviderOpts struct {
 	Build            string
 	BuildUrlOverride string `yaml:"build_url_override"`

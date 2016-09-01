@@ -125,7 +125,7 @@ func (t *Test) Run(scope Scope) {
 	// do optional setup
 	if *t.Flags.SkipSetup == false {
 		// if in default mode purge all containers
-		if t.Flags.Mode == "" {
+		if (t.Flags.Mode != "image") && (*t.Flags.SoftCleanup == false) {
 			t.Cm.RemoveAllContainers()
 		}
 		scope.Provider.ProvideCouchbaseServers(scope.Spec.Servers)

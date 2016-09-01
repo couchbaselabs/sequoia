@@ -1,0 +1,85 @@
+---
+servers: # each server tag represents a cluster
+  -
+      name: viewstress
+      count: 6
+      ram: 40%
+      rest_username: Administrator
+      rest_password: password
+      data_path: "/data"
+      index_path: "/data"
+      init_nodes: 6
+      buckets: b0,b1,b2,b3,b4,b5,b6,b7,b8,b9
+
+buckets:
+  -
+      name: b0
+      ram: 10%
+      eviction: fullEviction
+      ddocs: scale
+  -
+      name: b1
+      ram: 10%
+      eviction: fullEviction
+      ddocs: scale
+  -
+      name: b2
+      ram: 10%
+      eviction: fullEviction
+      ddocs: scale
+  -
+      name: b3
+      ram: 10%
+      eviction: fullEviction
+      ddocs: scale
+  -
+      name: b4
+      ram: 10%
+      eviction: fullEviction
+      ddocs: scale
+  -
+      name: b5
+      ram: 10%
+      eviction: fullEviction
+      ddocs: scale
+  -
+      name: b5
+      ram: 10%
+      eviction: fullEviction
+      ddocs: scale
+  -
+      name: b7
+      ram: 10%
+      eviction: fullEviction
+      ddocs: scale
+  -
+      name: b8
+      ram: 10%
+      eviction: fullEviction
+      ddocs: scale
+  -
+      name: b9
+      ram: 10%
+      eviction: fullEviction
+      ddocs: scale
+
+ddocs:
+  -
+   name: scale
+   views: stats, padd, array, all_ids
+
+
+views:
+  -
+    name: stats
+    map: "if(doc.profile){ if((doc.rating > 500) && (doc.rating < 520)){ emit(meta.id, doc.ops_sec); }}"
+    reduce: "_stats"
+  -
+    name: padd
+    map: "if(doc.profile){ if (doc.rating < 200){ emit(meta.id, doc.padding); }}"
+  -
+    name: array
+    map: "if(doc.profile){ if((doc.rating > 200) && (doc.rating< 300)){ emit(doc.active_hosts, null); }}"
+  -
+    name: all_ids
+    map: "emit(meta.id, null)"

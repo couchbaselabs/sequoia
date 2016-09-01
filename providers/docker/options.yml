@@ -1,6 +1,6 @@
-build: 4.7.0-937
-build_url_override: null 
-#build_url_override: "http://latestbuilds.hq.couchbase.com/couchbase-server-enterprise_x86_64_3.1.5-1859-rel.deb" 
+build: 3.1.5-1859 
+#build_url_override: null 
+build_url_override: "http://latestbuilds.hq.couchbase.com/couchbase-server-enterprise_x86_64_3.1.5-1859-rel.deb" 
 
 # Resource optimization
 # ------------
@@ -12,12 +12,12 @@ cpuperiod: 100000
 # Microseconds of CPU time that the container can get in a CPU period.
 # Default is 100ms which is 100% of a 100ms CpuPeriod
 # which means setting this value to 20ms results in 20% CPU
-cpuquota:  100000
+cpuquota:  40000
 
  # Hard Memory limit in bytes.
  # The default of (0) will be presented with entire machine memory to container
  # ie 4GB = 4000000000
-memory: 0
+memory:  4000000000
 
 # Total memory limit (memory + swap); set -1 to enable unlimited swap. 
 # You must use this with memory and make the swap value larger than memory
