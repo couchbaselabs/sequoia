@@ -14,6 +14,22 @@
       image: danihodovic/vegeta
       command: "bash -c 'echo GET \"http://$2:8092/$3/_design/$4/_view/$5?$6\" | vegeta attack -duration=$0 -rate=$1> results.bin && vegeta report -inputs=results.bin  >  results.txt && vegeta report -inputs=results.bin -reporter=plot > plot.html'"
 
+-
+  # run a distributed attack on all view nodes
+  # $0 attack duration
+  # $1 attack rate
+  #
+  # $2 bucket
+  # $3 ddoc
+  # $4 view
+  # $5 params
+  name: attack_view_all_nodes
+  actions:
+    -
+      foreach: "{{range $i, $node := (index (.Service `data` .Nodes) 0).Names}}"
+      template: attack_view
+      args: "$0, $1, {{$node | to_ip }}, $2, $3, $4, $5"
+
 
 -
   # run attack against a query node
