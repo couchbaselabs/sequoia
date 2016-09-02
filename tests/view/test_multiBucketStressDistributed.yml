@@ -5,7 +5,7 @@
   # load data
   foreach: "{{range $i, $offset := mkrange 0 9}}"
   image: sequoiatools/gideon
-  command: "kv --ops 1000 --create 100 --sizes 64 --hosts {{$.Orchestrator}} --bucket {{$.NthBucket $offset}}"
+  command: "kv --ops {{.Scale 1000}} --create 100 --hosts {{$.Orchestrator}} --bucket {{$.NthBucket $offset}}"
 
 -
   # run http attacks against view with various skip param
