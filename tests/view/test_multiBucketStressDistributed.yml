@@ -11,7 +11,7 @@
   # run http attacks against view with various skip param
   foreach: "{{range $i, $offset := mkrange 0 9}}"
   template: attack_view_all_nodes
-  args: "0, 50,
+  args: "0, 10,
          {{$.NthBucket $offset}},
          scale,
          padd,
