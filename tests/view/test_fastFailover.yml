@@ -1,0 +1,131 @@
+-
+  include: tests/templates/rebalance.yml, tests/templates/vegeta.yml
+
+-
+   image: sequoiatools/pillowfight
+   command: "-U {{.Orchestrator}} -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 4  --rate-limit {{.Scale 1000}} -m 1024"
+   duration: 20
+-
+   image: sequoiatools/gideon
+   command: "kv --ops {{.Scale 2000}} --create 10 --update 90 --expire 100 --ttl 15 --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 16000"
+   duration: 20
+
+-
+  # run http attacks against view with various skip param
+  foreach: "{{range $i, $view := strlist `stats` `array` `padd`}}"
+  template: attack_view
+  args: "30s, 10, {{$.NthDataNode $i}},
+         {{$.Bucket}},
+         scale,
+         {{$view}},
+         limit={{$.Scale 100}}&stale=false"
+
+
+#============ hard failover 2 nodes ============
+-
+   image: sequoiatools/couchbase-cli
+   command: "failover -c {{.Orchestrator}}
+       --server-failover {{.NthDataNode 1}}
+       -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   wait: true
+-
+   image: sequoiatools/couchbase-cli
+   command: "failover -c {{.Orchestrator}}
+       --server-failover {{.NthDataNode 2}}
+       -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+   wait: true
+-
+   template: rebalance
+
+# load some data then stop rebalance
+-
+   image: sequoiatools/pillowfight
+   command: "-U {{.Orchestrator}} -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 4  --rate-limit {{.Scale 1000}} -m 1024"
+   duration: 10
+-
+   image: sequoiatools/gideon
+   command: "kv --ops {{.Scale 2000}} --create 10 --update 90 --expire 100 --ttl 15 --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 16000"
+   duration: 10
+   wait: true
+
+-
+  # run http attacks against view with various skip param
+  foreach: "{{range $i, $view := strlist `stats` `array` `padd`}}"
+  template: attack_view
+  args: "30s, 10, {{$.NthDataNode $i}},
+         {{$.Bucket}},
+         scale,
+         {{$view}},
+         limit={{$.Scale 100}}&stale=false"
+
+-
+  # stop rebalance
+  template: rebalance_stop
+
+
+
+
+#============ swap graceful/hard failover ============
+-
+   template: add_node 
+   args: " {{.NthDataNode 2}}"
+   wait: true
+
+-
+   image: sequoiatools/couchbase-cli
+   command: "failover -c {{.Orchestrator}}
+      --server-failover {{.NthDataNode 3}}
+      -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+   wait: true
+
+-
+   command: "failover -c {{.Orchestrator}}
+      --server-failover {{.NthDataNode 4}}
+      -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+   wait: true
+
+-
+  # run http attacks against view with various skip param
+  foreach: "{{range $i, $view := strlist `stats` `array` `padd`}}"
+  template: attack_view
+  args: "30s, 10, {{$.NthDataNode $i}},
+         {{$.Bucket}},
+         scale,
+         {{$view}},
+         limit={{$.Scale 100}}&stale=false"
+
+-
+   template: rebalance
+
+# load some data then stop rebalance
+-
+   image: sequoiatools/pillowfight
+   command: "-U {{.Orchestrator}} -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 4  --rate-limit {{.Scale 1000}} -m 1024"
+   duration: 20
+
+-
+   image: sequoiatools/gideon
+   command: "kv --ops {{.Scale 2000}} --create 10 --update 90 --expire 100 --ttl 15 --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 16000"
+   duration: 20
+   wait: true
+
+-
+  template: rebalance_stop 
+  wait: true
+
+#============ add back============
+-
+  template: add_node
+  args: "{{.NthDataNode 1}}"
+-
+  template: add_node
+  args: "{{.NthDataNode 3}}"
+-
+  template: add_node
+  args: "{{.NthDataNode 4}}"
+
+-
+   template: rebalance
+   wait: true
+
+

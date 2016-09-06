@@ -1,0 +1,39 @@
+---
+servers: # each server tag represents a cluster
+  -
+      name: viewstress
+      count: 8
+      ram: 10%
+      rest_username: Administrator
+      rest_password: password
+      init_nodes: 8
+      buckets: default 
+
+buckets:
+  -
+      name: default 
+      ram: 40%
+      eviction: fullEviction
+      ddocs: scale
+      replica: 2
+
+ddocs:
+  -
+   name: scale
+   views: stats, padd, array, all_ids
+
+
+views:
+  -
+    name: stats
+    map: "if(doc.profile){ if((doc.rating > 500) && (doc.rating < 520)){ emit(meta.id, doc.ops_sec); }}"
+    reduce: "_stats"
+  -
+    name: padd
+    map: "if(doc.profile){ if (doc.rating < 200){ emit(meta.id, doc.padding); }}"
+  -
+    name: array
+    map: "if(doc.profile){ if((doc.rating > 200) && (doc.rating< 300)){ emit(doc.active_hosts, null); }}"
+  -
+    name: all_ids
+    map: "emit(meta.id, null)"
