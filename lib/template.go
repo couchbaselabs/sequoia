@@ -175,6 +175,12 @@ func (t *TemplateResolver) QueryPort() string {
 	return t.Attr("query_port", nodes)
 }
 
+// Shortcut: {{.ClusterNodes | .Attr `view_port`}}
+func (t *TemplateResolver) ViewPort() string {
+	nodes := t.ClusterNodes()
+	return t.Attr("view_port", nodes)
+}
+
 // Shortcut: {{.QueryNode | noport}}:{{.QueryPort}}
 func (t *TemplateResolver) QueryNodePort() string {
 	return fmt.Sprintf("%s:%s", t.NoPort(t.QueryNode()), t.QueryPort())
