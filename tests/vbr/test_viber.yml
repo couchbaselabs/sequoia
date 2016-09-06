@@ -4,7 +4,7 @@
 
 #============ 1 start loader for 36 hours ============
 -
-   image: sequoiatools/viber
+   image: sequoiatools/vbr
    command: " > LOGS"
    wait: false
 

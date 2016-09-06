@@ -1,4 +1,4 @@
-FROM ubuntu_viber
+FROM ubuntu_vbr
 #RUN killall java
 RUN ls -la
 #RUN /bin/bash -c "cd /CbTest ; ./startLoader.sh"
