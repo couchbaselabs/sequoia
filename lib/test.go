@@ -13,6 +13,12 @@ type Test struct {
 	Actions   []ActionSpec
 	Flags     TestFlags
 	Cm        *ContainerManager
+	CollMgr   *CollectionManager
+}
+
+type CollectionManager struct {
+	Ch                []chan bool
+	ActiveCollections int
 }
 
 type ActionSpec struct {
@@ -117,7 +123,10 @@ func NewTest(flags TestFlags, cm *ContainerManager) Test {
 	default:
 		actions = ActionsFromFile(*flags.TestFile)
 	}
-	return Test{templates, actions, flags, cm}
+
+	ch := []chan bool{}
+	chmgr := CollectionManager{ch, 0}
+	return Test{templates, actions, flags, cm, &chmgr}
 }
 
 func (t *Test) Run(scope Scope) {
@@ -174,6 +183,9 @@ func (t *Test) Run(scope Scope) {
 	}
 	t.Cm.TapHandle.AutoPlan()
 
+	// wait if collect is happening
+	t.WaitForCollect()
+
 	// do optional cluster teardown
 	if *t.Flags.SkipTeardown == false {
 		scope.Teardown()
@@ -182,6 +194,14 @@ func (t *Test) Run(scope Scope) {
 	// do optional cleanup
 	if *t.Flags.SkipCleanup == false {
 		t.Cleanup(scope)
+	}
+}
+
+// blocks when item is being collected
+func (t *Test) WaitForCollect() {
+	for i := 0; i < t.CollMgr.ActiveCollections; i++ {
+		colorsay("collect in progress")
+		<-t.CollMgr.Ch[i]
 	}
 }
 
@@ -632,7 +652,15 @@ func (t *Test) WatchErrorChan(echan chan error, n int, scope *Scope) {
 	for i := 0; i < n; i++ {
 		if err := <-echan; err != nil {
 			if *t.Flags.CollectOnError == true {
+
+				// add a new collect channel
+				ch := make(chan bool)
+				t.CollMgr.Ch = append(t.CollMgr.Ch, ch)
+				t.CollMgr.ActiveCollections = len(t.CollMgr.Ch)
+
+				// start collect
 				t.CollectInfo(*scope)
+				ch <- true
 			}
 
 			if *t.Flags.StopOnError == true {
