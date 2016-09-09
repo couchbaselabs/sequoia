@@ -1,0 +1,47 @@
+---
+servers: # each server tag represents a cluster
+  -
+      name: src
+      count: 4
+      ram: 80%
+      rest_username: Administrator
+      rest_password: password
+      rest_port: 8091
+      init_nodes: 3
+      buckets: AbRegNums,MsgsCalls,RevAB,UserInfo
+  -
+      name: dest
+      count: 4
+      ram: 80%
+      rest_username: Administrator
+      rest_password: password
+      rest_port: 8091
+      init_nodes: 3
+      buckets: AbRegNums2,MsgsCalls2,RevAB2,UserInfo2
+
+
+buckets:
+  -
+      name: AbRegNums
+      ram: 8%
+  -
+      name: MsgsCalls
+      ram: 6%
+  -
+      name: RevAB
+      ram: 75%
+  -
+      name: UserInfo
+      ram: 6%
+  -
+      name: AbRegNums2
+      ram: 8%
+  -
+      name: MsgsCalls2
+      ram: 6%
+  -
+      name: RevAB2
+      ram: 75%
+  -
+      name: UserInfo2
+      ram: 6%
