@@ -103,7 +103,7 @@ func (f *TestFlags) AddDefaultFlags(fset *flag.FlagSet) {
 		"config file to use")
 	f.Client = fset.String(
 		"client",
-		"https://192.168.99.100:2376",
+		"unix:///var/run/docker.sock",
 		"docker client")
 	f.Provider = fset.String(
 		"provider",

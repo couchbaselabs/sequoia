@@ -1,4 +1,4 @@
-client:  https://192.168.99.100:2376
+client: "unix:///var/run/docker.sock"
 scope:  tests/simple/scope_small.yml
 test: tests/simple/test_simple.yml
 provider: docker
