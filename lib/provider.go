@@ -282,8 +282,12 @@ func (p *DockerProvider) GetLinkPairs() string {
 }
 
 func (p *DockerProvider) GetRestUrl(name string) string {
+
 	// extract host from endpoint
 	url, err := url.Parse(p.Cm.Endpoint)
+	if url.Scheme == "" {
+		url, err = url.Parse("http://" + p.Cm.Endpoint)
+	}
 	chkerr(err)
 	host := url.Host
 
