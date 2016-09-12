@@ -107,10 +107,12 @@ func GetServerVersion(host, user, password string) string {
 func NodeIsSingle(host, user, password string) bool {
 
 	var n interface{}
-	err := getNodeStatus(host, user, password, &n)
-	chkerr(err)
-	s := n.(map[string]interface{})
-	return len(s) == 1
+	var single bool = false
+	if err := getNodeStatus(host, user, password, &n); err == nil {
+		s := n.(map[string]interface{})
+		single = len(s) == 1
+	}
+	return single
 }
 
 func getNodeStatus(host, user, password string, v interface{}) error {
