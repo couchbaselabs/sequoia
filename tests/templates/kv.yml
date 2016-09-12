@@ -46,7 +46,7 @@
                   {{with $sample:=(.TailLogs `__self__` 1 | json)}}
                     {{with $val:=ftoint (last $sample.op.samples.curr_items)}}
                        {{lt $1 $val}}
-                    {{end}}
-                  {{end}}
+                    {{else}}{{false}}{{end}}
+                  {{else}}{{false}}{{end}}
               {{else}}{{false}}{{end}}"
       wait: true
