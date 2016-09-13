@@ -44,7 +44,7 @@
 -
   foreach: "{{range $i, $offset := mkrange 0 500 100}}"
   template: attack_query
-  args: "0, 100, {{$.QueryNodePort}},
+  args: "0, {{.Scale 5}}, {{$.QueryNodePort}},
         select * from default where rating > 100 limit 100 offset {{$offset}}"
   alias: "N1qlQ{{$i}}"
 
