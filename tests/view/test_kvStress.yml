@@ -1,6 +1,6 @@
 ---
 -
-  include: tests/templates/rebalance.yml
+  include: tests/templates/rebalance.yml, tests/templates/vegeta.yml
 
 #============ continous kv loading a minimum of 1.5M items  at 1xScale============
 -
