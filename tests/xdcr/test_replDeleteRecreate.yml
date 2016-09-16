@@ -1,12 +1,23 @@
 ---
+-
+  include: tests/templates/kv.yml
+
 #============ data loading ============
 -
   # continously to remote site
   image: sequoiatools/gideon
-  command: "kv --ops {{.Scale 5000}} --create 100  --hosts {{.Nodes | .Cluster 1 | net 0}} --bucket {{.Bucket}}"
+  command: "kv --ops 15000 --create 100  --hosts {{.Nodes | .Cluster 1 | net 0}} --bucket {{.Bucket}}"
+  concurrency: "{{.Scale 1}}"
 -
-  command: "kv --ops {{.Scale 5000}} --create 100  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+  command: "kv --ops 15000 --create 100  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+  concurrency: "{{.Scale 1}}"
   duration: 60
+  wait: true
+
+### until 15M items ######
+-
+  template: wait_for_items
+  args: "{{.Bucket}}, 150000000"
   wait: true
 
 
