@@ -6,6 +6,7 @@ package sequoia
 
 import (
 	"fmt"
+	"github.com/docker/engine-api/types/swarm"
 	"github.com/fsouza/go-dockerclient"
 	"net/url"
 	"regexp"
@@ -63,13 +64,24 @@ func NewProvider(flags TestFlags, servers []ServerSpec) Provider {
 
 	switch providerArgs[0] {
 	case "docker":
-		cm := NewContainerManager(*flags.Client)
+		cm := NewContainerManager(*flags.Client, "docker")
 		provider = &DockerProvider{
 			cm,
 			servers,
 			make(map[string]string),
 			8091,
 			nil,
+		}
+	case "swarm":
+		cm := NewContainerManager(*flags.Client, "swarm")
+		provider = &SwarmProvider{
+			DockerProvider{
+				cm,
+				servers,
+				make(map[string]string),
+				8091,
+				nil,
+			},
 		}
 	case "file":
 		hostFile := "default.yml"
@@ -273,6 +285,122 @@ func (p *DockerProvider) ProvideCouchbaseServers(servers []ServerSpec) {
 	}
 }
 
+func (p *SwarmProvider) ProvideCouchbaseServers(servers []ServerSpec) {
+
+	var providerOpts DockerProviderOpts
+	ReadYamlFile("providers/docker/options.yml", &providerOpts)
+	p.Opts = &providerOpts
+	var build = p.Opts.Build
+
+	// start based on number of containers
+	var i int = p.NumCouchbaseServers()
+	p.StartPort = 8091 + i
+	for _, server := range servers {
+		serverNameList := ExpandServerName(server.Name, server.Count, server.CountOffset+1)
+
+		for _, serverName := range serverNameList {
+			portStr := fmt.Sprintf("%d", 8091+i)
+			port := docker.Port("8091/tcp")
+			binding := make([]docker.PortBinding, 1)
+			binding[0] = docker.PortBinding{
+				HostPort: portStr,
+			}
+
+			portConfig := []swarm.PortConfig{
+				swarm.PortConfig{
+					TargetPort:    8091,
+					PublishedPort: 8091 + uint32(i),
+				},
+			}
+
+			var portBindings = make(map[docker.Port][]docker.PortBinding)
+			portBindings[port] = binding
+			hostConfig := docker.HostConfig{
+				PortBindings: portBindings,
+				Ulimits:      p.Opts.Ulimits,
+			}
+
+			if p.Opts.CPUPeriod > 0 {
+				hostConfig.CPUPeriod = p.Opts.CPUPeriod
+			}
+			if p.Opts.CPUQuota > 0 {
+				hostConfig.CPUQuota = p.Opts.CPUQuota
+			}
+			if p.Opts.Memory > 0 {
+				hostConfig.Memory = p.Opts.Memory
+			}
+			if p.Opts.MemorySwap != 0 {
+				hostConfig.MemorySwap = p.Opts.MemorySwap
+			}
+
+			// check if build version exists
+			var imgName = fmt.Sprintf("couchbase_%s", build)
+			exists := p.Cm.CheckImageExists(imgName)
+			if exists == false {
+
+				var buildArgs = BuildArgsForVersion(p.Opts)
+				var buildOpts = docker.BuildImageOptions{
+					Name:           imgName,
+					ContextDir:     "containers/couchbase/",
+					SuppressOutput: false,
+					Pull:           false,
+					BuildArgs:      buildArgs,
+				}
+
+				// build image
+				err := p.Cm.BuildImage(buildOpts)
+				logerr(err)
+			}
+
+			serviceName := strings.Replace(serverName, ".", "-", -1)
+			containerSpec := swarm.ContainerSpec{Image: imgName}
+			annotations := swarm.Annotations{Name: serviceName}
+			taskSpec := swarm.TaskSpec{ContainerSpec: containerSpec}
+			endpointSpec := swarm.EndpointSpec{Ports: portConfig}
+			spec := swarm.ServiceSpec{
+				Annotations:  annotations,
+				TaskTemplate: taskSpec,
+				EndpointSpec: &endpointSpec,
+			}
+
+			options := docker.CreateServiceOptions{
+				ServiceSpec: spec,
+			}
+
+			_, container := p.Cm.RunContainerAsService(options, 10)
+			p.ActiveContainers[serverName] = container.ID
+			colorsay("start couchbase http://" + p.GetRestUrl(serverName))
+			i++
+		}
+	}
+}
+
+func (p *SwarmProvider) GetHostAddress(name string) string {
+	var ipAddress string
+
+	id, ok := p.ActiveContainers[name]
+	if ok == false {
+		// look up container by name
+		filter := make(map[string][]string)
+		filter["name"] = []string{name}
+		opts := docker.ListContainersOptions{
+			Filters: filter,
+		}
+		containers, err := p.Cm.Client.ListContainers(opts)
+		chkerr(err)
+		id = containers[0].ID
+	}
+	container, err := p.Cm.Client.InspectContainer(id)
+	chkerr(err)
+	ipAddress = container.NetworkSettings.Networks["ingress"].IPAddress
+
+	return ipAddress
+}
+
+func (p *SwarmProvider) GetType() string {
+	return "swarm"
+}
+
 func (p *DockerProvider) GetLinkPairs() string {
 	pairs := []string{}
 	for name, _ := range p.ActiveContainers {
@@ -290,6 +418,9 @@ func (p *DockerProvider) GetRestUrl(name string) string {
 	}
 	chkerr(err)
 	host := url.Host
+	if host == "" {
+		host = "localhost"
+	}
 
 	// remove port if specified
 	re := regexp.MustCompile(`:.*`)
