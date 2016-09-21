@@ -42,9 +42,7 @@
   args: "{{.NthDataNode 2}}, (data,fts,index,query)"
 
 -
-  image: sequoiatools/couchbase-cli
--
-  command:  "rebalance -c  {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
+  template: rebalance
   wait: true
 
 # make some more indexes across buckets
@@ -71,10 +69,6 @@
 -
   template: rebalance_out
   args: "{{.NthDataNode 1}}"
--
-  image: sequoiatools/couchbase-cli
--
-  command:  "rebalance -c  {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
   wait: true
 
 # start queries on new indexes
@@ -110,6 +104,7 @@
   args: "{{.NthDataNode 6}}, (data,fts)"
 -
   template: rebalance
+  wait: true
 
 -
   template: failover_and_recover
