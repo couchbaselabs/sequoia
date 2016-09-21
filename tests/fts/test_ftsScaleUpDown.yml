@@ -10,7 +10,7 @@
    image: sequoiatools/gideon
    command: "kv --ops {{.Scale 1000}} --create 10 --get 90 --expire 20 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 16000"
 -
-   command: "kv --ops {{.Scale 1000}} --create 30 --get 70 --delete 10   --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+   command: "kv --ops {{.Scale 1000}} --create 30 --get 70 --delete 10 --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
 -
    command: "kv --ops {{.Scale 1000}} --create 20 --get 80 --delete 10 --expire 10 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
 -
@@ -36,12 +36,16 @@
 # scale cluster up
 -
   template: add_node
-  args: "{{.NthDataNode 2}}, data"
+  args: "{{.NthDataNode 1}}, data"
 -
   template: add_node
-  args: "{{.NthDataNode 3}}, (data,fts)"
+  args: "{{.NthDataNode 2}}, (data,fts,index,query)"
+
 -
-  template: rebalance
+  image: sequoiatools/couchbase-cli
+-
+  command:  "rebalance -c  {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
+  wait: true
 
 # make some more indexes across buckets
 -
@@ -60,12 +64,18 @@
 # scale cluster up more
 -
   template: add_node
-  args: "{{.NthDataNode 4}}, data"
+  args: "{{.NthDataNode 3}}, data"
 -
   template: add_node
-  args: "{{.NthDataNode 5}}, (data,fts)"
+  args: "{{.NthDataNode 4}}, (data,fts)"
 -
-  template: rebalance
+  template: rebalance_out
+  args: "{{.NthDataNode 1}}"
+-
+  image: sequoiatools/couchbase-cli
+-
+  command:  "rebalance -c  {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
+  wait: true
 
 # start queries on new indexes
 -
@@ -80,8 +90,11 @@
 
 # scale back down
 -
+  template: add_node
+  args: "{{.NthDataNode 1}}, (data,index)"
+-
   template: rebalance_out
-  args: "{{.NthDataNode 1}}"
+  args: "{{.NthDataNode 2}}"
   wait: true
 
 # failover an fts node
@@ -92,11 +105,18 @@
   template: rebalance
   wait: true
 
-# rebalance out more nodes
 -
-  template: rebalance_out
-  args: "{{.NthDataNode 2}}"
+  template: add_node
+  args: "{{.NthDataNode 6}}, (data,fts)"
+-
+  template: rebalance
+
+-
+  template: failover_and_recover
+  args: "{{.Nodes | .Service `fts` | net 0}}, delta"
   wait: true
+
+# rebalance out more nodes
 -
   template: rebalance_out
   args: "{{.NthDataNode 3}}"
