@@ -14,6 +14,15 @@ import (
 	"strings"
 )
 
+type ProviderLabel int
+
+const (  // iota is reset to 0
+        Docker ProviderLabel = iota
+        Swarm ProviderLabel = iota
+        File ProviderLabel = iota
+        Dev ProviderLabel = iota
+)
+
 type Provider interface {
 	ProvideCouchbaseServers(servers []ServerSpec)
 	GetHostAddress(name string) string
@@ -80,8 +89,7 @@ func NewProvider(flags TestFlags, servers []ServerSpec) Provider {
 				servers,
 				make(map[string]string),
 				8091,
-				nil,
-			},
+				nil},
 		}
 	case "file":
 		hostFile := "default.yml"
@@ -367,7 +375,7 @@ func (p *SwarmProvider) ProvideCouchbaseServers(servers []ServerSpec) {
 				ServiceSpec: spec,
 			}
 
-			_, container := p.Cm.RunContainerAsService(options, 10)
+			_, container := p.Cm.RunContainerAsService(options, 30)
 			p.ActiveContainers[serverName] = container.ID
 			colorsay("start couchbase http://" + p.GetRestUrl(serverName))
 			i++
@@ -379,6 +387,7 @@ func (p *SwarmProvider) GetHostAddress(name string) string {
 	var ipAddress string
 
 	id, ok := p.ActiveContainers[name]
+        client := p.Cm.ClientForContainer(id)
 	if ok == false {
 		// look up container by name
 		filter := make(map[string][]string)
@@ -386,11 +395,11 @@ func (p *SwarmProvider) GetHostAddress(name string) string {
 		opts := docker.ListContainersOptions{
 			Filters: filter,
 		}
-		containers, err := p.Cm.Client.ListContainers(opts)
+		containers, err := client.ListContainers(opts)
 		chkerr(err)
 		id = containers[0].ID
 	}
-	container, err := p.Cm.Client.InspectContainer(id)
+	container, err := client.InspectContainer(id)
 	chkerr(err)
 	ipAddress = container.NetworkSettings.Networks["ingress"].IPAddress
 

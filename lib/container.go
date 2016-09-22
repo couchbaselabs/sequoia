@@ -13,6 +13,8 @@ import (
 	"github.com/tahmmee/tap.go"
 	"io"
 	"os"
+    "path/filepath"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -119,17 +121,19 @@ func (t *ContainerTask) GetServiceOptions(svcPort uint32) docker.CreateServiceOp
 }
 
 type ContainerManager struct {
-	Client       *docker.Client
-	Endpoint     string
-	TagId        map[string]string
-	IDs          []string
-	Services     []string
-	TapHandle    *tap.T
-	ProviderType string
-	LastSvcPort  uint32
+	Client               *docker.Client
+	Endpoint             string
+	TagId                map[string]string
+	IDs                  []string
+	Services             []string
+	TapHandle            *tap.T
+	ProviderType         string
+	LastSvcPort          uint32
+	SwarmClients         []*docker.Client
+    ContainerClientCache map[string]int
 }
 
-func NewContainerManager(clientUrl, provider string) *ContainerManager {
+func NewDockerClient(clientUrl string) *docker.Client {
 
 	var client *docker.Client
 	var err error
@@ -147,24 +151,96 @@ func NewContainerManager(clientUrl, provider string) *ContainerManager {
 		logerr(err)
 	}
 
-	return &ContainerManager{
-		Client:       client,
-		Endpoint:     clientUrl,
-		TagId:        make(map[string]string),
-		IDs:          []string{},
-		Services:     []string{},
-		TapHandle:    tap.New("results.tap4j"),
-		ProviderType: provider,
-		LastSvcPort:  100,
+    return client
+}
+
+func NewContainerManager(clientUrl, provider string) *ContainerManager {
+
+	var client *docker.Client = NewDockerClient(clientUrl)
+
+	cm := ContainerManager{
+		Client:               client,
+		Endpoint:             clientUrl,
+		TagId:                make(map[string]string),
+		IDs:                  []string{},
+		Services:             []string{},
+		TapHandle:            tap.New("results.tap4j"),
+		ProviderType:         provider,
+		LastSvcPort:          100,
+        SwarmClients:         []*docker.Client{}, 
+        ContainerClientCache: make(map[string]int),
 	}
+
+    if provider == "swarm" {
+        cm.SwarmClients = cm.GetSwarmClients(clientUrl) 
+    }
+    return &cm
+}
+
+func (cm *ContainerManager) GetSwarmClients(clientUrl string) []*docker.Client {
+
+    clients := []*docker.Client{}
+
+    // get all swarm nodes
+    opts := docker.ListNodesOptions{}
+    nodes, err := cm.Client.ListNodes(opts)
+
+    logerr(err)
+    for _, n := range nodes {
+        status := n.ManagerStatus 
+        if status != nil {
+           if status.Reachability == swarm.ReachabilityReachable {
+               hostname :=  n.Description.Hostname
+               clientParsed, _ := url.Parse(cm.Endpoint)
+               clientParts := strings.Split(clientParsed.Host, ":")
+               port := ""
+               if len(clientParts) == 2 {
+                   port = fmt.Sprintf(":%s",clientParts[1])   
+               }
+
+               // override cert paths if https
+               scheme := clientParsed.Scheme
+               if scheme != "" {
+                   if scheme == "https" {
+                      // update cert path to reflect hostname
+		              path := os.Getenv("DOCKER_CERT_PATH")
+                      pathBase := filepath.Dir(path)
+                      newPath := filepath.Join(pathBase, hostname)
+		              os.Setenv("DOCKER_CERT_PATH", newPath)
+                   }
+                   scheme += "://"
+               }
+
+               // create new client
+               swarmClientUrl := fmt.Sprintf("%s%s%s",scheme,hostname,port)
+               newClient := NewDockerClient(swarmClientUrl)
+               clients = append(clients, newClient)
+            }
+        }
+    }
+
+    return clients
 }
 
 func (cm *ContainerManager) GetAllContainers() []docker.APIContainers {
-	opts := docker.ListContainersOptions{All: true}
-	containers, err := cm.Client.ListContainers(opts)
-	chkerr(err)
 
-	return containers
+    allContainers := []docker.APIContainers{}
+    clients := []*docker.Client{cm.Client}
+
+    if cm.ProviderType == "swarm" {
+        clients = cm.SwarmClients
+    }
+
+    for _, client := range clients {
+        opts := docker.ListContainersOptions{All: true}
+        containers, err := client.ListContainers(opts)
+        for _, c := range containers {
+            allContainers = append(allContainers, c)
+        }
+        chkerr(err)
+    }
+
+	return allContainers
 }
 
 func (cm *ContainerManager) GetAllServices() []swarm.Service {
@@ -176,8 +252,9 @@ func (cm *ContainerManager) GetAllServices() []swarm.Service {
 }
 
 func (cm *ContainerManager) RemoveContainer(id string) error {
+    client := cm.ClientForContainer(id)
 	opts := docker.RemoveContainerOptions{ID: id, RemoveVolumes: true, Force: true}
-	return cm.Client.RemoveContainer(opts)
+	return client.RemoveContainer(opts)
 }
 
 func (cm *ContainerManager) RemoveService(id string) error {
@@ -186,7 +263,9 @@ func (cm *ContainerManager) RemoveService(id string) error {
 }
 
 func (cm *ContainerManager) KillContainer(id string) error {
-	c, err := cm.Client.InspectContainer(id)
+
+    client := cm.ClientForContainer(id)
+	c, err := client.InspectContainer(id)
 	if err == nil {
 		// must already be running
 		if c.State.Running == true {
@@ -207,12 +286,17 @@ func (cm *ContainerManager) RemoveAllContainers() {
 }
 
 func (cm *ContainerManager) RemoveAllServices() {
+    manager := cm.Client
 	// teardown services
-	for _, svc := range cm.GetAllServices() {
-		err := cm.RemoveService(svc.ID)
-		chkerr(err)
-		colorsay("remove service " + svc.ID[:6])
-	}
+    for _, client := range cm.SwarmClients {
+        for _, svc := range cm.GetAllServices() {
+            cm.Client = client
+            err := cm.RemoveService(svc.ID)
+            chkerr(err)
+            colorsay("remove service " + svc.ID[:6])
+        }
+   }
+   cm.Client = manager
 }
 func (cm *ContainerManager) RemoveManagedContainers(soft bool) {
 
@@ -294,7 +378,8 @@ func (cm *ContainerManager) ListImages() []docker.APIImages {
 }
 
 func (cm *ContainerManager) CheckContainerExists(id string) bool {
-	_, err := cm.Client.InspectContainer(id)
+    client := cm.ClientForContainer(id)
+	_, err := client.InspectContainer(id)
 	return err == nil
 }
 
@@ -400,6 +485,7 @@ func (cm *ContainerManager) GetStatus(ID string) (string, error) {
 // logging to file or io
 func (cm *ContainerManager) LogContainer(ID string, output io.Writer, follow bool) {
 
+    client := cm.ClientForContainer(ID)
 	logOpts := docker.LogsOptions{
 		Container:    ID,
 		OutputStream: output,
@@ -410,19 +496,20 @@ func (cm *ContainerManager) LogContainer(ID string, output io.Writer, follow boo
 		Stderr:       true,
 	}
 
-	cm.Client.Logs(logOpts)
+	client.Logs(logOpts)
 }
 
 func (cm *ContainerManager) WaitContainer(container *docker.Container, c chan TaskResult) {
 
 	// get additional info about container
-	_c, err := cm.Client.InspectContainer(container.ID)
+    client := cm.ClientForContainer(container.ID)
+	_c, err := client.InspectContainer(container.ID)
 	if err == nil && _c.Config != nil {
 		container = _c
 	}
 
 	// wait for container
-	rc, _ := cm.Client.WaitContainer(container.ID)
+	rc, _ := client.WaitContainer(container.ID)
 
 	// create task result
 	tResult := TaskResult{
@@ -483,22 +570,52 @@ func (cm *ContainerManager) RunService(opts docker.CreateServiceOptions) *swarm.
 	return service
 }
 
-func (cm *ContainerManager) ContainerForService(service *swarm.Service) *docker.APIContainers {
+func (cm *ContainerManager) ClientForContainer(ID string) *docker.Client {
 
-	// look up container by service
+    if cm.ProviderType == "swarm" {
+        if clientID, ok := cm.ContainerClientCache[ID]; ok ==  true {
+            swarmClient := cm.SwarmClients[clientID]
+            return swarmClient
+        } else {
+            // manual look up
+	        opts := docker.ListContainersOptions{All: true}
+            for cid, client := range cm.SwarmClients {
+                containers, err := client.ListContainers(opts)
+                logerr(err)
+                for _, c := range containers {
+                    if c.ID == ID {
+                        cm.ContainerClientCache[ID] = cid 
+                        return client
+                    }
+                }
+            }
+        }
+   }
+
+   return cm.Client
+}
+
+func (cm *ContainerManager) ContainerForService(service *swarm.Service) (*docker.APIContainers, *docker.Client) {
+
+
+    // get all containers (TODO: parallel)
 	opts := docker.ListContainersOptions{All: true}
-	containers, err := cm.Client.ListContainers(opts)
-	logerr(err)
-	for _, c := range containers {
-		labels := c.Labels
-		if svcid, ok := labels["com.docker.swarm.service.id"]; ok == true {
-			if svcid == service.ID {
-				return &c
-			}
-		}
-	}
+    for cid, client := range cm.SwarmClients {
+	    containers, err := client.ListContainers(opts)
+	    logerr(err)
+        for _, c := range containers {
+            labels := c.Labels
+            if svcid, ok := labels["com.docker.swarm.service.id"]; ok == true {
+                if svcid == service.ID {
+                    cm.ContainerClientCache[c.ID] = cid 
+                    return &c, client
+                }
+            }
+        }
+    }
 
-	return nil
+
+	return nil, nil
 }
 
 func (cm *ContainerManager) RunContainerAsService(opts docker.CreateServiceOptions, wait int) (chan TaskResult, *docker.Container) {
@@ -509,8 +626,8 @@ func (cm *ContainerManager) RunContainerAsService(opts docker.CreateServiceOptio
 
 	// wait for a container for service to be started
 	for wait > 0 {
-		if c := cm.ContainerForService(service); c != nil {
-			container, err = cm.Client.InspectContainer(c.ID)
+		if c, client := cm.ContainerForService(service); c != nil {
+			container, err = client.InspectContainer(c.ID)
 			logerr(err)
 			if container.State.Running == true {
 				break
@@ -557,7 +674,7 @@ func (cm *ContainerManager) RunContainerTask(task *ContainerTask) (chan TaskResu
 	if cm.ProviderType == "swarm" {
 		// run container within service
 		options := task.GetServiceOptions(cm.GetHighSvcPort())
-		ch, container = cm.RunContainerAsService(options, 10)
+		ch, container = cm.RunContainerAsService(options, 30)
 	} else {
 		// run container against standalone docker host
 		options := task.GetOptions()
