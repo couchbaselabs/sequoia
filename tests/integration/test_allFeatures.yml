@@ -71,7 +71,7 @@
          {{$.Bucket}},
          scale,
          {{$view}},
-         limit={{$.Scale 10}}&stale=update_after"
+         limit={{$.Scale 10}}&stale=update_after&connection_timeout=60000"
 
 #============ rebalance out a node============
 -
