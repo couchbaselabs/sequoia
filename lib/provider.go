@@ -16,11 +16,11 @@ import (
 
 type ProviderLabel int
 
-const (  // iota is reset to 0
-        Docker ProviderLabel = iota
-        Swarm ProviderLabel = iota
-        File ProviderLabel = iota
-        Dev ProviderLabel = iota
+const ( // iota is reset to 0
+	Docker ProviderLabel = iota
+	Swarm  ProviderLabel = iota
+	File   ProviderLabel = iota
+	Dev    ProviderLabel = iota
 )
 
 type Provider interface {
@@ -387,7 +387,7 @@ func (p *SwarmProvider) GetHostAddress(name string) string {
 	var ipAddress string
 
 	id, ok := p.ActiveContainers[name]
-        client := p.Cm.ClientForContainer(id)
+	client := p.Cm.ClientForContainer(id)
 	if ok == false {
 		// look up container by name
 		filter := make(map[string][]string)

@@ -12,9 +12,9 @@ import (
 	"github.com/fsouza/go-dockerclient"
 	"github.com/tahmmee/tap.go"
 	"io"
-	"os"
-    "path/filepath"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -130,7 +130,7 @@ type ContainerManager struct {
 	ProviderType         string
 	LastSvcPort          uint32
 	SwarmClients         []*docker.Client
-    ContainerClientCache map[string]int
+	ContainerClientCache map[string]int
 }
 
 func NewDockerClient(clientUrl string) *docker.Client {
@@ -151,7 +151,7 @@ func NewDockerClient(clientUrl string) *docker.Client {
 		logerr(err)
 	}
 
-    return client
+	return client
 }
 
 func NewContainerManager(clientUrl, provider string) *ContainerManager {
@@ -167,78 +167,81 @@ func NewContainerManager(clientUrl, provider string) *ContainerManager {
 		TapHandle:            tap.New("results.tap4j"),
 		ProviderType:         provider,
 		LastSvcPort:          100,
-        SwarmClients:         []*docker.Client{}, 
-        ContainerClientCache: make(map[string]int),
+		SwarmClients:         []*docker.Client{},
+		ContainerClientCache: make(map[string]int),
 	}
 
-    if provider == "swarm" {
-        cm.SwarmClients = cm.GetSwarmClients(clientUrl) 
-    }
-    return &cm
+	if provider == "swarm" {
+		cm.SwarmClients = cm.GetSwarmClients(clientUrl)
+	}
+	return &cm
 }
 
 func (cm *ContainerManager) GetSwarmClients(clientUrl string) []*docker.Client {
 
-    clients := []*docker.Client{}
+	clients := []*docker.Client{cm.Client}
 
-    // get all swarm nodes
-    opts := docker.ListNodesOptions{}
-    nodes, err := cm.Client.ListNodes(opts)
+	// get all swarm nodes
+	opts := docker.ListNodesOptions{}
+	nodes, err := cm.Client.ListNodes(opts)
 
-    logerr(err)
-    for _, n := range nodes {
-        status := n.ManagerStatus 
-        if status != nil {
-           if status.Reachability == swarm.ReachabilityReachable {
-               hostname :=  n.Description.Hostname
-               clientParsed, _ := url.Parse(cm.Endpoint)
-               clientParts := strings.Split(clientParsed.Host, ":")
-               port := ""
-               if len(clientParts) == 2 {
-                   port = fmt.Sprintf(":%s",clientParts[1])   
-               }
+	logerr(err)
+	for _, n := range nodes {
+		status := n.ManagerStatus
+		if status != nil {
+			if status.Leader == true {
+				continue // leader is already added
+			}
+			if status.Reachability == swarm.ReachabilityReachable {
+				hostname := n.Description.Hostname
+				clientParsed, _ := url.Parse(cm.Endpoint)
+				clientParts := strings.Split(clientParsed.Host, ":")
+				port := ""
+				if len(clientParts) == 2 {
+					port = fmt.Sprintf(":%s", clientParts[1])
+				}
 
-               // override cert paths if https
-               scheme := clientParsed.Scheme
-               if scheme != "" {
-                   if scheme == "https" {
-                      // update cert path to reflect hostname
-		              path := os.Getenv("DOCKER_CERT_PATH")
-                      pathBase := filepath.Dir(path)
-                      newPath := filepath.Join(pathBase, hostname)
-		              os.Setenv("DOCKER_CERT_PATH", newPath)
-                   }
-                   scheme += "://"
-               }
+				// override cert paths if https
+				scheme := clientParsed.Scheme
+				if scheme != "" {
+					if scheme == "https" {
+						// update cert path to reflect hostname
+						path := os.Getenv("DOCKER_CERT_PATH")
+						pathBase := filepath.Dir(path)
+						newPath := filepath.Join(pathBase, hostname)
+						os.Setenv("DOCKER_CERT_PATH", newPath)
+					}
+					scheme += "://"
+				}
 
-               // create new client
-               swarmClientUrl := fmt.Sprintf("%s%s%s",scheme,hostname,port)
-               newClient := NewDockerClient(swarmClientUrl)
-               clients = append(clients, newClient)
-            }
-        }
-    }
+				// create new client
+				swarmClientUrl := fmt.Sprintf("%s%s%s", scheme, hostname, port)
+				newClient := NewDockerClient(swarmClientUrl)
+				clients = append(clients, newClient)
+			}
+		}
+	}
 
-    return clients
+	return clients
 }
 
 func (cm *ContainerManager) GetAllContainers() []docker.APIContainers {
 
-    allContainers := []docker.APIContainers{}
-    clients := []*docker.Client{cm.Client}
+	allContainers := []docker.APIContainers{}
+	clients := []*docker.Client{cm.Client}
 
-    if cm.ProviderType == "swarm" {
-        clients = cm.SwarmClients
-    }
+	if cm.ProviderType == "swarm" {
+		clients = cm.SwarmClients
+	}
 
-    for _, client := range clients {
-        opts := docker.ListContainersOptions{All: true}
-        containers, err := client.ListContainers(opts)
-        for _, c := range containers {
-            allContainers = append(allContainers, c)
-        }
-        chkerr(err)
-    }
+	for _, client := range clients {
+		opts := docker.ListContainersOptions{All: true}
+		containers, err := client.ListContainers(opts)
+		for _, c := range containers {
+			allContainers = append(allContainers, c)
+		}
+		chkerr(err)
+	}
 
 	return allContainers
 }
@@ -252,7 +255,7 @@ func (cm *ContainerManager) GetAllServices() []swarm.Service {
 }
 
 func (cm *ContainerManager) RemoveContainer(id string) error {
-    client := cm.ClientForContainer(id)
+	client := cm.ClientForContainer(id)
 	opts := docker.RemoveContainerOptions{ID: id, RemoveVolumes: true, Force: true}
 	return client.RemoveContainer(opts)
 }
@@ -264,7 +267,7 @@ func (cm *ContainerManager) RemoveService(id string) error {
 
 func (cm *ContainerManager) KillContainer(id string) error {
 
-    client := cm.ClientForContainer(id)
+	client := cm.ClientForContainer(id)
 	c, err := client.InspectContainer(id)
 	if err == nil {
 		// must already be running
@@ -286,17 +289,17 @@ func (cm *ContainerManager) RemoveAllContainers() {
 }
 
 func (cm *ContainerManager) RemoveAllServices() {
-    manager := cm.Client
+	manager := cm.Client
 	// teardown services
-    for _, client := range cm.SwarmClients {
-        for _, svc := range cm.GetAllServices() {
-            cm.Client = client
-            err := cm.RemoveService(svc.ID)
-            chkerr(err)
-            colorsay("remove service " + svc.ID[:6])
-        }
-   }
-   cm.Client = manager
+	for _, client := range cm.SwarmClients {
+		for _, svc := range cm.GetAllServices() {
+			cm.Client = client
+			err := cm.RemoveService(svc.ID)
+			chkerr(err)
+			colorsay("remove service " + svc.ID[:6])
+		}
+	}
+	cm.Client = manager
 }
 func (cm *ContainerManager) RemoveManagedContainers(soft bool) {
 
@@ -378,7 +381,7 @@ func (cm *ContainerManager) ListImages() []docker.APIImages {
 }
 
 func (cm *ContainerManager) CheckContainerExists(id string) bool {
-    client := cm.ClientForContainer(id)
+	client := cm.ClientForContainer(id)
 	_, err := client.InspectContainer(id)
 	return err == nil
 }
@@ -485,7 +488,7 @@ func (cm *ContainerManager) GetStatus(ID string) (string, error) {
 // logging to file or io
 func (cm *ContainerManager) LogContainer(ID string, output io.Writer, follow bool) {
 
-    client := cm.ClientForContainer(ID)
+	client := cm.ClientForContainer(ID)
 	logOpts := docker.LogsOptions{
 		Container:    ID,
 		OutputStream: output,
@@ -502,7 +505,7 @@ func (cm *ContainerManager) LogContainer(ID string, output io.Writer, follow boo
 func (cm *ContainerManager) WaitContainer(container *docker.Container, c chan TaskResult) {
 
 	// get additional info about container
-    client := cm.ClientForContainer(container.ID)
+	client := cm.ClientForContainer(container.ID)
 	_c, err := client.InspectContainer(container.ID)
 	if err == nil && _c.Config != nil {
 		container = _c
@@ -572,48 +575,46 @@ func (cm *ContainerManager) RunService(opts docker.CreateServiceOptions) *swarm.
 
 func (cm *ContainerManager) ClientForContainer(ID string) *docker.Client {
 
-    if cm.ProviderType == "swarm" {
-        if clientID, ok := cm.ContainerClientCache[ID]; ok ==  true {
-            swarmClient := cm.SwarmClients[clientID]
-            return swarmClient
-        } else {
-            // manual look up
-	        opts := docker.ListContainersOptions{All: true}
-            for cid, client := range cm.SwarmClients {
-                containers, err := client.ListContainers(opts)
-                logerr(err)
-                for _, c := range containers {
-                    if c.ID == ID {
-                        cm.ContainerClientCache[ID] = cid 
-                        return client
-                    }
-                }
-            }
-        }
-   }
+	if cm.ProviderType == "swarm" {
+		if clientID, ok := cm.ContainerClientCache[ID]; ok == true {
+			swarmClient := cm.SwarmClients[clientID]
+			return swarmClient
+		} else {
+			// manual look up
+			opts := docker.ListContainersOptions{All: true}
+			for cid, client := range cm.SwarmClients {
+				containers, err := client.ListContainers(opts)
+				logerr(err)
+				for _, c := range containers {
+					if c.ID == ID {
+						cm.ContainerClientCache[ID] = cid
+						return client
+					}
+				}
+			}
+		}
+	}
 
-   return cm.Client
+	return cm.Client
 }
 
 func (cm *ContainerManager) ContainerForService(service *swarm.Service) (*docker.APIContainers, *docker.Client) {
 
-
-    // get all containers (TODO: parallel)
+	// get all containers (TODO: parallel)
 	opts := docker.ListContainersOptions{All: true}
-    for cid, client := range cm.SwarmClients {
-	    containers, err := client.ListContainers(opts)
-	    logerr(err)
-        for _, c := range containers {
-            labels := c.Labels
-            if svcid, ok := labels["com.docker.swarm.service.id"]; ok == true {
-                if svcid == service.ID {
-                    cm.ContainerClientCache[c.ID] = cid 
-                    return &c, client
-                }
-            }
-        }
-    }
-
+	for cid, client := range cm.SwarmClients {
+		containers, err := client.ListContainers(opts)
+		logerr(err)
+		for _, c := range containers {
+			labels := c.Labels
+			if svcid, ok := labels["com.docker.swarm.service.id"]; ok == true {
+				if svcid == service.ID {
+					cm.ContainerClientCache[c.ID] = cid
+					return &c, client
+				}
+			}
+		}
+	}
 
 	return nil, nil
 }
