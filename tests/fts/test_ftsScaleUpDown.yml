@@ -120,4 +120,6 @@
 -
   template: rebalance_out
   args: "{{.NthDataNode 3}}"
+-
+  template: wait_for_rebalance
   wait: true
