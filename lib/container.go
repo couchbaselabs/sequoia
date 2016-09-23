@@ -79,7 +79,12 @@ func (t *ContainerTask) GetOptions() docker.CreateContainerOptions {
 
 func (t *ContainerTask) GetServiceOptions(svcPort uint32) docker.CreateServiceOptions {
 
-	serviceName := strings.Replace(t.Name, ".", "-", -1)
+	var serviceName string
+	if t.Name != "" {
+		serviceName = strings.Replace(t.Name, ".", "-", -1)
+	} else {
+		serviceName = RandStr(8)
+	}
 	containerSpec := swarm.ContainerSpec{
 		Image: t.Image,
 		Args:  t.Command,
@@ -172,12 +177,12 @@ func NewContainerManager(clientUrl, provider string) *ContainerManager {
 	}
 
 	if provider == "swarm" {
-		cm.SwarmClients = cm.GetSwarmClients(clientUrl)
+		cm.SwarmClients = cm.CreateSwarmClients(clientUrl)
 	}
 	return &cm
 }
 
-func (cm *ContainerManager) GetSwarmClients(clientUrl string) []*docker.Client {
+func (cm *ContainerManager) CreateSwarmClients(clientUrl string) []*docker.Client {
 
 	clients := []*docker.Client{cm.Client}
 
@@ -193,29 +198,31 @@ func (cm *ContainerManager) GetSwarmClients(clientUrl string) []*docker.Client {
 				continue // leader is already added
 			}
 			if status.Reachability == swarm.ReachabilityReachable {
+				addr := strings.Split(status.Addr, ":")[0]
 				hostname := n.Description.Hostname
-				clientParsed, _ := url.Parse(cm.Endpoint)
-				clientParts := strings.Split(clientParsed.Host, ":")
+				endpointUrl, _ := url.Parse(cm.Endpoint)
+				if endpointUrl.Scheme == "" {
+					// parse again with scheme
+					endpointUrl, _ = url.Parse("http://" + cm.Endpoint)
+				}
+				clientParts := strings.Split(endpointUrl.Host, ":")
 				port := ""
 				if len(clientParts) == 2 {
 					port = fmt.Sprintf(":%s", clientParts[1])
 				}
 
 				// override cert paths if https
-				scheme := clientParsed.Scheme
-				if scheme != "" {
-					if scheme == "https" {
-						// update cert path to reflect hostname
-						path := os.Getenv("DOCKER_CERT_PATH")
-						pathBase := filepath.Dir(path)
-						newPath := filepath.Join(pathBase, hostname)
-						os.Setenv("DOCKER_CERT_PATH", newPath)
-					}
-					scheme += "://"
+				scheme := endpointUrl.Scheme
+				if scheme == "https" {
+					// update cert path to reflect hostname
+					path := os.Getenv("DOCKER_CERT_PATH")
+					pathBase := filepath.Dir(path)
+					newPath := filepath.Join(pathBase, hostname)
+					os.Setenv("DOCKER_CERT_PATH", newPath)
 				}
 
 				// create new client
-				swarmClientUrl := fmt.Sprintf("%s%s%s", scheme, hostname, port)
+				swarmClientUrl := fmt.Sprintf("%s://%s%s", scheme, addr, port)
 				newClient := NewDockerClient(swarmClientUrl)
 				clients = append(clients, newClient)
 			}
@@ -225,14 +232,19 @@ func (cm *ContainerManager) GetSwarmClients(clientUrl string) []*docker.Client {
 	return clients
 }
 
-func (cm *ContainerManager) GetAllContainers() []docker.APIContainers {
-
-	allContainers := []docker.APIContainers{}
+func (cm *ContainerManager) AllClients() []*docker.Client {
 	clients := []*docker.Client{cm.Client}
 
 	if cm.ProviderType == "swarm" {
 		clients = cm.SwarmClients
 	}
+	return clients
+}
+
+func (cm *ContainerManager) GetAllContainers() []docker.APIContainers {
+
+	allContainers := []docker.APIContainers{}
+	clients := cm.AllClients()
 
 	for _, client := range clients {
 		opts := docker.ListContainersOptions{All: true}
@@ -418,7 +430,14 @@ func (cm *ContainerManager) PullImage(repo string) error {
 	} // TODO: tag
 
 	fmt.Println(msg)
-	return cm.Client.PullImage(imgOpts, docker.AuthConfiguration{})
+	clients := cm.AllClients()
+	for _, client := range clients {
+		if err := client.PullImage(imgOpts, docker.AuthConfiguration{}); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (cm *ContainerManager) PullTaggedImage(repo, tag string) {
@@ -445,20 +464,39 @@ func (cm *ContainerManager) PullTaggedImage(repo, tag string) {
 					if len(tagArgs) > 1 {
 						tagId = tagArgs[1]
 					}
+					// use tag hash as image alias
 					cm.TagId[repo] = tagId[:7]
+					cm.TagImage(name, tagId[:7])
 				}
 			}
 		}
 	}
+}
 
+func (cm *ContainerManager) TagImage(repo, tag string) error {
+	clients := cm.AllClients()
+
+	for _, client := range clients {
+		tagOpts := docker.TagImageOptions{Repo: tag}
+		if err := client.TagImage(repo, tagOpts); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (cm *ContainerManager) BuildImage(opts docker.BuildImageOptions) error {
 	colorsay("building image " + opts.Name)
 
-	// hookup io
-	opts.OutputStream = os.Stdout
-	return cm.Client.BuildImage(opts)
+	clients := cm.AllClients()
+	for _, client := range clients {
+		opts.OutputStream = os.Stdout
+		if err := client.BuildImage(opts); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // get logs as string
@@ -630,13 +668,7 @@ func (cm *ContainerManager) RunContainerAsService(opts docker.CreateServiceOptio
 		if c, client := cm.ContainerForService(service); c != nil {
 			container, err = client.InspectContainer(c.ID)
 			logerr(err)
-			if container.State.Running == true {
-				break
-			} else {
-				// started but not running
-				time.Sleep(time.Second * 1)
-				wait -= 1
-			}
+			break
 		} else {
 			// not started yet
 			time.Sleep(time.Second * 1)

@@ -135,14 +135,15 @@ func (t *Test) Run(scope Scope) {
 	if *t.Flags.SkipSetup == false {
 		// if in default mode purge all containers
 		if (t.Flags.Mode != "image") && (*t.Flags.SoftCleanup == false) {
-			t.Cm.RemoveAllContainers()
 			if scope.Provider.GetType() == "swarm" {
 				t.Cm.RemoveAllServices()
 			}
+			t.Cm.RemoveAllContainers()
 		}
 		scope.Provider.ProvideCouchbaseServers(scope.Spec.Servers)
 		scope.Setup()
-	} else if scope.Provider.GetType() != "docker" {
+	} else if (scope.Provider.GetType() != "docker") &&
+		(scope.Provider.GetType() != "swarm") {
 		// non-dynamic IP's need to be extrapolated before test
 		scope.Provider.ProvideCouchbaseServers(scope.Spec.Servers)
 		scope.InitCli()
@@ -762,10 +763,10 @@ func (t *Test) ExitAfterDuration(sec int) {
 }
 
 func (t *Test) DoContainerCleanup(s Scope) {
-	s.Cm.RemoveManagedContainers(*t.Flags.SoftCleanup)
 	if s.Provider.GetType() == "swarm" {
 		s.Cm.RemoveManagedServices(*t.Flags.SoftCleanup)
 	}
+	s.Cm.RemoveManagedContainers(*t.Flags.SoftCleanup)
 }
 
 func (t *Test) Cleanup(s Scope) {
@@ -779,6 +780,7 @@ func (t *Test) Cleanup(s Scope) {
 		}
 		s.Provider.(*DockerProvider).Cm.RemoveManagedContainers(soft)
 	case "swarm":
+		s.Provider.(*SwarmProvider).Cm.RemoveManagedServices(soft)
 		s.Provider.(*SwarmProvider).Cm.RemoveManagedContainers(soft)
 	}
 
