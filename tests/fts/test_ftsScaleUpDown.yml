@@ -69,6 +69,9 @@
 -
   template: rebalance_out
   args: "{{.NthDataNode 1}}"
+
+-
+  template: wait_for_rebalance
   wait: true
 
 # start queries on new indexes
@@ -97,15 +100,17 @@
   args: "{{.Nodes | .Service `fts` | net 0}}"
 -
   template: rebalance
+-
+  template: wait_for_rebalance
   wait: true
-
 -
   template: add_node
   args: "{{.NthDataNode 6}}, (data,fts)"
 -
   template: rebalance
+-
+  template: wait_for_rebalance
   wait: true
-
 -
   template: failover_and_recover
   args: "{{.Nodes | .Service `fts` | net 0}}, delta"
