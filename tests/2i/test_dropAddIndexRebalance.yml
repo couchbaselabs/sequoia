@@ -126,7 +126,6 @@
 
 ###############  'when' hard failover is done add back all indexes ################
 -
-   before: "{{.Status `SwapFailId` | eq `exited`}}"
    image: sequoiatools/cbq
    command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_rating on `default`(rating)'"
 -
@@ -169,6 +168,7 @@
 
 ######  failover recently added index nodes  ######
 -
+   before: "{{.Status `SwapFailId` | eq `exited`}}"
    image: sequoiatools/couchbase-cli
    command: "failover -c  {{.Orchestrator}}
        --server-failover {{.ClusterNodes | net 6}}
