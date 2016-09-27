@@ -17,7 +17,7 @@ cpuquota:  40000
  # Hard Memory limit in bytes.
  # The default of (0) will be presented with entire machine memory to container
  # ie 4GB = 4000000000
-memory:  4000000000
+memory:  0
 
 # Total memory limit (memory + swap); set -1 to enable unlimited swap. 
 # You must use this with memory and make the swap value larger than memory
