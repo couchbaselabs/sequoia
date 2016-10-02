@@ -99,11 +99,10 @@
 -
   template: failover_node_forced
   args: "{{.Nodes | .Service `fts` | net 0}}"
--
-  template: wait_for_rebalance
   wait: true
 -
   template: rebalance
+  wait: true
 -
   template: wait_for_rebalance
   wait: true
@@ -112,6 +111,7 @@
   args: "{{.NthDataNode 6}}, (data,fts)"
 -
   template: rebalance
+  wait: true
 -
   template: wait_for_rebalance
   wait: true
