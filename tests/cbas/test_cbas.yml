@@ -3,12 +3,24 @@
   include: tests/templates/rebalance.yml, tests/templates/fts.yml
 
 # start json and binary data loading
-#-
-#   image: sequoiatools/pillowfight
-#   command: "-U  {{.Orchestrator}} -B {{.Scale 10}} -I {{.Scale 100}} -t 1"
+-
+   image: sequoiatools/pillowfight
+   command: "-U  {{.Orchestrator}} -B {{.Scale 10}} -I {{.Scale 100}} -t 1"
 -
    image: sequoiatools/gideon
    command: "kv --ops {{.Scale 10}} --create 10 --get 90 --expire 20 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 160"
+-
+   image: sequoiatools/cbas
+   command: " > LOGS"
+   wait: true
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "{{.Scale 360}}"
+   wait: true
+-
+  image: sequoiatools/curloop
+  command: "cbas.sh {{.QueryNodePort}} 'select * from default where rating > 0 limit 50'"
 
 ## create index on buckets
 #-

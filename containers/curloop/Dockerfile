@@ -1,3 +1,5 @@
 FROM appropriate/curl
 COPY n1ql.sh /bin/n1ql.sh 
-COPY view.sh /bin/view.sh 
+COPY view.sh /bin/view.sh
+COPY cbas.sh /bin/cbas.sh
+COPY cbasloop.sh /bin/cbasloop.sh
