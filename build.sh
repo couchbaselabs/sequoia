@@ -8,6 +8,7 @@ docker pull clue/httpie
 docker build -t ubuntu_gcc -f containers/templates/Dockerfile-ubuntu-gcc  containers/templates/
 docker build -t ubuntu_python -f containers/templates/Dockerfile-ubuntu-python  containers/templates/
 docker build -t ubuntu_vbr -f containers/templates/Dockerfile-ubuntu-vbr  containers/templates/
+docker build -t ubuntu_cbas -f containers/templates/Dockerfile-ubuntu-cbas  containers/templates/
 
 # framework containers
 docker build -t sequoiatools/perfrunner containers/perfrunner
@@ -18,6 +19,7 @@ docker build -t sequoiatools/tpcc containers/tpcc
 docker build -t sequoiatools/pillowfight containers/pillowfight
 docker build -t sequoiatools/gideon containers/gideon  # depends on pillowfight
 docker build -t sequoiatools/vbr containers/vbr
+docker build -t sequoiatools/cbas containers/cbas
 #docker build -t ycsb containers/ycsb
 #docker build -t mysql containers/mysql
 #docker build -t elasticsearch containers/elasticsearch

@@ -1,0 +1,97 @@
+---
+-
+  include: tests/templates/rebalance.yml, tests/templates/fts.yml
+
+# start json and binary data loading
+#-
+#   image: sequoiatools/pillowfight
+#   command: "-U  {{.Orchestrator}} -B {{.Scale 10}} -I {{.Scale 100}} -t 1"
+-
+   image: sequoiatools/gideon
+   command: "kv --ops {{.Scale 10}} --create 10 --get 90 --expire 20 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 160"
+
+## create index on buckets
+#-
+#  template: create_index
+#  args: "default, st_index"
+#  wait: true
+#
+## run field matching queries
+#-
+#  template: query_index_field
+#  args: "st_index, 5F"
+#-
+#  template: query_index_field
+#  args: "st_index, 0B"
+#-
+#  template: query_index_field
+#  args: "st_index, C5"
+#
+## scale cluster up
+#-
+#  template: add_node
+#  args: "{{.NthDataNode 2}}, data"
+#-
+#  template: add_node
+#  args: "{{.NthDataNode 3}}, (data,fts)"
+#-
+#  template: rebalance
+#
+## make some more indexes across buckets
+#-
+#  template: create_index
+#  args: "{{.NthBucket 1}}, st_index02"
+#  wait: true
+#-
+#  template: create_index
+#  args: "{{.NthBucket 2}}, st_index03"
+#  wait: true
+#-
+#  template: create_index
+#  args: "default, st_index04"
+#  wait: true
+#
+## scale cluster up more
+#-
+#  template: add_node
+#  args: "{{.NthDataNode 4}}, data"
+#-
+#  template: add_node
+#  args: "{{.NthDataNode 5}}, (data,fts)"
+#-
+#  template: rebalance
+#
+## start queries on new indexes
+#-
+#  template: query_index_field
+#  args: "st_index02, C5"
+#-
+#  template: query_index_field
+#  args: "st_index03, C5"
+#-
+#  template: query_index_field
+#  args: "st_index04, C5"
+#
+## scale back down
+#-
+#  template: rebalance_out
+#  args: "{{.NthDataNode 1}}"
+#  wait: true
+#
+## failover an fts node
+#-
+#  template: failover_node_forced
+#  args: "{{.Nodes | .Service `fts` | net 0}}"
+#-
+#  template: rebalance
+#  wait: true
+#
+## rebalance out more nodes
+#-
+#  template: rebalance_out
+#  args: "{{.NthDataNode 2}}"
+#  wait: true
+#-
+#  template: rebalance_out
+#  args: "{{.NthDataNode 3}}"
+#  wait: true
