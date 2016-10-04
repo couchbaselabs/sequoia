@@ -11,17 +11,21 @@
    command: "kv --ops {{.Scale 10}} --create 10 --get 90 --expire 20 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 160"
 -
    image: sequoiatools/cbas
-   command: " > LOGS"
-   wait: true
+   command: "> LOGS"
+   wait: false
 -
    image: sequoiatools/cmd
    entrypoint: sleep
-   command: "{{.Scale 360}}"
+   command: "{{.Scale 60}}"
    wait: true
 -
   image: sequoiatools/curloop
-  command: "cbas.sh {{.QueryNodePort}} 'select * from default where rating > 0 limit 50'"
-
+  command: "cbas.sh 'create bucket beerBucket with { 'bucket': 'default', 'nodes': '172.23.108.8' };'"
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "{{.Scale 260}}"
+   wait: true
 ## create index on buckets
 #-
 #  template: create_index
