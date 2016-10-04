@@ -16,11 +16,15 @@
 -
    image: sequoiatools/cmd
    entrypoint: sleep
-   command: "{{.Scale 20}}"
+   command: "{{.Scale 3}}"
    wait: true
 -
   image: sequoiatools/curloop
-  command: "cbas.sh create bucket beerBucket with { \'bucket\': \'default\', \'nodes\': \'172.23.108.8\' };"
+  command: "cbas.sh create bucket defaultBucket with { \''bucket\': \''default\', \''nodes\': \''172.23.108.8\' };"
+-
+  command: "cbas.sh create shadow dataset beers on defaultBucket;"
+-
+  command: "cbas.sh connect bucket beerBucket with { \''password': \''' };"
 -
    image: sequoiatools/cmd
    entrypoint: sleep
