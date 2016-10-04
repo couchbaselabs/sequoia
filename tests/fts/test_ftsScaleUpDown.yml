@@ -116,10 +116,19 @@
   template: wait_for_rebalance
   wait: true
 -
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "{{.Scale 100}}"
+   wait: true
+-
+  template: rebalance_stop
+-
   template: failover_and_recover
   args: "{{.Nodes | .Service `fts` | net 0}}, delta"
   wait: true
-
+-
+  template: wait_for_rebalance
+  wait: true
 # rebalance out more nodes
 -
   template: rebalance_out
