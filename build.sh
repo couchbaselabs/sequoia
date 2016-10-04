@@ -18,6 +18,7 @@ docker build -t sequoiatools/testrunner containers/testrunner
 docker build -t sequoiatools/tpcc containers/tpcc
 docker build -t sequoiatools/pillowfight containers/pillowfight
 docker build -t sequoiatools/gideon containers/gideon  # depends on pillowfight
+docker build -t sequoiatools/curloop containers/curloop
 docker build -t sequoiatools/vbr containers/vbr
 docker build -t sequoiatools/cbas containers/cbas
 #docker build -t ycsb containers/ycsb
