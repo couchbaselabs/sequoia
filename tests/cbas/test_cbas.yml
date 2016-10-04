@@ -3,12 +3,14 @@
   include: tests/templates/rebalance.yml, tests/templates/fts.yml
 
 # start json and binary data loading
--
-   image: sequoiatools/pillowfight
-   command: "-U  {{.Orchestrator}} -B {{.Scale 10}} -I {{.Scale 100}} -t 1"
+#-
+#   image: sequoiatools/pillowfight
+#   command: "-U  {{.Orchestrator}} -B {{.Scale 100}} -I {{.Scale 1000}} -t 1"
 -
    image: sequoiatools/gideon
-   command: "kv --ops {{.Scale 10}} --create 10 --get 90 --expire 20 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 160"
+   command: "kv --ops {{.Scale 100}} --create 10 --get 90 --expire 20 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 1600"
+-
+   command: "kv --ops {{.Scale 100}} --create 30 --get 70 --delete 10   --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
 -
    image: sequoiatools/cbas
    command: "> LOGS"
@@ -22,9 +24,9 @@
   image: sequoiatools/curloop
   command: "cbas.sh create bucket defaultBucket with { \''bucket\': \''default\', \''nodes\': \''172.23.108.8\' };"
 -
-  command: "cbas.sh create shadow dataset beers on defaultBucket;"
+  command: "cbas.sh create shadow dataset shadowBucket on defaultBucket;"
 -
-  command: "cbas.sh connect bucket beerBucket with { \''password': \''' };"
+  command: "cbas.sh connect bucket defaultBucket with { \''password': \''' };"
 -
    image: sequoiatools/cmd
    entrypoint: sleep
