@@ -16,7 +16,7 @@
 -
    image: sequoiatools/cmd
    entrypoint: sleep
-   command: "{{.Scale 60}}"
+   command: "{{.Scale 30}}"
    wait: true
 -
   image: sequoiatools/curloop
@@ -24,7 +24,7 @@
 -
    image: sequoiatools/cmd
    entrypoint: sleep
-   command: "{{.Scale 260}}"
+   command: "{{.Scale 200}}"
    wait: true
 ## create index on buckets
 #-
