@@ -8,9 +8,9 @@
 #   command: "-U  {{.Orchestrator}} -B {{.Scale 100}} -I {{.Scale 1000}} -t 1"
 -
    image: sequoiatools/gideon
-   command: "kv --ops {{.Scale 100}} --create 10 --get 90 --expire 20 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 1600"
+   command: "kv --ops {{.Scale 50}} --create 10 --get 90 --expire 20 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 1600"
 -
-   command: "kv --ops {{.Scale 100}} --create 30 --get 70 --delete 10   --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+   command: "kv --ops {{.Scale 50}} --create 30 --get 70 --delete 10   --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
 -
    image: sequoiatools/cbas
    command: "> LOGS"
@@ -28,7 +28,15 @@
 -
   command: "cbas.sh connect bucket defaultBucket with { \''password': \''' };"
 -
-  command: "cbas.sh select value t from shadowBucket t where \\`state\\` = \\''25\\' and \\`result\\` = \\''SUCCESS\\' group by \\`city\\`\\;"
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "{{.Scale 2}}"
+   wait: true
+-
+  image: sequoiatools/curloop
+  command: "cbas.sh select value t from shadowBucket t where \\`state\\` = \''25\' and \\`result\\` = \''SUCCESS\' group by \\`city\\` ;"
+-
+  command: "cbasloop.sh select value t from shadowBucket t where \\`state\\` = \''25\' and \\`result\\` = \''SUCCESS\' group by \\`city\\` ;"
 -
    image: sequoiatools/cmd
    entrypoint: sleep
