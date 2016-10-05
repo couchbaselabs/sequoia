@@ -18,7 +18,7 @@
 -
    image: sequoiatools/cmd
    entrypoint: sleep
-   command: "{{.Scale 3}}"
+   command: "{{.Scale 2}}"
    wait: true
 -
   image: sequoiatools/curloop
@@ -27,6 +27,8 @@
   command: "cbas.sh create shadow dataset shadowBucket on defaultBucket;"
 -
   command: "cbas.sh connect bucket defaultBucket with { \''password': \''' };"
+-
+  command: "cbas.sh select value t from shadowBucket t where \\`state\\` = \\''25\\' and \\`result\\` = \\''SUCCESS\\' group by \\`city\\`\\;"
 -
    image: sequoiatools/cmd
    entrypoint: sleep
