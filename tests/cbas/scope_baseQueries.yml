@@ -15,5 +15,5 @@ servers:
       rest_password: password
       #data_path: "/data"
       #index_path: "/data"
-      init_nodes: 6   # ONLY INIT 4 NODES
+      init_nodes: 6   # ONLY INIT 6 NODES
       buckets: default
