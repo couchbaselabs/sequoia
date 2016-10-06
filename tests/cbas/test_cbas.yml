@@ -18,8 +18,9 @@
 -
    image: sequoiatools/cmd
    entrypoint: sleep
-   command: "{{.Scale 2}}"
+   command: "{{.Scale 10}}"
    wait: true
+# connect bucket with CBAS
 -
   image: sequoiatools/curloop
   command: "cbas.sh create bucket defaultBucket with { \''bucket\': \''default\', \''nodes\': \''172.23.108.8\' };"
@@ -30,100 +31,77 @@
 -
    image: sequoiatools/cmd
    entrypoint: sleep
-   command: "{{.Scale 2}}"
+   command: "{{.Scale 10}}"
    wait: true
+# query on cbas side. # TODO add more queries
 -
   image: sequoiatools/curloop
-  command: "cbas.sh select value t from shadowBucket t where \\`state\\` = \''25\' and \\`result\\` = \''SUCCESS\' group by \\`city\\` ;"
--
   command: "cbasloop.sh select value t from shadowBucket t where \\`state\\` = \''25\' and \\`result\\` = \''SUCCESS\' group by \\`city\\` ;"
+-
+  command: "cbasloop.sh select count(*) from shadowBucket where \\`state\\` = \''79\' and \\`component\\` = \''D8\' ;"
+-
+  command: "cbasloop.sh select value t from shadowBucket t where \\`state\\` = \''B1\' and \\`rating\\`> \''NUM100\'NUM and \\`duration\\` > \''NUM7000\'NUM and \\`totalCount\\`> \''NUM80\'NUM group by \\`component\\` ;"
 -
    image: sequoiatools/cmd
    entrypoint: sleep
-   command: "{{.Scale 200}}"
+   command: "{{.Scale 20}}"
    wait: true
-## create index on buckets
-#-
-#  template: create_index
-#  args: "default, st_index"
-#  wait: true
-#
-## run field matching queries
-#-
-#  template: query_index_field
-#  args: "st_index, 5F"
-#-
-#  template: query_index_field
-#  args: "st_index, 0B"
-#-
-#  template: query_index_field
-#  args: "st_index, C5"
-#
-## scale cluster up
-#-
-#  template: add_node
-#  args: "{{.NthDataNode 2}}, data"
-#-
-#  template: add_node
-#  args: "{{.NthDataNode 3}}, (data,fts)"
-#-
-#  template: rebalance
-#
-## make some more indexes across buckets
-#-
-#  template: create_index
-#  args: "{{.NthBucket 1}}, st_index02"
-#  wait: true
-#-
-#  template: create_index
-#  args: "{{.NthBucket 2}}, st_index03"
-#  wait: true
-#-
-#  template: create_index
-#  args: "default, st_index04"
-#  wait: true
-#
-## scale cluster up more
-#-
-#  template: add_node
-#  args: "{{.NthDataNode 4}}, data"
-#-
-#  template: add_node
-#  args: "{{.NthDataNode 5}}, (data,fts)"
-#-
-#  template: rebalance
-#
-## start queries on new indexes
-#-
-#  template: query_index_field
-#  args: "st_index02, C5"
-#-
-#  template: query_index_field
-#  args: "st_index03, C5"
-#-
-#  template: query_index_field
-#  args: "st_index04, C5"
-#
-## scale back down
-#-
-#  template: rebalance_out
-#  args: "{{.NthDataNode 1}}"
-#  wait: true
-#
-## failover an fts node
-#-
-#  template: failover_node_forced
-#  args: "{{.Nodes | .Service `fts` | net 0}}"
-#-
-#  template: rebalance
-#  wait: true
-#
-## rebalance out more nodes
-#-
-#  template: rebalance_out
-#  args: "{{.NthDataNode 2}}"
-#  wait: true
-#-
-#  template: rebalance_out
-#  args: "{{.NthDataNode 3}}"
-#  wait: true
+# swap rebalance
+-
+  template: add_node
+  args: "{{.NthDataNode 6}}, data"
+-
+  template: rebalance_out
+  args: "{{.NthDataNode 2}}"
+-
+  template: wait_for_rebalance
+  wait: true
+
+# scale back down
+-
+  template: rebalance_out
+  args: "{{.NthDataNode 3}}"
+-
+  template: wait_for_rebalance
+  wait: true
+# failover a node
+-
+  template: failover_node_forced
+  args: "{{.NthDataNode 4}}"
+  wait: true
+-
+  template: rebalance
+  wait: true
+-
+  template: wait_for_rebalance
+  wait: true
+# add one node and then stop rebalance
+-
+  template: add_node
+  args: "{{.NthDataNode 7}}, data"
+-
+  template: rebalance
+  wait: false
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "{{.Scale 100}}"
+   wait: true
+-
+  template: rebalance_stop
+# failover node with delta recovery
+-
+  template: failover_and_recover
+  args: "{{.NthDataNode 6}}, delta"
+  wait: true
+-
+  template: wait_for_rebalance
+  wait: true
+
+# rebalance out one node
+-
+  template: rebalance_out
+  args: "{{.NthDataNode 4}}"
+-
+  template: wait_for_rebalance
+  wait: true

@@ -4,6 +4,7 @@
 HOST="172.17.0.4"
 STATEMENT=$@
 STATEMENT=${STATEMENT//\\/""} # remove \ slashes
+STATEMENT=${STATEMENT//\'NUM/""}  # to use nums in expression
 while [ 1 ] ; do
     curl -s --data pretty=true --data format=CLEAN_JSON --data-urlencode "statement=$STATEMENT" http://$HOST:8095/analytics/service -v # > log
 done
