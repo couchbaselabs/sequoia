@@ -2,15 +2,15 @@
 -
   include: tests/templates/rebalance.yml, tests/templates/fts.yml
 
-# start json and binary data loading
-#-
-#   image: sequoiatools/pillowfight
-#   command: "-U  {{.Orchestrator}} -B {{.Scale 100}} -I {{.Scale 1000}} -t 1"
+ start json and binary data loading
+-
+   image: sequoiatools/pillowfight
+   command: "-U  {{.Orchestrator}} -B {{.Scale 100}} -I {{.Scale 1000}} -t 1"
 -
    image: sequoiatools/gideon
-   command: "kv --ops {{.Scale 50}} --create 10 --get 90 --expire 20 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 1600"
+   command: "kv --ops {{.Scale 100}} --create 10 --get 90 --expire 20 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 1600"
 -
-   command: "kv --ops {{.Scale 50}} --create 30 --get 70 --delete 10   --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+   command: "kv --ops {{.Scale 100}} --create 30 --get 70 --delete 10   --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
 -
    image: sequoiatools/cbas
    command: "> LOGS"
