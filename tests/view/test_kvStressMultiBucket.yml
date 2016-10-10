@@ -2,6 +2,15 @@
 -
   include: tests/templates/rebalance.yml, tests/templates/vegeta.yml
 
+-
+  image: sequoiatools/purger
+  command: "{{.Orchestrator | noport}}:{{.RestPort}} {{.Orchestrator | noport}}:{{.ViewPort}} {{.Bucket}}"
+-
+  command: "{{.Orchestrator | noport}}:{{.RestPort}} {{.Orchestrator | noport}}:{{.ViewPort}} {{.NthBucket 1}}"
+-
+  command: "{{.Orchestrator | noport}}:{{.RestPort}} {{.Orchestrator | noport}}:{{.ViewPort}} {{.NthBucket 2}}"
+
+
 #============ continous kv loading a minimum of 1.5M items  at 1xScale============
 -
    image: sequoiatools/pillowfight
@@ -19,9 +28,6 @@
 -
    image: sequoiatools/gideon
    command: "kv --ops {{.Scale 100}} --create 30 --get 70 --delete 10 --expire 20 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}}"
--
-   image: sequoiatools/gideon
-   command: "kv --ops {{.Scale 100}} --create 30 --get 70 --delete 10 --expire 20 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}}"
 
 
 #============ start view queries  ============
