@@ -26,7 +26,7 @@ def purge(bucket, ddoc):
     client = Bucket(HOST+'/'+bucket)
 
     DDOC='/'.join([VIEW_API,bucket,'_design',ddoc,'_view'])
-    CLIENTS_Q = DDOC+"/clients?stale=ok&group=true"
+    CLIENTS_Q = DDOC+"/clients?stale=ok&limit=500&group=true"
     print CLIENTS_Q
     # purger for all platforms+comonent combo of each build
     r = getReq(CLIENTS_Q)
