@@ -11,11 +11,11 @@
 -
   # start doc purger
   image: sequoiatools/purger
-  command: "{{.Orchestrator | noport}}:{{.RestPort}} {{.Orchestrator | noport}}:{{.ViewPort}} {{.Bucket}}"
+  command: "{{.NthDataNode 5 | noport}}:{{.RestPort}} {{.NthDataNode 6 | noport}}:{{.ViewPort}} {{.Bucket}}"
 -
-  command: "{{.Orchestrator | noport}}:{{.RestPort}} {{.Orchestrator | noport}}:{{.ViewPort}} {{.NthBucket 1}}"
+  command: "{{.NthDataNode 7 | noport}}:{{.RestPort}} {{.NthDataNode 8 | noport}}:{{.ViewPort}} {{.NthBucket 1}}"
 -
-  command: "{{.Orchestrator | noport}}:{{.RestPort}} {{.Orchestrator | noport}}:{{.ViewPort}} {{.NthBucket 2}}"
+  command: "{{.NthDataNode 7 | noport}}:{{.RestPort}} {{.NthDataNode 8 | noport}}:{{.ViewPort}} {{.NthBucket 2}}"
 
 
 #============ continous kv loading a minimum of 1.5M items  at 1xScale============
