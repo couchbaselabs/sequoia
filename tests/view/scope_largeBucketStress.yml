@@ -2,14 +2,14 @@
 servers: # each server tag represents a cluster
   -
       name: local
-      count: 10 
+      count: 10
       ram: 40% 
       rest_username: Administrator
       rest_password: password
       data_path: "/data"
       index_path: "/data"
-      init_nodes: 10 
-      buckets: default,other-1,other-2,other-3
+      init_nodes: 10
+      buckets: default,other-1,other-2
 
 buckets:
   -
@@ -19,10 +19,6 @@ buckets:
       ddocs: scale,purger
   -
       name: other-1
-      ram: 20% 
-      ddocs: scale,purger
-  -
-      name: other-2
       ram: 20% 
       ddocs: scale,purger
   -
