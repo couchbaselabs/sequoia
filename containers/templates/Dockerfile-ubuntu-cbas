@@ -19,7 +19,8 @@ RUN mkdir -p /root/.ssh/
 RUN ssh-keyscan github.com  >> ~/.ssh/known_hosts
 RUN curl https://storage.googleapis.com/git-repo-downloads/repo > /usr/bin/repo
 RUN chmod a+x /usr/bin/repo
-ADD id_rsa /root/.ssh/id_rsa   # please replace 'id_rsa' file with private key when you pull private projects from github
+# please replace 'id_rsa' file with private key when you pull private projects from github
+ADD id_rsa /root/.ssh/id_rsa
 RUN chmod 400 /root/.ssh/id_rsa
 RUN mkdir -p /root/cbas
 RUN cd /root/cbas && repo init -u git://github.com/couchbase/manifest -m analytics/master.xml && repo sync --jobs=6

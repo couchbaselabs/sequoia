@@ -6,5 +6,5 @@ STATEMENT=$@
 STATEMENT=${STATEMENT//\\/""} # remove \ slashes
 STATEMENT=${STATEMENT//\'NUM/""}  # to use nums in expression
 while [ 1 ] ; do
-    curl -s --data pretty=true --data format=CLEAN_JSON --data-urlencode "statement=$STATEMENT" http://$HOST:8095/analytics/service > log
+    curl -s --data pretty=true --data-urlencode "statement=$STATEMENT" http://$HOST:8095/analytics/service > log
 done
