@@ -2,7 +2,7 @@
 -
   include: tests/templates/rebalance.yml, tests/templates/fts.yml
 
- start json and binary data loading
+# start json and binary data loading
 -
    image: sequoiatools/pillowfight
    command: "-U  {{.Orchestrator}} -B {{.Scale 100}} -I {{.Scale 1000}} -t 1"
@@ -20,6 +20,7 @@
    entrypoint: sleep
    command: "{{.Scale 10}}"
    wait: true
+
 # connect bucket with CBAS
 -
   image: sequoiatools/curloop
@@ -33,6 +34,7 @@
    entrypoint: sleep
    command: "{{.Scale 10}}"
    wait: true
+
 # query on cbas side. # TODO add more queries
 -
   image: sequoiatools/curloop
@@ -46,6 +48,7 @@
    entrypoint: sleep
    command: "{{.Scale 20}}"
    wait: true
+
 # swap rebalance
 -
   template: add_node
@@ -64,6 +67,7 @@
 -
   template: wait_for_rebalance
   wait: true
+
 # failover a node
 -
   template: failover_node_forced
@@ -75,6 +79,7 @@
 -
   template: wait_for_rebalance
   wait: true
+
 # add one node and then stop rebalance
 -
   template: add_node
@@ -89,6 +94,7 @@
    wait: true
 -
   template: rebalance_stop
+
 # failover node with delta recovery
 -
   template: failover_and_recover
