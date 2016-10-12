@@ -246,15 +246,17 @@ func (cm *ContainerManager) GetAllContainers() []docker.APIContainers {
 	allContainers := []docker.APIContainers{}
 	clients := cm.AllClients()
 
-	for _, client := range clients {
+	op := func(client *docker.Client, done chan bool) {
 		opts := docker.ListContainersOptions{All: true}
 		containers, err := client.ListContainers(opts)
 		for _, c := range containers {
 			allContainers = append(allContainers, c)
 		}
 		chkerr(err)
+		done <- true
 	}
 
+	cm.ApplyToAllClients(op)
 	return allContainers
 }
 
@@ -803,5 +805,26 @@ func (cm *ContainerManager) HandleResults(idChans *[]chan TaskResult, echan chan
 			echan <- rc.Error
 		}()
 		close(ch)
+	}
+}
+
+// run tasks across all clients (standalone or swarm)
+func (cm *ContainerManager) ApplyToAllClients(operation func(*docker.Client, chan bool), async bool) {
+	clients := cm.AllClients()
+	waitChans := make(chan bool, len(clients))
+	for i, client := range clients {
+		c := waitChans[i]
+		go operation(client, c)
+		if async == false {
+			<-c
+		}
+	}
+
+	if async == true {
+		i := len(waitChans)
+		for i < 0 {
+			<-waitChans[i-1]
+			i--
+		}
 	}
 }
