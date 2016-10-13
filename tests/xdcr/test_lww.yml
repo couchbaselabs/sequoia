@@ -5,11 +5,11 @@
 #============ LWW bucket creation =========
 -
   image: appropriate/curl
-  command: "-u Administrator:password -X POST http://{{.Orchestrator}}:8091/pools/default/buckets -d name=lww -d timeSynchronization=enabledWithoutDrift -d authType=none -d proxyPort=11212 -d ramQuotaMB=100"
+  command: "-u Administrator:password -X POST http://{{.Orchestrator}}:8091/pools/default/buckets -d name=lww -d timeSynchronization=enabledWithoutDrift -d authType=none -d proxyPort=11212 -d ramQuotaMB=13084"
   wait: true
 -
   image: appropriate/curl
-  command: "-u Administrator:password -X POST http://{{.Nodes | .Cluster 1 | net 0}}:8091/pools/default/buckets -d name=lww -d timeSynchronization=enabledWithoutDrift -d authType=none -d proxyPort=11212 -d ramQuotaMB=100"
+  command: "-u Administrator:password -X POST http://{{.Nodes | .Cluster 1 | net 0}}:8091/pools/default/buckets -d name=lww -d timeSynchronization=enabledWithoutDrift -d authType=none -d proxyPort=11212 -d ramQuotaMB=13084"
   wait: true
 
 #============ data loading ============
