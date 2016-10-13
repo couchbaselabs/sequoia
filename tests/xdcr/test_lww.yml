@@ -1,6 +1,7 @@
 ---
 -
   include: tests/templates/kv.yml
+  include: tests/templates/rebalance.yml
 
 #============ LWW bucket creation =========
 -
@@ -150,16 +151,13 @@
 
 #============ rebalance in/out =============
 -
-   image: sequoiatools/couchbase-cli
-   command: "rebalance -c {{.Orchestrator}} --server-remove {{.NthDataNode 5}}"
-   duration: 60
+   template: rebalance_out
+   args: "{{.NthDataNode 5}}"
    wait: true
 
 -
-   command: "rebalance -c {{.Orchestrator}}
-                        --server-add {{.NthDataNode 5}}
-                        --server-add-username {{.RestUsername}}
-                        --server-add-password  {{.RestPassword}}"
+   template: rebalance_in
+   args: "{{.NthDataNode 5}}"
    wait: true
 
 #============ graceful failover =============
@@ -175,7 +173,7 @@
        -u  {{.RestUsername}} -p  {{.RestPassword}}"
    wait: true
 -
-   command:  "rebalance -c  {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   template: rebalance
    wait: true
 
 #============ data loading ============
@@ -200,7 +198,7 @@
        -u  {{.RestUsername}} -p  {{.RestPassword}}"
    wait: true
 -
-   command:  "rebalance -c  {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   template: rebalance
    wait: true
 
 #============ graceful failover =============
@@ -216,7 +214,7 @@
        -u  {{.RestUsername}} -p  {{.RestPassword}}"
    wait: true
 -
-   command:  "rebalance -c  {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   template: rebalance
    wait: true
 
 #============ data loading ============
@@ -241,7 +239,7 @@
        -u  {{.RestUsername}} -p  {{.RestPassword}}"
    wait: true
 -
-   command:  "rebalance -c  {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   template: rebalance
    wait: true
 
 #============ data loading ============
