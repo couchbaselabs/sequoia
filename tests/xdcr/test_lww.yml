@@ -129,7 +129,7 @@
 -
    command: "xdcr-replicate -c {{.Nodes | .Cluster 1 | net 0}}
         --xdcr-cluster-name local
-        --xdcr-from-bucket {{.Nodes | .Cluster 1 | bucket 0}}
+        --xdcr-from-bucket lww
         --xdcr-to-bucket lww"
    wait: true
 
@@ -157,7 +157,7 @@
 
 -
    command: "rebalance -c {{.Orchestrator}}
-                       -server-add {{.NthDataNode 5}}
+                        --server-add {{.NthDataNode 5}}
                         --server-add-username {{.RestUsername}}
                         --server-add-password  {{.RestPassword}}"
    duration: 60
@@ -279,7 +279,6 @@
    image: sequoiatools/couchbase-cli
    command: "xdcr-replicate -c {{.Orchestrator}}
                             --settings
-                            --max-concurrent-reps=32
                             --checkpoint-interval=60
                             --worker-batch-size=4096
                             --doc-batch-size=1000
