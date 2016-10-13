@@ -160,7 +160,6 @@
                         --server-add {{.NthDataNode 5}}
                         --server-add-username {{.RestUsername}}
                         --server-add-password  {{.RestPassword}}"
-   duration: 60
    wait: true
 
 #============ graceful failover =============
@@ -238,7 +237,7 @@
 -
    command: "recovery -c {{.Orchestrator}}
        --server-recovery {{.NthDataNode 2}}
-       --recovery-type=full
+       --recovery-type full
        -u  {{.RestUsername}} -p  {{.RestPassword}}"
    wait: true
 -
@@ -281,7 +280,6 @@
                             --settings
                             --checkpoint-interval=60
                             --worker-batch-size=4096
-                            --doc-batch-size=1000
                             --failure-restart-interval=30
                             --optimistic-replication-threshold=512
                             -u {{.RestUsername}} -p {{.RestPassword}}
