@@ -191,12 +191,12 @@
 #============ delta recovery ================
 -
    image: sequoiatools/couchbase-cli
-   command: "server-readd -c {.Orchestrator}}
+   command: "server-readd -c {{.Orchestrator}}
             --server-add {{.NthDataNode 1}}
             -u  {{.RestUsername}} -p  {{.RestPassword}}"
    wait: true
 -
-   command: "server-readd -c {.Orchestrator}}
+   command: "server-readd -c {{.Orchestrator}}
             --server-add {{.NthDataNode 2}}
             -u  {{.RestUsername}} -p  {{.RestPassword}}"
    wait: true
@@ -244,12 +244,12 @@
 #============ full recovery ================
 -
    image: sequoiatools/couchbase-cli
-   command: "server-readd -c {.Orchestrator}}
+   command: "server-readd -c {{.Orchestrator}}
             --server-add {{.NthDataNode 1}}
             -u  {{.RestUsername}} -p  {{.RestPassword}}"
    wait: true
 -
-   command: "server-readd -c {.Orchestrator}}
+   command: "server-readd -c {{.Orchestrator}}
             --server-add {{.NthDataNode 2}}
             -u  {{.RestUsername}} -p  {{.RestPassword}}"
    wait: true
