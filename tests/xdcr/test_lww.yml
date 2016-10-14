@@ -176,10 +176,6 @@
        --server-failover {{.NthDataNode 2}}
        -u  {{.RestUsername}} -p  {{.RestPassword}}"
    wait: true
--
-   command:  "rebalance -c  {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
-   template: wait_for_rebalance
-   wait: true
 
 #============ data loading ============
 -
@@ -228,10 +224,6 @@
    command: "failover -c {{.Orchestrator}}
        --server-failover {{.NthDataNode 2}}
        -u  {{.RestUsername}} -p  {{.RestPassword}}"
-   wait: true
--
-   command:  "rebalance -c  {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
-   template: wait_for_rebalance
    wait: true
 
 #============ data loading ============
