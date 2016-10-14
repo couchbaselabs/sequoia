@@ -151,13 +151,17 @@
 
 #============ rebalance in/out =============
 -
-   template: rebalance_out
-   args: "{{.NthDataNode 5}}"
+   image: sequoiatools/couchbase-cli
+   command: "rebalance -c {{.Orchestrator}} --server-remove {{.NthDataNode 5}}"
+   template: wait_for_rebalance
    wait: true
 
 -
-   template: rebalance_in
-   args: "{{.NthDataNode 5}}"
+   command: "rebalance -c {{.Orchestrator}}
+                         --server-add {{.NthDataNode 5}}
+                         --server-add-username {{.RestUsername}}
+                         --server-add-password  {{.RestPassword}}"
+   template: wait_for_rebalance
    wait: true
 
 #============ graceful failover =============
@@ -173,7 +177,8 @@
        -u  {{.RestUsername}} -p  {{.RestPassword}}"
    wait: true
 -
-   template: rebalance
+   command:  "rebalance -c  {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   template: wait_for_rebalance
    wait: true
 
 #============ data loading ============
@@ -198,7 +203,8 @@
        -u  {{.RestUsername}} -p  {{.RestPassword}}"
    wait: true
 -
-   template: rebalance
+   command:  "rebalance -c  {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   template: wait_for_rebalance
    wait: true
 
 #============ graceful failover =============
@@ -214,7 +220,8 @@
        -u  {{.RestUsername}} -p  {{.RestPassword}}"
    wait: true
 -
-   template: rebalance
+   command:  "rebalance -c  {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   template: wait_for_rebalance
    wait: true
 
 #============ data loading ============
@@ -239,7 +246,8 @@
        -u  {{.RestUsername}} -p  {{.RestPassword}}"
    wait: true
 -
-   template: rebalance
+   command:  "rebalance -c  {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   template: wait_for_rebalance
    wait: true
 
 #============ data loading ============
