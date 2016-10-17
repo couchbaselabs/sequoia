@@ -215,8 +215,14 @@ func NewScopeSpec(fileName string) ScopeSpec {
 
 func SpecFromYaml(fileName string) ScopeSpec {
 	var spec ScopeSpec
+
 	// init from yaml
 	ReadYamlFile(fileName, &spec)
+	ConfigureSpec(&spec)
+	return spec
+}
+
+func ConfigureSpec(spec *ScopeSpec) {
 
 	// map views to name
 	viewNameMap := make(map[string]ViewSpec)
@@ -268,8 +274,6 @@ func SpecFromYaml(fileName string) ScopeSpec {
 		// init node services
 		spec.Servers[i].InitNodeServices()
 	}
-
-	return spec
 
 }
 

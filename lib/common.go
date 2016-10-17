@@ -182,3 +182,11 @@ func PathToFilename(p string) string {
 func PathToDir(p string) string {
 	return path.Dir(p)
 }
+
+func ToCamelCase(s string) string {
+	// camelcasing
+	s = strings.Replace(s, "_", " ", -1)
+	s = strings.Title(s)
+	s = strings.Replace(s, " ", "", -1)
+	return s
+}
