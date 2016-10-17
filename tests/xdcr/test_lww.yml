@@ -1,15 +1,16 @@
 ---
 -
   include: tests/templates/kv.yml
+  include: tests/templates/rebalance.yml
 
 #============ LWW bucket creation =========
 -
   image: appropriate/curl
-  command: "-u Administrator:password -X POST http://{{.Orchestrator}}:8091/pools/default/buckets -d name=lww -d timeSynchronization=enabledWithoutDrift -d authType=none -d proxyPort=11212 -d ramQuotaMB=100"
+  command: "-u Administrator:password -X POST http://{{.Orchestrator}}:8091/pools/default/buckets -d name=lww -d timeSynchronization=enabledWithoutDrift -d authType=none -d proxyPort=11212 -d ramQuotaMB=13084 -d replicaNumber=2"
   wait: true
 -
   image: appropriate/curl
-  command: "-u Administrator:password -X POST http://{{.Nodes | .Cluster 1 | net 0}}:8091/pools/default/buckets -d name=lww -d timeSynchronization=enabledWithoutDrift -d authType=none -d proxyPort=11212 -d ramQuotaMB=100"
+  command: "-u Administrator:password -X POST http://{{.Nodes | .Cluster 1 | net 0}}:8091/pools/default/buckets -d name=lww -d timeSynchronization=enabledWithoutDrift -d authType=none -d proxyPort=11212 -d ramQuotaMB=13084 -d replicaNumber=2"
   wait: true
 
 #============ data loading ============
@@ -78,7 +79,7 @@
    image: sequoiatools/couchbase-cli
    command: "xdcr-replicate -c {{.Orchestrator}} --pause
                             -u {{.RestUsername}} -p {{.RestPassword}}
-                            --xdcr-replicator={{(index (.AllLogs `ReplId` | json) 0).uuid }}/default/lww"
+                            --xdcr-replicator={{(index (.AllLogs `ReplId` | json) 0).uuid }}/lww/lww"
 
 #============ swap add back ============
 -
@@ -129,7 +130,7 @@
 -
    command: "xdcr-replicate -c {{.Nodes | .Cluster 1 | net 0}}
         --xdcr-cluster-name local
-        --xdcr-from-bucket {{.Nodes | .Cluster 1 | bucket 0}}
+        --xdcr-from-bucket lww
         --xdcr-to-bucket lww"
    wait: true
 
@@ -138,7 +139,7 @@
    image: sequoiatools/couchbase-cli
    command: "xdcr-replicate -c {{.Orchestrator}} --resume
                             -u {{.RestUsername}} -p {{.RestPassword}}
-                            --xdcr-replicator={{(index (.AllLogs `ReplId` | json) 0).uuid }}/default/lww"
+                            --xdcr-replicator={{(index (.AllLogs `ReplId` | json) 0).uuid }}/lww/lww"
    wait: true
 
 #============ data loading ============
@@ -152,15 +153,12 @@
 -
    image: sequoiatools/couchbase-cli
    command: "rebalance -c {{.Orchestrator}} --server-remove {{.NthDataNode 5}}"
-   duration: 60
    wait: true
-
 -
    command: "rebalance -c {{.Orchestrator}}
-                       -server-add {{.NthDataNode 5}}
-                        --server-add-username {{.RestUsername}}
-                        --server-add-password  {{.RestPassword}}"
-   duration: 60
+                         --server-add {{.NthDataNode 5}}
+                         --server-add-username {{.RestUsername}}
+                         --server-add-password  {{.RestPassword}}"
    wait: true
 
 #============ graceful failover =============
@@ -174,9 +172,6 @@
    command: "failover -c {{.Orchestrator}}
        --server-failover {{.NthDataNode 2}}
        -u  {{.RestUsername}} -p  {{.RestPassword}}"
-   wait: true
--
-   command:  "rebalance -c  {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
    wait: true
 
 #============ data loading ============
@@ -189,6 +184,16 @@
 #============ delta recovery ================
 -
    image: sequoiatools/couchbase-cli
+   command: "server-readd -c {{.Orchestrator}}
+            --server-add {{.NthDataNode 1}}
+            -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   wait: true
+-
+   command: "server-readd -c {{.Orchestrator}}
+            --server-add {{.NthDataNode 2}}
+            -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   wait: true
+-
    command: "recovery -c {{.Orchestrator}}
        --server-recovery {{.NthDataNode 1}}
        --recovery-type delta
@@ -197,7 +202,7 @@
 -
    command: "recovery -c {{.Orchestrator}}
        --server-recovery {{.NthDataNode 2}}
-       --recovery-type=delta
+       --recovery-type delta
        -u  {{.RestUsername}} -p  {{.RestPassword}}"
    wait: true
 -
@@ -216,9 +221,6 @@
        --server-failover {{.NthDataNode 2}}
        -u  {{.RestUsername}} -p  {{.RestPassword}}"
    wait: true
--
-   command:  "rebalance -c  {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
-   wait: true
 
 #============ data loading ============
 -
@@ -230,6 +232,16 @@
 #============ full recovery ================
 -
    image: sequoiatools/couchbase-cli
+   command: "server-readd -c {{.Orchestrator}}
+            --server-add {{.NthDataNode 1}}
+            -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   wait: true
+-
+   command: "server-readd -c {{.Orchestrator}}
+            --server-add {{.NthDataNode 2}}
+            -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   wait: true
+-
    command: "recovery -c {{.Orchestrator}}
        --server-recovery {{.NthDataNode 1}}
        --recovery-type full
@@ -238,7 +250,7 @@
 -
    command: "recovery -c {{.Orchestrator}}
        --server-recovery {{.NthDataNode 2}}
-       --recovery-type=full
+       --recovery-type full
        -u  {{.RestUsername}} -p  {{.RestPassword}}"
    wait: true
 -
@@ -279,21 +291,19 @@
    image: sequoiatools/couchbase-cli
    command: "xdcr-replicate -c {{.Orchestrator}}
                             --settings
-                            --max-concurrent-reps=32
                             --checkpoint-interval=60
                             --worker-batch-size=4096
-                            --doc-batch-size=1000
                             --failure-restart-interval=30
                             --optimistic-replication-threshold=512
                             -u {{.RestUsername}} -p {{.RestPassword}}
-                            --xdcr-replicator={{(index (.AllLogs `ReplId` | json) 0).uuid }}/default/lww"
+                            --xdcr-replicator={{(index (.AllLogs `ReplId` | json) 0).uuid }}/lww/lww"
 
 #============ delete xdcr replications ============
 -
    image: sequoiatools/couchbase-cli
    command: "xdcr-replicate -c {{.Orchestrator}} --delete
                             -u {{.RestUsername}} -p {{.RestPassword}}
-                            --xdcr-replicator={{(index (.AllLogs `ReplId` | json) 0).uuid }}/default/lww"
+                            --xdcr-replicator={{(index (.AllLogs `ReplId` | json) 0).uuid }}/lww/lww"
    wait: true
 
 #============ delete xdcr config ============
