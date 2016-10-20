@@ -108,11 +108,11 @@
 #debug: run once again to check
 -
   image: sequoiatools/curloop
-  command: "cbasl.sh select value t from shadowBucket t where \\`state\\` = \''25\' and \\`result\\` = \''SUCCESS\' group by \\`city\\` ;"
+  command: "cbas.sh select value t from shadowBucket t where \\`state\\` = \''25\' and \\`result\\` = \''SUCCESS\' group by \\`city\\` ;"
 -
-  command: "cbasl.sh select count(*) from shadowBucket where \\`state\\` = \''79\' and \\`component\\` = \''D8\' ;"
+  command: "cbas.sh select count(*) from shadowBucket where \\`state\\` = \''79\' and \\`component\\` = \''D8\' ;"
 -
-  command: "cbasl.sh select value t from shadowBucket t where \\`state\\` = \''B1\' and \\`rating\\`> \''NUM100\'NUM and \\`duration\\` > \''NUM7000\'NUM and \\`totalCount\\`> \''NUM80\'NUM group by \\`component\\` ;"
+  command: "cbas.sh select value t from shadowBucket t where \\`state\\` = \''B1\' and \\`rating\\`> \''NUM100\'NUM and \\`duration\\` > \''NUM7000\'NUM and \\`totalCount\\`> \''NUM80\'NUM group by \\`component\\` ;"
 
 
 # failover node with delta recovery
