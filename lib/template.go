@@ -169,6 +169,12 @@ func (t *TemplateResolver) QueryNode() string {
 	return t.Address(0, serviceNodes)
 }
 
+// Shortcut: {{.ClusterNodes | .Attr `rest_port`}}
+func (t *TemplateResolver) RestPort() string {
+	nodes := t.ClusterNodes()
+	return t.Attr("rest_port", nodes)
+}
+
 // Shortcut: {{.ClusterNodes | .Attr `query_port`}}
 func (t *TemplateResolver) QueryPort() string {
 	nodes := t.ClusterNodes()

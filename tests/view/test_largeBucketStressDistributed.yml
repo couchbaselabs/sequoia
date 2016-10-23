@@ -1,0 +1,54 @@
+-
+  include: tests/templates/vegeta.yml, tests/templates/kv.yml, tests/templates/rebalance.yml
+
+-
+  # load data
+  foreach: "{{range $i, $offset := mkrange 0 9}}"
+  image: sequoiatools/gideon
+  command: "kv --ops 1000 --create 100 --sizes 64 --hosts {{$.Orchestrator}} --bucket {{$.NthBucket $offset}}"
+
+-
+  # run http attacks against view with various skip param
+  foreach: "{{range $i, $offset := mkrange 0 9}}"
+  template: attack_view_all_nodes
+  args: "0, 50,
+         {{$.NthBucket $offset}},
+         scale,
+         padd,
+         connection_timeout=60000&inclusive_end=true&limit=100&stale=update_after"
+
+#============ swap hard failover ============
+-
+  template: failover_node_forced
+  args: "{{.NthDataNode 1}}"
+-
+  template: rebalance
+  duration: 60
+  wait: true
+-
+  template: rebalance_stop
+-
+  template: failover_node
+  args: "{{.NthDataNode 2}}"
+  duration: 60
+-
+  template: rebalance_stop
+-
+  template: failover_node_forced
+  args: "{{.NthDataNode 3}}"
+-
+  template: add_node
+  args: "{{.NthDataNode 1}}, data"
+-
+  template: rebalance
+  duration: 120
+  wait: true
+-
+  template: rebalance_stop
+-
+  # add back
+  template: add_node
+  args: "{{.NthDataNode 3}}, data"
+-
+  template: rebalance
+  wait: true

@@ -1,0 +1,325 @@
+---
+-
+  include: tests/templates/kv.yml
+  include: tests/templates/rebalance.yml
+
+#============ LWW bucket creation =========
+-
+  image: appropriate/curl
+  command: "-u Administrator:password -X POST http://{{.Orchestrator}}:8091/pools/default/buckets -d name=lww -d timeSynchronization=enabledWithoutDrift -d authType=none -d proxyPort=11212 -d ramQuotaMB=13084 -d replicaNumber=2"
+  wait: true
+-
+  image: appropriate/curl
+  command: "-u Administrator:password -X POST http://{{.Nodes | .Cluster 1 | net 0}}:8091/pools/default/buckets -d name=lww -d timeSynchronization=enabledWithoutDrift -d authType=none -d proxyPort=11212 -d ramQuotaMB=13084 -d replicaNumber=2"
+  wait: true
+
+#============ data loading ============
+-
+  # continously to remote site
+  image: sequoiatools/gideon
+  command: "kv --ops {{.Scale 5000}} --create 100  --hosts {{.Nodes | .Cluster 1 | net 0}} --bucket lww"
+-
+  command: "kv --ops {{.Scale 5000}} --create 100  --hosts {{.Orchestrator}} --bucket lww"
+  duration: 60
+  wait: true
+
+#============ setup xdcr replications ============
+-
+   image: sequoiatools/couchbase-cli
+   command:  "xdcr-setup -c {{.Orchestrator}} --create --xdcr-cluster-name remote
+        --xdcr-hostname {{.Nodes | .Cluster 1 | net 0}}
+        --xdcr-username {{.Nodes | .Cluster 1 | .Attr `rest_username`}}
+        --xdcr-password {{.Nodes | .Cluster 1 | .Attr `rest_password`}}"
+   wait: true
+-
+   command: "xdcr-replicate -c {{.Orchestrator}}
+        --xdcr-cluster-name remote
+        --xdcr-from-bucket lww
+        --xdcr-to-bucket lww"
+   wait: true
+
+#============ swap hard failover ============
+-
+   image: sequoiatools/couchbase-cli
+   command: "server-add -c  {{.Orchestrator}}
+       --server-add {{.NthDataNode 5}}
+       -u  {{.RestUsername}} -p  {{.RestPassword}}
+       --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
+   wait: true
+-
+   command: "failover -c {{.Orchestrator}}
+       --server-failover {{.NthDataNode 1}}
+       -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+   wait: true
+-
+   command: "failover -c {{.Orchestrator}}
+       --server-failover {{.NthDataNode 2}}
+       -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+   wait: true
+-
+   command:  "rebalance -c  {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   wait: true
+
+#============ get replication id ============
+-
+  image:  appropriate/curl
+  command: "-s http://{{.RestUsername}}:{{.RestPassword}}@{{.Orchestrator | noport}}:{{.ClusterNodes | .Attr `rest_port`}}/pools/default/remoteClusters"
+  alias: ReplId
+  wait: true
+
+#============ data loading ============
+-
+  image: sequoiatools/gideon
+  command: "kv --ops {{.Scale 5000}} --create 100  --hosts {{.Orchestrator}} --bucket lww"
+  duration: 60
+  wait: true
+
+#============ pause xdcr replications ============
+-
+   image: sequoiatools/couchbase-cli
+   command: "xdcr-replicate -c {{.Orchestrator}} --pause
+                            -u {{.RestUsername}} -p {{.RestPassword}}
+                            --xdcr-replicator={{(index (.AllLogs `ReplId` | json) 0).uuid }}/lww/lww"
+
+#============ swap add back ============
+-
+   image: sequoiatools/couchbase-cli
+   command: "server-add -c  {{.Orchestrator}}
+       --server-add {{.NthDataNode 1}}
+       -u  {{.RestUsername}} -p  {{.RestPassword}}
+       --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
+   wait: true
+
+-
+   command: "server-add -c  {{.Orchestrator}}
+       --server-add {{.NthDataNode 2}}
+       -u  {{.RestUsername}} -p  {{.RestPassword}}
+       --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
+   wait: true
+-
+   command: "failover -c {{.Orchestrator}}
+       --server-failover {{.NthDataNode 5}}
+       -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+   wait: true
+-
+   command:  "rebalance -c  {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   wait: true
+
+
+#============ remote add ============
+-
+   image: sequoiatools/couchbase-cli
+   command: "server-add -c  {{.Nodes | .Cluster 1 | net 0}}
+       --server-add {{.Nodes | .Cluster 1 | net 3}}
+       -u  {{.RestUsername}} -p  {{.RestPassword}}
+       --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
+   wait: true
+-
+   command:  "rebalance -c  {{.Nodes | .Cluster 1 | net 0}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   alias: RemoteRebalance
+
+#============ remote setup xdcr replications ============
+-
+   image: sequoiatools/couchbase-cli
+   requires:  "{{eq true .DoOnce}}"
+   command:  "xdcr-setup -c {{.Nodes | .Cluster 1 | net 0}} --create --xdcr-cluster-name local
+        --xdcr-hostname {{.Orchestrator}}
+        --xdcr-username {{.RestUsername}}
+        --xdcr-password {{.RestPassword}}"
+   wait: true
+-
+   command: "xdcr-replicate -c {{.Nodes | .Cluster 1 | net 0}}
+        --xdcr-cluster-name local
+        --xdcr-from-bucket lww
+        --xdcr-to-bucket lww"
+   wait: true
+
+#============ resume xdcr replications ============
+-
+   image: sequoiatools/couchbase-cli
+   command: "xdcr-replicate -c {{.Orchestrator}} --resume
+                            -u {{.RestUsername}} -p {{.RestPassword}}
+                            --xdcr-replicator={{(index (.AllLogs `ReplId` | json) 0).uuid }}/lww/lww"
+   wait: true
+
+#============ data loading ============
+-
+  image: sequoiatools/gideon
+  command: "kv --ops {{.Scale 5000}} --create 100  --hosts {{.Orchestrator}} --bucket lww"
+  duration: 60
+  wait: true
+
+#============ rebalance in/out =============
+-
+   image: sequoiatools/couchbase-cli
+   command: "rebalance -c {{.Orchestrator}} --server-remove {{.NthDataNode 5}}"
+   wait: true
+-
+   command: "rebalance -c {{.Orchestrator}}
+                         --server-add {{.NthDataNode 5}}
+                         --server-add-username {{.RestUsername}}
+                         --server-add-password  {{.RestPassword}}"
+   wait: true
+
+#============ graceful failover =============
+-
+   image: sequoiatools/couchbase-cli
+   command: "failover -c {{.Orchestrator}}
+       --server-failover {{.NthDataNode 1}}
+       -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   wait: true
+-
+   command: "failover -c {{.Orchestrator}}
+       --server-failover {{.NthDataNode 2}}
+       -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   wait: true
+
+#============ data loading ============
+-
+  image: sequoiatools/gideon
+  command: "kv --ops {{.Scale 5000}} --create 100  --hosts {{.Orchestrator}} --bucket lww"
+  duration: 60
+  wait: true
+
+#============ delta recovery ================
+-
+   image: sequoiatools/couchbase-cli
+   command: "server-readd -c {{.Orchestrator}}
+            --server-add {{.NthDataNode 1}}
+            -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   wait: true
+-
+   command: "server-readd -c {{.Orchestrator}}
+            --server-add {{.NthDataNode 2}}
+            -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   wait: true
+-
+   command: "recovery -c {{.Orchestrator}}
+       --server-recovery {{.NthDataNode 1}}
+       --recovery-type delta
+       -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   wait: true
+-
+   command: "recovery -c {{.Orchestrator}}
+       --server-recovery {{.NthDataNode 2}}
+       --recovery-type delta
+       -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   wait: true
+-
+   command:  "rebalance -c  {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   wait: true
+
+#============ graceful failover =============
+-
+   image: sequoiatools/couchbase-cli
+   command: "failover -c {{.Orchestrator}}
+       --server-failover {{.NthDataNode 1}}
+       -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   wait: true
+-
+   command: "failover -c {{.Orchestrator}}
+       --server-failover {{.NthDataNode 2}}
+       -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   wait: true
+
+#============ data loading ============
+-
+  image: sequoiatools/gideon
+  command: "kv --ops {{.Scale 5000}} --create 100  --hosts {{.Orchestrator}} --bucket lww"
+  duration: 60
+  wait: true
+
+#============ full recovery ================
+-
+   image: sequoiatools/couchbase-cli
+   command: "server-readd -c {{.Orchestrator}}
+            --server-add {{.NthDataNode 1}}
+            -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   wait: true
+-
+   command: "server-readd -c {{.Orchestrator}}
+            --server-add {{.NthDataNode 2}}
+            -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   wait: true
+-
+   command: "recovery -c {{.Orchestrator}}
+       --server-recovery {{.NthDataNode 1}}
+       --recovery-type full
+       -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   wait: true
+-
+   command: "recovery -c {{.Orchestrator}}
+       --server-recovery {{.NthDataNode 2}}
+       --recovery-type full
+       -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   wait: true
+-
+   command:  "rebalance -c  {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   wait: true
+
+#============ data loading ============
+-
+  image: sequoiatools/gideon
+  command: "kv --ops {{.Scale 5000}} --create 100  --hosts {{.Orchestrator}} --bucket lww"
+  duration: 60
+  wait: true
+
+#========= server group reshuffle =============
+-
+   image: sequoiatools/couchbase-cli
+   command: "group-manage -c {{.Orchestrator}}
+             -u {{.RestUsername}}
+             -p {{.RestPassword}}
+             --create --group-name lww-test"
+-
+   command: "group-manage -c {{.Orchestrator}}
+             -u {{.RestUsername}}
+             -p {{.RestPassword}}
+             --from-group 'Group 1'
+             --to-group lww-test
+             --move-servers {{.NthDataNode 1}};{{.NthDataNode 2}}"
+
+#============ data loading ============
+-
+  image: sequoiatools/gideon
+  command: "kv --ops {{.Scale 5000}} --create 100  --hosts {{.Orchestrator}} --bucket lww"
+  duration: 60
+  wait: true
+
+#============ xdcr optimistic threshold setting ==========
+-
+   image: sequoiatools/couchbase-cli
+   command: "xdcr-replicate -c {{.Orchestrator}}
+                            --settings
+                            --checkpoint-interval=60
+                            --worker-batch-size=4096
+                            --failure-restart-interval=30
+                            --optimistic-replication-threshold=512
+                            -u {{.RestUsername}} -p {{.RestPassword}}
+                            --xdcr-replicator={{(index (.AllLogs `ReplId` | json) 0).uuid }}/lww/lww"
+
+#============ delete xdcr replications ============
+-
+   image: sequoiatools/couchbase-cli
+   command: "xdcr-replicate -c {{.Orchestrator}} --delete
+                            -u {{.RestUsername}} -p {{.RestPassword}}
+                            --xdcr-replicator={{(index (.AllLogs `ReplId` | json) 0).uuid }}/lww/lww"
+   wait: true
+
+#============ delete xdcr config ============
+-
+   image: sequoiatools/couchbase-cli
+   command:  "xdcr-setup -c {{.Orchestrator}} --delete --xdcr-cluster-name remote
+                            -u {{.RestUsername}} -p {{.RestPassword}}"
+   wait: true
+
+#============ hard failover remote node when remote finished rebalance-in ============
+-
+  before: "{{.Status `RemoteRebalance` | eq `exited`}}"
+  image: sequoiatools/couchbase-cli
+  command: "failover -c {{.Nodes | .Cluster 1 | net 0}}
+       --server-failover {{.Nodes | .Cluster 1 | net 3}}
+       -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+-
+  command:  "rebalance -c  {{.Nodes | .Cluster 1 | net 0}} -u  {{.RestUsername}} -p  {{.RestPassword}}"

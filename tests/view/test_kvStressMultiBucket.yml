@@ -1,0 +1,160 @@
+---
+-
+  include: tests/templates/rebalance.yml, tests/templates/vegeta.yml
+
+-
+  image: sequoiatools/purger
+  command: "{{.Orchestrator | noport}}:{{.RestPort}} {{.Orchestrator | noport}}:{{.ViewPort}} {{.Bucket}}"
+-
+  command: "{{.Orchestrator | noport}}:{{.RestPort}} {{.Orchestrator | noport}}:{{.ViewPort}} {{.NthBucket 1}}"
+-
+  command: "{{.Orchestrator | noport}}:{{.RestPort}} {{.Orchestrator | noport}}:{{.ViewPort}} {{.NthBucket 2}}"
+
+
+#============ continous kv loading a minimum of 1.5M items  at 1xScale============
+-
+   image: sequoiatools/pillowfight
+   command: "-U {{.Orchestrator}} -M 512 -p aaa -I {{.Scale 500000}} -B 100 --rate-limit {{.Scale 1000}}"
+-
+   command: "-U {{.Orchestrator}} -M 512 -p bbb -I {{.Scale 500000}} -B 100  --rate-limit {{.Scale 1000}}"
+-
+   command: "-U {{.Orchestrator}} -M 512 -p ccc -I {{.Scale 500000}} -B 100  --rate-limit {{.Scale 1000}}"
+-
+   image: sequoiatools/gideon
+   command: "kv --ops {{.Scale 1000}} --create 30 --get 70 --delete 10 --expire 20 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+-
+   image: sequoiatools/gideon
+   command: "kv --ops {{.Scale 100}} --create 30 --get 70 --delete 10 --expire 20 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
+-
+   image: sequoiatools/gideon
+   command: "kv --ops {{.Scale 100}} --create 30 --get 70 --delete 10 --expire 20 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}}"
+
+
+#============ start view queries  ============
+-
+  # run http attacks against view with various skip param
+  foreach: "{{range $i, $view := strlist `stats` `array` `padd`}}"
+  template: attack_view
+  args: "0, 50, {{$.NthDataNode $i}},
+         {{$.Bucket}},
+         scale,
+         {{$view}},
+         limit={{$.Scale 10}}&stale=ok"
+
+#============ start view queries  ============
+-
+  # run http attacks against view with various skip param
+  foreach: "{{range $i, $view := strlist `stats` `array` `padd`}}"
+  template: attack_view
+  args: "0, 50, {{$.NthDataNode $i}},
+         {{$.NthBucket 1}},
+         scale,
+         {{$view}},
+         limit={{$.Scale 10}}&stale=ok"
+
+
+#============ load 10k items at 1xScale============
+-
+   image: sequoiatools/pillowfight
+   command: "-U  {{.Orchestrator}} -I {{.Scale 10000}} -B 100 -c {{.Scale 100}}"
+   wait: true
+
+
+#============ rebalance out a node============
+-
+  template: rebalance_out
+  args: "{{.NthDataNode 1}}"
+  wait: true
+
+#============ load 100k items at 1xScale============
+-
+  image: sequoiatools/pillowfight
+  command: "-U  {{.Orchestrator}} -I {{.Scale 100000}} -B 100 -c {{.Scale 1000}}"
+  wait: true
+
+
+#============ swap rebalance ============
+-
+  template: rebalance_swap
+  args: "{{.NthDataNode 1}}, {{.NthDataNode 2}}"
+  wait: true
+
+
+#============ update 100k items at 1xScale============
+-
+  image: sequoiatools/pillowfight
+  command: "-U  {{.Orchestrator}} -I {{.Scale 100000}} -B 100 -c {{.Scale 1000}}"
+  wait: true
+
+#============ swap failover ============
+-
+   image: sequoiatools/couchbase-cli
+   command: "server-add -c  {{.Orchestrator}}
+       --server-add  {{.NthDataNode 2}}
+       -u  {{.RestUsername}} -p  {{.RestPassword}}
+       --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
+   wait: true
+-
+   command: "failover -c {{.Orchestrator}}
+       --server-failover {{.NthDataNode 1}}
+       -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   wait: true
+-
+  template: rebalance
+  wait: true
+
+#============ update 100k items at 1xScale============
+-
+   image: sequoiatools/pillowfight
+   command: "-U  {{.Orchestrator}} -I {{.Scale 100000}} -B 100 -c {{.Scale 1000}}"
+   wait: true
+
+
+#============ swap hard failover ============
+-
+   image: sequoiatools/couchbase-cli  # as indexer
+   command: "server-add -c  {{.Orchestrator}}
+       --server-add  {{.NthDataNode 1}}
+       -u  {{.RestUsername}} -p  {{.RestPassword}}
+       --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
+   wait: true
+-
+   command: "failover -c {{.Orchestrator}}
+      --server-failover {{.NthDataNode 2}}
+      -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+   wait: true
+-
+   command: "failover -c {{.Orchestrator}}
+      --server-failover {{.NthDataNode 3}}
+      -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+   wait: true
+-
+  template: rebalance
+  wait: true
+
+
+
+
+#============ update 100k items at 1xScale============
+-
+   image: sequoiatools/pillowfight
+   command: "-U  {{.Orchestrator}} -I {{.Scale 100000}} -B 100 -c {{.Scale 1000}}"
+   wait: true
+
+#============ add back============
+-
+   image: sequoiatools/couchbase-cli
+   command: "server-add -c  {{.Orchestrator}}
+       --server-add  {{.NthDataNode 2}}
+       -u  {{.RestUsername}} -p  {{.RestPassword}}
+       --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
+   wait: true
+-
+   command: "server-add -c  {{.Orchestrator}}
+       --server-add  {{.NthDataNode 3}}
+       -u  {{.RestUsername}} -p  {{.RestPassword}}
+       --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
+   wait: true
+-
+  template: rebalance
+  wait: true

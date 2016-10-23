@@ -1,0 +1,78 @@
+
+---
+-
+  include: tests/templates/rebalance.yml, tests/templates/vegeta.yml
+
+-
+  # set minUpdateChanges
+  image:  appropriate/curl
+  command: "-X POST -u {{.RestUsername}}:{{.RestPassword}} http://{{.Orchestrator | noport}}:{{.RestPort}}/settings/viewUpdateDaemon -d updateMinChanges=1&replicaUpdateMinChanges=1"
+
+-
+  # start doc purger
+  image: sequoiatools/purger
+  command: "{{.NthDataNode 5 | noport}}:{{.RestPort}} {{.NthDataNode 6 | noport}}:{{.ViewPort}} {{.Bucket}}"
+-
+  command: "{{.NthDataNode 7 | noport}}:{{.RestPort}} {{.NthDataNode 8 | noport}}:{{.ViewPort}} {{.NthBucket 1}}"
+-
+  command: "{{.NthDataNode 7 | noport}}:{{.RestPort}} {{.NthDataNode 8 | noport}}:{{.ViewPort}} {{.NthBucket 2}}"
+
+
+#============ continous kv loading a minimum of 1.5M items  at 1xScale============
+-
+   image: sequoiatools/pillowfight
+   command: "-U {{.Orchestrator}} -M 512 -p aaa -I {{.Scale 500000}} -B 100 --rate-limit {{.Scale 1000}}"
+-
+   command: "-U {{.Orchestrator}} -M 512 -p bbb -I {{.Scale 500000}} -B 100  --rate-limit {{.Scale 1000}}"
+-
+   command: "-U {{.Orchestrator}} -M 512 -p ccc -I {{.Scale 500000}} -B 100  --rate-limit {{.Scale 1000}}"
+
+-
+   image: sequoiatools/gideon
+   command: "kv --ops {{.Scale 100}} --create 30 --get 70 --delete 10 --expire 20 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
+-
+   image: sequoiatools/gideon
+   command: "kv --ops {{.Scale 100}} --create 30 --get 70 --delete 10 --expire 20 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}}"
+
+
+#============ start view queries on all design docs  ============
+-
+  foreach: "{{range $i, $view := strlist `stats` `array` `padd` `all_ids`}}"
+  template: attack_view
+  args: "0, 10, {{$.NthDataNode $i}},
+         {{$.Bucket}},
+         scale,
+         {{$view}},
+         limit={{$.Scale 10}}&stale=ok"
+
+-
+  foreach: "{{range $i, $view := strlist `success` `city_state` `os` `sizes`}}"
+  template: attack_view
+  args: "0, 10, {{$.NthDataNode $i}},
+         {{$.Bucket}},
+         info,
+         {{$view}},
+         limit={{$.Scale 10}}&stale=ok"
+
+-
+  foreach: "{{range $i, $view := strlist `stats` `array` `padd`}}"
+  template: attack_view
+  args: "0, 10, {{$.NthDataNode $i}},
+         {{$.NthBucket 1}},
+         scale,
+         {{$view}},
+         limit={{$.Scale 10}}&stale=ok"
+
+# run for 2 hours
+-
+   image: sequoiatools/gideon
+   command: "kv --ops {{.Scale 1000}} --create 30 --get 70 --delete 10 --expire 20 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+   duration: 7200
+   wait: true
+
+-
+  # 30 min additional doc purging 
+  image: sequoiatools/purger
+  command: "{{.Orchestrator | noport}}:{{.RestPort}} {{.Orchestrator | noport}}:{{.ViewPort}} {{.Bucket}}"
+  duration: 1800 
+  wait: true

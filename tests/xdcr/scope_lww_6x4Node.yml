@@ -1,0 +1,20 @@
+---
+servers:
+  -
+      name: local
+      count: 6
+      ram: 70%
+      rest_username: Administrator
+      rest_password: password
+      init_nodes: 5
+      buckets: lww
+      data_path: "/data"
+  -
+      name: remote
+      count: 4
+      ram: 70%
+      rest_username: Administrator
+      rest_password: password
+      init_nodes: 3
+      buckets: lww
+      data_path: "/data"
