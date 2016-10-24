@@ -5,10 +5,10 @@
 # start json and binary data loading
 -
    image: sequoiatools/pillowfight
-   command: "-U  {{.Orchestrator}} -B {{.Scale 100}} -I {{.Scale 500000}} -t 1"
+   command: "-U  {{.Orchestrator}} -B {{.Scale 100}} -I {{.Scale 1000000}} -t 1"
 -
    image: sequoiatools/gideon
-   command: "kv --ops {{.Scale 1000}} --create 10 --get 90 --expire 20 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 16000"
+   command: "kv --ops {{.Scale 1000}} --create 10 --get 90 --expire 20 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 1600"
 -
    command: "kv --ops {{.Scale 1000}} --create 30 --get 70 --delete 10   --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
 -
@@ -40,19 +40,33 @@
   image: sequoiatools/curloop
   command: "cbas.sh select value t from shadowBucket t where \\`state\\` = \''25\' and \\`result\\` = \''SUCCESS\' group by \\`city\\` ;"
 -
-  command: "cbas.sh select count(*) from shadowBucket where \\`state\\` = \''79\' and \\`component\\` = \''D8\' ;"
+  command: "cbas.sh select count(*) from shadowBucket where \\`state\\` = \''29\' and \\`component\\` = \''0A\' ;"
+-
+  command: "cbas.sh select count(*) from shadowBucket where \\`state\\` = \''79\' and \\`component\\` != \''D8\' ;"
 -
   command: "cbas.sh select value t from shadowBucket t where \\`state\\` = \''B1\' and \\`rating\\`> \''NUM100\'NUM and \\`duration\\` > \''NUM7000\'NUM and \\`totalCount\\`> \''NUM80\'NUM group by \\`component\\` ;"
+-
+  command: "cbas.sh select value t from shadowBucket t where \\`state\\` = \''7B\' and \\`rating\\`> \''NUM100\'NUM and \\`duration\\` < \''NUM7000\'NUM and \\`totalCount\\`< \''NUM80\'NUM group by \\`component\\` ;"
 
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "{{.Scale 20}}"
+   wait: true
 
 # query on cbas side. # TODO add more queries
 -
   image: sequoiatools/curloop
   command: "cbasloop.sh select value t from shadowBucket t where \\`state\\` = \''25\' and \\`result\\` = \''SUCCESS\' group by \\`city\\` ;"
 -
-  command: "cbasloop.sh select count(*) from shadowBucket where \\`state\\` = \''79\' and \\`component\\` = \''D8\' ;"
+  command: "cbasloop.sh select count(*) from shadowBucket where \\`state\\` = \''29\' and \\`component\\` = \''0A\' ;"
+-
+  command: "cbasloop.sh select count(*) from shadowBucket where \\`state\\` = \''79\' and \\`component\\` != \''D8\' ;"
 -
   command: "cbasloop.sh select value t from shadowBucket t where \\`state\\` = \''B1\' and \\`rating\\`> \''NUM100\'NUM and \\`duration\\` > \''NUM7000\'NUM and \\`totalCount\\`> \''NUM80\'NUM group by \\`component\\` ;"
+-
+  command: "cbasloop.sh select value t from shadowBucket t where \\`state\\` = \''7B\' and \\`rating\\`> \''NUM100\'NUM and \\`duration\\` < \''NUM7000\'NUM and \\`totalCount\\`< \''NUM80\'NUM group by \\`component\\` ;"
+
 -
    image: sequoiatools/cmd
    entrypoint: sleep
@@ -110,9 +124,13 @@
   image: sequoiatools/curloop
   command: "cbas.sh select value t from shadowBucket t where \\`state\\` = \''25\' and \\`result\\` = \''SUCCESS\' group by \\`city\\` ;"
 -
-  command: "cbas.sh select count(*) from shadowBucket where \\`state\\` = \''79\' and \\`component\\` = \''D8\' ;"
+  command: "cbas.sh select count(*) from shadowBucket where \\`state\\` = \''29\' and \\`component\\` = \''0A\' ;"
+-
+  command: "cbas.sh select count(*) from shadowBucket where \\`state\\` = \''79\' and \\`component\\` != \''D8\' ;"
 -
   command: "cbas.sh select value t from shadowBucket t where \\`state\\` = \''B1\' and \\`rating\\`> \''NUM100\'NUM and \\`duration\\` > \''NUM7000\'NUM and \\`totalCount\\`> \''NUM80\'NUM group by \\`component\\` ;"
+-
+  command: "cbas.sh select value t from shadowBucket t where \\`state\\` = \''7B\' and \\`rating\\`> \''NUM100\'NUM and \\`duration\\` < \''NUM7000\'NUM and \\`totalCount\\`< \''NUM80\'NUM group by \\`component\\` ;"
 
 
 # failover node with delta recovery
