@@ -107,8 +107,10 @@
   template: wait_for_rebalance
   wait: true
 -
+  # if we have any more inactive nodes then another
+  requires: "{{ gt (len (.Nodes | .InActiveNodes)) 0}}"
   template: add_node
-  args: "{{.NthDataNode 6}}, (data,fts)"
+  args: "{{.InActiveNode}}, (data,fts)"
 -
   template: rebalance
   wait: true
