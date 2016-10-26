@@ -288,15 +288,17 @@ func (t *TemplateResolver) SSHPassword() string {
 	return password
 }
 
-// Get nodes from Cluster Spec that are not active
-func (t *TemplateResolver) SingleNodes(servers []ServerSpec) []string {
+// Get nodes from Cluster Spec that where:
+//		isActive = true, node is in cluster
+//		isActive = false, node is not in cluster
+func (t *TemplateResolver) NodesByAvailability(servers []ServerSpec, isActive bool) []string {
 
 	ips := []string{}
 	for _, spec := range servers {
 		for _, name := range spec.Names {
 			rest := t.Scope.Provider.GetRestUrl(name)
-			ok := NodeIsSingle(rest, spec.RestUsername, spec.RestPassword)
-			if ok == true {
+			active := !NodeIsSingle(rest, spec.RestUsername, spec.RestPassword)
+			if active == isActive {
 				ip := t.Scope.Provider.GetHostAddress(name)
 				ips = append(ips, ip)
 			}
@@ -305,6 +307,53 @@ func (t *TemplateResolver) SingleNodes(servers []ServerSpec) []string {
 
 	return ips
 
+}
+
+// Get ALL nodes from Cluster Spec that are active
+func (t *TemplateResolver) ActiveNodes(servers []ServerSpec) []string {
+	return t.NodesByAvailability(servers, true)
+}
+
+// Get ALL nodes from Cluster Spec that are single (not active)
+func (t *TemplateResolver) InActiveNodes(servers []ServerSpec) []string {
+	return t.NodesByAvailability(servers, false)
+
+}
+
+// Get ONE node from ANY cluster where:
+//		isActive = true, node is in cluster
+//		isActive = false, node is not in cluster
+func (t *TemplateResolver) NodeFromClusterByAvailability(n int, isActive bool) string {
+
+	servers := t.Cluster(n, t.Nodes())
+	var nodes []string
+	if isActive == true {
+		nodes = t.ActiveNodes(servers)
+	} else {
+		nodes = t.InActiveNodes(servers)
+	}
+
+	numNodes := len(nodes)
+	ip := "<node_not_found>"
+	if numNodes > 0 {
+		// omitting orchestrator if possible
+		ip = nodes[0]
+		if ip == t.Orchestrator() && numNodes > 1 {
+			ip = nodes[1]
+		}
+	}
+
+	return ip
+}
+
+// Get ONE node from FIRST cluster that is Active
+func (t *TemplateResolver) ActiveNode() string {
+	return t.NodeFromClusterByAvailability(0, true)
+}
+
+// Get ONE node from FIRST cluster that is InActive
+func (t *TemplateResolver) InActiveNode() string {
+	return t.NodeFromClusterByAvailability(0, false)
 }
 
 // Template function: `net`

@@ -1,0 +1,20 @@
+- include: tests/templates/rebalance.yml
+
+- image: sequoiatools/pillowfight
+  command: "-U  {{.Orchestrator}} -B 100 -t 1 -c 10"
+  wait: true
+
+# require inactive nodes exist that can be added
+- requires: "{{ gt (len (.Nodes | .InActiveNodes)) 0}}"
+  template: add_node
+  args: "{{.InActiveNode}}, (data,fts)"
+
+# do rebalance
+- template: rebalance
+  wait: true
+
+# likewise require active nodes exist that can be removed
+- requires: "{{ gt (len (.Nodes | .ActiveNodes)) 0}}"
+  template: rebalance_out
+  args: "{{.ActiveNode}}"
+  wait: true

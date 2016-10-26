@@ -50,7 +50,7 @@
   # and wait for completion
   #  (requires node to be re-init)
   name: collect_info_missing_nodes
-  foreach: "{{range .Nodes | .SingleNodes}}"
+  foreach: "{{range .Nodes | .InActiveNodes}}"
   actions:
     -
       image: sequoiatools/couchbase-cli
