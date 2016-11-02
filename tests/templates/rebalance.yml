@@ -65,7 +65,7 @@
       image: sequoiatools/couchbase-cli
       command: "server-add -c  {{.Orchestrator}}
            --server-add $0
-           --services $1
+           {{if gt .Version 4.0}} --services $1 {{end}}
            -u  {{.RestUsername}} -p  {{.RestPassword}}
            --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
       wait: true
