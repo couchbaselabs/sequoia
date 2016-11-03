@@ -1,0 +1,72 @@
+---
+servers: # each server tag represents a cluster
+  -
+      name: local
+      count: 10
+      ram: 40% 
+      rest_username: Administrator
+      rest_password: password
+      data_path: "/data"
+      index_path: "/data"
+      init_nodes: 10
+      buckets: default,other-1,other-2
+
+buckets:
+  -
+      name: default
+      ram: 40% 
+      eviction: fullEviction
+      ddocs: scale,info,purger
+      replica: 2
+  -
+      name: other-1
+      ram: 20% 
+      ddocs: scale,info,purger
+  -
+      name: other-2
+      ram: 20% 
+      ddocs: scale,info,purger
+
+ddocs:
+  -
+   name: scale
+   views: stats, padd, array, all_ids
+  -
+   name: info 
+   views: success, city_state, os, sizes
+  -
+   name: purger 
+   views: clients 
+
+
+views:
+  -
+    name: stats
+    map: "if(doc.profile){ if((doc.rating > 500) && (doc.rating < 520)){ emit(meta.id, doc.ops_sec); }}"
+    reduce: "_stats"
+  -
+    name: padd
+    map: "if(doc.profile){ if (doc.rating < 200){ emit(meta.id, doc.padding); }}"
+  -
+    name: array
+    map: "if(doc.profile){ if((doc.rating > 200) && (doc.rating< 300)){ emit(doc.active_hosts, null); }}"
+  -
+    name: all_ids
+    map: "emit(meta.id, null)"
+  -
+    name: clients 
+    map: "if(doc.profile){ var k=meta.id.split('_'); emit(k[0], parseInt(k[1])); }"
+    reduce: "_stats"
+  -
+    name: success
+    map: "if(doc.result){ if(doc.result=='SUCCESS'){ emit(doc.result, doc.rating); }}"
+    reduce: "_sum"
+  -
+    name: city_state 
+    map: "if(doc.city){emit(doc.city, doc.state); }"
+  -
+    name: os 
+    map: "if(doc.os){ emit(doc.os, null); }"
+  -
+    name: sizes 
+    map: "if(doc.sizes){ emit(doc.sizes, null); }"
