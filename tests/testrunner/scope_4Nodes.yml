@@ -1,0 +1,18 @@
+---
+buckets: # define 1 bucket with 'scale' design-doc
+  -
+    name: default
+    ram: 75% 
+    replica: 1
+    type: couchbase
+
+servers: # define 4 servers
+  -
+     name: local.st.couchbase.com
+     ram: 50% 
+     count: 4
+     rest_username: Administrator
+     rest_password: password
+     rest_port: 8091
+     init_nodes: 1
+

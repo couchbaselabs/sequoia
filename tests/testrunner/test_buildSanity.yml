@@ -1,0 +1,4 @@
+# run testrunner image
+- image: sequoiatools/testrunner
+  command: "-i b/resources/4-nodes-template.ini -c conf/py-multi-node-sanity.conf -p get-cbcollect-info=True"
+  wait: true
