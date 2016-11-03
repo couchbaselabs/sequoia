@@ -59,7 +59,7 @@ views:
     reduce: "_stats"
   -
     name: success
-    map: "if(doc.result){ if(doc.result=='SUCCESS'){ emit(doc.result,, doc.rating); }}"
+    map: "if(doc.result){ if(doc.result=='SUCCESS'){ emit(doc.result, doc.rating); }}"
     reduce: "_sum"
   -
     name: city_state 
