@@ -763,10 +763,10 @@ func (t *Test) ExitAfterDuration(sec int) {
 }
 
 func (t *Test) DoContainerCleanup(s Scope) {
+	s.Cm.RemoveManagedContainers(*t.Flags.SoftCleanup)
 	if s.Provider.GetType() == "swarm" {
 		s.Cm.RemoveManagedServices(*t.Flags.SoftCleanup)
 	}
-	s.Cm.RemoveManagedContainers(*t.Flags.SoftCleanup)
 }
 
 func (t *Test) Cleanup(s Scope) {

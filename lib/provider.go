@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/docker/engine-api/types/swarm"
 	"github.com/fsouza/go-dockerclient"
+	"net"
 	"net/url"
 	"regexp"
 	"strconv"
@@ -295,6 +296,8 @@ func (p *DockerProvider) ProvideCouchbaseServers(servers []ServerSpec) {
 
 func (p *SwarmProvider) ProvideCouchbaseServers(servers []ServerSpec) {
 
+	//TODO: start concurrently!
+
 	var providerOpts DockerProviderOpts
 	ReadYamlFile("providers/docker/options.yml", &providerOpts)
 	p.Opts = &providerOpts
@@ -404,6 +407,53 @@ func (p *SwarmProvider) GetHostAddress(name string) string {
 	ipAddress = container.NetworkSettings.Networks["ingress"].IPAddress
 
 	return ipAddress
+}
+
+func (p *SwarmProvider) GetRestUrl(name string) string {
+
+	var restUrl string
+
+	// get port
+	port := p.StartPort
+	offset := 0
+	for _, spec := range p.Servers {
+		for _, server := range spec.Names {
+			if server == name {
+				port = port + offset
+				break
+			}
+			offset += 1
+		}
+	}
+
+	// where is this port being forwarded
+	for _, client := range p.Cm.AllClients() {
+
+		clientEndpoint := client.Endpoint()
+		// extract host from endpoint
+		url, err := url.Parse(clientEndpoint)
+		if url.Scheme == "" {
+			url, err = url.Parse("http://" + clientEndpoint)
+		}
+		chkerr(err)
+		host := url.Host
+		if host == "" {
+			host = "localhost"
+		}
+
+		// remove port if specified
+		re := regexp.MustCompile(`:.*`)
+		host = re.ReplaceAllString(host, "")
+
+		// attempt to connect
+		restUrl = fmt.Sprintf("%s:%d\n", host, port)
+		_, err = net.Dial("tcp", host)
+		if err == nil {
+			break
+		}
+	}
+
+	return strings.TrimSpace(restUrl)
 }
 
 func (p *SwarmProvider) GetType() string {
