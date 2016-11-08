@@ -13,6 +13,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type ProviderLabel int
@@ -294,95 +295,105 @@ func (p *DockerProvider) ProvideCouchbaseServers(servers []ServerSpec) {
 	}
 }
 
+func (p *SwarmProvider) ProvideCouchbaseServer(serverName string, portOffset int) {
+
+	var build = p.Opts.Build
+
+	portStr := fmt.Sprintf("%d", portOffset)
+	port := docker.Port("8091/tcp")
+	binding := make([]docker.PortBinding, 1)
+	binding[0] = docker.PortBinding{
+		HostPort: portStr,
+	}
+
+	portConfig := []swarm.PortConfig{
+		swarm.PortConfig{
+			TargetPort:    8091,
+			PublishedPort: uint32(portOffset),
+		},
+	}
+
+	var portBindings = make(map[docker.Port][]docker.PortBinding)
+	portBindings[port] = binding
+	hostConfig := docker.HostConfig{
+		PortBindings: portBindings,
+		Ulimits:      p.Opts.Ulimits,
+	}
+
+	if p.Opts.CPUPeriod > 0 {
+		hostConfig.CPUPeriod = p.Opts.CPUPeriod
+	}
+	if p.Opts.CPUQuota > 0 {
+		hostConfig.CPUQuota = p.Opts.CPUQuota
+	}
+	if p.Opts.Memory > 0 {
+		hostConfig.Memory = p.Opts.Memory
+	}
+	if p.Opts.MemorySwap != 0 {
+		hostConfig.MemorySwap = p.Opts.MemorySwap
+	}
+
+	// check if build version exists
+	var imgName = fmt.Sprintf("couchbase_%s", build)
+	exists := p.Cm.CheckImageExists(imgName)
+	if exists == false {
+
+		var buildArgs = BuildArgsForVersion(p.Opts)
+		var buildOpts = docker.BuildImageOptions{
+			Name:           imgName,
+			ContextDir:     "containers/couchbase/",
+			SuppressOutput: false,
+			Pull:           false,
+			BuildArgs:      buildArgs,
+		}
+
+		// build image
+		err := p.Cm.BuildImage(buildOpts)
+		logerr(err)
+	}
+
+	serviceName := strings.Replace(serverName, ".", "-", -1)
+	containerSpec := swarm.ContainerSpec{Image: imgName}
+	annotations := swarm.Annotations{Name: serviceName}
+	taskSpec := swarm.TaskSpec{ContainerSpec: containerSpec}
+	endpointSpec := swarm.EndpointSpec{Ports: portConfig}
+	spec := swarm.ServiceSpec{
+		Annotations:  annotations,
+		TaskTemplate: taskSpec,
+		EndpointSpec: &endpointSpec,
+	}
+
+	options := docker.CreateServiceOptions{
+		ServiceSpec: spec,
+	}
+
+	_, container := p.Cm.RunContainerAsService(options, 30)
+	p.ActiveContainers[serverName] = container.ID
+	colorsay("start couchbase http://" + p.GetRestUrl(serverName))
+}
+
 func (p *SwarmProvider) ProvideCouchbaseServers(servers []ServerSpec) {
 
-	//TODO: start concurrently!
-
+	// read provider options
 	var providerOpts DockerProviderOpts
 	ReadYamlFile("providers/docker/options.yml", &providerOpts)
 	p.Opts = &providerOpts
-	var build = p.Opts.Build
 
 	// start based on number of containers
 	var i int = p.NumCouchbaseServers()
 	p.StartPort = 8091 + i
+	var j = 0
 	for _, server := range servers {
 		serverNameList := ExpandServerName(server.Name, server.Count, server.CountOffset+1)
-
 		for _, serverName := range serverNameList {
-			portStr := fmt.Sprintf("%d", 8091+i)
-			port := docker.Port("8091/tcp")
-			binding := make([]docker.PortBinding, 1)
-			binding[0] = docker.PortBinding{
-				HostPort: portStr,
-			}
-
-			portConfig := []swarm.PortConfig{
-				swarm.PortConfig{
-					TargetPort:    8091,
-					PublishedPort: 8091 + uint32(i),
-				},
-			}
-
-			var portBindings = make(map[docker.Port][]docker.PortBinding)
-			portBindings[port] = binding
-			hostConfig := docker.HostConfig{
-				PortBindings: portBindings,
-				Ulimits:      p.Opts.Ulimits,
-			}
-
-			if p.Opts.CPUPeriod > 0 {
-				hostConfig.CPUPeriod = p.Opts.CPUPeriod
-			}
-			if p.Opts.CPUQuota > 0 {
-				hostConfig.CPUQuota = p.Opts.CPUQuota
-			}
-			if p.Opts.Memory > 0 {
-				hostConfig.Memory = p.Opts.Memory
-			}
-			if p.Opts.MemorySwap != 0 {
-				hostConfig.MemorySwap = p.Opts.MemorySwap
-			}
-
-			// check if build version exists
-			var imgName = fmt.Sprintf("couchbase_%s", build)
-			exists := p.Cm.CheckImageExists(imgName)
-			if exists == false {
-
-				var buildArgs = BuildArgsForVersion(p.Opts)
-				var buildOpts = docker.BuildImageOptions{
-					Name:           imgName,
-					ContextDir:     "containers/couchbase/",
-					SuppressOutput: false,
-					Pull:           false,
-					BuildArgs:      buildArgs,
-				}
-
-				// build image
-				err := p.Cm.BuildImage(buildOpts)
-				logerr(err)
-			}
-
-			serviceName := strings.Replace(serverName, ".", "-", -1)
-			containerSpec := swarm.ContainerSpec{Image: imgName}
-			annotations := swarm.Annotations{Name: serviceName}
-			taskSpec := swarm.TaskSpec{ContainerSpec: containerSpec}
-			endpointSpec := swarm.EndpointSpec{Ports: portConfig}
-			spec := swarm.ServiceSpec{
-				Annotations:  annotations,
-				TaskTemplate: taskSpec,
-				EndpointSpec: &endpointSpec,
-			}
-
-			options := docker.CreateServiceOptions{
-				ServiceSpec: spec,
-			}
-
-			_, container := p.Cm.RunContainerAsService(options, 30)
-			p.ActiveContainers[serverName] = container.ID
-			colorsay("start couchbase http://" + p.GetRestUrl(serverName))
+			port := 8091 + i
+			go p.ProvideCouchbaseServer(serverName, port)
 			i++
+			j++
 		}
+	}
+	for len(p.ActiveContainers) != j {
+		time.Sleep(time.Second * 1)
 	}
 }
 

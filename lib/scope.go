@@ -122,7 +122,7 @@ func (s *Scope) WaitForNodes() {
 	var image = "martin/wait"
 
 	// use martin/wait container to wait for node to listen on port 8091
-	waitForNodesOp := func(name string, server *ServerSpec) {
+	waitForNodesOp := func(name string, server *ServerSpec, done chan bool) {
 
 		ip := s.Provider.GetHostAddress(name)
 		ipPort := strings.Split(ip, ":")
@@ -144,10 +144,11 @@ func (s *Scope) WaitForNodes() {
 		}
 
 		s.Cm.Run(&task)
+		done <- true
 	}
 
 	// verify nodes
-	s.Spec.ApplyToAllServers(waitForNodesOp)
+	s.Spec.ApplyToAllServersAsync(waitForNodesOp)
 
 }
 
@@ -155,7 +156,7 @@ func (s *Scope) InitNodes() {
 
 	var image = "sequoiatools/couchbase-cli"
 
-	initNodesOp := func(name string, server *ServerSpec) {
+	initNodesOp := func(name string, server *ServerSpec, done chan bool) {
 		ip := s.Provider.GetHostAddress(name)
 		command := []string{"node-init",
 			"-c", ip,
@@ -181,10 +182,11 @@ func (s *Scope) InitNodes() {
 		}
 
 		s.Cm.Run(&task)
+		done <- true
 	}
 
 	// verify nodes
-	s.Spec.ApplyToAllServers(initNodesOp)
+	s.Spec.ApplyToAllServersAsync(initNodesOp)
 }
 
 func (s *Scope) InitCluster() {
