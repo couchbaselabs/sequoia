@@ -98,8 +98,10 @@ func (t *ContainerTask) GetServiceOptions(svcPort uint32) docker.CreateServiceOp
 	// create task spec
 	annotations := swarm.Annotations{Name: serviceName}
 	policy := swarm.RestartPolicy{Condition: swarm.RestartPolicyConditionNone}
+	placement := swarm.Placement{Constraints: []string{"node.labels.zone == client"}}
 	taskSpec := swarm.TaskSpec{ContainerSpec: containerSpec,
-		RestartPolicy: &policy}
+		RestartPolicy: &policy,
+		Placement:     &placement}
 
 	// service spec requires port config to be placed on swarm nework
 	portConfig := []swarm.PortConfig{

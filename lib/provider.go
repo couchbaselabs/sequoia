@@ -295,7 +295,7 @@ func (p *DockerProvider) ProvideCouchbaseServers(servers []ServerSpec) {
 	}
 }
 
-func (p *SwarmProvider) ProvideCouchbaseServer(serverName string, portOffset int) {
+func (p *SwarmProvider) ProvideCouchbaseServer(serverName string, portOffset int, zone string) {
 
 	var build = p.Opts.Build
 
@@ -354,8 +354,9 @@ func (p *SwarmProvider) ProvideCouchbaseServer(serverName string, portOffset int
 
 	serviceName := strings.Replace(serverName, ".", "-", -1)
 	containerSpec := swarm.ContainerSpec{Image: imgName}
+	placement := swarm.Placement{Constraints: []string{"node.labels.zone == " + zone}}
+	taskSpec := swarm.TaskSpec{ContainerSpec: containerSpec, Placement: &placement}
 	annotations := swarm.Annotations{Name: serviceName}
-	taskSpec := swarm.TaskSpec{ContainerSpec: containerSpec}
 	endpointSpec := swarm.EndpointSpec{Ports: portConfig}
 	spec := swarm.ServiceSpec{
 		Annotations:  annotations,
@@ -369,7 +370,10 @@ func (p *SwarmProvider) ProvideCouchbaseServer(serverName string, portOffset int
 
 	_, container := p.Cm.RunContainerAsService(options, 30)
 	p.ActiveContainers[serverName] = container.ID
-	colorsay("start couchbase http://" + p.GetRestUrl(serverName))
+
+	// get ip where this node is running
+	//	colorsay("start couchbase http://" + p.GetRestUrl(serverName))
+	colorsay("start couchbase " + serverName)
 }
 
 func (p *SwarmProvider) ProvideCouchbaseServers(servers []ServerSpec) {
@@ -387,11 +391,16 @@ func (p *SwarmProvider) ProvideCouchbaseServers(servers []ServerSpec) {
 		serverNameList := ExpandServerName(server.Name, server.Count, server.CountOffset+1)
 		for _, serverName := range serverNameList {
 			port := 8091 + i
-			go p.ProvideCouchbaseServer(serverName, port)
+
+			// determin zone based on service
+			services := server.NodeServices[serverName]
+			zone := services[0]
+			go p.ProvideCouchbaseServer(serverName, port, zone)
 			i++
 			j++
 		}
 	}
+
 	for len(p.ActiveContainers) != j {
 		time.Sleep(time.Second * 1)
 	}
@@ -457,8 +466,8 @@ func (p *SwarmProvider) GetRestUrl(name string) string {
 		host = re.ReplaceAllString(host, "")
 
 		// attempt to connect
-		restUrl = fmt.Sprintf("%s:%d\n", host, port)
-		_, err = net.Dial("tcp", host)
+		restUrl = fmt.Sprintf("%s:%d", host, port)
+		_, err = net.DialTimeout("tcp", restUrl, time.Second*5)
 		if err == nil {
 			break
 		}

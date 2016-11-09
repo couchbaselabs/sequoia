@@ -149,7 +149,6 @@ func (s *Scope) WaitForNodes() {
 
 	// verify nodes
 	s.Spec.ApplyToAllServersAsync(waitForNodesOp)
-
 }
 
 func (s *Scope) InitNodes() {

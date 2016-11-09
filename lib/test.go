@@ -135,9 +135,10 @@ func (t *Test) Run(scope Scope) {
 	if *t.Flags.SkipSetup == false {
 		// if in default mode purge all containers
 		if (t.Flags.Mode != "image") && (*t.Flags.SoftCleanup == false) {
-			t.Cm.RemoveAllContainers()
 			if scope.Provider.GetType() == "swarm" {
 				t.Cm.RemoveAllServices()
+			} else {
+				t.Cm.RemoveAllContainers()
 			}
 		}
 		scope.Provider.ProvideCouchbaseServers(scope.Spec.Servers)
@@ -763,9 +764,10 @@ func (t *Test) ExitAfterDuration(sec int) {
 }
 
 func (t *Test) DoContainerCleanup(s Scope) {
-	s.Cm.RemoveManagedContainers(*t.Flags.SoftCleanup)
 	if s.Provider.GetType() == "swarm" {
 		s.Cm.RemoveManagedServices(*t.Flags.SoftCleanup)
+	} else {
+		s.Cm.RemoveManagedContainers(*t.Flags.SoftCleanup)
 	}
 }
 
@@ -780,7 +782,6 @@ func (t *Test) Cleanup(s Scope) {
 		}
 		s.Provider.(*DockerProvider).Cm.RemoveManagedContainers(soft)
 	case "swarm":
-		s.Provider.(*SwarmProvider).Cm.RemoveManagedContainers(soft)
 		s.Provider.(*SwarmProvider).Cm.RemoveManagedServices(soft)
 	}
 
