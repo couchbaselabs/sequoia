@@ -67,7 +67,7 @@
            --server-add $0
            -u {{.RestUsername}} -p {{.RestPassword}}
            --server-add-username {{.RestUsername}} --server-add-password {{.RestPassword}}
-           {{if gt .Version 4.0}} --services $1 {{end}}"
+           {{if gt .Version 4.0}}--services $1 {{end}}"
       wait: true
 
 # swap rebalance 1x1 node
