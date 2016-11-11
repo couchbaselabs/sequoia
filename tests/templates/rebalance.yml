@@ -63,11 +63,11 @@
   actions:
     -
       image: sequoiatools/couchbase-cli
-      command: "server-add -c  {{.Orchestrator}}
+      command: "server-add -c {{.Orchestrator}}
            --server-add $0
-           {{if gt .Version 4.0}} --services $1 {{end}}
-           -u  {{.RestUsername}} -p  {{.RestPassword}}
-           --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
+           -u {{.RestUsername}} -p {{.RestPassword}}
+           --server-add-username {{.RestUsername}} --server-add-password {{.RestPassword}}
+           {{if gt .Version 4.0}} --services $1 {{end}}"
       wait: true
 
 # swap rebalance 1x1 node
