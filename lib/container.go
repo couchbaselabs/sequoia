@@ -495,14 +495,27 @@ func (cm *ContainerManager) BuildImage(opts docker.BuildImageOptions) error {
 	colorsay("building image " + opts.Name)
 
 	clients := cm.AllClients()
+	buildChans := []chan error{}
 	for _, client := range clients {
-		opts.OutputStream = os.Stdout
-		if err := client.BuildImage(opts); err != nil {
+		ch := make(chan error)
+		buildChans = append(buildChans, ch)
+		go cm.buildImage(client, opts, ch)
+	}
+
+	for _, ch := range buildChans {
+		err := <-ch
+		if err != nil {
 			return err
 		}
 	}
 
 	return nil
+}
+
+func (cm *ContainerManager) buildImage(client *docker.Client, opts docker.BuildImageOptions, ch chan error) {
+	opts.OutputStream = os.Stdout
+	err := client.BuildImage(opts)
+	ch <- err
 }
 
 // get logs as string
