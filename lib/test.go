@@ -135,11 +135,16 @@ func (t *Test) Run(scope Scope) {
 	if *t.Flags.SkipSetup == false {
 		// if in default mode purge all containers
 		if (t.Flags.Mode != "image") && (*t.Flags.SoftCleanup == false) {
-			t.Cm.RemoveAllContainers()
+			if scope.Provider.GetType() == "swarm" {
+				t.Cm.RemoveAllServices()
+			} else {
+				t.Cm.RemoveAllContainers()
+			}
 		}
 		scope.Provider.ProvideCouchbaseServers(scope.Spec.Servers)
 		scope.Setup()
-	} else if scope.Provider.GetType() != "docker" {
+	} else if (scope.Provider.GetType() != "docker") &&
+		(scope.Provider.GetType() != "swarm") {
 		// non-dynamic IP's need to be extrapolated before test
 		scope.Provider.ProvideCouchbaseServers(scope.Spec.Servers)
 		scope.InitCli()
@@ -170,7 +175,8 @@ func (t *Test) Run(scope Scope) {
 		for {
 			t.runActions(scope, loops, t.Actions)
 			// kill test containers
-			scope.Cm.RemoveManagedContainers(*t.Flags.SoftCleanup)
+			t.DoContainerCleanup(scope)
+
 			loops++
 		}
 	} else {
@@ -178,7 +184,7 @@ func (t *Test) Run(scope Scope) {
 		for loops = 0; loops < repeat; loops++ {
 			t.runActions(scope, loops, t.Actions)
 			// kill test containers
-			scope.Cm.RemoveManagedContainers(*t.Flags.SoftCleanup)
+			t.DoContainerCleanup(scope)
 		}
 	}
 	t.Cm.TapHandle.AutoPlan()
@@ -757,14 +763,26 @@ func (t *Test) ExitAfterDuration(sec int) {
 	os.Exit(0)
 }
 
+func (t *Test) DoContainerCleanup(s Scope) {
+	if s.Provider.GetType() == "swarm" {
+		s.Cm.RemoveManagedServices(*t.Flags.SoftCleanup)
+	} else {
+		s.Cm.RemoveManagedContainers(*t.Flags.SoftCleanup)
+	}
+}
+
 func (t *Test) Cleanup(s Scope) {
 	soft := *t.Flags.SoftCleanup
-	s.Cm.RemoveManagedContainers(soft)
-	if s.Provider.GetType() == "docker" {
+	t.DoContainerCleanup(s)
+	switch s.Provider.GetType() {
+	case "docker":
 		// save logs
 		if *t.Flags.LogLevel > 0 {
 			s.Provider.(*DockerProvider).Cm.SaveCouchbaseContainerLogs(*t.Flags.LogDir)
 		}
 		s.Provider.(*DockerProvider).Cm.RemoveManagedContainers(soft)
+	case "swarm":
+		s.Provider.(*SwarmProvider).Cm.RemoveManagedServices(soft)
 	}
+
 }

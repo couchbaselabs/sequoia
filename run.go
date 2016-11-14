@@ -11,7 +11,7 @@ func main() {
 	flags.Parse()
 
 	// configure
-	cm := S.NewContainerManager(*flags.Client)
+	cm := S.NewContainerManager(*flags.Client, *flags.Provider)
 	scope := S.NewScope(flags, cm)
 	test := S.NewTest(flags, cm)
 
