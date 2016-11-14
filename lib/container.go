@@ -431,19 +431,33 @@ func (cm *ContainerManager) CheckImageExists(image string) bool {
 func (cm *ContainerManager) PullImage(repo string) error {
 	msg := UtilTaskMsg("[pull]", repo)
 	cm.TapHandle.Ok(true, msg)
-	imgOpts := docker.PullImageOptions{
-		Repository: repo,
-	} // TODO: tag
-
 	fmt.Println(msg)
+
+	// pull image across all clients
+	pullChans := []chan error{}
 	clients := cm.AllClients()
 	for _, client := range clients {
-		if err := client.PullImage(imgOpts, docker.AuthConfiguration{}); err != nil {
+		ch := make(chan error)
+		pullChans = append(pullChans, ch)
+		go cm.pullImage(client, repo, ch)
+	}
+
+	for _, ch := range pullChans {
+		err := <-ch
+		if err != nil {
 			return err
 		}
 	}
-
 	return nil
+}
+
+func (cm *ContainerManager) pullImage(client *docker.Client, repo string, ch chan error) {
+
+	imgOpts := docker.PullImageOptions{
+		Repository: repo,
+	}
+	err := client.PullImage(imgOpts, docker.AuthConfiguration{})
+	ch <- err
 }
 
 func (cm *ContainerManager) PullTaggedImage(repo, tag string) {
