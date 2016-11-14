@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"github.com/docker/engine-api/types/swarm"
 	"github.com/fsouza/go-dockerclient"
+	"github.com/streamrail/concurrent-map"
 	"github.com/tahmmee/tap.go"
 	"io"
 	"net/url"
@@ -137,7 +138,7 @@ type ContainerManager struct {
 	ProviderType         string
 	LastSvcPort          uint32
 	SwarmClients         []*docker.Client
-	ContainerClientCache map[string]int
+	ContainerClientCache cmap.ConcurrentMap
 }
 
 func NewDockerClient(clientUrl string) *docker.Client {
@@ -175,7 +176,7 @@ func NewContainerManager(clientUrl, provider string) *ContainerManager {
 		ProviderType:         provider,
 		LastSvcPort:          100,
 		SwarmClients:         []*docker.Client{},
-		ContainerClientCache: make(map[string]int),
+		ContainerClientCache: cmap.New(),
 	}
 
 	if provider == "swarm" {
@@ -647,8 +648,8 @@ func (cm *ContainerManager) RunService(opts docker.CreateServiceOptions) *swarm.
 func (cm *ContainerManager) ClientForContainer(ID string) *docker.Client {
 
 	if cm.ProviderType == "swarm" {
-		if clientID, ok := cm.ContainerClientCache[ID]; ok == true {
-			swarmClient := cm.SwarmClients[clientID]
+		if clientID, ok := cm.ContainerClientCache.Get(ID); ok == true {
+			swarmClient := cm.SwarmClients[clientID.(int)]
 			return swarmClient
 		} else {
 			// manual look up
@@ -658,7 +659,7 @@ func (cm *ContainerManager) ClientForContainer(ID string) *docker.Client {
 				logerr(err)
 				for _, c := range containers {
 					if c.ID == ID {
-						cm.ContainerClientCache[ID] = cid
+						cm.ContainerClientCache.Set(ID, cid)
 						return client
 					}
 				}
@@ -680,7 +681,7 @@ func (cm *ContainerManager) ContainerForService(service *swarm.Service) (*docker
 			labels := c.Labels
 			if svcid, ok := labels["com.docker.swarm.service.id"]; ok == true {
 				if svcid == service.ID {
-					cm.ContainerClientCache[c.ID] = cid
+					cm.ContainerClientCache.Set(c.ID, cid)
 					return &c, client
 				}
 			}
