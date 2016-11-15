@@ -6,7 +6,7 @@ package sequoia
 
 import (
 	"fmt"
-	"github.com/docker/engine-api/types/swarm"
+	"github.com/docker/docker/api/types/swarm"
 	"github.com/fsouza/go-dockerclient"
 	"net/url"
 	"regexp"
@@ -401,6 +401,7 @@ func (p *SwarmProvider) ProvideCouchbaseServers(servers []ServerSpec) {
 	for len(p.ActiveContainers) != j {
 		time.Sleep(time.Second * 1)
 	}
+	time.Sleep(time.Second * 5)
 }
 
 func (p *SwarmProvider) GetHostAddress(name string) string {
