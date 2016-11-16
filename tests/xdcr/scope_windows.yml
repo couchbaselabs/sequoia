@@ -1,0 +1,26 @@
+---
+buckets:
+  -
+      name: default
+      ram: 80%
+      eviction: fullEviction
+
+servers:
+  -
+      name: local
+      count: 4
+      ram: 70%
+      rest_username: Administrator
+      rest_password: password
+      init_nodes: 5
+      buckets: default
+      data_path: "/data"
+  -
+      name: remote
+      count: 4
+      ram: 70%
+      rest_username: Administrator
+      rest_password: password
+      init_nodes: 3
+      buckets: default
+      data_path: "/data"
