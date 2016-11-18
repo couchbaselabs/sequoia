@@ -58,7 +58,7 @@
 -
    duration: 3600  # 1 hour of main loader
    command: "kv --ops {{.Scale 2000}} --create 15 --get 80 --delete 5  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 512 128 1024 2048"
-   concurrency: {{.Scale 1}}
+   concurrency: "{{.Scale 1}}"
 
 #============ start view queries  ============
 -
