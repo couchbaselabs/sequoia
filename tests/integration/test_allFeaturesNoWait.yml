@@ -6,7 +6,6 @@
 -
   image: sequoiatools/queryloop
   requires: "{{ eq false .DoOnce}}" # only after first pass
-  duration: 600 # 10 min
   command: "{{.QueryNodePort}} 'delete from default where rating < 300'"
 -
   command: "{{.QueryNodePort}} 'delete from default where rating > 700'"
