@@ -362,7 +362,6 @@ func (t *Test) runActions(scope Scope, loop int, actions []ActionSpec) {
 			pass, err := strconv.ParseBool(ok)
 			logerr(err)
 			if pass == false {
-				colorsay("skipping due to requirements: " + action.Requires)
 				lastAction = action
 				continue
 			}
