@@ -4,18 +4,18 @@
 -  # start rth verifer
    image: sequoiatools/righthand
    command: "-host http://{{.NthDataNode 1 | noport}}:{{.RestPort}} -query http://{{.QueryNodePort}} -stress {{.Scale 10}}"
-  
+   alias: RthContainer
 
 #============  data loading ============
 -
    image: sequoiatools/gideon
    command: "kv --ops {{.Scale 2000}} --create 15 --get 80 --delete 5  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 512 128 1024 2048"
-   duration: "{{.Scale 40}}"
+   duration: "{{.Scale 10}}"
 
 -
    image: sequoiatools/pillowfight
    command: "-U {{.Orchestrator}} -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 4  --rate-limit {{.Scale 2000}} -c -1"
-   duration: "{{.Scale 40}}"
+   duration: "{{.Scale 10}}"
    wait: true
 
 #============  hard failover delta recovery ============
@@ -23,19 +23,25 @@
    template: failover_node_forced
    args: "{{.Orchestrator}}"
 
--
-   template: recover_node
-   args: "{{.Orchestrator}}, delta"
+-  template: rebalance
+   args: "{{.NthDataNode 1}}"
+   wait: true
+
+#============  add back ============
+-  before: "{{.Status `RthContainer` | eq `exited`}}"
+   template: add_node
+   args: "{{.Orchestrator}}, data, {{.NthDataNode 1}}"
    wait: true
 
 -  template: rebalance
+   args: "{{.NthDataNode 1}}"
    wait: true
 
-#============  data loading Phase 2============
+#============  data loading Phase 2 (non-takeover scenario) ============
 -  # start rth verifer
    image: sequoiatools/righthand
-   command: "-host http://{{.NthDataNode 1 | noport}}:{{.RestPort}}  -query http://{{.QueryNodePort}} -stress {{.Scale 10}}"
-
+   command: "-host http://{{.Orchestrator  | noport}}:{{.RestPort}}  -query http://{{.QueryNodePort}} -stress {{.Scale 10}} --no_takeover"
+   alias: RthContainer
 -
    image: sequoiatools/gideon
    command: "kv --ops {{.Scale 2000}} --create 15 --get 80 --delete 5  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 512 128 1024 2048"
@@ -48,37 +54,7 @@
    wait: true
 
 
-#============  hard failover full recovery ============
--
-   template: failover_node_forced
-   args: "{{.Orchestrator}}"
-
--  # full recover
-   template: recover_node
-   args: "{{.Orchestrator}}, full"
-
--  template: rebalance
-   wait: true
-
-
-
-#============  data loading Phase 3 (non-takeover scenario) ============
--  # start rth verifer
-   image: sequoiatools/righthand
-   command: "-host http://{{.Orchestrator | noport}}:{{.RestPort}}  -query http://{{.QueryNodePort}} -stress {{.Scale 10}} --no_takeover"
--
-   image: sequoiatools/gideon
-   command: "kv --ops {{.Scale 2000}} --create 15 --get 80 --delete 5  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 512 128 1024 2048"
-   duration: "{{.Scale 40}}"
-
--
-   image: sequoiatools/pillowfight
-   command: "-U {{.Orchestrator}} -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 4  --rate-limit {{.Scale 2000}} -c -1"
-   duration: "{{.Scale 40}}"
-   wait: true
-
-
-#============  hard failover full recovery ============
+#============  hard failover index node============
 -
    template: failover_node_forced
    args: "{{.NthDataNode 1}}"
@@ -86,5 +62,14 @@
 -  template: rebalance
    wait: true
 
-- # wait for rth to finish
-  before: "{{.Status `RthVerifier3` | eq `exited`}}"
+#============  add back ============
+-  before: "{{.Status `RthContainer` | eq `exited`}}"
+   template: add_node
+   args: "{{.NthDataNode 1}}, (data, index)"
+   wait: true
+
+-  template: rebalance
+   args: "{{.Orchestrator}}"
+   wait: true
+
+
