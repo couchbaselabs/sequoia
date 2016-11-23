@@ -1,10 +1,12 @@
 # rebalance the cluster
+# $0 = optional orchestrator node
 -
   name: rebalance
   actions:
     -
       image: sequoiatools/couchbase-cli
-      command:  "rebalance -c  {{.Orchestrator}}
+      command:  "rebalance
+                -c {{if gt (len `$0`) 2}}$0{{else}}{{.Orchestrator}}{{end}}
                 -u  {{.RestUsername}} -p  {{.RestPassword}}"
       condwait: "{{if eq `windows` .Platform }}
                     false
@@ -14,15 +16,6 @@
       requires: "{{ eq `windows` .Platform}}"
       template: wait_for_rebalance
 
-# rebalance the cluster by IP
-# $0 = server to rebalance
--
-  name: rebalance_by_ip
-  actions:
-    -
-      image: sequoiatools/couchbase-cli
-      command:  "rebalance -c  $0
-                -u  {{.RestUsername}} -p  {{.RestPassword}}"
 
 # rebalance out a single node
 # $0 = server to remove
@@ -58,12 +51,14 @@
 # add a node to cluster
 # $0 server to add
 # $1 node services
+# $2 optional orchestrator
 -
   name: add_node
   actions:
     -
       image: sequoiatools/couchbase-cli
-      command: "server-add -c {{.Orchestrator}}
+      command: "server-add
+           -c {{if gt (len `$2`) 2}}$2{{else}}{{.Orchestrator}}{{end}}
            --server-add $0
            -u {{.RestUsername}} -p {{.RestPassword}}
            --server-add-username {{.RestUsername}} --server-add-password {{.RestPassword}}
@@ -182,3 +177,23 @@
       command:  "rebalance-stop -c  {{.Orchestrator}}
                 -u  {{.RestUsername}} -p  {{.RestPassword}}"
       wait: true
+
+# !!!depreciated - use rebalance with optional arg!!!
+# rebalance the cluster by IP
+# $0 = server to rebalance
+-
+  name: rebalance_by_ip
+  actions:
+    -
+      image: sequoiatools/couchbase-cli
+      command:  "rebalance -c  $0
+                -u  {{.RestUsername}} -p  {{.RestPassword}}"
+      condwait: "{{if eq `windows` .Platform }}
+                    false
+                 {{end}}"
+    -
+      # windows requires special status watching
+      requires: "{{ eq `windows` .Platform}}"
+      template: wait_for_rebalance
+
+
