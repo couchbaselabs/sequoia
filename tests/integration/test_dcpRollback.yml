@@ -1,0 +1,90 @@
+---
+- include: tests/templates/rebalance.yml
+
+-  # start rth verifer
+   image: sequoiatools/righthand
+   command: "-host http://{{.NthDataNode 1 | noport}}:{{.RestPort}} -query http://{{.QueryNodePort}} -stress {{.Scale 10}}"
+  
+
+#============  data loading ============
+-
+   image: sequoiatools/gideon
+   command: "kv --ops {{.Scale 2000}} --create 15 --get 80 --delete 5  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 512 128 1024 2048"
+   duration: "{{.Scale 40}}"
+
+-
+   image: sequoiatools/pillowfight
+   command: "-U {{.Orchestrator}} -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 4  --rate-limit {{.Scale 2000}} -c -1"
+   duration: "{{.Scale 40}}"
+   wait: true
+
+#============  hard failover delta recovery ============
+-
+   template: failover_node_forced
+   args: "{{.Orchestrator}}"
+
+-
+   template: recover_node
+   args: "{{.Orchestrator}}, delta"
+   wait: true
+
+-  template: rebalance
+   wait: true
+
+#============  data loading Phase 2============
+-  # start rth verifer
+   image: sequoiatools/righthand
+   command: "-host http://{{.NthDataNode 1 | noport}}:{{.RestPort}}  -query http://{{.QueryNodePort}} -stress {{.Scale 10}}"
+
+-
+   image: sequoiatools/gideon
+   command: "kv --ops {{.Scale 2000}} --create 15 --get 80 --delete 5  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 512 128 1024 2048"
+   duration: "{{.Scale 40}}"
+
+-
+   image: sequoiatools/pillowfight
+   command: "-U {{.Orchestrator}} -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 4  --rate-limit {{.Scale 2000}} -c -1"
+   duration: "{{.Scale 40}}"
+   wait: true
+
+
+#============  hard failover full recovery ============
+-
+   template: failover_node_forced
+   args: "{{.Orchestrator}}"
+
+-  # full recover
+   template: recover_node
+   args: "{{.Orchestrator}}, full"
+
+-  template: rebalance
+   wait: true
+
+
+
+#============  data loading Phase 3 (non-takeover scenario) ============
+-  # start rth verifer
+   image: sequoiatools/righthand
+   command: "-host http://{{.Orchestrator | noport}}:{{.RestPort}}  -query http://{{.QueryNodePort}} -stress {{.Scale 10}} --no_takeover"
+-
+   image: sequoiatools/gideon
+   command: "kv --ops {{.Scale 2000}} --create 15 --get 80 --delete 5  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 512 128 1024 2048"
+   duration: "{{.Scale 40}}"
+
+-
+   image: sequoiatools/pillowfight
+   command: "-U {{.Orchestrator}} -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 4  --rate-limit {{.Scale 2000}} -c -1"
+   duration: "{{.Scale 40}}"
+   wait: true
+
+
+#============  hard failover full recovery ============
+-
+   template: failover_node_forced
+   args: "{{.NthDataNode 1}}"
+
+-  template: rebalance
+   wait: true
+
+- # wait for rth to finish
+  before: "{{.Status `RthVerifier3` | eq `exited`}}"
