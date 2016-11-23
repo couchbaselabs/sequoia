@@ -15,7 +15,7 @@
       # windows requires special status watching
       requires: "{{ eq `windows` .Platform}}"
       template: wait_for_rebalance
-
+      args: "$0"
 
 # rebalance out a single node
 # $0 = server to remove
@@ -89,12 +89,14 @@
       template: wait_for_rebalance
 
 # waits for any current rebalance to finish
+# receives optional orchestrator arg from callee
 -
   name: wait_for_rebalance
   actions:
     -
       image: appropriate/curl
-      command: "-s -u {{.RestUsername}}:{{.RestPassword}} {{.Orchestrator}}:8091/pools/default/rebalanceProgress"
+      command: "-s -u {{.RestUsername}}:{{.RestPassword}}
+                 {{if gt (len `$0`) 2}}$0{{else}}{{.Orchestrator}}{{end}}:8091/pools/default/rebalanceProgress"
       repeat: -1
       until: "{{if .AllLogs `__self__`}}
                 {{with $sample:=(.TailLogs `__self__` 1 | json)}}
