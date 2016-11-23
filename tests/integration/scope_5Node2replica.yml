@@ -9,7 +9,7 @@ buckets: # define single default bucket
 
 servers: # define 4 servers
   -
-     name: local.st.couchbase.com
+     name: local
      ram: 40% 
      index_ram: 10% 
      count: 5
