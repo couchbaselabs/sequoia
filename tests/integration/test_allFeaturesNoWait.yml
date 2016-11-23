@@ -6,7 +6,6 @@
 -
   image: sequoiatools/queryloop
   requires: "{{ eq false .DoOnce}}" # only after first pass
-  duration: 3600 # 1 hr
   command: "{{.QueryNodePort}} 'delete from default where rating < 300'"
 -
   command: "{{.QueryNodePort}} 'delete from default where rating > 700'"
@@ -51,15 +50,14 @@
 #============ continous kv loading ============
 -
    image: sequoiatools/pillowfight
-   command: "-U {{.Orchestrator}} -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 4  --rate-limit {{.Scale 2000}}"
-   duration: 3600  # 1 hour of main loader
+   command: "-U {{.Orchestrator}} -M 512 -I {{.Scale 1000000}} -B {{.Scale 100}} -t 4  --rate-limit {{.Scale 2000}}"
 -
    image: sequoiatools/gideon
    command: "kv --ops {{.Scale 100}} --create 10 --get 90 --expire 100 --ttl 660  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 16000"
 -
    duration: 3600  # 1 hour of main loader
    command: "kv --ops {{.Scale 2000}} --create 15 --get 80 --delete 5  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 512 128 1024 2048"
-
+   concurrency: "{{.Scale 1}}"
 
 #============ start view queries  ============
 -
