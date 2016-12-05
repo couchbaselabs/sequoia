@@ -247,6 +247,8 @@ func (t *Test) runActions(scope Scope, loop int, actions []ActionSpec) {
 					ecolorsay("no such container alias " + key)
 				}
 			case "cp":
+				// allow parsing of topath
+				action.Client.ToPath = ParseTemplate(&scope, action.Client.ToPath)
 				if id, ok := scope.GetVarsKV(key); ok {
 					t.Cm.CopyFromContainer(id,
 						PathToFilename(action.Client.ToPath),
