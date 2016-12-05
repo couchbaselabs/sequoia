@@ -12,7 +12,7 @@
   image: sequoiatools/pillowfight
   command: "-U  {{.Orchestrator}} -B 100 -I 1000 -t 1 -c -1"
   concurrency: "{{.Scale 5}}"
-  duration: 10
+  duration: 30
   wait: true  # wait for duration 
 
 
