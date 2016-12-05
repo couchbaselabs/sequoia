@@ -1,0 +1,26 @@
+-
+  # start cbqindex container (will run .config file)
+  image: sequoiatools/cbindexperf
+  command: "-cluster {{.QueryNode | noport}}:{{.RestPort}}
+    -auth {{.RestUsername}}:{{.RestPassword}}
+    -resultfile /root/result.json"
+  repeat: -1  # forever in background
+  alias: CBIndexPerf
+
+-
+  # pillow fight in background
+  image: sequoiatools/pillowfight
+  command: "-U  {{.Orchestrator}} -B 100 -I 1000 -t 1 -c -1"
+  concurrency: "{{.Scale 5}}"
+  duration: 10
+  wait: true  # wait for duration 
+
+
+-
+  # save results
+  client:
+    op: cp
+    container: CBIndexPerf 
+    frompath: "/root/result.json"
+    topath: "result-{{.Loop}}.json"
+  wait: true
