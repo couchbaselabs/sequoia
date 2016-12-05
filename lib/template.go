@@ -64,6 +64,10 @@ func (t *TemplateResolver) OddCount() bool {
 	return !t.EvenCount()
 }
 
+func (t *TemplateResolver) Loop() int {
+	return t.Scope.Loops
+}
+
 // apply scope scale factor to the value
 func (t *TemplateResolver) Scale(val int) string {
 	scale := *t.Scope.Flags.Scale
