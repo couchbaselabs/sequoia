@@ -1,0 +1,46 @@
+{
+   "Concurrency" : 1,
+   "Clients": 1,
+   "ScanSpecs" : [
+      {
+         "Type" : "All",
+         "Id" : 1,
+         "Index" : "first_name",
+         "Repeat" : 0,
+         "Limit" : 100,
+         "Bucket" : "default"
+      },
+      {
+         "Limit" : 0,
+         "Low" : [
+            "Aaron"
+         ],
+         "Repeat" : 0,
+         "Type" : "Range",
+         "Bucket" : "default",
+         "High" : [
+            "Z"
+         ],
+         "Id" : 2,
+         "Inclusion" : 3,
+         "Index" : "first_name"
+      },
+      {
+         "Repeat" : 0,
+         "Limit" : 0,
+         "Type" : "Lookup",
+         "Bucket" : "default",
+         "Lookups" : [
+            [
+               "Aaron"
+            ],
+            [
+               "Adela"
+            ]
+         ],
+         "Index" : "first_name",
+         "Id" : 2,
+         "Inclusion" : 3
+      }
+   ]
+}
