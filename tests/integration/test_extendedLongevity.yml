@@ -1,0 +1,17 @@
+#
+# Extended Longevity test runs a series of stress tests
+# along with the allFeatures test which is used for standard
+# longevity
+#
+-
+  test: tests/view/test_ddocStress.yml
+  scope: tests/view/scope_ddocStress.yml
+-
+  test: tests/view/test_kvStress.yml
+-
+  test: tests/integration/test_allFeatures.yml
+  scope: tests/integration/scope_8x4.yml
+-
+  test: tests/2i/test_dropAddIndexRebalance.yml
+-
+  test: tests/integration/test_dcpRollback.yml
