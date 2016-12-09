@@ -1,0 +1,48 @@
+-
+  include: tests/templates/rebalance.yml, tests/templates/vegeta.yml
+
+-
+
+  # start doc purger
+  image: sequoiatools/cbworkloadgen
+  command: "-n {{.Orchestrator}} -i 1000000 -s 32 -j"
+  repeat: -1
+-
+  template: attack_view
+  args: "0, 10, {{.Orchestrator}},
+         {{.Bucket}},
+         scale,
+         age,
+         stale=connection_timeout=60000&inclusive_end=true&group=true&skip=0&stale=false"
+
+-
+  # rebalance out an active node
+  image: sequoiatools/couchbase-cli
+  command: "failover -c {{.Orchestrator}}
+      --server-failover {{.ActiveNode}}
+      -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+
+  wait: true
+- 
+  # likewise require active nodes exist that can be removed
+  template: rebalance
+  wait: true
+
+-
+  # rebalance out an active node
+  image: sequoiatools/couchbase-cli
+  command: "failover -c {{.Orchestrator}}
+      --server-failover {{.ActiveNode}}
+      -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+
+  wait: true
+
+# add back 
+-
+  template: add_node
+  args: "{{.InActiveNode}}, data"
+
+# do rebalance
+- template: rebalance
+  wait: true
+
