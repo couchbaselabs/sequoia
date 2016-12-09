@@ -17,10 +17,15 @@ views: # define some views
     name: live_ratings 
     map: "emit(meta.id, doc.rating)"
 
+  -
+    name: age
+    map: "emit(doc.age, 1)"
+    reduce: "_count"
+
 ddocs:  # add views to design docs
   -
    name: scale
-   views: stats, padd, array
+   views: stats, padd, array, age
   -
    name: live 
    views: live_ratings
