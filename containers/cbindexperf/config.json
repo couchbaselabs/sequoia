@@ -1,46 +1,21 @@
 {
-   "Concurrency" : 1,
-   "Clients": 1,
-   "ScanSpecs" : [
-      {
-         "Type" : "All",
-         "Id" : 1,
-         "Index" : "first_name",
-         "Repeat" : 0,
-         "Limit" : 100,
-         "Bucket" : "default"
-      },
-      {
-         "Limit" : 0,
-         "Low" : [
-            "Aaron"
-         ],
-         "Repeat" : 0,
-         "Type" : "Range",
-         "Bucket" : "default",
-         "High" : [
-            "Z"
-         ],
-         "Id" : 2,
-         "Inclusion" : 3,
-         "Index" : "first_name"
-      },
-      {
-         "Repeat" : 0,
-         "Limit" : 0,
-         "Type" : "Lookup",
-         "Bucket" : "default",
-         "Lookups" : [
-            [
-               "Aaron"
-            ],
-            [
-               "Adela"
-            ]
-         ],
-         "Index" : "first_name",
-         "Id" : 2,
-         "Inclusion" : 3
-      }
-   ]
+       "Concurrency" : 128,
+       "Clients" : 5,
+       "ScanSpecs" : [
+          {
+             "Limit" : 1,
+             "Low" : [
+                "000015"
+             ],
+             "Repeat" : 9999999,
+             "Type" : "Range",
+             "Bucket" : "bucket-1",
+             "High" : [
+                "000028"
+             ],
+             "Id" : 1,
+             "Inclusion" : 3,
+             "Index" : "myindex"
+           }
+       ]
 }
