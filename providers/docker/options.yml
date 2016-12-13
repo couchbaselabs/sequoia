@@ -1,6 +1,6 @@
-build: 3.1.5-1859 
-#build_url_override: null 
-build_url_override: "http://latestbuilds.hq.couchbase.com/couchbase-server-enterprise_x86_64_3.1.5-1859-rel.deb" 
+build: 4.6.0-3552
+build_url_override: null 
+#build_url_override: "http://latestbuilds.hq.couchbase.com/couchbase-server-enterprise_x86_64_3.1.5-1859-rel.deb" 
 
 # Resource optimization
 # ------------
@@ -12,7 +12,7 @@ cpuperiod: 100000
 # Microseconds of CPU time that the container can get in a CPU period.
 # Default is 100ms which is 100% of a 100ms CpuPeriod
 # which means setting this value to 20ms results in 20% CPU
-cpuquota:  40000
+cpuquota:  100000
 
  # Hard Memory limit in bytes.
  # The default of (0) will be presented with entire machine memory to container
