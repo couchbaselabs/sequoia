@@ -24,6 +24,9 @@ const ( // iota is reset to 0
 	Dev    ProviderLabel = iota
 )
 
+const UBUNTU_OS_DIR = "Ubuntu14"
+const CENTOS_OS_DIR = "CentOS7"
+
 type Provider interface {
 	ProvideCouchbaseServers(servers []ServerSpec)
 	GetHostAddress(name string) string
@@ -61,6 +64,7 @@ type DockerProviderOpts struct {
 	CPUQuota         int64
 	Memory           int64
 	MemorySwap       int64
+	OS               string
 	Ulimits          []docker.ULimit
 }
 
@@ -258,14 +262,22 @@ func (p *DockerProvider) ProvideCouchbaseServers(servers []ServerSpec) {
 			}
 
 			// check if build version exists
-			var imgName = fmt.Sprintf("couchbase_%s", build)
+			var osPath = UBUNTU_OS_DIR
+			if p.Opts.OS == "centos7" {
+				osPath = CENTOS_OS_DIR
+			}
+			var imgName = fmt.Sprintf("couchbase_%s.%s",
+				build,
+				strings.ToLower(osPath))
 			exists := p.Cm.CheckImageExists(imgName)
+
 			if exists == false {
 
 				var buildArgs = BuildArgsForVersion(p.Opts)
+				var contextDir = fmt.Sprintf("containers/couchbase/%s/", osPath)
 				var buildOpts = docker.BuildImageOptions{
 					Name:           imgName,
-					ContextDir:     "containers/couchbase/",
+					ContextDir:     contextDir,
 					SuppressOutput: false,
 					Pull:           false,
 					BuildArgs:      buildArgs,
@@ -333,14 +345,21 @@ func (p *SwarmProvider) ProvideCouchbaseServer(serverName string, portOffset int
 	}
 
 	// check if build version exists
-	var imgName = fmt.Sprintf("couchbase_%s", build)
+	var osPath = UBUNTU_OS_DIR
+	if p.Opts.OS == "centos7" {
+		osPath = CENTOS_OS_DIR
+	}
+	var imgName = fmt.Sprintf("couchbase_%s.%s",
+		build,
+		strings.ToLower(osPath))
 	exists := p.Cm.CheckImageExists(imgName)
 	if exists == false {
 
 		var buildArgs = BuildArgsForVersion(p.Opts)
+		var contextDir = fmt.Sprintf("containers/couchbase/%s/", osPath)
 		var buildOpts = docker.BuildImageOptions{
 			Name:           imgName,
-			ContextDir:     "containers/couchbase/",
+			ContextDir:     contextDir,
 			SuppressOutput: false,
 			Pull:           false,
 			BuildArgs:      buildArgs,
