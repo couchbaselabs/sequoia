@@ -11,7 +11,9 @@ RUN yum install -y tar \
       yum -y install openssl \
       lsof lshw net-tools numactl \
       sysstat wget screen psmisc \
-      zip unzip glibc glibc-devel
+      zip unzip glibc glibc-devel \
+      openssh-server libssl0.9.8 \
+      tcpdump iptables psmisc
 
 # Install python-httplib2
 RUN curl https://bootstrap.pypa.io/get-pip.py | python - ; pip install httplib2
@@ -25,6 +27,17 @@ RUN gpg --keyserver ha.pool.sks-keyservers.net --recv-keys B42F6819007F00F88E364
     && gpg --verify /usr/local/bin/gosu.asc \
     && rm /usr/local/bin/gosu.asc \
     && chmod +x /usr/local/bin/gosu
+
+
+RUN mkdir /var/run/sshd
+RUN echo 'root:couchbase' | chpasswd
+RUN sed -i 's/PermitRootLogin without-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+
+# SSH login fix. Otherwise user is kicked off after login
+RUN sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' -i /etc/pam.d/sshd
+
+RUN echo "export VISIBLE=now" >> /etc/profile
+
 
 # Create Couchbase user with UID 1000 (necessary to match default
 # boot2docker UID)
@@ -64,9 +77,14 @@ LABEL RUN="docker run -d --rm --privileged -p 8091:8091 --restart always --name 
 
 
 ENV PATH=$PATH:/opt/couchbase/bin:/opt/couchbase/bin/tools:/opt/couchbase/bin/install
-ENTRYPOINT ["couchbase-start"]
-CMD ["couchbase-server", "--", "-noinput"]
+COPY start.sh /start.sh
+
+EXPOSE 8091 8092 8093 8094 9100 9101 9102 9103 9104 9105 9998 9999 11207 11210 11211 18091 18092 22
+ARG MEMBASE_RAM_MEGS=0
+RUN bash -c '[[ $MEMBASE_RAM_MEGS != 0 ]] && sed  -i "s/export PATH/export PATH\nMEMBASE_RAM_MEGS=$MEMBASE_RAM_MEGS\nexport MEMBASE_RAM_MEGS/" /opt/couchbase/bin/couchbase-server || true'
+
+
+CMD "./start.sh"
 # pass -noinput so it doesn't drop us in the erlang shell
 
-EXPOSE 8091 8092 8093 11207 11210 11211 18091 18092
 #VOLUME /opt/couchbase/var
