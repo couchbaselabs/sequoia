@@ -1,18 +1,18 @@
 -
   image: sequoiatools/spring
   requires:  "{{eq true .DoOnce}}"
-  command: "-c 100  -o {{.Scale 1000000000}} -n 50 -s 1024  -i {{.Scale 1000000000}} cb://@{{.Orchestrator}}:{{.RestPort}}/{{.Bucket}}"
+  command: "-c 100  -o {{.Scale 1}} -n 50 -s 1024  -i {{.Scale 1}} cb://@{{.Orchestrator}}:{{.RestPort}}/{{.Bucket}}"
   wait: true
 
 -
   image: sequoiatools/cbq
   requires:  "{{eq true .DoOnce}}"
-  command: "-e=http://{{.QueryNode}}:{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index myindex on `bucket-1`(city)'"
+  command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index myindex on `bucket-1`(city)'"
   wait: true
 
 -
   image: sequoiatools/spring
-  command: "-u 80 -c 10 -d 10  -o {{.Scale 1000000000}} -n 50 -s 1024  -i {{.Scale 1000000000}} cb://@{{.Orchestrator}}:{{.RestPort}}/{{.Bucket}}"
+  command: "-u 80 -c 10 -d 10  -o {{.Scale 1}} -n 50 -s 1024  -i {{.Scale 1}} cb://@{{.Orchestrator}}:{{.RestPort}}/{{.Bucket}}"
   repeat: -1
 
 -
