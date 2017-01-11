@@ -142,7 +142,9 @@ func (t *Test) Run(scope Scope) {
 			}
 		}
 		scope.Provider.ProvideCouchbaseServers(scope.Spec.Servers)
-		scope.Setup()
+		if t.Flags.Mode != "image" {
+			scope.Setup()
+		}
 	} else if (scope.Provider.GetType() != "docker") &&
 		(scope.Provider.GetType() != "swarm") {
 		// non-dynamic IP's need to be extrapolated before test
