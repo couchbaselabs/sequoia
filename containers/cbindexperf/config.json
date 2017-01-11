@@ -15,7 +15,8 @@
              ],
              "Id" : 1,
              "Inclusion" : 3,
-             "Index" : "myindex"
+             "Index" : "myindex",
+             "NInterval" : 100
            }
        ]
 }

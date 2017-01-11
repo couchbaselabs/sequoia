@@ -1,0 +1,28 @@
+---
+buckets:
+  -
+      name: default
+      ram: 50% 
+      eviction: fullEviction
+  -
+      name: other
+      count: 3 
+      ram: 15%
+
+
+servers: # each server tag represents a cluster
+  -
+      name: local
+      count: 5
+      ram: 70%
+      index_ram: 20%
+      index_storage: memory_optimized
+      services:
+        index: 1
+        index_start: 3
+        query: 1
+        query_start: 2
+      rest_username: Administrator
+      rest_password: password
+      init_nodes: 5
+      buckets: default,other
