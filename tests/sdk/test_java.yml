@@ -1,0 +1,26 @@
+- include: tests/templates/rebalance.yml
+
+# stream data 
+- 
+  image: sequoiatools/sdk-java-resource
+  command: "/client basic '{{.Orchestrator}} {{.Bucket}} 0 1023 n' com.couchbase.client.dcptest.BasicClient"
+  alias: DCP_STREAM
+
+# generate data
+- 
+  image: sequoiatools/sdk-java-resource
+  command: "/workload dcp/generator '{{.Orchestrator}} {{.Bucket}} {{.Scale 120}}'"
+  alias: DCP_WORKLOAD
+
+# swap rebalance 
+-
+  template: rebalance_swap
+  args: "{{.InActiveNode}}, {{.NthDataNode 1}}"
+  wait: true
+
+-
+  # rebalance when pillowfight container finishes
+  before: "{{.Status `DCP_WORKLOAD` | eq `exited`}}"
+  template: rebalance_out
+  args: "{{.NthDataNode 2}}"
+  wait: true
