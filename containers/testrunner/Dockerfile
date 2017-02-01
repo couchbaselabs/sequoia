@@ -16,6 +16,8 @@ RUN git clone git://github.com/couchbase/testrunner.git
 WORKDIR testrunner
 
 # install python deps
+RUN pip2 install --upgrade packaging appdirs
+RUN pip install -U pip setuptools
 RUN pip install paramiko &&\
     pip install gevent &&\
     pip install boto &&\
