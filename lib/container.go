@@ -273,6 +273,33 @@ func (cm *ContainerManager) GetAllServices() []swarm.Service {
 	return services
 }
 
+func (cm *ContainerManager) ExecContainer(id string) error {
+	client := cm.ClientForContainer(id)
+
+	// create the exec session
+	createOpts := docker.CreateExecOptions{
+		Container:    id,
+		AttachStdin:  true,
+		AttachStdout: true,
+		AttachStderr: true,
+		Tty:          true,
+		Cmd:          []string{"bash"}, //TODO: we may not always want that
+	}
+	exec, err := client.CreateExec(createOpts)
+	chkerr(err)
+
+	// start the exec session
+	startOpts := docker.StartExecOptions{
+		InputStream:  os.Stdin,
+		OutputStream: os.Stdout,
+		ErrorStream:  os.Stderr,
+		Tty:          true,
+		RawTerminal:  true,
+		Detach:       false,
+	}
+	return client.StartExec(exec.ID, startOpts)
+}
+
 func (cm *ContainerManager) RemoveContainer(id string) error {
 	client := cm.ClientForContainer(id)
 	opts := docker.RemoveContainerOptions{ID: id, RemoveVolumes: true, Force: true}

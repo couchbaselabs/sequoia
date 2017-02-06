@@ -36,6 +36,7 @@ type TestFlags struct {
 	CleanLogs         *bool
 	CleanContainers   *bool
 	Override          *string
+	Exec              *bool
 	DefaultFlagSet    *flag.FlagSet
 	ImageFlagSet      *flag.FlagSet
 	CleanFlagSet      *flag.FlagSet
@@ -78,6 +79,7 @@ func (f *TestFlags) SetFlagVals() {
 		// testrunner flagset
 		f.TestrunnerFlagSet = flag.NewFlagSet("testrunner", flag.ExitOnError)
 		f.AddDefaultFlags(f.TestrunnerFlagSet)
+		f.AddTestrunnerFlags(f.TestrunnerFlagSet)
 
 		// include image flags and
 		f.AddImageFlags(f.TestrunnerFlagSet)
@@ -232,4 +234,10 @@ func (f *TestFlags) AddCleanFlags(fset *flag.FlagSet) {
 		"log_dir",
 		"logs",
 		"directory of log files")
+}
+
+func (f *TestFlags) AddTestrunnerFlags(fset *flag.FlagSet) {
+	f.Exec = fset.Bool(
+		"exec", false,
+		"enter into container for debugging")
 }

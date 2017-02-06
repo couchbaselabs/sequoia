@@ -120,6 +120,26 @@ func NewTest(flags TestFlags, cm *ContainerManager) Test {
 	switch flags.Mode {
 	case "image", "testrunner":
 		actions = ActionsFromArgs(*flags.ImageName, *flags.ImageCommand, *flags.ImageWait)
+		if *flags.Exec == true {
+			// create new exec action
+			clientAction := ClientActionSpec{
+				Op:        "exec",
+				Container: "testrunner_id",
+			}
+			execAction := ActionSpec{
+				Client: clientAction,
+			}
+
+			// don't wait for testrunner to run
+			actions[0].Wait = false
+			actions[0].Alias = "testrunner_id"
+
+			// add exec action to test
+			actions = append(actions, execAction)
+
+			// no extra logging
+			*flags.LogLevel = 0
+		}
 	default:
 		actions = ActionsFromFile(*flags.TestFile)
 	}
@@ -264,6 +284,26 @@ func (t *Test) runActions(scope Scope, loop int, actions []ActionSpec) {
 				} else {
 					ecolorsay("no such container alias " + key)
 				}
+			case "exec":
+				// enter into container
+				if id, ok := scope.GetVarsKV(key); ok {
+					if err := t.Cm.ExecContainer(id); err != nil {
+						emsg := fmt.Sprintf("%s [%s] %s",
+							"failed to exec into container ",
+							id,
+							err)
+						ecolorsay(emsg)
+					} else {
+						// we are inside container, make sure it stays that way
+						*t.Flags.SkipCleanup = true
+
+						// running exec ends test
+						return
+					}
+				} else {
+					ecolorsay("no such container alias " + key)
+				}
+
 			}
 			continue
 		}
