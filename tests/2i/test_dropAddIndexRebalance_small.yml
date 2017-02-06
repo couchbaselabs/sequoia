@@ -1,0 +1,161 @@
+############### data loading ################
+-
+  image: sequoiatools/spring
+  requires:  "{{eq true .DoOnce}}"
+  command: "-c 100  -o {{.Scale 1}} -n 25 -s 1024  -i {{.Scale 1}} cb://@{{.Orchestrator}}:{{.RestPort}}/{{.Bucket}}"
+-
+  command: "-c 100  -o {{.Scale 1}} -n 25 -s 512  -i {{.Scale 1}} cb://@{{.Orchestrator}}:{{.RestPort}}/{{.NthBucket 1}}"
+-
+  command: "-c 100  -o {{.Scale 1}} -n 25 -s 256  -i {{.Scale 1}} cb://@{{.Orchestrator}}:{{.RestPort}}/{{.NthBucket 2}}"
+-
+  command: "-c 100  -o {{.Scale 1}} -n 25 -s 128  -i {{.Scale 1}} cb://@{{.Orchestrator}}:{{.RestPort}}/{{.NthBucket 3}}"
+  wait: true
+
+
+############### run mutations ################
+-
+  image: sequoiatools/spring
+  command: "-u 80 -c 10 -d 10  -o {{.Scale 1}} -n 25 -s 1024  -i {{.Scale 1}} cb://@{{.Orchestrator}}:{{.RestPort}}/{{.Bucket}}"
+  repeat: -1
+-
+  command: "-u 80 -c 10 -d 10  -o {{.Scale 1}} -n 25 -s 512  -i {{.Scale 1}} cb://@{{.Orchestrator}}:{{.RestPort}}/{{.NthBucket 1}}"
+  repeat: -1
+-
+  command: "-u 80 -c 10 -d 10  -o {{.Scale 1}} -n 25 -s 256  -i {{.Scale 1}} cb://@{{.Orchestrator}}:{{.RestPort}}/{{.NthBucket 2}}"
+  repeat: -1
+-
+  command: "-u 80 -c 10 -d 10  -o {{.Scale 1}} -n 25 -s 128  -i {{.Scale 1}} cb://@{{.Orchestrator}}:{{.RestPort}}/{{.NthBucket 3}}"
+  repeat: -1
+
+
+
+###############  create indexes ################
+-
+   image: sequoiatools/cbq
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_coins on `default`(coins)'"
+-
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_email on `default`(email)'"
+-
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_city on `default`(city)'"
+   wait: true
+-
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create primary index on `default`'"
+-
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o1_coins on `other-1`(coins)'"
+   wait: true
+-
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o1_email on `other-1`(email)'"
+-
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o1_city on `other-1`(city)'"
+-
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o2_coins on `other-2`(coins)'"
+-
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o2_email on `other-2`(email)'"
+-
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o2_city on `other-2`(city)'"
+   wait: true
+-
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o3_coins on `other-3`(coins)'"
+-
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o3_email on `other-3`(email)'"
+-
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o3_city on `other-3`(city)'"
+   wait: true
+
+
+# ###############  query index ################
+-
+  image: sequoiatools/curloop
+  command: "n1ql.sh {{.QueryNodePort}} 'select SUM(coins) from default where coins > 0 limit 50'"
+-
+  command: "n1ql.sh {{.QueryNodePort}} 'select city from default where coins > 0 limit 50'"
+-
+  command: "n1ql.sh {{.QueryNodePort}} 'select SUM(coins) from `other-1` where coins > 100  limit 50'"
+-
+  command: "n1ql.sh {{.QueryNodePort}} 'select * from `other-1` where coins > 100  limit 50'"
+-
+  command: "n1ql.sh {{.QueryNodePort}} 'select SUM(coins) from `other-2` where city like c% limit 50'"
+-
+  command: "n1ql.sh {{.QueryNodePort}} 'select SUM(coins) from `other-3` where email like a% limit 20'"
+-
+  command: "n1ql.sh {{.QueryNodePort}} 'delete from default where coins < 300'"
+-
+  command: "n1ql.sh {{.QueryNodePort}} 'delete from default where coins > 700'"
+-
+  command: "n1ql.sh {{.QueryNodePort}} 'delete from default where coins > 300 and coins < 700'"
+
+
+###############  remove data node and rebalance ################
+-
+   image: sequoiatools/couchbase-cli
+   command:  "rebalance -c  {{.Orchestrator}} --server-remove {{.ClusterNodes | net 3}}  -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   alias: SwapRebId
+
+
+###############  drop indexes during rebalance ################
+-
+   image: sequoiatools/cbq
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='drop primary index on `default`'"
+-
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='drop index `other-1`.o1_coins'"
+-
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='drop index `other-2`.o2_coins'"
+-
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='drop index `other-3`.o3_coins'"
+
+
+
+###############  after rebalance is done add back some and drop others index ################
+-
+   before: "{{.Status `SwapRebId` | eq `exited`}}"
+   image: sequoiatools/cbq
+   wait: true
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create primary index on `default`'"
+-
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o3_coins on `other-3`(coins)'"
+-
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='drop index `other-2`.o2_email'"
+-
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='drop index `other-3`.o3_email'"
+
+
+###############  add previously removed data node and rebalance ################
+-
+   image: sequoiatools/couchbase-cli
+   command: "server-add -c  {{.Orchestrator}}
+       --server-add  {{.ClusterNodes | net 3}}
+       --services data
+       -u  {{.RestUsername}} -p  {{.RestPassword}}
+       --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
+   wait: true
+-
+   image: sequoiatools/couchbase-cli
+   command:  "rebalance -c  {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   alias: AddRebId
+
+###############  drop all indexes ################
+-
+   before: "{{.Status `AddRebId` | eq `exited`}}"
+   image: sequoiatools/cbq
+   wait: true
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='drop primary index on `default`'"
+-
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='drop index `default`.default_email'"
+-
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='drop index `default`.default_city'"
+-
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='drop index `default`.default_coins'"
+   wait: true
+-
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='drop index `other-1`.o1_email'"
+-
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='drop index `other-1`.o1_city'"
+
+-
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='drop index `other-2`.o2_city'"
+   wait: true
+-
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='drop index `other-3`.o3_coins'"
+-
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='drop index `other-3`.o3_city'"
+   wait: true
