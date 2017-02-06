@@ -1,0 +1,3 @@
+[submodule "containers/testrunner/src"]
+	path = containers/testrunner/src
+	url = https://github.com/couchbase/testrunner

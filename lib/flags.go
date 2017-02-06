@@ -2,42 +2,44 @@ package sequoia
 
 import (
 	"flag"
+	"fmt"
 	"os"
 	"strings"
 )
 
 type TestFlags struct {
-	Mode            string
-	Args            []string
-	Config          *string
-	ScopeFile       *string `yaml:"scope"`
-	TestFile        *string `yaml:"test"`
-	Client          *string
-	Provider        *string
-	Platform        *string
-	ImageName       *string
-	ContainerName   *string
-	ImageCommand    *string
-	ImageWait       *bool
-	SkipSetup       *bool `yaml:"skip_setup"`
-	SkipTest        *bool `yaml:"skip_test"`
-	SkipTeardown    *bool `yaml:"skip_teardown"`
-	SkipCleanup     *bool `yaml:"skip_cleanup"`
-	SoftCleanup     *bool `yaml:"soft_cleanup"`
-	Continue        *bool
-	StopOnError     *bool
-	CollectOnError  *bool
-	Scale           *int
-	Repeat          *int
-	Duration        *int
-	LogDir          *string
-	LogLevel        *int
-	CleanLogs       *bool
-	CleanContainers *bool
-	Override        *string
-	DefaultFlagSet  *flag.FlagSet
-	ImageFlagSet    *flag.FlagSet
-	CleanFlagSet    *flag.FlagSet
+	Mode              string
+	Args              []string
+	Config            *string
+	ScopeFile         *string `yaml:"scope"`
+	TestFile          *string `yaml:"test"`
+	Client            *string
+	Provider          *string
+	Platform          *string
+	ImageName         *string
+	ContainerName     *string
+	ImageCommand      *string
+	ImageWait         *bool
+	SkipSetup         *bool `yaml:"skip_setup"`
+	SkipTest          *bool `yaml:"skip_test"`
+	SkipTeardown      *bool `yaml:"skip_teardown"`
+	SkipCleanup       *bool `yaml:"skip_cleanup"`
+	SoftCleanup       *bool `yaml:"soft_cleanup"`
+	Continue          *bool
+	StopOnError       *bool
+	CollectOnError    *bool
+	Scale             *int
+	Repeat            *int
+	Duration          *int
+	LogDir            *string
+	LogLevel          *int
+	CleanLogs         *bool
+	CleanContainers   *bool
+	Override          *string
+	DefaultFlagSet    *flag.FlagSet
+	ImageFlagSet      *flag.FlagSet
+	CleanFlagSet      *flag.FlagSet
+	TestrunnerFlagSet *flag.FlagSet
 }
 
 // parse top-level args and set test flag parsing mode
@@ -72,6 +74,20 @@ func (f *TestFlags) SetFlagVals() {
 	case "clean":
 		f.ImageFlagSet = flag.NewFlagSet("clean", flag.ExitOnError)
 		f.AddCleanFlags(f.CleanFlagSet)
+	case "testrunner":
+		// testrunner flagset
+		f.TestrunnerFlagSet = flag.NewFlagSet("testrunner", flag.ExitOnError)
+		f.AddDefaultFlags(f.TestrunnerFlagSet)
+
+		// include image flags and
+		f.AddImageFlags(f.TestrunnerFlagSet)
+
+		// override image flags for testrunner mode
+		*f.ImageName = "sequoiatools/testrunner"
+		*f.ImageWait = true
+		*f.LogLevel = 2
+		*f.SoftCleanup = true
+
 	default:
 		// default cli flags
 		f.DefaultFlagSet = flag.NewFlagSet("default", flag.ExitOnError)
@@ -84,6 +100,20 @@ func (f *TestFlags) Parse() {
 	switch f.Mode {
 	case "image":
 		f.ImageFlagSet.Parse(f.Args[1:])
+	case "testrunner":
+		f.TestrunnerFlagSet.Parse(f.Args[1:])
+
+		// override scope with ini file
+		flagArgs := strings.Split(*f.ImageCommand, " ")
+		for i, opt := range flagArgs {
+			argOffset := i + 1
+			if opt == "-i" {
+				if len(flagArgs) >= argOffset {
+					iniFile := flagArgs[argOffset]
+					*f.ScopeFile = fmt.Sprintf("%s/%s", "containers/testrunner/src", iniFile)
+				}
+			}
+		}
 	default:
 		f.DefaultFlagSet.Parse(f.Args)
 	}

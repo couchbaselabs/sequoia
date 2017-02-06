@@ -118,7 +118,7 @@ func NewTest(flags TestFlags, cm *ContainerManager) Test {
 	var templates = make(map[string][]ActionSpec)
 	var actions []ActionSpec
 	switch flags.Mode {
-	case "image":
+	case "image", "testrunner":
 		actions = ActionsFromArgs(*flags.ImageName, *flags.ImageCommand, *flags.ImageWait)
 	default:
 		actions = ActionsFromFile(*flags.TestFile)
@@ -134,7 +134,7 @@ func (t *Test) Run(scope Scope) {
 	// do optional setup
 	if *t.Flags.SkipSetup == false {
 		// if in default mode purge all containers
-		if (t.Flags.Mode != "image") && (*t.Flags.SoftCleanup == false) {
+		if (t.Flags.Mode == "") && (*t.Flags.SoftCleanup == false) {
 			if scope.Provider.GetType() == "swarm" {
 				t.Cm.RemoveAllServices()
 			} else {
@@ -142,7 +142,7 @@ func (t *Test) Run(scope Scope) {
 			}
 		}
 		scope.Provider.ProvideCouchbaseServers(scope.Spec.Servers)
-		if t.Flags.Mode != "image" {
+		if t.Flags.Mode == "" {
 			scope.Setup()
 		}
 	} else if (scope.Provider.GetType() != "docker") &&
