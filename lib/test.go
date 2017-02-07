@@ -466,9 +466,6 @@ func (t *Test) runActions(scope Scope, loop int, actions []ActionSpec) {
 		if action.Entrypoint != "" {
 			task.Entrypoint = []string{action.Entrypoint}
 		}
-		if t.Flags.Mode == "testrunner" {
-			task.Binds = t.Flags.ContainerBinds
-		}
 
 		// run task
 		if task.Async == true {
