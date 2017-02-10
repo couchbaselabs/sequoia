@@ -1,0 +1,14 @@
+-
+   image: sequoiatools/cbq
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index metaindex on `bucket-1`(meta().id)'"
+   wait: true
+-
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create primary index on `bucket-1`'"
+   wait: true
+-
+  image: sequoiatools/ycsb
+  command: "load couchbase2 -P workloads/workloade -p recordcount=10000000 -p threadcount=160 -p couchbase.host={{.QueryNode}} -p couchbase.bucket={{.Bucket}} -p couchbase.username=Administrator -p couchbase.password=password -p couchbase.boost=48 -p couchbase.epoll=true -p exportfile=ycsb.log"
+-
+  image: sequoiatools/ycsb
+  command: "run couchbase2 -P workloads/workloade -p recordcount=10000000 -p threadcount=160 -p couchbase.host={{.QueryNode}} -p couchbase.bucket={{.Bucket}} -p couchbase.username=Administrator -p couchbase.password=password -p couchbase.boost=48 -p couchbase.epoll=true -p exportfile=ycsb.log -p operationcount=10000000 -p maxexecutiontime=600"
+  wait: true
