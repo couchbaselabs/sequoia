@@ -1,12 +1,12 @@
 # sequoia
-Scalable couchbase testing with docker
+Scalable testing with docker
 
 **Install Docker**
 * Mac - https://docs.docker.com/mac/
 * Ubuntu - https://docs.docker.com/engine/installation/linux/ubuntulinux/
 * CentOS - https://docs.docker.com/engine/installation/linux/centos/
 
-**Install Go**
+**Install Go (1.7+)**
 * Ubuntu - https://github.com/golang/go/wiki/Ubuntu
 * CentOS - http://itekblog.com/centos-golang/
 * Any - https://golang.org/dl/ 
