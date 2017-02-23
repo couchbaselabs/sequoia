@@ -22,5 +22,5 @@ servers: # define 4 servers
        query: 1
        index: 1
        data: 2
-     index_storage: memory_optimized
+     index_storage: plasma
      buckets: bucket-1
