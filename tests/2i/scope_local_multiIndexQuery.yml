@@ -16,7 +16,7 @@ servers: # each server tag represents a cluster
       count: 5
       ram: 70%
       index_ram: 20%
-      index_storage: memory_optimized
+      index_storage: plasma
       services:
         index: 1
         index_start: 3
