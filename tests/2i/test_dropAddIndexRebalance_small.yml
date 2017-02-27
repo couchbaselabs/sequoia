@@ -2,29 +2,29 @@
 -
   image: sequoiatools/spring
   requires:  "{{eq true .DoOnce}}"
-  command: "-c 100  -o {{.Scale 1}} -n 25 -s 1024  -i {{.Scale 1}} cb://@{{.Orchestrator}}:{{.RestPort}}/{{.Bucket}}"
+  command: "-c 100  -o {{.Scale 10}} -n 25 -s 1024  -i {{.Scale 1}} cb://@{{.Orchestrator}}:{{.RestPort}}/{{.Bucket}}"
 -
-  command: "-c 100  -o {{.Scale 1}} -n 25 -s 512  -i {{.Scale 1}} cb://@{{.Orchestrator}}:{{.RestPort}}/{{.NthBucket 1}}"
+  command: "-c 100  -o {{.Scale 10}} -n 25 -s 512  -i {{.Scale 1}} cb://@{{.Orchestrator}}:{{.RestPort}}/{{.NthBucket 1}}"
 -
-  command: "-c 100  -o {{.Scale 1}} -n 25 -s 256  -i {{.Scale 1}} cb://@{{.Orchestrator}}:{{.RestPort}}/{{.NthBucket 2}}"
+  command: "-c 100  -o {{.Scale 10}} -n 25 -s 256  -i {{.Scale 1}} cb://@{{.Orchestrator}}:{{.RestPort}}/{{.NthBucket 2}}"
 -
-  command: "-c 100  -o {{.Scale 1}} -n 25 -s 128  -i {{.Scale 1}} cb://@{{.Orchestrator}}:{{.RestPort}}/{{.NthBucket 3}}"
+  command: "-c 100  -o {{.Scale 10}} -n 25 -s 128  -i {{.Scale 1}} cb://@{{.Orchestrator}}:{{.RestPort}}/{{.NthBucket 3}}"
   wait: true
 
 
 ############### run mutations ################
 -
   image: sequoiatools/spring
-  command: "-u 80 -c 10 -d 10  -o {{.Scale 1}} -n 25 -s 1024  -i {{.Scale 1}} cb://@{{.Orchestrator}}:{{.RestPort}}/{{.Bucket}}"
+  command: "-u 80 -c 10 -d 10  -o {{.Scale 10}} -n 25 -s 1024  -i {{.Scale 1}} cb://@{{.Orchestrator}}:{{.RestPort}}/{{.Bucket}}"
   repeat: -1
 -
-  command: "-u 80 -c 10 -d 10  -o {{.Scale 1}} -n 25 -s 512  -i {{.Scale 1}} cb://@{{.Orchestrator}}:{{.RestPort}}/{{.NthBucket 1}}"
+  command: "-u 80 -c 10 -d 10  -o {{.Scale 10}} -n 25 -s 512  -i {{.Scale 1}} cb://@{{.Orchestrator}}:{{.RestPort}}/{{.NthBucket 1}}"
   repeat: -1
 -
-  command: "-u 80 -c 10 -d 10  -o {{.Scale 1}} -n 25 -s 256  -i {{.Scale 1}} cb://@{{.Orchestrator}}:{{.RestPort}}/{{.NthBucket 2}}"
+  command: "-u 80 -c 10 -d 10  -o {{.Scale 10}} -n 25 -s 256  -i {{.Scale 1}} cb://@{{.Orchestrator}}:{{.RestPort}}/{{.NthBucket 2}}"
   repeat: -1
 -
-  command: "-u 80 -c 10 -d 10  -o {{.Scale 1}} -n 25 -s 128  -i {{.Scale 1}} cb://@{{.Orchestrator}}:{{.RestPort}}/{{.NthBucket 3}}"
+  command: "-u 80 -c 10 -d 10  -o {{.Scale 10}} -n 25 -s 128  -i {{.Scale 1}} cb://@{{.Orchestrator}}:{{.RestPort}}/{{.NthBucket 3}}"
   repeat: -1
 
 
