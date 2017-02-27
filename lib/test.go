@@ -194,6 +194,12 @@ func (t *Test) Run(scope Scope) {
 		}
 	}
 
+	// in exec mode, just run and exit control
+	if *t.Flags.Exec == true {
+		t.runActions(scope, loops, t.Actions)
+		return
+	}
+
 	if repeat == -1 {
 		// run forever
 		for {
