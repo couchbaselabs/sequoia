@@ -1,3 +1,5 @@
 #! /bin/bash
+if [ $1 == "wait" ]; then tail -f /dev/null; fi  # do not run test
+
 ./host2ip.sh $(echo "$@" | sed -e 's/.*-i //' -e 's/ini.*/ini/')
 exec python ${0}.py "$@"

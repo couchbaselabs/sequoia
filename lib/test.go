@@ -135,6 +135,7 @@ func NewTest(flags TestFlags, cm *ContainerManager) Test {
 			// don't wait for testrunner to run
 			actions[0].Wait = false
 			actions[0].Alias = "testrunner_id"
+			actions[0].Command = "wait"
 
 			// add exec action to test
 			actions = append(actions, execAction)
