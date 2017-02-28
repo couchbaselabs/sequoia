@@ -14,6 +14,8 @@ RUN ../cmake/configure --prefix=/usr && \
 WORKDIR /
 RUN git clone git://github.com/couchbase/testrunner.git
 WORKDIR testrunner
+ARG BRANCH=master
+RUN git checkout $BRANCH
 
 # install python deps
 RUN pip2 install --upgrade packaging appdirs
