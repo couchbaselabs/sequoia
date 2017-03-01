@@ -15,18 +15,17 @@
 ############### run mutations ################
 -
   image: sequoiatools/spring
-  command: "-u 80 -c 10 -d 10  -o {{.Scale 10}} -n 25 -s 1024  -i {{.Scale 1}} cb://@{{.Orchestrator}}:{{.RestPort}}/{{.Bucket}}"
+  command: "-u 80 -c 10 -d 10  -n 25 -s 1024  -i {{.Scale 10}} cb://@{{.Orchestrator}}:{{.RestPort}}/{{.Bucket}}"
   repeat: -1
 -
-  command: "-u 80 -c 10 -d 10  -o {{.Scale 10}} -n 25 -s 512  -i {{.Scale 1}} cb://@{{.Orchestrator}}:{{.RestPort}}/{{.NthBucket 1}}"
+  command: "-u 80 -c 10 -d 10  -n 25 -s 512  -i {{.Scale 10}} cb://@{{.Orchestrator}}:{{.RestPort}}/{{.NthBucket 1}}"
   repeat: -1
 -
-  command: "-u 80 -c 10 -d 10  -o {{.Scale 10}} -n 25 -s 256  -i {{.Scale 1}} cb://@{{.Orchestrator}}:{{.RestPort}}/{{.NthBucket 2}}"
+  command: "-u 80 -c 10 -d 10  -n 25 -s 256  -i {{.Scale 10}} cb://@{{.Orchestrator}}:{{.RestPort}}/{{.NthBucket 2}}"
   repeat: -1
 -
-  command: "-u 80 -c 10 -d 10  -o {{.Scale 10}} -n 25 -s 128  -i {{.Scale 1}} cb://@{{.Orchestrator}}:{{.RestPort}}/{{.NthBucket 3}}"
+  command: "-u 80 -c 10 -d 10  -n 25 -s 128  -i {{.Scale 10}} cb://@{{.Orchestrator}}:{{.RestPort}}/{{.NthBucket 3}}"
   repeat: -1
-
 
 
 ###############  create indexes ################
@@ -34,34 +33,33 @@
    image: sequoiatools/cbq
    command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_coins on `default`(coins)'"
 -
-   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_email on `default`(email)'"
--
-   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_city on `default`(city)'"
-   wait: true
--
-   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create primary index on `default`'"
--
    command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o1_coins on `other-1`(coins)'"
-   wait: true
--
-   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o1_email on `other-1`(email)'"
--
-   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o1_city on `other-1`(city)'"
 -
    command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o2_coins on `other-2`(coins)'"
 -
-   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o2_email on `other-2`(email)'"
--
-   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o2_city on `other-2`(city)'"
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o3_coins on `other-3`(coins)'"
    wait: true
 -
-   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o3_coins on `other-3`(coins)'"
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_email on `default`(email)'"
+-
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o1_email on `other-1`(email)'"
+-
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o2_email on `other-2`(email)'"
 -
    command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o3_email on `other-3`(email)'"
+   wait: true
+-
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_city on `default`(city)'"
+-
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o1_city on `other-1`(city)'"
+-
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o2_city on `other-2`(city)'"
 -
    command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o3_city on `other-3`(city)'"
    wait: true
-
+-
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create primary index on `default`'"
+   wait: true
 
 # ###############  query index ################
 -
