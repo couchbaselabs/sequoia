@@ -589,6 +589,17 @@ func cliCommandValidator(version string, command []string) []string {
 			continue
 		}
 
+		// >5.0 builds
+		if vMajor >= 5.0 {
+			// remove -u/-p from cluster_init
+			if command[0] == "cluster-init" {
+				if arg == "-u" ||
+					arg == "-p" {
+					continue
+				}
+			}
+		}
+
 		// <4.5 builds
 		if vMajor < 4.5 {
 			if arg == "--index-storage-setting" ||
