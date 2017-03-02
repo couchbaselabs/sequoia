@@ -598,6 +598,17 @@ func cliCommandValidator(version string, command []string) []string {
 					continue
 				}
 			}
+			// rename memory_optimized/forestdb to memopt/default, respectively
+			if arg == "--index-storage-setting" {
+				if len(command) > (i + 1) {
+					if command[i+1] == "memory_optimized" {
+						command[i+1] = "memopt"
+					}
+					if command[i+1] == "forestdb" {
+						command[i+1] = "default"
+					}
+				}
+			}
 		}
 
 		// <4.5 builds
