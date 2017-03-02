@@ -16,8 +16,9 @@ servers: # define 4 servers
      rest_password: password
      rest_port: 8091
      services:
-       query: 1
-       index: 1
+       query: 4
+       index: 4
+       data: 4
      init_nodes: 4
-     index_storage: memory_optimized
+     index_storage: memopt
      buckets: bucket-1

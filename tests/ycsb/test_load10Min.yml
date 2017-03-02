@@ -1,3 +1,15 @@
+### YCSB TEST 
+#
+#  Runs load phase of workloade followed by run phase
+#
+#  By default the test runs with 4 threads and a recordcount of 250K
+#  Set a scale value of 40 to amplify this to 160 threads and 10M items by starting
+#  test with params:
+#     ./sequoia ... -scale=40
+#
+######################
+
+# INIT Phase
 -
    image: sequoiatools/cbq
    command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index metaindex on `bucket-1`(meta().id)'"
@@ -5,10 +17,35 @@
 -
    command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create primary index on `bucket-1`'"
    wait: true
+
+
+# LOAD Phase
 -
   image: sequoiatools/ycsb
-  command: "load couchbase2 -P workloads/workloade -p recordcount=10000000 -p threadcount=160 -p couchbase.host={{.QueryNode}} -p couchbase.bucket={{.Bucket}} -p couchbase.username=Administrator -p couchbase.password=password -p couchbase.boost=48 -p couchbase.epoll=true -p exportfile=ycsb.log"
--
-  image: sequoiatools/ycsb
-  command: "run couchbase2 -P workloads/workloade -p recordcount=10000000 -p threadcount=160 -p couchbase.host={{.QueryNode}} -p couchbase.bucket={{.Bucket}} -p couchbase.username=Administrator -p couchbase.password=password -p couchbase.boost=48 -p couchbase.epoll=true -p exportfile=ycsb.log -p operationcount=10000000 -p maxexecutiontime=600"
+  command: "load couchbase2 -P workloads/workloade -p recordcount={{.Scale 250000}} -p threadcount={{.Scale 4}} -p couchbase.host={{.QueryNode}} -p couchbase.bucket={{.Bucket}} -p couchbase.boost=48 -p couchbase.epoll=true -p exportfile=ycsb.log"
+  alias: LoadContainer
   wait: true
+
+# RUN Phase
+-
+  image: sequoiatools/ycsb
+  command: "run couchbase2 -P workloads/workloade -p recordcount={{.Scale 250000}} -p threadcount={{.Scale 4}} -p couchbase.host={{.QueryNode}} -p couchbase.bucket={{.Bucket}} -p couchbase.boost=48 -p couchbase.epoll=true -p exportfile=ycsb.log -p operationcount=10000000 -p maxexecutiontime=600"
+  alias: RunContainer
+  wait: true
+
+
+# SAVE Logs
+-
+  client:
+    op: cp
+    container: "LoadContainer"
+    frompath: "ycsb.log"
+    topath: "logs/ycsb_load.log"
+
+-
+  # save run results
+  client:
+    op: cp
+    container: "RunContainer"
+    frompath: "ycsb.log"
+    topath: "logs/ycsb_run.log"
