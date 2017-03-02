@@ -214,12 +214,32 @@ func (s *Scope) InitNodes() {
 			"-p", server.RestPassword,
 		}
 
-		if s.Provider.GetType() == "file" {
-			command = append(command, "--node-init-data-path", server.DataPath)
+		// set data path, or use default if unset
+		if server.DataPath != "" {
+			command = append(
+				command,
+				"--node-init-data-path",
+				server.DataPath)
+		} else {
+			command = append(
+				command,
+				"--node-init-data-path",
+				"/opt/couchbase/var/lib/couchbase/data")
 		}
-		if s.Provider.GetType() == "file" {
-			command = append(command, "--node-init-index-path", server.IndexPath)
+
+		// set index path, or use default if unset
+		if server.IndexPath != "" {
+			command = append(
+				command,
+				"--node-init-index-path",
+				server.IndexPath)
+		} else {
+			command = append(
+				command,
+				"--node-init-data-path",
+				"/opt/couchbase/var/lib/couchbase/data")
 		}
+
 		desc := "init node " + ip
 		task := ContainerTask{
 			Describe: desc,
