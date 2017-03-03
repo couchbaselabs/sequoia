@@ -236,7 +236,7 @@ func (s *Scope) InitNodes() {
 		} else {
 			command = append(
 				command,
-				"--node-init-data-path",
+				"--node-init-index-path",
 				"/opt/couchbase/var/lib/couchbase/data")
 		}
 
