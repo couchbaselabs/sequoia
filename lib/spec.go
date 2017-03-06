@@ -152,9 +152,10 @@ func (s *ScopeSpec) ApplyToAllServersAsync(operation func(string, *ServerSpec, c
 
 		for _, serverName := range server.Names[:endIdx] {
 			c := make(chan bool)
-			go operation(serverName, &server, c)
+
+			// allowed apply func to modify server
+			go operation(serverName, &s.Servers[i], c)
 			waitChans = append(waitChans, c)
-			s.Servers[i] = server // allowed apply func to modify server
 		}
 	}
 
@@ -176,8 +177,8 @@ func (s *ScopeSpec) ApplyToServers(operation func(string, *ServerSpec),
 			endIdx = len(server.Names)
 		}
 		for _, serverName := range server.Names[startIdx:endIdx] {
-			operation(serverName, &server)
-			s.Servers[i] = server // allowed apply func to modify server
+			// allowed apply func to modify server
+			operation(serverName, &s.Servers[i])
 		}
 	}
 }
@@ -304,6 +305,7 @@ func SetYamlSpecDefaults(spec *ServerSpec) {
 	if spec.RestPassword == "" {
 		spec.RestPassword = "password"
 	}
+
 }
 
 func SpecFromIni(fileName string) ScopeSpec {
