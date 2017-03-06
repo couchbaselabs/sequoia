@@ -26,23 +26,27 @@
    wait: true
 -
    command: "xdcr-replicate -c {{.Orchestrator}}
+        --create
         --xdcr-cluster-name remote
         --xdcr-from-bucket {{.Nodes | .Cluster 0 | bucket 0}}
         --xdcr-to-bucket {{.Nodes | .Cluster 1 | bucket 0}}"
    wait: true
 -
    command: "xdcr-replicate -c {{.Orchestrator}}
+        --create
         --xdcr-cluster-name remote
         --xdcr-from-bucket {{.Nodes | .Cluster 0 | bucket 1}}
         --xdcr-to-bucket {{.Nodes | .Cluster 1 | bucket 1}}"
    wait: true
 -
    command: "xdcr-replicate -c {{.Orchestrator}}
+        --create
         --xdcr-cluster-name remote
         --xdcr-from-bucket {{.Nodes | .Cluster 0 | bucket 2}}
         --xdcr-to-bucket {{.Nodes | .Cluster 1 | bucket 2}}"
 -
    command: "xdcr-replicate -c {{.Orchestrator}}
+        --create
         --xdcr-cluster-name remote
         --xdcr-from-bucket {{.Nodes | .Cluster 0 | bucket 3}}
         --xdcr-to-bucket {{.Nodes | .Cluster 1 | bucket 3}}"

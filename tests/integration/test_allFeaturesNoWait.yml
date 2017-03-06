@@ -87,6 +87,7 @@
    wait: true
 -
    command: "xdcr-replicate -c {{.Orchestrator}}
+        --create
         --xdcr-cluster-name remote
         --xdcr-from-bucket {{.Bucket}}
         --xdcr-to-bucket {{.Nodes | .Cluster 1 | bucket 0}}"

@@ -33,6 +33,7 @@
    wait: true
 -
    command: "xdcr-replicate -c {{.Orchestrator}}
+        --create
         --xdcr-cluster-name remote
         --xdcr-from-bucket lww
         --xdcr-to-bucket lww"
@@ -129,6 +130,7 @@
    wait: true
 -
    command: "xdcr-replicate -c {{.Nodes | .Cluster 1 | net 0}}
+        --create
         --xdcr-cluster-name local
         --xdcr-from-bucket lww
         --xdcr-to-bucket lww"
