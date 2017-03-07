@@ -83,13 +83,13 @@
 -
    image: sequoiatools/couchbase-cli
    requires:  "{{eq true .DoOnce }}"
-   command:  "xdcr-setup -c {{.Orchestrator}} --create --xdcr-cluster-name remote
+   command:  "xdcr-setup -c {{.Orchestrator}}:{{.RestPort}} --create --xdcr-cluster-name remote
         --xdcr-hostname {{.Nodes | .Cluster 1 | net 0}}
         --xdcr-username {{.Nodes | .Cluster 1 | .Attr `rest_username`}}
         --xdcr-password {{.Nodes | .Cluster 1 | .Attr `rest_password`}}"
    wait: true
 -
-   command: "xdcr-replicate -c {{.Orchestrator}}
+   command: "xdcr-replicate -c {{.Orchestrator}}:{{.RestPort}}
         --create
         --xdcr-cluster-name remote
         --xdcr-from-bucket {{.Bucket}}
@@ -106,7 +106,7 @@
 #============ swap rebalance ============
 -
   template: rebalance_swap
-  args: "{{.NthDataNode 1}}, {{.NthDataNode 2}}"
+  args: "{{.NthDataNode 1}}:{{.RestPort}}, {{.NthDataNode 2}}:{{.RestPort}}"
   wait: true
 
 #============ quick update batch ============
@@ -118,14 +118,14 @@
 #============ swap failover ============
 -
    image: sequoiatools/couchbase-cli
-   command: "server-add -c  {{.Orchestrator}}
-       --server-add  {{.NthDataNode 2}}
+   command: "server-add -c  {{.Orchestrator}}:{{.RestPort}}
+       --server-add  {{.NthDataNode 2}}:{{.RestPort}}
        -u  {{.RestUsername}} -p  {{.RestPassword}}
        --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
    wait: true
 -
-   command: "failover -c {{.Orchestrator}}
-       --server-failover {{.NthDataNode 1}}
+   command: "failover -c {{.Orchestrator}}:{{.RestPort}}
+       --server-failover {{.NthDataNode 1}}:{{.RestPort}}
        -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
    wait: true
 -
@@ -142,18 +142,18 @@
 #============ swap hard failover ============
 -
    image: sequoiatools/couchbase-cli  # as indexer
-   command: "server-add -c  {{.Orchestrator}}
-       --server-add  {{.NthDataNode 1}}
+   command: "server-add -c  {{.Orchestrator}}:{{.RestPort}}
+       --server-add  {{.NthDataNode 1}}:{{.RestPort}}
        -u  {{.RestUsername}} -p  {{.RestPassword}}
        --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
    wait: true
 -
-   command: "failover -c {{.Orchestrator}}
-      --server-failover {{.NthDataNode 2}}
+   command: "failover -c {{.Orchestrator}}:{{.RestPort}}
+      --server-failover {{.NthDataNode 2}}:{{.RestPort}}
       -u  {{.RestUsername}} -p  {{.RestPassword}}"
    wait: true
 -
-   command: "failover -c {{.Orchestrator}}
+   command: "failover -c {{.Orchestrator}}:{{.RestPort}}
       --server-failover {{.NthDataNode 3}}
       -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
    wait: true
@@ -166,20 +166,20 @@
 #============ quick update batch ============
 -
    image: sequoiatools/pillowfight
-   command: "-U  {{.Orchestrator}} -I {{.Scale 1000}} -B {{.Scale 100}} -t 4 -c 100"
+   command: "-U  {{.Orchestrator}}:{{.RestPort}} -I {{.Scale 1000}} -B {{.Scale 100}} -t 4 -c 100"
    wait: true
 
 #============ add back============
 -
    image: sequoiatools/couchbase-cli
-   command: "server-add -c  {{.Orchestrator}}
-       --server-add  {{.NthDataNode 2}}
+   command: "server-add -c  {{.Orchestrator}}:{{.RestPort}}
+       --server-add  {{.NthDataNode 2}}:{{.RestPort}}
        -u  {{.RestUsername}} -p  {{.RestPassword}}
        --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
    wait: true
 -
-   command: "server-add -c  {{.Orchestrator}}
-       --server-add  {{.NthDataNode 3}}
+   command: "server-add -c  {{.Orchestrator}}:{{.RestPort}}
+       --server-add  {{.NthDataNode 3}}:{{.RestPort}}
        -u  {{.RestUsername}} -p  {{.RestPassword}}
        --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
    wait: true
