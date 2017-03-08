@@ -76,7 +76,7 @@
 #============ rebalance out a node============
 -
   template: rebalance_out
-  args: "{{.NthDataNode 1}}"
+  args: "{{.NthDataNode 1}}:{{.RestPort}}"
   wait: true
 
 #============ start xdcr replications ============
@@ -154,7 +154,7 @@
    wait: true
 -
    command: "failover -c {{.Orchestrator}}:{{.RestPort}}
-      --server-failover {{.NthDataNode 3}}
+      --server-failover {{.NthDataNode 3}}:{{.RestPort}}
       -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
    wait: true
 -
