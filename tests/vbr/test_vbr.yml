@@ -19,33 +19,33 @@
 -
    image: sequoiatools/couchbase-cli
    requires:  "{{eq true .DoOnce }}"
-   command:  "xdcr-setup -c {{.Orchestrator}} --create --xdcr-cluster-name remote
+   command:  "xdcr-setup -c {{.Orchestrator}}:{{.RestPort}} --create --xdcr-cluster-name remote
         --xdcr-hostname {{.Nodes | .Cluster 1 | net 0}}
         --xdcr-username {{.Nodes | .Cluster 1 | .Attr `rest_username`}}
         --xdcr-password {{.Nodes | .Cluster 1 | .Attr `rest_password`}}"
    wait: true
 -
-   command: "xdcr-replicate -c {{.Orchestrator}}
+   command: "xdcr-replicate -c {{.Orchestrator}}:{{.RestPort}}
         --create
         --xdcr-cluster-name remote
         --xdcr-from-bucket {{.Nodes | .Cluster 0 | bucket 0}}
         --xdcr-to-bucket {{.Nodes | .Cluster 1 | bucket 0}}"
    wait: true
 -
-   command: "xdcr-replicate -c {{.Orchestrator}}
+   command: "xdcr-replicate -c {{.Orchestrator}}:{{.RestPort}}
         --create
         --xdcr-cluster-name remote
         --xdcr-from-bucket {{.Nodes | .Cluster 0 | bucket 1}}
         --xdcr-to-bucket {{.Nodes | .Cluster 1 | bucket 1}}"
    wait: true
 -
-   command: "xdcr-replicate -c {{.Orchestrator}}
+   command: "xdcr-replicate -c {{.Orchestrator}}:{{.RestPort}}
         --create
         --xdcr-cluster-name remote
         --xdcr-from-bucket {{.Nodes | .Cluster 0 | bucket 2}}
         --xdcr-to-bucket {{.Nodes | .Cluster 1 | bucket 2}}"
 -
-   command: "xdcr-replicate -c {{.Orchestrator}}
+   command: "xdcr-replicate -c {{.Orchestrator}}:{{.RestPort}}
         --create
         --xdcr-cluster-name remote
         --xdcr-from-bucket {{.Nodes | .Cluster 0 | bucket 3}}
@@ -54,15 +54,15 @@
 #============ 3 rebalance in at cluster A and B ============
 -
    image: sequoiatools/couchbase-cli
-   command: "server-add -c  {{.Orchestrator}}
-       --server-add  {{.NthDataNode 3}}
+   command: "server-add -c  {{.Orchestrator}}:{{.RestPort}}
+       --server-add  {{.NthDataNode 3}}:{{.RestPort}}
        -u  {{.RestUsername}} -p  {{.RestPassword}}
        --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
    wait: true
 -
    image: sequoiatools/couchbase-cli
-   command: "server-add -c  {{.Nodes | .Cluster 1 | net 0}}
-       --server-add  {{.Nodes | .Cluster 1 | net 3}}
+   command: "server-add -c  {{.Nodes | .Cluster 1 | net 0}}:{{.RestPort}}
+       --server-add  {{.Nodes | .Cluster 1 | net 3}}:{{.RestPort}}
        -u  {{.RestUsername}} -p  {{.RestPassword}}
        --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
    wait: true
@@ -101,7 +101,7 @@
    wait: true
 -
    image: sequoiatools/couchbase-cli
-   command: "rebalance-stop -c {{.Orchestrator}}:8091
+   command: "rebalance-stop -c {{.Orchestrator}}:{{.RestPort}}
         -u {{.RestUsername}} -p  {{.RestPassword}}"
 -
   template: rebalance
@@ -112,14 +112,14 @@
 #============ 7 rebalance out 1 node on cluster A & B============
 -
    image: sequoiatools/couchbase-cli
-   command: "rebalance -c  {{.Orchestrator}}
-       --server-remove {{.Nodes | .Cluster 0 | net 3}}
+   command: "rebalance -c  {{.Orchestrator}}:{{.RestPort}}
+       --server-remove {{.Nodes | .Cluster 0 | net 3}}:{{.RestPort}}
        -u  {{.RestUsername}} -p  {{.RestPassword}}"
    wait: true
 -
    image: sequoiatools/couchbase-cli
-   command: "rebalance -c  {{.Nodes | .Cluster 1 | net 0}}
-       --server-remove  {{.Nodes | .Cluster 1 | net 3}}
+   command: "rebalance -c  {{.Nodes | .Cluster 1 | net 0}}:{{.RestPort}}
+       --server-remove  {{.Nodes | .Cluster 1 | net 3}}:{{.RestPort}}
        -u  {{.RestUsername}} -p  {{.RestPassword}}"
    wait: true
 -
@@ -138,15 +138,15 @@
 #============ 8 rebalance in 2 nodes on cluster A ============
 -
    image: sequoiatools/couchbase-cli
-   command: "server-add -c  {{.Orchestrator}}
-       --server-add  {{.Nodes | .Cluster 0 | net 3}}
+   command: "server-add -c  {{.Orchestrator}}:{{.RestPort}}
+       --server-add  {{.Nodes | .Cluster 0 | net 3}}:{{.RestPort}}
        -u  {{.RestUsername}} -p  {{.RestPassword}}
        --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
    wait: true
 -
    image: sequoiatools/couchbase-cli
-   command: "server-add -c  {{.Orchestrator}}
-       --server-add  {{.Nodes | .Cluster 1 | net 3}}
+   command: "server-add -c  {{.Orchestrator}}:{{.RestPort}}
+       --server-add  {{.Nodes | .Cluster 1 | net 3}}:{{.RestPort}}
        -u  {{.RestUsername}} -p  {{.RestPassword}}
        --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
    wait: true

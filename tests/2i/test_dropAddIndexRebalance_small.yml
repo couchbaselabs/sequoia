@@ -86,7 +86,7 @@
 ###############  remove data node and rebalance ################
 -
    image: sequoiatools/couchbase-cli
-   command:  "rebalance -c  {{.Orchestrator}} --server-remove {{.ClusterNodes | net 3}}  -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   command:  "rebalance -c  {{.Orchestrator}}:{{.RestPort}} --server-remove {{.ClusterNodes | net 3}}:{{.RestPort}}  -u  {{.RestUsername}} -p  {{.RestPassword}}"
    alias: SwapRebId
 
 
@@ -120,15 +120,15 @@
 ###############  add previously removed data node and rebalance ################
 -
    image: sequoiatools/couchbase-cli
-   command: "server-add -c  {{.Orchestrator}}
-       --server-add  {{.ClusterNodes | net 3}}
+   command: "server-add -c  {{.Orchestrator}}:{{.RestPort}}
+       --server-add  {{.ClusterNodes | net 3}}:{{.RestPort}}
        --services data
        -u  {{.RestUsername}} -p  {{.RestPassword}}
        --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
    wait: true
 -
    image: sequoiatools/couchbase-cli
-   command:  "rebalance -c  {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   command:  "rebalance -c  {{.Orchestrator}}:{{.RestPort}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
    alias: AddRebId
 
 ###############  drop all indexes ################

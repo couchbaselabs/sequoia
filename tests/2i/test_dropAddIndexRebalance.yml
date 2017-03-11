@@ -65,15 +65,15 @@
 ###############  swap indexer ################
 -
    image: sequoiatools/couchbase-cli
-   command: "server-add -c  {{.Orchestrator}}
-       --server-add  {{.ClusterNodes | net 6}}
+   command: "server-add -c  {{.Orchestrator}}:{{.RestPort}}
+       --server-add  {{.ClusterNodes | net 6}}:{{.RestPort}}
        --services index,data
        -u  {{.RestUsername}} -p  {{.RestPassword}}
        --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
    wait: true
 -
    image: sequoiatools/couchbase-cli
-   command:  "rebalance -c  {{.Orchestrator}} --server-remove {{.Nodes | .Service `index` | net 1}}  -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   command:  "rebalance -c  {{.Orchestrator}}:{{.RestPort}} --server-remove {{.Nodes | .Service `index` | net 1}}:{{.RestPort}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
    alias: SwapRebId
 
 
@@ -109,19 +109,19 @@
 ###############  swap hard-failover(orchestrator.index) ################
 -
    image: sequoiatools/couchbase-cli
-   command: "failover -c {{.Orchestrator}}
-       --server-failover {{.Nodes | .Service `index` | net 0}} --force
+   command: "failover -c {{.Orchestrator}}:{{.RestPort}}
+       --server-failover {{.Nodes | .Service `index` | net 0}}:{{.RestPort}} --force
        -u  {{.RestUsername}} -p  {{.RestPassword}}"
    wait: true
 -
-   command: "server-add -c {{.Orchestrator}}
-       --server-add  {{.ClusterNodes | net 7}}
+   command: "server-add -c {{.Orchestrator}}:{{.RestPort}}
+       --server-add  {{.ClusterNodes | net 7}}:{{.RestPort}}
        --services index,data
        -u  {{.RestUsername}} -p  {{.RestPassword}}
        --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
    wait: true
 -
-   command:  "rebalance -c {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   command:  "rebalance -c {{.Orchestrator}}:{{.RestPort}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
    alias: SwapFailId
 
 ###############  'when' hard failover is done add back all indexes ################
@@ -170,31 +170,31 @@
 -
    before: "{{.Status `SwapFailId` | eq `exited`}}"
    image: sequoiatools/couchbase-cli
-   command: "failover -c  {{.Orchestrator}}
-       --server-failover {{.ClusterNodes | net 6}}
+   command: "failover -c  {{.Orchestrator}}:{{.RestPort}}
+       --server-failover {{.ClusterNodes | net 6}}:{{.RestPort}}
        -u  {{.RestUsername}} -p  {{.RestPassword}}"
    wait: true
 -
-   command:  "rebalance -c  {{.Orchestrator}}  --server-remove {{.ClusterNodes | net 7}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   command:  "rebalance -c  {{.Orchestrator}}:{{.RestPort}} --server-remove {{.ClusterNodes | net 7}}:{{.RestPort}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
    wait: true
 
 
 #### add back index nodes ####
 -
   image: sequoiatools/couchbase-cli
-  command: "server-add -c  {{.Orchestrator}}
-      --server-add  {{.ClusterNodes | net 4}}
+  command: "server-add -c  {{.Orchestrator}}:{{.RestPort}}
+      --server-add  {{.ClusterNodes | net 4}}:{{.RestPort}}
       --services index
       -u  {{.RestUsername}} -p  {{.RestPassword}}
       --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
   wait: true
 -
-  command: "server-add -c  {{.Orchestrator}}
-      --server-add  {{.ClusterNodes | net 5}}
+  command: "server-add -c  {{.Orchestrator}}:{{.RestPort}}
+      --server-add  {{.ClusterNodes | net 5}}:{{.RestPort}}
       --services index
       -u  {{.RestUsername}} -p  {{.RestPassword}}
       --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
   wait: true
 -
-  command:  "rebalance -c  {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
+  command:  "rebalance -c  {{.Orchestrator}}:{{.RestPort}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
   wait: true
