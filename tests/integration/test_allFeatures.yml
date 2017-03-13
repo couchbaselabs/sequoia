@@ -106,7 +106,7 @@
 #============ swap rebalance ============
 -
   template: rebalance_swap
-  args: "{{.NthDataNode 1}}:{{.RestPort}}, {{.NthDataNode 2}}:{{.RestPort}}"
+  args: "{{.NthDataNode 1}}, {{.NthDataNode 2}}"
   wait: true
 
 #============ quick update batch ============
