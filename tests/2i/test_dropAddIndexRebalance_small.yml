@@ -2,29 +2,42 @@
 -
   image: sequoiatools/spring
   requires:  "{{eq true .DoOnce}}"
-  command: "-c 100  -o {{.Scale 10}} -n 25 -s 1024  -i {{.Scale 1}} cb://@{{.Orchestrator}}:{{.RestPort}}/{{.Bucket}}"
+  command: "-c 100  -o {{.Scale 10}} -n 25 -s 1024 cb://@{{.Orchestrator}}:{{.RestPort}}/{{.Bucket}}"
 -
-  command: "-c 100  -o {{.Scale 10}} -n 25 -s 512  -i {{.Scale 1}} cb://@{{.Orchestrator}}:{{.RestPort}}/{{.NthBucket 1}}"
+  command: "-c 100  -o {{.Scale 10}} -n 25 -s 512 cb://@{{.Orchestrator}}:{{.RestPort}}/{{.NthBucket 1}}"
 -
-  command: "-c 100  -o {{.Scale 10}} -n 25 -s 256  -i {{.Scale 1}} cb://@{{.Orchestrator}}:{{.RestPort}}/{{.NthBucket 2}}"
+  command: "-c 100  -o {{.Scale 10}} -n 25 -s 256 cb://@{{.Orchestrator}}:{{.RestPort}}/{{.NthBucket 2}}"
 -
-  command: "-c 100  -o {{.Scale 10}} -n 25 -s 128  -i {{.Scale 1}} cb://@{{.Orchestrator}}:{{.RestPort}}/{{.NthBucket 3}}"
+  command: "-c 100  -o {{.Scale 10}} -n 25 -s 128 cb://@{{.Orchestrator}}:{{.RestPort}}/{{.NthBucket 3}}"
   wait: true
 
+
+###############  create indexes and keep them forever ################
+-
+   image: sequoiatools/cbq
+   requires:  "{{eq true .DoOnce}}"
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_email on `default`(email)'"
+-
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o1_city on `other-1`(city)'"
+-
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o2_coins on `other-2`(coins)'"
+-
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o3_email on `other-3`(email)'"
+   wait: true
 
 ############### run mutations ################
 -
   image: sequoiatools/spring
-  command: "-u 20 -c 40 -d 40  -n 25 -s 1024 -t 1500 -i {{.Scale 10}} cb://@{{.Orchestrator}}:{{.RestPort}}/{{.Bucket}}"
+  command: "-u 80 -c 10 -d 10  -n 25 -s 1024 -t 1500 -o {{.Scale 10}} -i {{.Scale 10}} cb://@{{.Orchestrator}}:{{.RestPort}}/{{.Bucket}}"
   repeat: -1
 -
-  command: "-u 20 -c 40 -d 40  -n 25 -s 512 -t 1500 -i {{.Scale 10}} cb://@{{.Orchestrator}}:{{.RestPort}}/{{.NthBucket 1}}"
+  command: "-u 80 -c 10 -d 10  -n 25 -s 512 -t 1500 -o {{.Scale 10}} -i {{.Scale 10}} cb://@{{.Orchestrator}}:{{.RestPort}}/{{.NthBucket 1}}"
   repeat: -1
 -
-  command: "-u 20 -c 40 -d 40  -n 25 -s 256 -t 1500 -i {{.Scale 10}} cb://@{{.Orchestrator}}:{{.RestPort}}/{{.NthBucket 2}}"
+  command: "-u 80 -c 10 -d 10  -n 25 -s 256 -t 1500 -o {{.Scale 10}} -i {{.Scale 10}} cb://@{{.Orchestrator}}:{{.RestPort}}/{{.NthBucket 2}}"
   repeat: -1
 -
-  command: "-u 20 -c 40 -d 40  -n 25 -s 128 -t 1500 -i {{.Scale 10}} cb://@{{.Orchestrator}}:{{.RestPort}}/{{.NthBucket 3}}"
+  command: "-u 80 -c 10 -d 10  -n 25 -s 128 -t 1500 -o {{.Scale 10}} -i {{.Scale 10}} cb://@{{.Orchestrator}}:{{.RestPort}}/{{.NthBucket 3}}"
   repeat: -1
 
 
@@ -35,23 +48,15 @@
 -
    command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o1_coins on `other-1`(coins)'"
 -
-   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o2_coins on `other-2`(coins)'"
--
    command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o3_coins on `other-3`(coins)'"
    wait: true
--
-   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_email on `default`(email)'"
 -
    command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o1_email on `other-1`(email)'"
 -
    command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o2_email on `other-2`(email)'"
--
-   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o3_email on `other-3`(email)'"
    wait: true
 -
    command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_city on `default`(city)'"
--
-   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o1_city on `other-1`(city)'"
 -
    command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o2_city on `other-2`(city)'"
 -
@@ -97,8 +102,6 @@
 -
    command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='drop index `other-1`.o1_coins'"
 -
-   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='drop index `other-2`.o2_coins'"
--
    command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='drop index `other-3`.o3_coins'"
 
 
@@ -113,8 +116,6 @@
    command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o3_coins on `other-3`(coins)'"
 -
    command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='drop index `other-2`.o2_email'"
--
-   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='drop index `other-3`.o3_email'"
 
 
 ###############  add previously removed data node and rebalance ################
@@ -138,16 +139,12 @@
    wait: true
    command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='drop primary index on `default`'"
 -
-   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='drop index `default`.default_email'"
--
    command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='drop index `default`.default_city'"
 -
    command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='drop index `default`.default_coins'"
    wait: true
 -
    command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='drop index `other-1`.o1_email'"
--
-   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='drop index `other-1`.o1_city'"
 
 -
    command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='drop index `other-2`.o2_city'"
@@ -157,3 +154,27 @@
 -
    command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='drop index `other-3`.o3_city'"
    wait: true
+
+############### run deletes ################
+-
+  image: sequoiatools/spring
+  command: "-d 100  -n 25 -s 1024 -t 1500 -o {{.Scale 8}} -i {{.Scale 10}} cb://@{{.Orchestrator}}:{{.RestPort}}/{{.Bucket}}"
+-
+  command: "-d 100  -n 25 -s 512 -t 1500 -o {{.Scale 8}} -i {{.Scale 10}} cb://@{{.Orchestrator}}:{{.RestPort}}/{{.NthBucket 1}}"
+-
+  command: "-d 100  -n 25 -s 256 -t 1500 -o {{.Scale 8}} -i {{.Scale 10}} cb://@{{.Orchestrator}}:{{.RestPort}}/{{.NthBucket 2}}"
+-
+  command: "-d 100  -n 25 -s 128 -t 1500 -o {{.Scale 8}} -i {{.Scale 10}} cb://@{{.Orchestrator}}:{{.RestPort}}/{{.NthBucket 3}}"
+  wait: true
+
+############### run creates ################
+-
+  image: sequoiatools/spring
+  command: "-c 100  -n 25 -s 1024 -t 1500 -o {{.Scale 8}} -i {{.Scale 2}} cb://@{{.Orchestrator}}:{{.RestPort}}/{{.Bucket}}"
+-
+  command: "-c 100  -n 25 -s 512 -t 1500 -o {{.Scale 8}} -i {{.Scale 2}} cb://@{{.Orchestrator}}:{{.RestPort}}/{{.NthBucket 1}}"
+-
+  command: "-c 100  -n 25 -s 256 -t 1500 -o {{.Scale 8}} -i {{.Scale 2}} cb://@{{.Orchestrator}}:{{.RestPort}}/{{.NthBucket 2}}"
+-
+  command: "-c 100  -n 25 -s 128 -t 1500 -o {{.Scale 8}} -i {{.Scale 2}} cb://@{{.Orchestrator}}:{{.RestPort}}/{{.NthBucket 3}}"
+  wait: true
