@@ -142,9 +142,9 @@ type ContainerManager struct {
 }
 
 func NewDockerClient(clientUrl string) *docker.Client {
-
 	var client *docker.Client
 	var err error
+
 	// open docker client
 	if strings.Index(clientUrl, "https") > -1 {
 		// with tls
@@ -179,8 +179,13 @@ func NewContainerManager(clientUrl, provider string) *ContainerManager {
 		ContainerClientCache: cmap.New(),
 	}
 
-	if provider == "swarm" {
+	// get all swarm nodes
+	opts := docker.ListNodesOptions{}
+	nodes, _ := client.ListNodes(opts)
+
+	if len(nodes) > 0 { // this is a swarm
 		cm.SwarmClients = cm.CreateSwarmClients(clientUrl)
+		cm.ProviderType = "swarm"
 	}
 	return &cm
 }

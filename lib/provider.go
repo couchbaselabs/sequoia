@@ -79,12 +79,23 @@ func NewProvider(flags TestFlags, servers []ServerSpec) Provider {
 	switch providerArgs[0] {
 	case "docker":
 		cm := NewContainerManager(*flags.Client, "docker")
-		provider = &DockerProvider{
-			cm,
-			servers,
-			make(map[string]string),
-			8091,
-			nil,
+		if cm.ProviderType == "swarm" { // detected docker client is in a swarm
+			provider = &SwarmProvider{
+				DockerProvider{
+					cm,
+					servers,
+					make(map[string]string),
+					8091,
+					nil},
+			}
+		} else {
+			provider = &DockerProvider{
+				cm,
+				servers,
+				make(map[string]string),
+				8091,
+				nil,
+			}
 		}
 	case "swarm":
 		cm := NewContainerManager(*flags.Client, "swarm")
@@ -182,7 +193,7 @@ func (p *ClusterRunProvider) ProvideCouchbaseServers(servers []ServerSpec) {
 }
 
 func (p *DockerProvider) GetType() string {
-	return "docker"
+	return p.Cm.ProviderType
 }
 
 func (p *DockerProvider) GetHostAddress(name string) string {

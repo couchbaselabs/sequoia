@@ -158,7 +158,7 @@ func (t *Test) Run(scope Scope) {
 	if *t.Flags.SkipSetup == false {
 		// if in default mode purge all containers
 		if (t.Flags.Mode == "") && (*t.Flags.SoftCleanup == false) {
-			if scope.Provider.GetType() == "swarm" {
+			if (scope.Provider.GetType() == "swarm") || (t.Cm.ProviderType == "swarm") {
 				t.Cm.RemoveAllServices()
 			} else {
 				t.Cm.RemoveAllContainers()
