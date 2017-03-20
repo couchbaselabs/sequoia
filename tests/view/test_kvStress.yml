@@ -62,14 +62,14 @@
 #============ swap failover ============
 -
    image: sequoiatools/couchbase-cli
-   command: "server-add -c  {{.Orchestrator}}
-       --server-add  {{.NthDataNode 2}}
+   command: "server-add -c  {{.Orchestrator}}:{{.RestPort}}
+       --server-add  {{.NthDataNode 2}}:{{.RestPort}}
        -u  {{.RestUsername}} -p  {{.RestPassword}}
        --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
    wait: true
 -
-   command: "failover -c {{.Orchestrator}}
-       --server-failover {{.NthDataNode 1}}
+   command: "failover -c {{.Orchestrator}}:{{.RestPort}}
+       --server-failover {{.NthDataNode 1}}:{{.RestPort}}
        -u  {{.RestUsername}} -p  {{.RestPassword}}"
    wait: true
 -
@@ -86,19 +86,19 @@
 #============ swap hard failover ============
 -
    image: sequoiatools/couchbase-cli  # as indexer
-   command: "server-add -c  {{.Orchestrator}}
-       --server-add  {{.NthDataNode 1}}
+   command: "server-add -c  {{.Orchestrator}}:{{.RestPort}}
+       --server-add  {{.NthDataNode 1}}:{{.RestPort}}
        -u  {{.RestUsername}} -p  {{.RestPassword}}
        --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
    wait: true
 -
-   command: "failover -c {{.Orchestrator}}
-      --server-failover {{.NthDataNode 2}}
+   command: "failover -c {{.Orchestrator}}:{{.RestPort}}
+      --server-failover {{.NthDataNode 2}}:{{.RestPort}}
       -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
    wait: true
 -
-   command: "failover -c {{.Orchestrator}}
-      --server-failover {{.NthDataNode 3}}
+   command: "failover -c {{.Orchestrator}}:{{.RestPort}}
+      --server-failover {{.NthDataNode 3}}:{{.RestPort}}
       -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
    wait: true
 -
@@ -117,14 +117,14 @@
 #============ add back============
 -
    image: sequoiatools/couchbase-cli
-   command: "server-add -c  {{.Orchestrator}}
-       --server-add  {{.NthDataNode 2}}
+   command: "server-add -c  {{.Orchestrator}}:{{.RestPort}}
+       --server-add  {{.NthDataNode 2}}:{{.RestPort}}
        -u  {{.RestUsername}} -p  {{.RestPassword}}
        --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
    wait: true
 -
-   command: "server-add -c  {{.Orchestrator}}
-       --server-add  {{.NthDataNode 3}}
+   command: "server-add -c  {{.Orchestrator}}:{{.RestPort}}
+       --server-add  {{.NthDataNode 3}}:{{.RestPort}}
        -u  {{.RestUsername}} -p  {{.RestPassword}}
        --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
    wait: true
