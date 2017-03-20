@@ -244,6 +244,10 @@ func (cm *ContainerManager) AllClients() []*docker.Client {
 	return clients
 }
 
+func (cm *ContainerManager) NumClients() int {
+	return len(cm.AllClients())
+}
+
 func (cm *ContainerManager) GetAllContainers() []docker.APIContainers {
 
 	allContainers := []docker.APIContainers{}

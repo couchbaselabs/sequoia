@@ -408,9 +408,12 @@ func (p *SwarmProvider) ProvideCouchbaseServers(servers []ServerSpec) {
 		for _, serverName := range serverNameList {
 			port := 8091 + i
 
-			// determin zone based on service
+			// determine zone based on service
 			services := server.NodeServices[serverName]
 			zone := services[0]
+			if p.Cm.NumClients() == 1 {
+				zone = "client" // override for single host swarm
+			}
 			go p.ProvideCouchbaseServer(serverName, port, zone)
 			i++
 			j++
