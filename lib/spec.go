@@ -281,6 +281,10 @@ func ConfigureSpec(spec *ScopeSpec) {
 
 	// init server section of spec
 	for i, server := range spec.Servers {
+		if server.Name == "" {
+			server.Name = RandHostStr(6)
+			spec.Servers[i].Name = server.Name
+		}
 		spec.Servers[i].Names = ExpandServerName(server.Name, server.Count, 1)
 		spec.Servers[i].BucketSpecs = make([]BucketSpec, 0)
 

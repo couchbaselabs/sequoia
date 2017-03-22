@@ -114,6 +114,10 @@ func ParseSlashString(s string) string {
 	return _s[0]
 }
 
+func RandHostStr(size int) string {
+	return fmt.Sprintf("%s.%s", RandStr(size), "st.couchbase.com")
+}
+
 func RandStr(size int) string {
 	rb := make([]byte, size)
 	_, err := rand.Read(rb)
