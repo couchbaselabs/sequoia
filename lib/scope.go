@@ -29,6 +29,7 @@ type Scope struct {
 	Version  string
 	Vars     cmap.ConcurrentMap
 	Loops    int
+	Rest     RestClient
 }
 
 func ApplyOverrides(overrides string, spec *ScopeSpec) {
@@ -124,6 +125,11 @@ func NewScope(flags TestFlags, cm *ContainerManager) Scope {
 		loops++ // we've already done first pass
 	}
 
+	rest := RestClient{
+		Clusters: spec.Servers,
+		Provider: provider,
+		Cm:       cm,
+	}
 	return Scope{
 		spec,
 		cm,
@@ -132,6 +138,7 @@ func NewScope(flags TestFlags, cm *ContainerManager) Scope {
 		"",
 		cmap.New(),
 		loops,
+		rest,
 	}
 }
 
@@ -156,10 +163,7 @@ func (s *Scope) Teardown() {
 func (s *Scope) InitCli() {
 
 	// make sure proper couchbase-cli is used for node init
-	cluster := s.Spec.Servers[0]
-	orchestrator := cluster.Names[0]
-	rest := s.Provider.GetRestUrl(orchestrator)
-	version := GetServerVersion(rest, cluster.RestUsername, cluster.RestPassword)
+	version := s.Rest.GetServerVersion()
 	s.Version = version[:3]
 
 	// pull cli tag matching version..ie 3.5, 4.1, 4.5
@@ -271,7 +275,7 @@ func (s *Scope) InitCluster() {
 		ramQuota := server.Ram
 		if ramQuota == "" {
 			// use cluster mcdReserved
-			memTotal := s.ClusterMemReserved(name, server)
+			memTotal := s.Rest.GetMemReserved(name)
 			ramQuota = strconv.Itoa(memTotal)
 		}
 		if strings.Index(ramQuota, "%") > -1 {
@@ -294,7 +298,8 @@ func (s *Scope) InitCluster() {
 
 		// make sure if index services is specified that index ram is set
 		if strings.Index(services, "index") > -1 && server.IndexRam == "" {
-			server.IndexRam = strconv.Itoa(s.ClusterIndexQuota(name, server))
+			q := s.Rest.GetIndexQuota(name)
+			server.IndexRam = strconv.Itoa(q)
 		}
 		if server.IndexRam != "" {
 			indexQuota := server.IndexRam
@@ -498,26 +503,13 @@ func (s *Scope) GetPercOfMemTotal(name string, server *ServerSpec, quota string)
 }
 
 func (s *Scope) ClusterMemTotal(name string, server *ServerSpec) int {
-	rest := s.Provider.GetRestUrl(name)
-	mem := GetMemTotal(rest, server.RestUsername, server.RestPassword)
+	mem := s.Rest.GetMemTotal(name)
 	if s.Provider.GetType() == "docker" {
 		p := s.Provider.(*DockerProvider)
 		if p.Opts.Memory > 0 {
 			mem = p.Opts.MemoryMB()
 		}
 	}
-	return mem
-}
-
-func (s *Scope) ClusterMemReserved(name string, server *ServerSpec) int {
-	rest := s.Provider.GetRestUrl(name)
-	mem := GetMemReserved(rest, server.RestUsername, server.RestPassword)
-	return mem
-}
-
-func (s *Scope) ClusterIndexQuota(name string, server *ServerSpec) int {
-	rest := s.Provider.GetRestUrl(name)
-	mem := GetIndexQuota(rest, server.RestUsername, server.RestPassword)
 	return mem
 }
 

@@ -51,6 +51,7 @@ type DockerProvider struct {
 	ActiveContainers map[string]string
 	StartPort        int
 	Opts             *DockerProviderOpts
+	ExposePorts      bool
 }
 
 type SwarmProvider struct {
@@ -75,6 +76,7 @@ func (opts *DockerProviderOpts) MemoryMB() int {
 func NewProvider(flags TestFlags, servers []ServerSpec) Provider {
 	var provider Provider
 	providerArgs := strings.Split(*flags.Provider, ":")
+	startPort := 8091
 
 	switch providerArgs[0] {
 	case "docker":
@@ -85,16 +87,18 @@ func NewProvider(flags TestFlags, servers []ServerSpec) Provider {
 					cm,
 					servers,
 					make(map[string]string),
-					8091,
-					nil},
+					startPort,
+					nil,
+					*flags.ExposePorts},
 			}
 		} else {
 			provider = &DockerProvider{
 				cm,
 				servers,
 				make(map[string]string),
-				8091,
+				startPort,
 				nil,
+				*flags.ExposePorts,
 			}
 		}
 	case "swarm":
@@ -104,8 +108,10 @@ func NewProvider(flags TestFlags, servers []ServerSpec) Provider {
 				cm,
 				servers,
 				make(map[string]string),
-				8091,
-				nil},
+				startPort,
+				nil,
+				*flags.ExposePorts,
+			},
 		}
 	case "file":
 		hostFile := "default.yml"
@@ -240,7 +246,7 @@ func (p *DockerProvider) ProvideCouchbaseServers(servers []ServerSpec) {
 
 	// start based on number of containers
 	var i int = p.NumCouchbaseServers()
-	p.StartPort = 8091 + i
+	p.StartPort += i
 	for _, server := range servers {
 		serverNameList := ExpandServerName(server.Name, server.Count, server.CountOffset+1)
 
@@ -255,8 +261,10 @@ func (p *DockerProvider) ProvideCouchbaseServers(servers []ServerSpec) {
 			var portBindings = make(map[docker.Port][]docker.PortBinding)
 			portBindings[port] = binding
 			hostConfig := docker.HostConfig{
-				PortBindings: portBindings,
-				Ulimits:      p.Opts.Ulimits,
+				Ulimits: p.Opts.Ulimits,
+			}
+			if p.ExposePorts == true {
+				hostConfig.PortBindings = portBindings
 			}
 
 			if p.Opts.CPUPeriod > 0 {
@@ -518,32 +526,8 @@ func (p *DockerProvider) GetLinkPairs() string {
 
 func (p *DockerProvider) GetRestUrl(name string) string {
 
-	// extract host from endpoint
-	url, err := url.Parse(p.Cm.Endpoint)
-	if url.Scheme == "" {
-		url, err = url.Parse("http://" + p.Cm.Endpoint)
-	}
-	chkerr(err)
-	host := url.Host
-	if host == "" {
-		host = "localhost"
-	}
-
-	// remove port if specified
-	re := regexp.MustCompile(`:.*`)
-	host = re.ReplaceAllString(host, "")
-	port := p.StartPort
-	step := len(p.Servers)
-	for i, spec := range p.Servers {
-		for j, server := range spec.Names {
-			if server == name {
-				port = port + i + j*step
-			}
-		}
-	}
-
-	host = fmt.Sprintf("%s:%d\n", host, port)
-	return strings.TrimSpace(host)
+	addr := fmt.Sprintf("%s:8091", p.GetHostAddress(name))
+	return addr
 }
 
 func BuildArgsForVersion(opts *DockerProviderOpts) []docker.BuildArg {

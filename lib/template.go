@@ -7,7 +7,6 @@ package sequoia
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -86,8 +85,7 @@ func (t *TemplateResolver) Service(service string, servers []ServerSpec) []Serve
 	for _, spec := range servers {
 		added := false
 		for _, name := range spec.Names {
-			rest := t.Scope.Provider.GetRestUrl(name)
-			ok := NodeHasService(service, rest, spec.RestUsername, spec.RestPassword)
+			ok := t.Scope.Rest.NodeHasService(service, name)
 			if ok == true {
 				if added == false {
 					serviceNodes = append(serviceNodes, ServerSpec{Names: []string{name}})
@@ -300,8 +298,7 @@ func (t *TemplateResolver) NodesByAvailability(servers []ServerSpec, isActive bo
 	ips := []string{}
 	for _, spec := range servers {
 		for _, name := range spec.Names {
-			rest := t.Scope.Provider.GetRestUrl(name)
-			active := !NodeIsSingle(rest, spec.RestUsername, spec.RestPassword)
+			active := !t.Scope.Rest.NodeIsSingle(name)
 			if active == isActive {
 				ip := t.Scope.Provider.GetHostAddress(name)
 				ips = append(ips, ip)
@@ -433,14 +430,10 @@ func (t *TemplateResolver) Excludes(key, str string) bool {
 }
 
 func (t *TemplateResolver) ToJson(data string) interface{} {
-	var kv interface{}
-	blob := []byte(data)
-	err := json.Unmarshal(blob, &kv)
-	if err != nil {
-		fmt.Println("warning using 'json' filter: ", err)
-		kv = nil
-	}
-	return kv
+	// from common.go
+	var js interface{}
+	StringToJson(data, &js)
+	return js
 }
 
 func (t *TemplateResolver) ToList(spec ServerSpec) []ServerSpec {

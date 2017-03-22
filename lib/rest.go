@@ -1,12 +1,16 @@
 package sequoia
 
 import (
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"net/http"
+	"github.com/fsouza/go-dockerclient"
 	"time"
 )
+
+type RestClient struct {
+	Clusters []ServerSpec
+	Provider Provider
+	Cm       *ContainerManager
+}
 
 type NodeSelf struct {
 	MemoryTotal       int
@@ -31,117 +35,129 @@ type NodeStatus struct {
 	Dataless    map[string]bool
 }
 
-func GetMemTotal(host, user, password string) int {
-	var n NodeSelf
+func (r *RestClient) GetServerVersion() string {
+	host := r.GetOrchestrator()
+	n := r.GetHostNodeSelf(host)
+	return n.Version
+}
 
-	err := getNodeSelf(host, user, password, &n)
-	chkerr(err)
-
+func (r *RestClient) GetMemTotal(host string) int {
+	n := r.GetHostNodeSelf(host)
 	q := n.MemoryTotal
 	if q == 0 {
 		time.Sleep(5 * time.Second)
-		return GetMemTotal(host, user, password)
+		return r.GetMemTotal(host)
 	}
 	q = q / 1048576 // mb
 	return q
 }
 
-func GetMemReserved(host, user, password string) int {
-	var n NodeSelf
-
-	err := getNodeSelf(host, user, password, &n)
-	chkerr(err)
-
+func (r *RestClient) GetMemReserved(host string) int {
+	n := r.GetHostNodeSelf(host)
 	q := n.McdMemoryReserved
 	if q == 0 {
 		time.Sleep(5 * time.Second)
-		return GetMemReserved(host, user, password)
+		return r.GetMemReserved(host)
 	}
+
 	return q
 }
 
-func GetIndexQuota(host, user, password string) int {
-	var n NodeSelf
-
-	err := getNodeSelf(host, user, password, &n)
-	chkerr(err)
-
+func (r *RestClient) GetIndexQuota(host string) int {
+	n := r.GetHostNodeSelf(host)
 	q := n.IndexMemoryQuota
 	if q == 0 {
 		time.Sleep(5 * time.Second)
-		return GetIndexQuota(host, user, password)
+		return r.GetIndexQuota(host)
 	}
+
 	return q
 }
 
-func NodeHasService(service, host, user, password string) bool {
-	var n NodeSelf
-	err := getNodeSelf(host, user, password, &n)
-	if err != nil {
-		return false
-	}
+func (r *RestClient) NodeHasService(service, host string) bool {
+	n := r.GetHostNodeSelf(host)
 	for _, s := range n.Services {
 		if s == service {
 			return true
 		}
 	}
-
 	return false
 }
 
-func GetServerVersion(host, user, password string) string {
-	var n NodeSelf
+func (r *RestClient) NodeIsSingle(host string) bool {
 
-	err := getNodeSelf(host, user, password, &n)
-	chkerr(err)
+	n := r.GetHostNodeStatuses(host)
+	single := len(n.Statuses) == 1
 
-	q := n.Version
-	if q == "" {
-		time.Sleep(1 * time.Second)
-		return GetServerVersion(host, user, password)
-	}
-
-	return q
-}
-
-func NodeIsSingle(host, user, password string) bool {
-
-	var n interface{}
-	var single bool = false
-	if err := getNodeStatus(host, user, password, &n); err == nil {
-		s := n.(map[string]interface{})
-		single = len(s) == 1
-	}
 	return single
 }
 
-func getNodeStatus(host, user, password string, v interface{}) error {
-	return _jsonRequest("http://%s/nodeStatuses", host, user, password, v)
+func (r *RestClient) GetOrchestrator() string {
+	cluster := r.Clusters[0]
+	return cluster.Names[0]
 }
 
-func getNodeSelf(host, user, password string, v interface{}) error {
-	return _jsonRequest("http://%s/nodes/self", host, user, password, v)
+func (r *RestClient) GetAuth(host string) string {
+	for _, cluster := range r.Clusters {
+		for _, _host := range cluster.Names {
+			if _host == host {
+				user := cluster.RestUsername
+				pass := cluster.RestPassword
+				return fmt.Sprintf("%s:%s", user, pass)
+			}
+		}
+	}
+	return ""
 }
 
-func _jsonRequest(url, host, user, password string, v interface{}) error {
+func (r *RestClient) GetHostNodeSelf(host string) NodeSelf {
+	url := r.Provider.GetRestUrl(host)
+	auth := r.GetAuth(host)
+	n := r.GetNodeSelf(auth, url)
+	return n
+}
 
-	// setup request url
-	urlStr := fmt.Sprintf(url, host)
-	req, err := http.NewRequest("GET", urlStr, nil)
-	chkerr(err)
-	req.SetBasicAuth(user, password)
+func (r *RestClient) GetHostNodeStatuses(host string) NodeStatuses {
+	url := r.Provider.GetRestUrl(host)
+	auth := r.GetAuth(host)
+	n := r.GetNodeStatuses(auth, url)
+	return n
+}
 
-	// send client request
-	client := &http.Client{}
-	res, err := client.Do(req)
-	if err != nil {
-		return err
+func (r *RestClient) GetNodeSelf(auth, url string) NodeSelf {
+	reqUrl := fmt.Sprintf("%s/nodes/self", url)
+	var n NodeSelf
+	r.JsonRequest(auth, reqUrl, &n)
+	return n
+}
+
+func (r *RestClient) GetNodeStatuses(auth, url string) NodeStatuses {
+	reqUrl := fmt.Sprintf("%s/nodeStatuses", url)
+	var n NodeStatuses
+	r.JsonRequest(auth, reqUrl, &n)
+	return n
+}
+
+func (r *RestClient) JsonRequest(auth, url string, v interface{}) {
+
+	// use curl container for rest requests
+	hostConfig := docker.HostConfig{}
+	config := docker.Config{
+		Image: "appropriate/curl",
+		Cmd:   []string{"-u", auth, "-s", url},
 	}
 
-	// unmarshal data to provided interface
-	body, err := ioutil.ReadAll(res.Body)
-	chkerr(err)
-	err = json.Unmarshal(body, v)
-	chkerr(err)
-	return nil
+	options := docker.CreateContainerOptions{
+		Config:     &config,
+		HostConfig: &hostConfig,
+	}
+
+	// run curl container and wait for finish
+	_, container := r.Cm.RunContainer(options)
+	_, err := r.Cm.Client.WaitContainer(container.ID)
+	logerr(err)
+
+	// convert logs to json
+	resp := r.Cm.GetLogs(container.ID, "all")
+	StringToJson(resp, &v)
 }

@@ -28,6 +28,7 @@ type TestFlags struct {
 	Continue          *bool
 	StopOnError       *bool
 	CollectOnError    *bool
+	ExposePorts       *bool
 	Scale             *int
 	Repeat            *int
 	Duration          *int
@@ -185,6 +186,10 @@ func (f *TestFlags) AddDefaultFlags(fset *flag.FlagSet) {
 		"collect_on_error",
 		false,
 		"run cbcollect when error occurs")
+	f.ExposePorts = fset.Bool(
+		"expose_ports",
+		false,
+		"expose container ports for url access")
 	f.Scale = fset.Int(
 		"scale",
 		1,
