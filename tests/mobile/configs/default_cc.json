@@ -1,0 +1,11 @@
+{
+    "interface":":4984",
+    "adminInterface": "0.0.0.0:4985",
+    "log": ["*"],
+    "databases":{
+        "db":{
+            "server":"http://{{ couchbase_server_primary_node }}:8091",
+            "bucket":"data-bucket"
+        }
+    }
+}

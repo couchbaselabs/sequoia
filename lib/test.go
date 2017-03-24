@@ -168,6 +168,8 @@ func (t *Test) Run(scope Scope) {
 		if t.Flags.Mode == "" {
 			scope.Setup()
 		}
+
+		// Set up Sync Gateway / Accels
 	} else if (scope.Provider.GetType() != "docker") &&
 		(scope.Provider.GetType() != "swarm") {
 		// non-dynamic IP's need to be extrapolated before test

@@ -1,0 +1,24 @@
+---
+buckets: # define single default bucket
+  -
+    name: data-bucket
+    ram: 75%
+    replica: 1
+    type: couchbase
+
+servers: # define a single server with link named 'local'
+  -
+     name: local
+     ram: 50% # 50% of total memory
+     count: 3
+     rest_username: Administrator
+     rest_password: password
+     rest_port: 8091
+     init_nodes: 3
+     buckets: default
+
+syncgateways:
+  -
+     name: sg
+     servers: local 
+     config: default_cc.json

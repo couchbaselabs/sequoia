@@ -6,13 +6,14 @@ package sequoia
 
 import (
 	"fmt"
-	"github.com/docker/docker/api/types/swarm"
-	"github.com/fsouza/go-dockerclient"
 	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/docker/docker/api/types/swarm"
+	"github.com/fsouza/go-dockerclient"
 )
 
 type ProviderLabel int
@@ -29,6 +30,7 @@ const CENTOS_OS_DIR = "CentOS7"
 
 type Provider interface {
 	ProvideCouchbaseServers(servers []ServerSpec)
+	ProvideSyncGateways(syncgateways []SyncGatewaySpec)
 	GetHostAddress(name string) string
 	GetType() string
 	GetRestUrl(name string) string
@@ -235,6 +237,10 @@ func (p *DockerProvider) NumCouchbaseServers() int {
 		}
 	}
 	return count
+}
+
+func (p *DockerProvider) ProvideSyncGateways(servers []SyncGatewaySpec) {
+
 }
 
 func (p *DockerProvider) ProvideCouchbaseServers(servers []ServerSpec) {

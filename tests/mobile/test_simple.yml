@@ -1,0 +1,4 @@
+- 
+  image: couchbase/mobile-testkit
+  command: "pytest blah -k some_test"
+  wait: true
