@@ -30,4 +30,7 @@ COPY local.ini local.ini
 COPY upgrade_local.ini upgrade_local.ini
 COPY host2ip.sh host2ip.sh
 COPY testrunner testrunner
+
+# make sure tests use storage memory
+RUN sed -i 's/IS_CONTAINER.*/IS_CONTAINER = True/' lib/testconstants.py
 ENTRYPOINT ["./testrunner"]
