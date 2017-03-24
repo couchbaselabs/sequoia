@@ -240,7 +240,9 @@ func (p *DockerProvider) NumCouchbaseServers() int {
 }
 
 func (p *DockerProvider) ProvideSyncGateways(servers []SyncGatewaySpec) {
-
+	// Get the ip of server Cluster
+	// Render config from SyncGatewaySpec
+	// Start docker container with renderer config
 }
 
 func (p *DockerProvider) ProvideCouchbaseServers(servers []ServerSpec) {
