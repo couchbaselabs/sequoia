@@ -1,8 +1,8 @@
 # container os, supported values = ubuntu14, centos7
-os: ubuntu14
+os: centos7 
 
 # build version
-build: 4.6.0-3554
+build: 5.0.0-2412
 
 # override build... ie http://latestbuilds.hq.couchbase.com/couchbase-server-enterprise_x86_64_3.1.5-1859-rel.deb"
 build_url_override: null 
@@ -31,12 +31,16 @@ memoryswap: 0
 
 # A list of ulimits to set in the container
 # uncomment below to enable core-dumps and set memlock
-# ulimits:
-#  -
-#    Name: core
-#    Soft: 100000000
-#    Hard: 100000000
-#  -
-#    Name: memlock
-#    Soft: 100000000
-#    Hard: 100000000
+ulimits:
+ -
+   Name: nproc 
+   Soft: 1024 
+   Hard: 2048 
+#-
+#  Name: core
+#  Soft: 100000000
+#  Hard: 100000000
+#-
+#  Name: memlock
+#  Soft: 100000000
+#  Hard: 100000000
