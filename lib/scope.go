@@ -145,6 +145,7 @@ func NewScope(flags TestFlags, cm *ContainerManager) Scope {
 func (s *Scope) Setup() {
 
 	s.WaitForNodes()
+	s.InitRestContainer()
 	s.InitCli()
 	s.InitNodes()
 	s.InitCluster()
@@ -158,6 +159,11 @@ func (s *Scope) Teardown() {
 	// descope
 	s.DeleteBuckets()
 	s.RemoveNodes()
+}
+
+func (s *Scope) InitRestContainer() {
+	// make sure container used for rest calls exists
+	s.Cm.PullImage("appropriate/curl")
 }
 
 func (s *Scope) InitCli() {
