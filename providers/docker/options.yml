@@ -31,11 +31,11 @@ memoryswap: 0
 
 # A list of ulimits to set in the container
 # uncomment below to enable core-dumps and set memlock
-ulimits:
- -
-   Name: nproc 
-   Soft: 1024 
-   Hard: 2048 
+#ulimits:
+#-
+#  Name: nproc
+#  Soft: 1024
+#  Hard: 2048
 #-
 #  Name: core
 #  Soft: 100000000
