@@ -261,7 +261,8 @@ func (p *DockerProvider) ProvideCouchbaseServers(servers []ServerSpec) {
 			var portBindings = make(map[docker.Port][]docker.PortBinding)
 			portBindings[port] = binding
 			hostConfig := docker.HostConfig{
-				Ulimits: p.Opts.Ulimits,
+				Ulimits:    p.Opts.Ulimits,
+				Privileged: true,
 			}
 			if p.ExposePorts == true {
 				hostConfig.PortBindings = portBindings
@@ -348,6 +349,7 @@ func (p *SwarmProvider) ProvideCouchbaseServer(serverName string, portOffset int
 	hostConfig := docker.HostConfig{
 		PortBindings: portBindings,
 		Ulimits:      p.Opts.Ulimits,
+		Privileged:   true,
 	}
 
 	if p.Opts.CPUPeriod > 0 {
