@@ -2,7 +2,6 @@ package sequoia
 
 import (
 	"fmt"
-	"github.com/fsouza/go-dockerclient"
 	"time"
 )
 
@@ -138,26 +137,13 @@ func (r *RestClient) GetNodeStatuses(auth, url string) NodeStatuses {
 	return n
 }
 
-func (r *RestClient) JsonRequest(auth, url string, v interface{}) {
+func (r *RestClient) JsonRequest(auth, restUrl string, v interface{}) {
 
-	// use curl container for rest requests
-	hostConfig := docker.HostConfig{}
-	config := docker.Config{
-		Image: "appropriate/curl",
-		Cmd:   []string{"-u", auth, "-s", url},
-	}
-
-	options := docker.CreateContainerOptions{
-		Config:     &config,
-		HostConfig: &hostConfig,
-	}
-
-	// run curl container and wait for finish
-	_, container := r.Cm.RunContainer(options)
-	_, err := r.Cm.Client.WaitContainer(container.ID)
-	logerr(err)
+	// run curl container to make rest request
+	cmd := []string{"-u", auth, "-s", restUrl}
+	id := r.Cm.RunRestContainer(cmd)
 
 	// convert logs to json
-	resp := r.Cm.GetLogs(container.ID, "all")
+	resp := r.Cm.GetLogs(id, "all")
 	StringToJson(resp, &v)
 }

@@ -469,6 +469,8 @@ func (t *Test) runActions(scope Scope, loop int, actions []ActionSpec) {
 
 		if scope.Provider.GetType() == "docker" {
 			task.LinksTo = scope.Provider.(*DockerProvider).GetLinkPairs()
+		} else if scope.Provider.GetType() == "swarm" {
+			task.LinksTo = scope.Provider.(*SwarmProvider).GetLinkPairs()
 		}
 		if action.Entrypoint != "" {
 			task.Entrypoint = []string{action.Entrypoint}

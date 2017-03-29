@@ -43,60 +43,45 @@ type TaskResult struct {
 	Error   error
 }
 
-func (t *ContainerTask) GetOptions() docker.CreateContainerOptions {
-
+func (cm *ContainerManager) NewContainerOptions(image string, cmd []string) docker.CreateContainerOptions {
 	hostConfig := docker.HostConfig{}
-
-	if len(t.LinksTo) > 0 {
-		links := strings.Split(t.LinksTo, ",")
-		pairs := []string{}
-		for i, name := range links {
-			linkName := fmt.Sprintf("container-%d.st.couchbase.com", i)
-			pairs = append(pairs, name+":"+linkName)
-		}
-		hostConfig.Links = pairs
-	}
-
 	config := docker.Config{
-		Image: t.Image,
-		Cmd:   t.Command,
-	}
-	if len(t.Entrypoint) > 0 {
-		config.Entrypoint = t.Entrypoint
+		Image: image,
+		Cmd:   cmd,
 	}
 
-	containerOpts := docker.CreateContainerOptions{
+	options := docker.CreateContainerOptions{
 		Config:     &config,
 		HostConfig: &hostConfig,
 	}
+	return options
+}
 
-	if t.Name != "" {
-		containerOpts.Name = t.Name
+func (t *ContainerTask) UpdateContainerOptions(options *docker.CreateContainerOptions) {
+
+	if len(t.LinksTo) > 0 {
+		options.HostConfig.Links = GenerateLinkPairs(t.LinksTo)
 	}
 
-	return containerOpts
+	if len(t.Entrypoint) > 0 {
+		options.Config.Entrypoint = t.Entrypoint
+	}
+
+	if t.Name != "" {
+		options.Name = t.Name
+	}
 
 }
 
-func (t *ContainerTask) GetServiceOptions(svcPort uint32) docker.CreateServiceOptions {
+func (cm *ContainerManager) NewServiceOptions(image string, cmd []string) docker.CreateServiceOptions {
 
-	var serviceName string
-	if t.Name != "" {
-		serviceName = strings.Replace(t.Name, ".", "-", -1)
-	} else {
-		serviceName = RandStr(8)
-	}
+	// makes generic service options
+	serviceName := RandStr(8)
 	containerSpec := swarm.ContainerSpec{
-		Image: t.Image,
-		Args:  t.Command,
-	}
-	// note the inconsistencies between entrypoint and command
-	// https://github.com/docker/docker/issues/24196
-	if len(t.Entrypoint) > 0 {
-		containerSpec.Command = t.Entrypoint
+		Image: image,
+		Args:  cmd,
 	}
 
-	// create task spec
 	annotations := swarm.Annotations{Name: serviceName}
 	policy := swarm.RestartPolicy{Condition: swarm.RestartPolicyConditionNone}
 	placement := swarm.Placement{Constraints: []string{"node.labels.zone == client"}}
@@ -105,12 +90,7 @@ func (t *ContainerTask) GetServiceOptions(svcPort uint32) docker.CreateServiceOp
 		Placement:     &placement}
 
 	// service spec requires port config to be placed on swarm nework
-	portConfig := []swarm.PortConfig{
-		swarm.PortConfig{
-			TargetPort:    svcPort,
-			PublishedPort: svcPort,
-		},
-	}
+	portConfig := []swarm.PortConfig{swarm.PortConfig{}}
 	endpointSpec := swarm.EndpointSpec{Ports: portConfig}
 
 	// create service spec
@@ -121,11 +101,32 @@ func (t *ContainerTask) GetServiceOptions(svcPort uint32) docker.CreateServiceOp
 	}
 
 	// create options
-	options := docker.CreateServiceOptions{
+	opts := docker.CreateServiceOptions{
 		ServiceSpec: spec,
 	}
 
-	return options
+	return opts
+}
+
+func (t *ContainerTask) UpdateServiceOptions(options *docker.CreateServiceOptions) {
+
+	// override the generic service options
+	if t.Name != "" {
+		taskName := strings.Replace(t.Name, ".", "-", -1)
+		options.ServiceSpec.Annotations.Name = taskName
+	}
+
+	if len(t.LinksTo) > 0 {
+		envStr := fmt.Sprintf("SWARM_HOSTS=%s", t.LinksTo)
+		options.TaskTemplate.ContainerSpec.Env = []string{envStr}
+	}
+
+	// note the inconsistencies between entrypoint and command
+	// https://github.com/docker/docker/issues/24196
+	if len(t.Entrypoint) > 0 {
+		options.TaskTemplate.ContainerSpec.Command = t.Entrypoint
+	}
+
 }
 
 type ContainerManager struct {
@@ -136,7 +137,6 @@ type ContainerManager struct {
 	Services             []string
 	TapHandle            *tap.T
 	ProviderType         string
-	LastSvcPort          uint32
 	SwarmClients         []*docker.Client
 	ContainerClientCache cmap.ConcurrentMap
 }
@@ -174,7 +174,6 @@ func NewContainerManager(clientUrl, provider string) *ContainerManager {
 		Services:             []string{},
 		TapHandle:            tap.New("results.tap4j"),
 		ProviderType:         provider,
-		LastSvcPort:          100,
 		SwarmClients:         []*docker.Client{},
 		ContainerClientCache: cmap.New(),
 	}
@@ -577,7 +576,8 @@ func (cm *ContainerManager) GetLogs(ID, tail string) string {
 		Stdout:       true,
 		Tail:         tail,
 	}
-	cm.Client.Logs(logOpts)
+	client := cm.ClientForContainer(ID)
+	client.Logs(logOpts)
 	return buf.String()
 }
 
@@ -757,15 +757,6 @@ func (cm *ContainerManager) RunContainerAsService(opts docker.CreateServiceOptio
 
 }
 
-func (cm *ContainerManager) GetHighSvcPort() uint32 {
-	if cm.LastSvcPort == 8091 {
-		cm.LastSvcPort = 100
-	}
-	// todo free pool
-	cm.LastSvcPort += 1
-	return cm.LastSvcPort
-}
-
 func (cm *ContainerManager) RunContainerTask(task *ContainerTask) (chan TaskResult, *docker.Container) {
 
 	// get task options
@@ -773,11 +764,13 @@ func (cm *ContainerManager) RunContainerTask(task *ContainerTask) (chan TaskResu
 	var ch chan TaskResult
 	if cm.ProviderType == "swarm" {
 		// run container within service
-		options := task.GetServiceOptions(cm.GetHighSvcPort())
+		options := cm.NewServiceOptions(task.Image, task.Command)
+		task.UpdateServiceOptions(&options)
 		ch, container = cm.RunContainerAsService(options, 30)
 	} else {
 		// run container against standalone docker host
-		options := task.GetOptions()
+		options := cm.NewContainerOptions(task.Image, task.Command)
+		task.UpdateContainerOptions(&options)
 		ch, container = cm.RunContainer(options)
 	}
 
@@ -871,4 +864,41 @@ func (cm *ContainerManager) HandleResults(idChans *[]chan TaskResult, echan chan
 		}()
 		close(ch)
 	}
+}
+
+func (cm *ContainerManager) RunRestContainer(cmd []string) string {
+	var rest_container_id string
+	image := "appropriate/curl"
+
+	if cm.ProviderType == "swarm" {
+
+		// as swarm
+		opts := cm.NewServiceOptions(image, cmd)
+		ch, _ := cm.RunContainerAsService(opts, 30)
+		rc := <-ch
+		logerr(rc.Error)
+		rest_container_id = rc.ID
+
+	} else {
+
+		// normal docker
+		options := cm.NewContainerOptions(image, cmd)
+		_, container := cm.RunContainer(options)
+		_, err := cm.Client.WaitContainer(container.ID)
+		logerr(err)
+		rest_container_id = container.ID
+
+	}
+
+	return rest_container_id
+}
+
+func GenerateLinkPairs(linksTo string) []string {
+	links := strings.Split(linksTo, ",")
+	pairs := []string{}
+	for i, name := range links {
+		linkName := fmt.Sprintf("container-%d.st.couchbase.com", i)
+		pairs = append(pairs, name+":"+linkName)
+	}
+	return pairs
 }

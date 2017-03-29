@@ -8,8 +8,6 @@ import (
 	"fmt"
 	"github.com/docker/docker/api/types/swarm"
 	"github.com/fsouza/go-dockerclient"
-	"net/url"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -326,6 +324,16 @@ func (p *DockerProvider) ProvideCouchbaseServers(servers []ServerSpec) {
 	}
 }
 
+func (p *SwarmProvider) GetLinkPairs() string {
+	pairs := []string{}
+	for name, _ := range p.ActiveContainers {
+		address := p.GetHostAddress(name)
+		pairs = append(pairs, address)
+	}
+
+	return strings.Join(pairs, ",")
+}
+
 func (p *SwarmProvider) ProvideCouchbaseServer(serverName string, portOffset int, zone string) {
 
 	var build = p.Opts.Build
@@ -338,18 +346,23 @@ func (p *SwarmProvider) ProvideCouchbaseServer(serverName string, portOffset int
 	}
 
 	portConfig := []swarm.PortConfig{
-		swarm.PortConfig{
-			TargetPort:    8091,
-			PublishedPort: uint32(portOffset),
-		},
+		swarm.PortConfig{},
+	}
+
+	if p.ExposePorts {
+		portConfig[0].TargetPort = 8091
+		portConfig[0].PublishedPort = uint32(portOffset)
 	}
 
 	var portBindings = make(map[docker.Port][]docker.PortBinding)
 	portBindings[port] = binding
 	hostConfig := docker.HostConfig{
-		PortBindings: portBindings,
-		Ulimits:      p.Opts.Ulimits,
-		Privileged:   true,
+		Ulimits:    p.Opts.Ulimits,
+		Privileged: true,
+	}
+
+	if p.ExposePorts {
+		hostConfig.PortBindings = portBindings
 	}
 
 	if p.Opts.CPUPeriod > 0 {
@@ -453,9 +466,9 @@ func (p *SwarmProvider) GetHostAddress(name string) string {
 	id, ok := p.ActiveContainers[name]
 	client := p.Cm.ClientForContainer(id)
 	if ok == false {
-		// look up container by name
+		// look up container by name if not known
 		filter := make(map[string][]string)
-		filter["name"] = []string{name}
+		filter["id"] = []string{id}
 		opts := docker.ListContainersOptions{
 			Filters: filter,
 		}
@@ -463,6 +476,7 @@ func (p *SwarmProvider) GetHostAddress(name string) string {
 		chkerr(err)
 		id = containers[0].ID
 	}
+
 	container, err := client.InspectContainer(id)
 	chkerr(err)
 	ipAddress = container.NetworkSettings.Networks["ingress"].IPAddress
@@ -471,47 +485,19 @@ func (p *SwarmProvider) GetHostAddress(name string) string {
 }
 
 func (p *SwarmProvider) GetRestUrl(name string) string {
+	// get ip address of the container and format as rest url
 
-	var restUrl string
+	retry := 5
+	address := p.GetHostAddress(name)
+	for address == "" && retry > 0 {
+		// retry if ip was not found
 
-	// get port
-	port := p.StartPort
-	offset := 0
-	for _, spec := range p.Servers {
-		for _, server := range spec.Names {
-			if server == name {
-				port = port + offset
-				break
-			}
-			offset += 1
-		}
+		time.Sleep(time.Second * 3)
+		address = p.GetHostAddress(name)
+		retry -= 1
 	}
-
-	// get server for this container
-
-	containerID := p.ActiveContainers[name]
-	client := p.Cm.ClientForContainer(containerID)
-
-	clientEndpoint := client.Endpoint()
-	// extract host from endpoint
-	url, err := url.Parse(clientEndpoint)
-	if url.Scheme == "" {
-		url, err = url.Parse("http://" + clientEndpoint)
-	}
-	chkerr(err)
-	host := url.Host
-	if host == "" {
-		host = "localhost"
-	}
-
-	// remove port if specified
-	re := regexp.MustCompile(`:.*`)
-	host = re.ReplaceAllString(host, "")
-
-	// attempt to connect
-	restUrl = fmt.Sprintf("%s:%d", host, port)
-
-	return strings.TrimSpace(restUrl)
+	addr := fmt.Sprintf("%s:8091", address)
+	return addr
 }
 
 func (p *SwarmProvider) GetType() string {
