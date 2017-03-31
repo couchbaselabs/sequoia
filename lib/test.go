@@ -3,6 +3,7 @@ package sequoia
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 	"time"
@@ -296,17 +297,28 @@ func (t *Test) runActions(scope Scope, loop int, actions []ActionSpec) {
 			case "exec":
 				// enter into container
 				if id, ok := scope.GetVarsKV(key); ok {
-					if err := t.Cm.ExecContainer(id); err != nil {
+					colorsay("docker exec -it " + id + " bash")
+					subProcess := exec.Command("docker", "exec", "-it", id, "bash")
+
+					stdin, err := subProcess.StdinPipe()
+					logerr(err)
+					defer stdin.Close() // the doc says subProcess.Wait will close it, but I'm not sure, so I kept this line
+
+					subProcess.Stdin = os.Stdin
+					subProcess.Stdout = os.Stdout
+					subProcess.Stderr = os.Stderr
+
+					if err := subProcess.Start(); err != nil {
 						emsg := fmt.Sprintf("%s [%s] %s",
 							"failed to exec into container ",
 							id,
 							err)
 						ecolorsay(emsg)
 					} else {
-						// we are inside container, make sure it stays that way
-						*t.Flags.SkipCleanup = true
-
-						// running exec ends test
+						// wait for process to quit and cleanup
+						subProcess.Wait()
+						*t.Flags.SoftCleanup = false // purge debug containers
+						t.Cleanup(scope)
 						return
 					}
 				} else {
