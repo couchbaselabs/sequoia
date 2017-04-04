@@ -46,9 +46,9 @@ RUN groupadd -g1000 couchbase && \
     echo 'couchbase:couchbase' | chpasswd
 
 
-ARG VERSION=4.6.0
-ARG BUILD_NO=3552
-ARG FLAVOR=watson
+ARG VERSION=5.0.0
+ARG BUILD_NO=2412
+ARG FLAVOR=spock
 ARG BUILD_PKG=couchbase-server-enterprise-$VERSION-$BUILD_NO-centos7.x86_64.rpm
 ARG BASE_URL=http://172.23.120.24/builds/latestbuilds/couchbase-server/$FLAVOR/$BUILD_NO
 
@@ -87,6 +87,9 @@ EXPOSE 8091 8092 8093 8094 9100 9101 9102 9103 9104 9105 9998 9999 11207 11210 1
 ARG MEMBASE_RAM_MEGS=0
 RUN bash -c '[[ $MEMBASE_RAM_MEGS != 0 ]] && sed  -i "s/export PATH/export PATH\nMEMBASE_RAM_MEGS=$MEMBASE_RAM_MEGS\nexport MEMBASE_RAM_MEGS/" /opt/couchbase/bin/couchbase-server || true'
 
+RUN echo "*        soft    nproc           unlimited" >> /etc/security/limits.conf
+RUN echo "*        hard    nproc           unlimited" >> /etc/security/limits.conf
+RUN echo "ulimit -u unlimited" >> /home/couchbase/.bashrc
 CMD "./start.sh"
 # pass -noinput so it doesn't drop us in the erlang shell
 
