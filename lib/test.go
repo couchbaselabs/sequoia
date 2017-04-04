@@ -298,8 +298,7 @@ func (t *Test) runActions(scope Scope, loop int, actions []ActionSpec) {
 				// enter into container
 				if id, ok := scope.GetVarsKV(key); ok {
 					colorsay("docker exec -it " + id + " bash")
-					subProcess := exec.Command("docker", "exec", "-it", id, "bash")
-
+					subProcess := exec.Command("docker", "-H", *t.Flags.Client, "exec", "-it", id, "bash")
 					stdin, err := subProcess.StdinPipe()
 					logerr(err)
 					defer stdin.Close() // the doc says subProcess.Wait will close it, but I'm not sure, so I kept this line
