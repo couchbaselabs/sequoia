@@ -90,6 +90,8 @@ RUN bash -c '[[ $MEMBASE_RAM_MEGS != 0 ]] && sed  -i "s/export PATH/export PATH\
 RUN echo "*        soft    nproc           unlimited" >> /etc/security/limits.conf
 RUN echo "*        hard    nproc           unlimited" >> /etc/security/limits.conf
 RUN echo "ulimit -u unlimited" >> /home/couchbase/.bashrc
+RUN sed -i 's/--user couchbase/--user root/' /etc/init.d/couchbase-server
+
 CMD "./start.sh"
 # pass -noinput so it doesn't drop us in the erlang shell
 
