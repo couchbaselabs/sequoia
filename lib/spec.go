@@ -5,6 +5,13 @@ import (
 	"strings"
 )
 
+type RbacSpec struct {
+	Name     string
+	Password string
+	Roles    string
+	AuthType string `yaml:"auth_type"`
+}
+
 type BucketSpec struct {
 	Name      string
 	Names     []string
@@ -42,6 +49,8 @@ type ServerSpec struct {
 	NodesActive  uint8
 	Services     map[string]uint8
 	NodeServices map[string][]string
+	Users        string
+	RbacSpecs    []RbacSpec
 }
 
 type ViewSpec struct {
@@ -61,6 +70,7 @@ type ScopeSpec struct {
 	Servers []ServerSpec
 	Views   []ViewSpec
 	DDocs   []DDocSpec `yaml:"ddocs"`
+	Users   []RbacSpec
 }
 
 func (s *ServerSpec) InitNodeServices() {
@@ -295,6 +305,19 @@ func ConfigureSpec(spec *ScopeSpec) {
 				spec.Servers[i].BucketSpecs = append(spec.Servers[i].BucketSpecs, bucketSpec)
 			}
 		}
+
+		// map servers to user objects
+		userList := CommaStrToList(spec.Servers[i].Users)
+		spec.Servers[i].RbacSpecs = make([]RbacSpec, 0)
+		for _, userName := range userList {
+			for _, rbacSpec := range spec.Users {
+				if rbacSpec.Name == userName {
+					spec.Servers[i].RbacSpecs = append(spec.Servers[i].RbacSpecs, rbacSpec)
+					break
+				}
+			}
+		}
+
 		// init node services
 		spec.Servers[i].InitNodeServices()
 	}

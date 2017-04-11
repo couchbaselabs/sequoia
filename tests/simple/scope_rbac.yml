@@ -1,0 +1,27 @@
+---
+users:
+  -
+    name: default
+    password: password 
+    roles: admin 
+    auth_type: builtin
+
+buckets: # define single default bucket
+  -
+    name: default
+    ram: 75%
+    replica: 1
+    type: couchbase
+
+
+servers: # define a single server with link named 'local'
+  -
+     name: local
+     ram: 3000 
+     count: 1
+     rest_username: Administrator
+     rest_password: password
+     rest_port: 8091
+     init_nodes: 1
+     buckets: default
+     users: default

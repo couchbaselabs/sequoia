@@ -1,0 +1,5 @@
+-
+  image: sequoiatools/gideon
+  command: "kv --ops 1000 --create 100  --hosts {{.Orchestrator}}"
+  duration: 30 
+  wait: true
