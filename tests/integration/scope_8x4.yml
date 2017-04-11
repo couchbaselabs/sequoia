@@ -1,4 +1,16 @@
 ---
+users:
+  -
+    name: default
+    password: password
+    roles: admin
+    auth_type: builtin
+  -
+    name: remote
+    password: password
+    roles: admin
+    auth_type: builtin
+
 servers: # each server tag represents a cluster
   -
       name: local
@@ -17,6 +29,7 @@ servers: # each server tag represents a cluster
       query_port: 8093
       init_nodes: 8
       buckets: default,CUSTOMER,DISTRICT,HISTORY,ITEM,NEW_ORDER,ORDERS,ORDER_LINE,STOCK,WAREHOUSE
+      users: default
   -
       name: remote
       count: 2
@@ -27,6 +40,7 @@ servers: # each server tag represents a cluster
       rest_port: 8091
       init_nodes: 2
       buckets: remote
+      users: remote
 
 
 buckets:
