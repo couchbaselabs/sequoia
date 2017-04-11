@@ -9,9 +9,10 @@ RUN pip install gevent
 WORKDIR /root
 
 WORKDIR /root
-RUN pip install couchbase &&\
-    pip install pyyaml && \
+RUN pip install pyyaml && \
     pip install eventlet
+
+RUN pip install git+git://github.com/couchbase/couchbase-python-client
 
 # src
 RUN git clone https://github.com/couchbaselabs/gideon.git
