@@ -149,6 +149,7 @@ func (s *Scope) Setup() {
 	s.InitCli()
 	s.InitNodes()
 	s.InitCluster()
+	s.AddUsers()
 	s.AddNodes()
 	s.RebalanceClusters()
 	s.CreateBuckets()
@@ -354,6 +355,58 @@ func (s *Scope) InitCluster() {
 	// apply only to orchestrator
 	s.Spec.ApplyToServers(initClusterOp, 0, 1)
 
+}
+
+func (s *Scope) AddUsers() {
+
+	// spock only
+	if strings.Compare(s.Version, "5.0") == -1 {
+		return
+	}
+
+	var image = "sequoiatools/couchbase-cli"
+
+	// add users
+	operation := func(name string, server *ServerSpec) {
+		orchestrator := server.Names[0]
+		ip := s.Provider.GetHostAddress(orchestrator)
+
+		for _, user := range server.RbacSpecs {
+
+			roles := user.Roles
+			if roles == "" {
+				roles = "admin"
+			}
+			auth_type := user.AuthType
+			if auth_type == "" {
+				auth_type = "builtin"
+			}
+			command := []string{"user-manage", "-c", ip,
+				"-u", server.RestUsername, "-p", server.RestPassword,
+				"--rbac-username", user.Name,
+				"--rbac-password", user.Password,
+				"--roles", roles,
+				"--auth-type", user.AuthType,
+				"--set",
+			}
+
+			desc := "create rbac user " + user.Name
+			task := ContainerTask{
+				Describe: desc,
+				Image:    image,
+				Command:  command,
+				Async:    false,
+			}
+			if s.Provider.GetType() == "docker" {
+				task.LinksTo = orchestrator
+			}
+
+			s.Cm.Run(&task)
+		}
+	}
+
+	// apply only to orchestrator of each cluster
+	s.Spec.ApplyToServers(operation, 0, 1)
 }
 
 func (s *Scope) AddNodes() {
