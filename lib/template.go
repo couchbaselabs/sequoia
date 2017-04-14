@@ -23,18 +23,19 @@ func ParseTemplate(s *Scope, command string) string {
 	tResolv := TemplateResolver{s}
 
 	netFunc := template.FuncMap{
-		"net":      tResolv.Address,
-		"bucket":   tResolv.BucketName,
-		"noport":   tResolv.NoPort,
-		"json":     tResolv.ToJson,
-		"ftoint":   tResolv.FloatToInt,
-		"last":     tResolv.LastItem,
-		"contains": tResolv.Contains,
-		"excludes": tResolv.Excludes,
-		"tolist":   tResolv.ToList,
-		"strlist":  tResolv.StrList,
-		"mkrange":  tResolv.MkRange,
-		"to_ip":    tResolv.ToIp,
+		"net":       tResolv.Address,
+		"bucket":    tResolv.BucketName,
+		"auth_user": tResolv.AuthUser,
+		"noport":    tResolv.NoPort,
+		"json":      tResolv.ToJson,
+		"ftoint":    tResolv.FloatToInt,
+		"last":      tResolv.LastItem,
+		"contains":  tResolv.Contains,
+		"excludes":  tResolv.Excludes,
+		"tolist":    tResolv.ToList,
+		"strlist":   tResolv.StrList,
+		"mkrange":   tResolv.MkRange,
+		"to_ip":     tResolv.ToIp,
 	}
 	tmpl, err := template.New("t").Funcs(netFunc).Parse(command)
 	logerr(err)
@@ -365,6 +366,44 @@ func (t *TemplateResolver) Address(index int, servers []ServerSpec) string {
 
 	var name = servers[0].Names[index]
 	return t.Scope.Provider.GetHostAddress(name)
+}
+
+func (t *TemplateResolver) AuthUser(index int, servers []ServerSpec) *RbacSpec {
+	for _, spec := range servers {
+		for i, userSpec := range spec.RbacSpecs {
+			if i == index {
+				return &userSpec
+			}
+			i++
+		}
+	}
+	return nil
+}
+
+// .ClusterNodes | (auth_user N).Name
+func (t *TemplateResolver) NthAuthUserName(n int) string {
+	if user := t.AuthUser(n, t.ClusterNodes()); user != nil {
+		return user.Name
+	}
+	return "<user not found>"
+}
+
+// .ClusterNodes | (auth_user 0).Name
+func (t *TemplateResolver) AuthUserName() string {
+	return t.NthAuthUserName(0)
+}
+
+// .ClusterNodes | (auth_user N).Password
+func (t *TemplateResolver) NthAuthPassword(n int) string {
+	if user := t.AuthUser(n, t.ClusterNodes()); user != nil {
+		return user.Password
+	}
+	return "<user not found>"
+}
+
+// .ClusterNodes | (auth_user 0).Password
+func (t *TemplateResolver) AuthPassword() string {
+	return t.NthAuthPassword(0)
 }
 
 // Template function: `bucket`
