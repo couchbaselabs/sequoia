@@ -1,6 +1,6 @@
 ---
 -
-  include: tests/templates/rebalance.yml, tests/templates/vegeta.yml
+  include: tests/templates/rebalance.yml, tests/templates/vegeta.yml, tests/templates/kv.yml
 
 #============ delete phase ============
 -
@@ -51,8 +51,8 @@
 
 #============ continous kv loading ============
 -
-   image: sequoiatools/pillowfight
-   command: "-U {{.Orchestrator}} -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 4  --rate-limit {{.Scale 2000}}"
+   template: pillowfight
+   args: "{{.Orchestrator}}, {{.Bucket}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 4  --rate-limit {{.Scale 2000}}, {{.AuthPassword}}"
    duration: 3600  # 1 hour of main loader
 -
    image: sequoiatools/gideon
@@ -98,9 +98,13 @@
 
 #============ load 1M items ============
 -
-   image: sequoiatools/pillowfight
-   command: "-U  {{.Orchestrator}} -I {{.Scale 1000}} -B {{.Scale 100}} -t 4 -c 100"
+   template: pillowfight_htp
    wait: true
+
+-
+   template: pillowfight
+   args: "{{.Orchestrator}}, {{.Bucket}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 4  --rate-limit {{.Scale 2000}}, {{.AuthPassword}}"
+   duration: 3600  # 1 hour of main loader
 
 
 #============ swap rebalance ============
@@ -111,8 +115,7 @@
 
 #============ quick update batch ============
 -
-   image: sequoiatools/pillowfight
-   command: "-U  {{.Orchestrator}} -I {{.Scale 1000}} -B {{.Scale 100}} -t 4 -c 100"
+   template: pillowfight_htp
    wait: true
 
 #============ swap failover ============
@@ -132,12 +135,11 @@
    template: rebalance
    wait: true
 
+
 #============ quick update batch ============
 -
-   image: sequoiatools/pillowfight
-   command: "-U  {{.Orchestrator}} -I {{.Scale 1000}} -B {{.Scale 100}} -t 4 -c 100"
+   template: pillowfight_htp
    wait: true
-
 
 #============ swap hard failover ============
 -
@@ -162,11 +164,9 @@
    wait: true
 
 
-
 #============ quick update batch ============
 -
-   image: sequoiatools/pillowfight
-   command: "-U  {{.Orchestrator}}:{{.RestPort}} -I {{.Scale 1000}} -B {{.Scale 100}} -t 4 -c 100"
+   template: pillowfight_htp
    wait: true
 
 #============ add back============
