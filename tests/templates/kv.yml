@@ -17,7 +17,7 @@
   name: pillowfight_htp
   actions:
     -
-      image: sequoiatools/pillowfight
+      template: pillowfight
       args: "{{.Orchestrator}}, {{.Bucket}},-I {{.Scale 1000}} -B {{.Scale 100}} -t 4 -c 100, {{.AuthPassword}}"
 
 
