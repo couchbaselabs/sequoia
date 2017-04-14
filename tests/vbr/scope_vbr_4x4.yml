@@ -1,4 +1,15 @@
 ---
+users:
+  -
+      name: AbRegNums
+      password: password
+      roles: admin
+      auth_type: builtin
+  -
+      name: AbRegNums2
+      password: password
+      roles: admin
+      auth_type: builtin
 servers: # each server tag represents a cluster
   -
       name: src
@@ -9,6 +20,7 @@ servers: # each server tag represents a cluster
       rest_port: 8091
       init_nodes: 3
       buckets: AbRegNums,MsgsCalls,RevAB,UserInfo
+      users: AbRegNums
   -
       name: dest
       count: 4
@@ -18,7 +30,7 @@ servers: # each server tag represents a cluster
       rest_port: 8091
       init_nodes: 3
       buckets: AbRegNums2,MsgsCalls2,RevAB2,UserInfo2
-
+      users: AbRegNums2
 
 buckets:
   -
