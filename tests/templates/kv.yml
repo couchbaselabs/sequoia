@@ -1,16 +1,24 @@
+-
+  name: pillowfight
+  actions:
+    -
+      image: sequoiatools/pillowfight
+      command: "-U  couchbase://$0/$1{{if le 5.0 .Version}}?select_bucket=true{{end}} $2{{if le 5.0 .Version}} -P $3{{end}}"
+
 - 
   name: pillowfight_small
   actions:
     -
-      image: sequoiatools/pillowfight
-      command: "-U  {{.Orchestrator}} -B 100 -t 1 -c 100"
+      template: pillowfight
+      args: "{{.Orchestrator}}, {{.Bucket}}, -B 100 -t 1 -c 100, {{.AuthPassword}}"
 
 -
-  name: pillowfight_hi
+  # high throughput pillowfight
+  name: pillowfight_htp
   actions:
     -
       image: sequoiatools/pillowfight
-      command: "-U  {{.Orchestrator}} -I {{.Scale 1000}} -B {{.Scale 100}} -t 4 -c 100"
+      args: "{{.Orchestrator}}, {{.Bucket}},-I {{.Scale 1000}} -B {{.Scale 100}} -t 4 -c 100, {{.AuthPassword}}"
 
 
 -
