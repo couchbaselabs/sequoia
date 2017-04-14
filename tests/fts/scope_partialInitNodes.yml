@@ -1,4 +1,10 @@
 ---
+users:
+  -
+      name: default
+      password: password
+      roles: admin
+      auth_type: builtin
 buckets:
   -
       name: default
@@ -30,3 +36,4 @@ servers:
       index_path: "/data"
       init_nodes: 4   # ONLY INIT 4 NODES
       buckets: default,other
+      users: default

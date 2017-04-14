@@ -1,4 +1,10 @@
 ---
+users:
+  -
+      name: default
+      password: password
+      roles: admin
+      auth_type: builtin
 buckets:
   -
       name: default
@@ -15,6 +21,7 @@ servers:
       init_nodes: 5
       buckets: default
       data_path: "/data"
+      users: default
   -
       name: remote
       count: 4
@@ -24,3 +31,4 @@ servers:
       init_nodes: 3
       buckets: default
       data_path: "/data"
+      users: default

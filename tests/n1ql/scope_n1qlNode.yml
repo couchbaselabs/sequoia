@@ -1,4 +1,10 @@
 ---
+users:
+  -
+      name: default
+      password: password
+      roles: admin
+      auth_type: builtin
 buckets:
   -
       name: default
@@ -22,4 +28,5 @@ servers: # each server tag represents a cluster
       index_path: "/data"
       init_nodes: 10
       buckets: default
+      users: default
 

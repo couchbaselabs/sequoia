@@ -1,4 +1,16 @@
 ---
+users:
+  -
+      name: default
+      password: password
+      roles: admin
+      auth_type: builtin
+  -
+      name: remote
+      password: password
+      roles: admin
+      auth_type: builtin
+
 servers: # each server tag represents a cluster
   -
       name: local
@@ -10,6 +22,7 @@ servers: # each server tag represents a cluster
       index_path: "/data"
       init_nodes: 8
       buckets: default,other
+      users: default
   -
       name: remote
       count: 2
@@ -19,6 +32,7 @@ servers: # each server tag represents a cluster
       data_path: "/data"
       init_nodes: 2
       buckets: remote
+      users: remote
 
 buckets:
   -

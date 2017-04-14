@@ -1,4 +1,11 @@
 ---
+users:
+  -
+      name: lww
+      password: password
+      roles: admin
+      auth_type: builtin
+
 servers:
   -
       name: local
@@ -9,6 +16,7 @@ servers:
       init_nodes: 5
       buckets: lww
       data_path: "/data"
+      users: lww
   -
       name: remote
       count: 4
@@ -18,3 +26,4 @@ servers:
       init_nodes: 3
       buckets: lww
       data_path: "/data"
+      users: lww
