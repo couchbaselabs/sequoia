@@ -5,6 +5,21 @@ users:
       password: password
       roles: admin
       auth_type: builtin
+  -
+      name: other-1
+      password: password
+      roles: admin
+      auth_type: builtin
+  -
+      name: other-2
+      password: password
+      roles: admin
+      auth_type: builtin
+  -
+      name: other-3
+      password: password
+      roles: admin
+      auth_type: builtin
 
 buckets:
   -
@@ -20,7 +35,7 @@ buckets:
 servers: # each server tag represents a cluster
   -
       name: local
-      count: 5
+      count: 4
       ram: 80%
       index_ram: 50%
       #index_storage: plasma
@@ -31,6 +46,6 @@ servers: # each server tag represents a cluster
         query_start: 2
       rest_username: Administrator
       rest_password: password
-      init_nodes: 5
+      init_nodes: 4
       buckets: default,other
-      users: default
+      users: default,other-1,other-2,other-3
