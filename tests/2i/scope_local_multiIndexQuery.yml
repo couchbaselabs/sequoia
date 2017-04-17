@@ -1,4 +1,11 @@
 ---
+users:
+  -
+      name: default
+      password: password
+      roles: admin
+      auth_type: builtin
+
 buckets:
   -
       name: default
@@ -26,3 +33,4 @@ servers: # each server tag represents a cluster
       rest_password: password
       init_nodes: 5
       buckets: default,other
+      users: default
