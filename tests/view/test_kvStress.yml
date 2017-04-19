@@ -1,15 +1,17 @@
 ---
 -
-  include: tests/templates/rebalance.yml, tests/templates/vegeta.yml
+  include: tests/templates/rebalance.yml, tests/templates/vegeta.yml, tests/templates/kv.yml
 
 #============ continous kv loading a minimum of 1.5M items  at 1xScale============
 -
-   image: sequoiatools/pillowfight
-   command: "-U {{.Orchestrator}} -M 512 -p aaa -I {{.Scale 500000}} -B 100 --rate-limit {{.Scale 1000}}"
+   template: pillowfight
+   args: "{{.Orchestrator}}, {{.Bucket}}, -M 512 -p aaa -I {{.Scale 500000}} -B 100 --rate-limit {{.Scale 1000}}, {{.AuthPassword}}"
 -
-   command: "-U {{.Orchestrator}} -M 512 -p bbb -I {{.Scale 500000}} -B 100  --rate-limit {{.Scale 1000}}"
+   template: pillowfight
+   args: "{{.Orchestrator}}, {{.Bucket}}, -M 512 -p bbb -I {{.Scale 500000}} -B 100  --rate-limit {{.Scale 1000}}, {{.AuthPassword}}"
 -
-   command: "-U {{.Orchestrator}} -M 512 -p ccc -I {{.Scale 500000}} -B 100  --rate-limit {{.Scale 1000}}"
+   template: pillowfight
+   command: "{{.Orchestrator}}, {{.Bucket}}, -M 512 -p ccc -I {{.Scale 500000}} -B 100  --rate-limit {{.Scale 1000}}, {{.AuthPassword}}"
 -
    image: sequoiatools/gideon
    command: "kv --ops {{.Scale 1000}} --create 30 --get 70 --delete 10 --expire 20 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 16000"
@@ -28,8 +30,8 @@
 
 #============ load 10k items at 1xScale============
 -
-   image: sequoiatools/pillowfight
-   command: "-U  {{.Orchestrator}} -I {{.Scale 10000}} -B 100 -c {{.Scale 100}}"
+   template: pillowfight
+   args: "{{.Orchestrator}}, {{.Bucket}}, -I {{.Scale 10000}} -B 100 -c {{.Scale 100}}, {{.AuthPassword}}"
    wait: true
 
 
@@ -41,8 +43,8 @@
 
 #============ load 100k items at 1xScale============
 -
-  image: sequoiatools/pillowfight
-  command: "-U  {{.Orchestrator}} -I {{.Scale 100000}} -B 100 -c {{.Scale 1000}}"
+  template: pillowfight
+  args: "{{.Orchestrator}}, {{.Bucket}}, -I {{.Scale 100000}} -B 100 -c {{.Scale 1000}}, {{.AuthPassword}}"
   wait: true
 
 
@@ -55,8 +57,8 @@
 
 #============ update 100k items at 1xScale============
 -
-  image: sequoiatools/pillowfight
-  command: "-U  {{.Orchestrator}} -I {{.Scale 100000}} -B 100 -c {{.Scale 1000}}"
+  template: pillowfight
+  args: "{{.Orchestrator}}, {{.Bucket}}, -I {{.Scale 100000}} -B 100 -c {{.Scale 1000}}, {{.AuthPassword}}"
   wait: true
 
 #============ swap failover ============
@@ -78,8 +80,8 @@
 
 #============ update 100k items at 1xScale============
 -
-   image: sequoiatools/pillowfight
-   command: "-U  {{.Orchestrator}} -I {{.Scale 100000}} -B 100 -c {{.Scale 1000}}"
+   template: pillowfight
+   args: "{{.Orchestrator}}, {{.Bucket}}, -I {{.Scale 100000}} -B 100 -c {{.Scale 1000}}, {{.AuthPassword}}"
    wait: true
 
 
@@ -110,8 +112,8 @@
 
 #============ update 100k items at 1xScale============
 -
-   image: sequoiatools/pillowfight
-   command: "-U  {{.Orchestrator}} -I {{.Scale 100000}} -B 100 -c {{.Scale 1000}}"
+   template: pillowfight
+   args "{{.Orchestrator}}, {{.Bucket}}, -I {{.Scale 100000}} -B 100 -c {{.Scale 1000}}, , {{.AuthPassword}}"
    wait: true
 
 #============ add back============

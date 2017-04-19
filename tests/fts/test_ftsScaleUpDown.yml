@@ -1,11 +1,11 @@
 ---
 -
-  include: tests/templates/rebalance.yml, tests/templates/fts.yml
+  include: tests/templates/rebalance.yml, tests/templates/fts.yml, tests/templates/kv.yml
 
 # start json and binary data loading
 -
-   image: sequoiatools/pillowfight
-   command: "-U  {{.Orchestrator}} -B {{.Scale 100}} -I {{.Scale 100000}} -t 1"
+   template: pillowfight
+   args: "{{.Orchestrator}}, {{.Bucket}}, -B {{.Scale 100}} -I {{.Scale 100000}} -t 1, {{.AuthPassword}}"
 -
    image: sequoiatools/gideon
    command: "kv --ops {{.Scale 1000}} --create 10 --get 90 --expire 20 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 16000"
