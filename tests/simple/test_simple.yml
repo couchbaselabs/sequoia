@@ -1,4 +1,8 @@
-- 
-  image: sequoiatools/pillowfight
-  command: "-U  {{.Orchestrator}} -B 100 -t 1 -c 10"
-  wait: true
+---
+-
+  include: tests/templates/kv.yml
+
+-
+   template: pillowfight
+   args: "{{.Orchestrator}}, {{.Bucket}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 4 -c 10 , {{.AuthPassword}}"
+   wait: true

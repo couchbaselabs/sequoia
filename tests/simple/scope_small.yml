@@ -1,4 +1,11 @@
 ---
+users:
+  -
+    name: default
+    password: password
+    roles: admin
+    auth_domain: local
+
 buckets: # define single default bucket
   -
     name: default
@@ -16,3 +23,4 @@ servers: # define a single server with link named 'local'
      rest_port: 8091
      init_nodes: 1
      buckets: default
+     users: default

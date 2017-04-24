@@ -6,10 +6,10 @@ import (
 )
 
 type RbacSpec struct {
-	Name     string
-	Password string
-	Roles    string
-	AuthType string `yaml:"auth_type"`
+	Name       string
+	Password   string
+	Roles      string
+	AuthDomain string `yaml:"auth_domain"`
 }
 
 type BucketSpec struct {

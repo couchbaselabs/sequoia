@@ -377,16 +377,18 @@ func (s *Scope) AddUsers() {
 			if roles == "" {
 				roles = "admin"
 			}
-			auth_type := user.AuthType
-			if auth_type == "" {
-				auth_type = "builtin"
+
+			// auth_domain can override auth_type
+			auth_domain := user.AuthDomain
+			if auth_domain == "" {
+				auth_domain = "builtin"
 			}
 			command := []string{"user-manage", "-c", ip,
 				"-u", server.RestUsername, "-p", server.RestPassword,
 				"--rbac-username", user.Name,
 				"--rbac-password", user.Password,
 				"--roles", roles,
-				"--auth-type", user.AuthType,
+				"--auth-domain", auth_domain,
 				"--set",
 			}
 
