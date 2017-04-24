@@ -43,8 +43,8 @@
     -
       image: danihodovic/vegeta
       command: "bash -c
-          'echo \"$3\" > query.txt;
-           echo -e POST http://$2/query/service
+          'echo \"$3\" | sed s/~/\\\"/g > query.txt;
+          echo -e POST http://{{$.RestUsername}}:{{$.RestPassword}}@$2/query/service
                | vegeta attack -duration=$0 -rate=$1 -body=query.txt > results.bin;
                  vegeta report -inputs=results.bin  >  results.txt;
                  vegeta report -inputs=results.bin -reporter=plot > plot.html'"
