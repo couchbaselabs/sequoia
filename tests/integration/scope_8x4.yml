@@ -4,12 +4,12 @@ users:
     name: default
     password: password
     roles: admin
-    auth_type: builtin
+    auth_domain: local
   -
     name: remote
     password: password
     roles: admin
-    auth_type: builtin
+    auth_domain: local
 
 servers: # each server tag represents a cluster
   -
