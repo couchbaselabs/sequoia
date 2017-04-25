@@ -1,0 +1,14 @@
+#! /bin/bash
+
+#! /bin/bash
+
+./host2ip.sh $(echo "$@" | sed -e 's/.*-I //' -e 's/ini.*/ini/')
+
+# do not run test on wait
+if [ $1 == "wait" ]; then tail -f /dev/null; fi
+
+exec java -cp target/sdkdclient-1.0-SNAPSHOT.jar \
+    com.couchbase.sdkdclient.batch.BRun $@
+
+
+# ./report
