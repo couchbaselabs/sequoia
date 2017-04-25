@@ -42,7 +42,7 @@
   actions:
     -
       image: sequoiatools/vegeta
-      commandraw: sh -c './run.sh $0 $1 POST http://{{$.RestUsername}}:{{$.RestPassword}}@{{$.QueryNodePort}}/query/service $3'
+      commandraw: sh -c './run.sh $0 $1 POST http://{{$.RestUsername}}:{{$.RestPassword}}@{{$.QueryNodePort}}/query/service "$3"'
 
 
 -

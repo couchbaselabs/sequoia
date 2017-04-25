@@ -1,10 +1,11 @@
 #!/bin/sh
 
+set -f
 DURATION=$1
 RATE=$2
 REST=$3
 URL=$4
-REQUEST=$(echo $* | cut -d' ' -f5-)
+REQUEST=$(echo "$*" | cut -d' ' -f5-)
 
 echo "REQUEST", $REQUEST
 echo "========="
