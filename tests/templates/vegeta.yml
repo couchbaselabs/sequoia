@@ -12,7 +12,7 @@
   actions:
     -
       image: danihodovic/vegeta
-      command: "bash -c 'echo GET \"http://{{`$2` | noport}}:{{$.ViewPort}}/$3/_design/$4/_view/$5?$6\" | vegeta attack -duration=$0 -rate=$1> results.bin && vegeta report -inputs=results.bin  >  results.txt && vegeta report -inputs=results.bin -reporter=plot > plot.html'"
+      command: "bash -c 'echo GET \"http://{{$.RestUsername}}:{{$.RestPassword}}@{{`$2` | noport}}:{{$.ViewPort}}/$3/_design/$4/_view/$5?$6\" | vegeta attack -duration=$0 -rate=$1> results.bin && vegeta report -inputs=results.bin  >  results.txt && vegeta report -inputs=results.bin -reporter=plot > plot.html'"
 
 -
   # run a distributed attack on all view nodes
