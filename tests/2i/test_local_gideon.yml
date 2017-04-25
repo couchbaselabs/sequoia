@@ -1,3 +1,6 @@
+-
+  include: tests/templates/kv.yml, tests/templates/vegeta.yml
+
 ############### data loading ################
 -
   image: sequoiatools/gideon
@@ -32,12 +35,16 @@
 -
   image: sequoiatools/gideon
   command: "kv --ops {{.Scale 10}} --create 20 --update 60 --delete 20     --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+  alias: GideonContainer1
 -
   command: "kv --ops {{.Scale 10}} --create 20 --update 60 --delete 20 --sizes 64 96   --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
+  alias: GideonContainer2
 -
   command: "kv --ops {{.Scale 10}} --create 20 --update 60 --delete 20 --sizes 64 96   --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}}"
+  alias: GideonContainer3
 -
   command: "kv --ops {{.Scale 1}} --create 20 --update 60 --delete 20 --sizes 512  --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}}"
+  alias: GideonContainer4
 
 ###############  create indexes ################
 -
@@ -126,35 +133,61 @@
    command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='drop index `other-3`.o3_claim'"
    wait: true
 
+# stop gideon data loading
+-
+  client:
+    op: rm
+    container: GideonContainer1
+-
+  client:
+    op: rm
+    container: GideonContainer2
+-
+  client:
+    op: rm
+    container: GideonContainer3
+-
+  client:
+    op: rm
+    container: GideonContainer4
+
 ############### run deletes ################
 -
-  image: sequoiatools/gideon
-  command: "kv --ops {{.Scale 10}} --delete 100     --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
-  duration: 70
+  template: attack_query
+  args: 0, 10, {{$.QueryNodePort}},
+        delete from default where rating > 0 limit 100
+  duration: 900
 -
-  command: "kv --ops {{.Scale 10}} --delete 100  --sizes 64 96   --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
-  duration: 70
+  # load data
+  template: attack_query
+  args: 0, 10, {{$.QueryNodePort}},
+         delete from \`other-1\` where claim like \"\%1\%\" limit 100
+  duration: 900
 -
-  command: "kv --ops {{.Scale 10}} --delete 100  --sizes 64 96   --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}}"
-  duration: 70
+  template: attack_query
+  args: 0, 10, {{$.QueryNodePort}},
+        delete from \`other-2\` where result = \"SUCCESS\" limit 100
+  duration: 900
 -
-  command: "kv --ops {{.Scale 1}} --delete 100  --sizes 512  --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}}"
-  duration: 70
+  template: attack_query
+  args: 0, 10, {{$.QueryNodePort}},
+        delete from \`other-3\` where rating > 0 limit 100
+  duration: 900
   wait: true
 
 ############### run creates ################
 -
   image: sequoiatools/gideon
   command: "kv --ops {{.Scale 10}} --create 100     --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
-  duration: 60
+  duration: 30
 -
   command: "kv --ops {{.Scale 10}} --create 100  --sizes 64 96   --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
-  duration: 60
+  duration: 30
 -
   command: "kv --ops {{.Scale 10}} --create 100  --sizes 64 96   --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}}"
-  duration: 60
+  duration: 30
 -
   command: "kv --ops {{.Scale 1}} --create 100  --sizes 512  --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}}"
-  duration: 60
+  duration: 30
   wait: true
 
