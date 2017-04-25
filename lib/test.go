@@ -26,6 +26,7 @@ type ActionSpec struct {
 	Describe    string
 	Image       string
 	Command     string
+	CommandRaw  string
 	Wait        bool
 	CondWait    string
 	Before      string
@@ -51,6 +52,7 @@ func (a *ActionSpec) String() string {
 		`-
  image: %q
  command: %q
+ commandraw: %s
  wait: %t
  condwait: %q
  before: %q
@@ -63,7 +65,8 @@ func (a *ActionSpec) String() string {
  template: %q
  args: %q
  client: %v
-`, a.Image, a.Command, a.Wait, a.CondWait, a.Before, a.Entrypoint, a.Requires,
+`, a.Image, a.Command, a.CommandRaw, a.Wait, a.CondWait, a.Before,
+		a.Entrypoint, a.Requires,
 		a.Concurrency, a.Duration, a.Alias, a.Repeat,
 		a.Template, a.Args, a.Client)
 }
@@ -627,6 +630,11 @@ func (t *Test) ResolveTemplateActions(scope Scope, action ActionSpec) []ActionSp
 			resolvedSubAction.ForEach = subAction.ForEach
 			t.RestoreConditionalValues(subAction, &resolvedSubAction)
 			subAction = resolvedSubAction
+		}
+
+		// replace cmd with raw string if specified
+		if subAction.CommandRaw != "" {
+			subAction.Command = subAction.CommandRaw
 		}
 
 		// allow inheritance

@@ -41,14 +41,8 @@
   name: attack_query
   actions:
     -
-      image: danihodovic/vegeta
-      command: "bash -c
-          'echo \"$3\" | sed s/~/\\\"/g > query.txt;
-          echo -e POST http://{{$.RestUsername}}:{{$.RestPassword}}@$2/query/service
-               | vegeta attack -duration=$0 -rate=$1 -body=query.txt > results.bin;
-                 vegeta report -inputs=results.bin  >  results.txt;
-                 vegeta report -inputs=results.bin -reporter=plot > plot.html'"
-
+      image: sequoiatools/vegeta
+      commandraw: sh -c './run.sh $0 $1 POST http://{{$.RestUsername}}:{{$.RestPassword}}@{{$.QueryNodePort}}/query/service $3'
 
 
 -
@@ -62,7 +56,7 @@
     -
       foreach: "{{range $i, $node := (index (.Service `n1ql` .Nodes) 0).Names}}"
       template: attack_query
-      args: "$0, $1, {{$node | to_ip }}:{{$.QueryPort}}, $2"
+      args: $0, $1, {{$node | to_ip }}:{{$.QueryPort}}, $2
 
 
 -
