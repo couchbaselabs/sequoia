@@ -29,9 +29,14 @@ RUN pip install paramiko &&\
 COPY local.ini local.ini
 COPY upgrade_local.ini upgrade_local.ini
 COPY host2ip.sh host2ip.sh
+COPY sync.sh sync.sh
 COPY testrunner testrunner
+COPY testrunner scripts/testrunner-docker
+RUN cp testrunner scripts/testrunner-orig
 
 # make sure tests use storage memory and avoid htp (for now)
 RUN sed -i 's/IS_CONTAINER.*/IS_CONTAINER = True/' lib/testconstants.py
 RUN sed -i 's/ALLOW_HTP.*/ALLOW_HTP=False/' lib/testconstants.py
+RUN echo git pull origin $BRANCH > /tmp/.pull
+RUN chmod +x /tmp/.pull
 ENTRYPOINT ["./testrunner"]

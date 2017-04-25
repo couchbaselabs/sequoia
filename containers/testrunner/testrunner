@@ -1,5 +1,10 @@
 #! /bin/bash
-if [ $1 == "wait" ]; then tail -f /dev/null; fi  # do not run test
 
+./sync.sh
+
+# do not run test on wait
+if [ $1 == "wait" ]; then tail -f /dev/null; fi
+
+# translate hosts to ip
 ./host2ip.sh $(echo "$@" | sed -e 's/.*-i //' -e 's/ini.*/ini/')
-exec python ${0}.py "$@"
+exec python testrunner.py "$@"
