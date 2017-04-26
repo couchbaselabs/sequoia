@@ -350,6 +350,8 @@ func SpecFromIni(fileName string) ScopeSpec {
 	}
 	clusterName := RandStr(6)
 	serverSpec.Name = clusterName + ".st.couchbase.com"
+
+	// parse testrunner style
 	for i, serverKey := range cfg.Section("servers").Keys() {
 		serverSpec.Count = uint8(i + 1)
 		name := fmt.Sprintf("%s-%d.st.couchbase.com",
@@ -390,6 +392,25 @@ func SpecFromIni(fileName string) ScopeSpec {
 		}
 		serverSpec.Ram = "60%"
 	}
+
+	// parse for generic init
+	if sec, err := cfg.GetSection("cluster"); err == nil {
+		count := 4
+		if key, err := sec.GetKey("num_containers"); err == nil {
+			count, _ = key.Int()
+		}
+		for i := 0; i < count; i = i + 1 {
+			serverSpec.Count = uint8(i + 1)
+			name := fmt.Sprintf("%s-%d.st.couchbase.com",
+				clusterName,
+				serverSpec.Count)
+			if len(cfg.Section("servers").Keys()) == 1 {
+				name = fmt.Sprintf("%s.st.couchbase.com", clusterName)
+			}
+			serverSpec.Names = append(serverSpec.Names, name)
+		}
+	}
+
 	serverSpec.InitNodes = serverSpec.Count
 	spec.Servers = append(spec.Servers, serverSpec)
 	return spec

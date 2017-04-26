@@ -124,21 +124,21 @@ func NewTest(flags TestFlags, cm *ContainerManager) Test {
 	switch flags.Mode {
 	case "image":
 		actions = ActionsFromArgs(*flags.ImageName, *flags.ImageCommand, *flags.ImageWait)
-	case "testrunner":
+	case "testrunner", "sdk":
 		actions = ActionsFromArgs(*flags.ImageName, *flags.ImageCommand, *flags.ImageWait)
 		if *flags.Exec == true {
 			// create new exec action
 			clientAction := ClientActionSpec{
 				Op:        "exec",
-				Container: "testrunner_id",
+				Container: "framework_id",
 			}
 			execAction := ActionSpec{
 				Client: clientAction,
 			}
 
-			// don't wait for testrunner to run
+			// don't wait for framework to run
 			actions[0].Wait = false
-			actions[0].Alias = "testrunner_id"
+			actions[0].Alias = "framework_id"
 			actions[0].Command = "wait"
 
 			// add exec action to test
@@ -171,7 +171,10 @@ func (t *Test) Run(scope Scope) {
 		scope.Provider.ProvideCouchbaseServers(scope.Spec.Servers)
 		if t.Flags.Mode == "" {
 			scope.Setup()
+		} else { // just wait for resources
+			scope.WaitForNodes()
 		}
+
 	} else if (scope.Provider.GetType() != "docker") &&
 		(scope.Provider.GetType() != "swarm") {
 		// non-dynamic IP's need to be extrapolated before test

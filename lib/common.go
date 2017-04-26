@@ -92,7 +92,11 @@ func ReadYamlFile(filename string, spec interface{}) {
 
 func ReadIniFile(filename string) *ini.File {
 
-	file, err := ini.Load(filename)
+	opts := ini.LoadOptions{
+		AllowShadows:     true,
+		AllowBooleanKeys: true,
+	}
+	file, err := ini.LoadSources(opts, filename)
 	logerr(err)
 
 	return file
