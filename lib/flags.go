@@ -8,40 +8,40 @@ import (
 )
 
 type TestFlags struct {
-	Mode              string
-	Args              []string
-	Config            *string
-	ScopeFile         *string `yaml:"scope"`
-	TestFile          *string `yaml:"test"`
-	Client            *string
-	Provider          *string
-	Platform          *string
-	ImageName         *string
-	ContainerName     *string
-	ImageCommand      *string
-	ImageWait         *bool
-	SkipSetup         *bool `yaml:"skip_setup"`
-	SkipTest          *bool `yaml:"skip_test"`
-	SkipTeardown      *bool `yaml:"skip_teardown"`
-	SkipCleanup       *bool `yaml:"skip_cleanup"`
-	SoftCleanup       *bool `yaml:"soft_cleanup"`
-	Continue          *bool
-	StopOnError       *bool
-	CollectOnError    *bool
-	ExposePorts       *bool
-	Scale             *int
-	Repeat            *int
-	Duration          *int
-	LogDir            *string
-	LogLevel          *int
-	CleanLogs         *bool
-	CleanContainers   *bool
-	Override          *string
-	Exec              *bool
-	DefaultFlagSet    *flag.FlagSet
-	ImageFlagSet      *flag.FlagSet
-	CleanFlagSet      *flag.FlagSet
-	TestrunnerFlagSet *flag.FlagSet
+	Mode             string
+	Args             []string
+	Config           *string
+	ScopeFile        *string `yaml:"scope"`
+	TestFile         *string `yaml:"test"`
+	Client           *string
+	Provider         *string
+	Platform         *string
+	ImageName        *string
+	ContainerName    *string
+	ImageCommand     *string
+	ImageWait        *bool
+	SkipSetup        *bool `yaml:"skip_setup"`
+	SkipTest         *bool `yaml:"skip_test"`
+	SkipTeardown     *bool `yaml:"skip_teardown"`
+	SkipCleanup      *bool `yaml:"skip_cleanup"`
+	SoftCleanup      *bool `yaml:"soft_cleanup"`
+	Continue         *bool
+	StopOnError      *bool
+	CollectOnError   *bool
+	ExposePorts      *bool
+	Scale            *int
+	Repeat           *int
+	Duration         *int
+	LogDir           *string
+	LogLevel         *int
+	CleanLogs        *bool
+	CleanContainers  *bool
+	Override         *string
+	Exec             *bool
+	DefaultFlagSet   *flag.FlagSet
+	ImageFlagSet     *flag.FlagSet
+	CleanFlagSet     *flag.FlagSet
+	FrameworkFlagSet *flag.FlagSet
 }
 
 // parse top-level args and set test flag parsing mode
@@ -76,17 +76,17 @@ func (f *TestFlags) SetFlagVals() {
 	case "clean":
 		f.ImageFlagSet = flag.NewFlagSet("clean", flag.ExitOnError)
 		f.AddCleanFlags(f.CleanFlagSet)
-	case "testrunner":
-		// testrunner flagset
-		f.TestrunnerFlagSet = flag.NewFlagSet("testrunner", flag.ExitOnError)
-		f.AddDefaultFlags(f.TestrunnerFlagSet)
-		f.AddTestrunnerFlags(f.TestrunnerFlagSet)
+	case "testrunner", "sdk":
+		// external framework flagset
+		f.FrameworkFlagSet = flag.NewFlagSet(f.Mode, flag.ExitOnError)
+		f.AddDefaultFlags(f.FrameworkFlagSet)
+		f.AddTestrunnerFlags(f.FrameworkFlagSet)
 
 		// include image flags and
-		f.AddImageFlags(f.TestrunnerFlagSet)
+		f.AddImageFlags(f.FrameworkFlagSet)
 
 		// override image flags for testrunner mode
-		*f.ImageName = "sequoiatools/testrunner"
+		*f.ImageName = "sequoiatools/" + f.Mode
 		*f.ImageWait = true
 		*f.LogLevel = 2
 		*f.SoftCleanup = true
@@ -104,9 +104,9 @@ func (f *TestFlags) Parse() {
 	case "image":
 		f.ImageFlagSet.Parse(f.Args[1:])
 	case "testrunner":
-		f.TestrunnerFlagSet.Parse(f.Args[1:])
+		f.FrameworkFlagSet.Parse(f.Args[1:])
 
-		// override scope with ini file
+		// override scope with ini file from testrunner path
 		flagArgs := strings.Split(*f.ImageCommand, " ")
 		for i, opt := range flagArgs {
 			argOffset := i + 1
@@ -114,6 +114,23 @@ func (f *TestFlags) Parse() {
 				if len(flagArgs) >= argOffset {
 					iniFile := flagArgs[argOffset]
 					*f.ScopeFile = fmt.Sprintf("%s/%s", "containers/testrunner/src", iniFile)
+					break
+				}
+			}
+		}
+	case "sdk":
+		f.FrameworkFlagSet.Parse(f.Args[1:])
+
+		// override scope with ini file from sdk path
+		flagArgs := strings.Split(*f.ImageCommand, " ")
+		for i, opt := range flagArgs {
+			argOffset := i + 1
+			if opt == "-I" {
+				if len(flagArgs) >= argOffset {
+					iniFile := flagArgs[argOffset]
+					fmt.Println(iniFile)
+					*f.ScopeFile = fmt.Sprintf("%s/%s", "containers/sdk", iniFile)
+					break
 				}
 			}
 		}
