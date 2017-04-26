@@ -40,5 +40,8 @@ RUN mkdir -p pylib
 RUN cp /root/sdkd-cpp/pylib/s3upload.py pylib/s3upload.py
 COPY brun brun
 COPY host2ip.sh host2ip.sh
+
+# add runtime ini-files
 COPY watson-basic.ini watson-basic.ini
+RUN sed -i 's/num_containers.*//' watson-basic.ini
 ENTRYPOINT ["./brun"]
