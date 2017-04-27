@@ -97,7 +97,7 @@ func (s *ServerSpec) InitNodeServices() {
 		// override
 		indexStartPos = customIndexStart - 1
 	}
-	if indexStartPos > numNodes {
+	if indexStartPos >= numNodes {
 		indexStartPos = 0
 	}
 
@@ -108,7 +108,7 @@ func (s *ServerSpec) InitNodeServices() {
 		// override
 		ftsStartPos = customFtsStart - 1
 	}
-	if ftsStartPos > numNodes {
+	if ftsStartPos >= numNodes {
 		ftsStartPos = 0
 	}
 
@@ -117,7 +117,7 @@ func (s *ServerSpec) InitNodeServices() {
 		// override
 		queryStartPos = customQueryStart - 1
 	}
-	if queryStartPos > numNodes {
+	if queryStartPos >= numNodes {
 		queryStartPos = 0
 	}
 
