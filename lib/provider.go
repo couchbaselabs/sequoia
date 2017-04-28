@@ -6,8 +6,8 @@ package sequoia
 
 import (
 	"fmt"
+	"github.com/docker/docker/api/types/swarm"
 	"github.com/fsouza/go-dockerclient"
-	"github.com/moby/moby/api/types/swarm"
 	"strconv"
 	"strings"
 	"time"
