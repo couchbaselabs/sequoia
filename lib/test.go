@@ -172,7 +172,9 @@ func (t *Test) Run(scope Scope) {
 		if t.Flags.Mode == "" {
 			scope.Setup()
 		} else { // just wait for resources
-			scope.WaitForNodes()
+			if t.Flags.Exec == nil || *t.Flags.Exec == false {
+				scope.WaitForNodes()
+			}
 		}
 
 	} else if (scope.Provider.GetType() != "docker") &&
