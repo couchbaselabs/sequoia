@@ -47,7 +47,7 @@ buckets:
   -
       name: default
       ram: 50%
-      eviction: fullEviction
+      eviction: noEviction
       ddocs: scale
       type: ephemeral
   -
