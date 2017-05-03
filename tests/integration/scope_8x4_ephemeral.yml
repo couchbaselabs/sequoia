@@ -1,0 +1,119 @@
+---
+users:
+  -
+    name: default
+    password: password
+    roles: admin
+    auth_domain: local
+  -
+    name: remote
+    password: password
+    roles: admin
+    auth_domain: local
+
+servers: # each server tag represents a cluster
+  -
+      name: local
+      count: 8
+      ram: 40%
+      index_ram: 50%
+      index_storage: forestdb
+      services:
+        query: 1
+        index: 1
+      rest_username: Administrator
+      rest_password: password
+      data_path: "/data"
+      index_path: "/data"
+      rest_port: 8091
+      query_port: 8093
+      init_nodes: 8
+      buckets: default,CUSTOMER,DISTRICT,HISTORY,ITEM,NEW_ORDER,ORDERS,ORDER_LINE,STOCK,WAREHOUSE
+      users: default
+  -
+      name: remote
+      count: 2
+      ram: 90%
+      rest_username: Administrator
+      rest_password: password
+      data_path: "/data"
+      rest_port: 8091
+      init_nodes: 2
+      buckets: remote
+      users: remote
+
+
+buckets:
+  -
+      name: default
+      ram: 50%
+      eviction: fullEviction
+      ddocs: scale
+      type: ephemeral
+  -
+      name: ORDERS
+      ram: 10%
+      type: ephemeral
+  -
+      name: ORDER_LINE
+      ram: 10%
+      ddocs: all
+      type: ephemeral
+  -
+      name: CUSTOMER
+      ram: 5%
+      type: ephemeral
+  -
+      name: STOCK
+      ram: 5%
+      type: ephemeral
+  -
+      name: NEW_ORDER
+      ram: 5%
+      type: ephemeral
+  -
+      name: WAREHOUSE
+      ram: 5%
+      type: ephemeral
+  -
+      name: DISTRICT
+      ram: 2%
+      type: ephemeral
+  -
+      name: HISTORY
+      ram: 2%
+      type: ephemeral
+  -
+      name: ITEM
+      ram: 2%
+      type: ephemeral
+  -
+      name: remote
+      ram: 80%
+      type: ephemeral
+
+ddocs:
+  -
+   name: scale
+   views: stats, padd, array
+  -
+   name: all
+   views: all_ids
+
+
+views:
+  -
+    name: stats
+    map: "if(doc.profile){ if((doc.rating > 500) && (doc.rating < 520)){ emit(meta.id, doc.ops_sec); }}"
+    reduce: "_stats"
+  -
+    name: padd
+    map: "if(doc.profile){ if (doc.rating < 200){ emit(meta.id, doc.padding); }}"
+  -
+    name: array
+    map: "if(doc.profile){ if((doc.rating > 200) && (doc.rating< 300)){ emit(doc.active_hosts, null); }}"
+  -
+    name: all_ids
+    map: "emit(meta.id, null)"
+
+
