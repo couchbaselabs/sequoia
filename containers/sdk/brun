@@ -1,7 +1,5 @@
 #! /bin/bash
 
-#! /bin/bash
-
 ./host2ip.sh $(echo "$@" | sed -e 's/.*-I //' -e 's/ini.*/ini/')
 
 # do not run test on wait

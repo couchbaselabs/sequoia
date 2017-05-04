@@ -14,7 +14,7 @@ for host in $( grep "node \?=" $FILE | awk -F "=" '{print $2}' ); do
   if [ -n "$services" ]; then
      services=":::"$services
   fi
-  echo $host" -> "$addr:8091$services
-  sed -i "0,/node.*$host/s//node = $addr:8091$services/" $FILE
+  echo $host" -> "$addr$services
+  sed -i "0,/node.*$host/s//node = $addr$services/" $FILE
   ((i++))
 done

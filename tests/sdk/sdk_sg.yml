@@ -1,0 +1,23 @@
+-
+  include: tests/templates/kv.yml
+
+# start sdk test (async)
+-
+  image: sequoiatools/sdk
+  command: "-I spock-basic.ini --install-skip true --bucket-password password --rebound 240 --testsuite-variants=HYBRID --testsuite-test=Rb1Swap -A S3Creds_tmp -d all:debug -C share/rexec --rexec_path=/root/java/sdkd-java/run-sdkd-java --rexec_port=8050"
+  alias: SDK_TEST
+
+-
+   template: wait_for_items
+   args: "{{.Bucket}}, 100"
+
+# start gateway 
+-
+  image: couchbase/sync-gateway
+  command: "-url http://{{.Orchestrator}} -bucket {{.Bucket}}"
+  alias: SYNC_GATEWAY
+
+# wait for sdk test to finish
+-
+  before: "{{.Status `SDK_TEST` | eq `exited`}}"
+  wait: true

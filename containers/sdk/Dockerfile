@@ -5,43 +5,43 @@ FROM centos:7
 #  * git@github.com:couchbaselabs/sdkdclient-ng.git
 #  * git@github.com:couchbase/sdkd-cpp.git
 
-# enviornment
-RUN yum update -y; yum install -y java-1.8.0-openjdk-devel maven git gcc make cmake
-RUN yum install -y gcc-c++.x86_64
-RUN yum install -y libev libevent libev-devel libevent-devel openssl-devel
-WORKDIR /root
+ARG SDK=java
+ARG SDK_COMMIT=master
+ARG CORE_COMMIT=master
 
-# build libcouchbase
-RUN git clone git://github.com/couchbase/libcouchbase.git
-WORKDIR libcouchbase
-RUN  git checkout 2.6.2
-RUN cmake -DCMAKE_INSTALL_PREFIX=/root/libcouchbase/inst -DLCB_NO_SSL=0 -DCMAKE_BUILD_TYPE=Debug ./
-RUN make -j 8
-RUN make install
+WORKDIR /root
+# install base packages
+RUN yum update -y
+RUN yum install -y java-1.8.0-openjdk-devel git wget openssl-devel
+ENV JAVA_HOME=/usr/lib/jvm/java
 
-# install sdkd
-WORKDIR /root
-ADD sdkd-cpp /root/sdkd-cpp
-WORKDIR /root/sdkd-cpp
-WORKDIR src/contrib/json-cpp
-RUN python amalgamate.py
-WORKDIR /root/sdkd-cpp
-RUN cmake -DLCB_ROOT=/root/libcouchbase/inst -DCMAKE_BUILD_TYPE=DEBUG ./
-RUN  make -j 8
-WORKDIR /root
-ADD sdkdclient-ng /root/sdkdclient-ng
+
+# install maven 3.3.9
+RUN wget http://www-eu.apache.org/dist/maven/maven-3/3.3.9/binaries/apache-maven-3.3.9-bin.tar.gz
+RUN tar xzf apache-maven-3.3.9-bin.tar.gz
+RUN ln -s apache-maven-3.3.9 maven
+ENV PATH=${PATH}:/root/maven/bin
+
+
+# enviornment to build sdk
+ADD $SDK /root/$SDK
+WORKDIR /root/$SDK
+RUN ./environment.sh
+
+# build sdkd with sdk
+RUN ./build.sh $SDK_COMMIT $CORE_COMMIT
 
 # install sdkdclient
+ADD sdkdclient-ng /root/sdkdclient-ng
 WORKDIR /root/sdkdclient-ng
-RUN mvn package -Dmaven.test.skip=true
+RUN mvn package -q -Dmaven.test.skip=true
 ENV BRUN_PERCENTILE=85
-#RUN mapfile -c 1 -C subst
-RUN mkdir -p pylib
-RUN cp /root/sdkd-cpp/pylib/s3upload.py pylib/s3upload.py
-COPY brun brun
-COPY host2ip.sh host2ip.sh
+ADD S3Creds_tmp S3Creds_tmp
+ADD brun brun
+ADD host2ip.sh host2ip.sh
 
 # add runtime ini-files
-COPY watson-basic.ini watson-basic.ini
-RUN sed -i 's/num_containers.*//' watson-basic.ini
+ADD spock-basic.ini spock-basic.ini
+RUN sed -i 's/num_containers.*//' spock-basic.ini
+
 ENTRYPOINT ["./brun"]
