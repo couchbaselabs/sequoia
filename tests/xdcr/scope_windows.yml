@@ -1,4 +1,10 @@
 ---
+users:
+  -
+      name: default
+      password: password
+      roles: admin
+      auth_type: local
 buckets:
   -
       name: default
