@@ -17,10 +17,10 @@ servers: # define a single server with link named 'local'
   -
      name: local
      ram: 50% # 50% of total memory
-     count: 1
+     count: 4
      rest_username: Administrator
      rest_password: password
      rest_port: 8091
-     init_nodes: 1
+     init_nodes: 4
      buckets: default
      users: default

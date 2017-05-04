@@ -23,6 +23,8 @@ RUN make install
 WORKDIR /root
 ADD sdkd-cpp /root/sdkd-cpp
 WORKDIR /root/sdkd-cpp
+RUN git submodule init
+RUN git submodule update
 WORKDIR src/contrib/json-cpp
 RUN python amalgamate.py
 WORKDIR /root/sdkd-cpp
@@ -38,6 +40,7 @@ ENV BRUN_PERCENTILE=85
 #RUN mapfile -c 1 -C subst
 RUN mkdir -p pylib
 RUN cp /root/sdkd-cpp/pylib/s3upload.py pylib/s3upload.py
+ADD S3Creds_tmp S3Creds_tmp
 COPY brun brun
 COPY host2ip.sh host2ip.sh
 

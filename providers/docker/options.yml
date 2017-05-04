@@ -2,10 +2,10 @@
 os: centos7 
 
 # build version
-build: 5.0.0-2448
+build: 4.5.1-2844
 
 # override build... ie http://latestbuilds.hq.couchbase.com/couchbase-server-enterprise_x86_64_3.1.5-1859-rel.deb"
-build_url_override: null 
+build_url_override: http://172.23.120.24/builds/releases/4.5.1/couchbase-server-enterprise-4.5.1-centos7.x86_64.rpm
 
 # Resource optimization
 # ------------
