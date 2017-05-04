@@ -1,0 +1,2 @@
+#!/bin/bash
+sequoia sdk -expose_ports -command "-I watson-basic.ini --install-skip true --rebound 90 --testsuite-variants=HYBRID --testsuite-test=Rb1Swap -d all:debug -A S3Creds_tmp -C share/rexec --rexec_path=/root/sdkd-cpp/sdkd_lcb --rexec_port=8050 --rexec_arg=-l 8050 --rexec_arg=-L log.txt"
