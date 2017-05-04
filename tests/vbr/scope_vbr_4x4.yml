@@ -4,12 +4,12 @@ users:
       name: AbRegNums
       password: password
       roles: admin
-      auth_type: builtin
+      auth_type: local
   -
       name: AbRegNums2
       password: password
       roles: admin
-      auth_type: builtin
+      auth_type: local
 servers: # each server tag represents a cluster
   -
       name: src
