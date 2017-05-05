@@ -1,6 +1,5 @@
 #! /bin/bash
-
-#! /bin/bash
+set -e
 
 ./host2ip.sh $(echo "$@" | sed -e 's/.*-I //' -e 's/ini.*/ini/')
 
@@ -10,5 +9,7 @@ if [ $1 == "wait" ]; then tail -f /dev/null; fi
 exec java -cp target/sdkdclient-1.0-SNAPSHOT.jar \
     com.couchbase.sdkdclient.batch.BRun $@
 
+echo change to sdkdclient-ng
 cd sdkdclient-ng
+echo `ls -al`
 ./report
