@@ -13,3 +13,5 @@ echo change to sdkdclient-ng
 cd sdkdclient-ng
 echo `ls -al`
 ./report
+
+sleep 2m
