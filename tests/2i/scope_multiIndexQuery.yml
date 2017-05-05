@@ -4,7 +4,7 @@ users:
       name: default
       password: password
       roles: admin
-      auth_type: local
+      auth_domain: local
 
 buckets:
   -

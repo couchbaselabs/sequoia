@@ -4,7 +4,7 @@ users:
       name: lww
       password: password
       roles: admin
-      auth_type: local
+      auth_domain: local
 
 servers:
   -
