@@ -171,7 +171,7 @@ func (s *Scope) InitCli() {
 
 	// make sure proper couchbase-cli is used for node init
 	var version string
-	if s.Flags.Version != nil {
+	if s.Flags.Version != nil && (*s.Flags.Version != "") {
 		version = *s.Flags.Version
 	} else {
 		version = s.Rest.GetServerVersion()
