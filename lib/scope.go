@@ -170,9 +170,14 @@ func (s *Scope) InitRestContainer() {
 func (s *Scope) InitCli() {
 
 	// make sure proper couchbase-cli is used for node init
-	version := s.Rest.GetServerVersion()
-	s.Version = version[:3]
+	var version string
+	if s.Flags.Version != nil {
+		version = *s.Flags.Version
+	} else {
+		version = s.Rest.GetServerVersion()
+	}
 
+	s.Version = version[:3]
 	// pull cli tag matching version..ie 3.5, 4.1, 4.5
 	// :latest is used if no match found
 	s.Cm.PullTaggedImage("sequoiatools/couchbase-cli", s.Version)

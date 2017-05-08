@@ -37,6 +37,7 @@ type TestFlags struct {
 	CleanLogs        *bool
 	CleanContainers  *bool
 	Override         *string
+	Version          *string
 	Exec             *bool
 	DefaultFlagSet   *flag.FlagSet
 	ImageFlagSet     *flag.FlagSet
@@ -233,6 +234,9 @@ func (f *TestFlags) AddDefaultFlags(fset *flag.FlagSet) {
 	f.Override = fset.String(
 		"override", "",
 		"override params, ie servers:local.count=1,servers:remote.count=1")
+	f.Version = fset.String(
+		"version", "",
+		"specify version, ie 4.6.2, 5.0.0 - default is determined by server")
 }
 
 func (f *TestFlags) AddImageFlags(fset *flag.FlagSet) {
