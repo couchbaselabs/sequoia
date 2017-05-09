@@ -1,13 +1,28 @@
 #!/bin/bash
-if [ "$2" == "couchbase.service" ]; then
-   /etc/init.d/couchbase-server $1
-else
 
+export PATH=$PATH:/opt/couchbase/bin:/opt/couchbase/bin/tools:/opt/couchbase/bin/install:/usr/local/bin/
+service() {
+   if [ "$1" == "stop" ]; then
+      ps aux | grep couchbase | grep -v grep | grep -v systemctl | awk '{print $2}' | xargs kill
+      echo "couchbase service stopped"
+   fi
+   
+   if [ "$1" == "start" ]; then
+      nohup couchbase-start couchbase-server -- -noinput > /opt/_status 2>&1 </dev/null &
+      echo "couchbase service started"
+   fi
+}
+
+if [ "$2" == "couchbase.service" ]; then
+   service $1
+elif [ "$2" == "couchbase-server.service" ]; then
+   service $1
+else
    if [ "$0" == "/usr/sbin/reboot" ]; then
        # fake reboot
-       /etc/init.d/couchbase-server stop
+       service stop
        sleep 10
-       /etc/init.d/couchbase-server start
+       service start
    else
        exec /bin/systemctl.bin "$@"
    fi
