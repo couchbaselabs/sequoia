@@ -23,19 +23,21 @@ func ParseTemplate(s *Scope, command string) string {
 	tResolv := TemplateResolver{s}
 
 	netFunc := template.FuncMap{
-		"net":       tResolv.Address,
-		"bucket":    tResolv.BucketName,
-		"auth_user": tResolv.AuthUser,
-		"noport":    tResolv.NoPort,
-		"json":      tResolv.ToJson,
-		"ftoint":    tResolv.FloatToInt,
-		"last":      tResolv.LastItem,
-		"contains":  tResolv.Contains,
-		"excludes":  tResolv.Excludes,
-		"tolist":    tResolv.ToList,
-		"strlist":   tResolv.StrList,
-		"mkrange":   tResolv.MkRange,
-		"to_ip":     tResolv.ToIp,
+		"net":               tResolv.Address,
+		"bucket":            tResolv.BucketName,
+		"auth_user":         tResolv.AuthUser,
+		"noport":            tResolv.NoPort,
+		"json":              tResolv.ToJson,
+		"to_double_quote":   tResolv.ToDoubleQuotes,
+		"wrap_single_quote": tResolv.WrapSingleQuote,
+		"ftoint":            tResolv.FloatToInt,
+		"last":              tResolv.LastItem,
+		"contains":          tResolv.Contains,
+		"excludes":          tResolv.Excludes,
+		"tolist":            tResolv.ToList,
+		"strlist":           tResolv.StrList,
+		"mkrange":           tResolv.MkRange,
+		"to_ip":             tResolv.ToIp,
 	}
 	tmpl, err := template.New("t").Funcs(netFunc).Parse(command)
 	logerr(err)
@@ -473,6 +475,16 @@ func (t *TemplateResolver) ToJson(data string) interface{} {
 	var js interface{}
 	StringToJson(data, &js)
 	return js
+}
+
+func (t *TemplateResolver) ToDoubleQuotes(data string) interface{} {
+	// transform all single quotes to double
+	return strings.Replace(data, "'", "\"", -1)
+}
+
+func (t *TemplateResolver) WrapSingleQuote(data string) interface{} {
+	// wraps input string with single quotes
+	return fmt.Sprintf("'%s'", data)
 }
 
 func (t *TemplateResolver) ToList(spec ServerSpec) []ServerSpec {
