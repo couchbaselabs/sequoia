@@ -1,5 +1,4 @@
-
-# create index
+# template to create a default index
 # $0 = bucket
 # $1 = name of the index
 -
@@ -7,8 +6,73 @@
   actions:
     -
       image:  appropriate/curl
-      command: "-X PUT -u {{.RestUsername}}:{{.RestPassword}} -H Content-Type:application/json
-         http://{{.Nodes | .Service `fts` | net 0}}:8094/api/index/$1 -d '{ \"type\": \"fulltext-index\", \"sourceType\": \"couchbase\", \"sourceName\": \"$0\"}'"
+      template: _put_index
+      args: "$0, ({
+                    'type': 'fulltext-index',
+                    'sourceType': 'couchbase',
+                    'sourceName': '$0'
+                 })"
+
+
+# create index with custom type mapping
+# $0 = name
+# $1 = bucket
+# $2 = type
+# $3 = field
+-
+  name: custom_type_mapping_field
+  actions:
+    -
+      template: _put_index
+      args: "$0, ({
+                        'type': 'fulltext-index',
+                         'name': '$1',
+                         'sourceType': 'couchbase',
+                         'sourceName': '$2',
+                         'planParams': {
+                           'maxPartitionsPerPIndex': 171
+                         },
+                         'params': {
+                           'doc_config': {
+                             'mode': 'type_field',
+                             'type_field': 'type'
+                           },
+                           'mapping': {
+                             'default_mapping': {
+                               'enabled': false
+                             },
+                             'index_dynamic': true,
+                             'store_dynamic': false,
+                             'types': {
+                               '$1': {
+                                 'dynamic': false,
+                                 'enabled': true,
+                                 'properties': {
+                                   '$3': {
+                                     'dynamic': false,
+                                     'enabled': true,
+                                     'fields': [
+                                       {
+                                         'analyzer': '',
+                                         'include_in_all': true,
+                                         'include_term_vectors': true,
+                                         'index': true,
+                                         'name': '$3',
+                                         'store': true,
+                                         'type': 'text'
+                                       }
+                                     ]
+                                   }
+                                 }
+                               }
+                             }
+                           },
+                           'store': {
+                             'kvStoreName': 'mossStore'
+                           }
+                         },
+                         'sourceParams': {}
+                      })"
 
 # query index using match field
 # $0 = name of the index
@@ -22,3 +86,14 @@
                http://{{.Nodes | .Service `fts` | net 0}}:8094/api/index/$0/query -d '{ \"from\": 0, \"indexName\": \"$0\", \"fields\": [\"*\"], \"explain\": false, \"ctl\": {\"timeout\": 0, \"consistency\": {\"vectors\": {}, \"level\": \"\"}}, \"query\": { \"match\": \"$1\"}, \"size\": 1000}'"
       repeat: -1
 
+
+
+# top level template to put index via curl
+# $0 = name of index
+# $1 = index definition
+-
+  name: _put_index
+  actions:
+    -
+      image:  appropriate/curl
+      command: "-X PUT -u {{.RestUsername}}:{{.RestPassword}} -H Content-Type:application/json http://{{.Nodes | .Service `fts` | net 0}}:8094/api/index/$0 -d {{ `$1` | to_double_quote | wrap_single_quote }}"
