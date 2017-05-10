@@ -13,29 +13,128 @@
                     'sourceName': '$0'
                  })"
 
+# template to create an index with child field mapping
+# $0 = name
+# $1 = bucket
+# $2 = top-level type
+# $3 = top-level field
+# $4 = store docs
+# $5 = optional type mapping
+-
+  name: create_index_with_child_field
+  actions:
+    -
+      template: _put_index_with_type_mapping
+      args: "$0, $1, $2, ({
+                     '$2': {
+                             'dynamic': false,
+                             'enabled': true,
+                             'properties': {
+                               '$3': {
+                                 'dynamic': false,
+                                 'enabled': true,
+                                 'fields': [
+                                   {
+                                     'analyzer': '',
+                                     'include_in_all': true,
+                                     'include_term_vectors': true,
+                                     'index': true,
+                                     'name': '$3',
+                                     'store': $4,
+                                     'type': 'text'
+                                   }
+                                 ]
+                               }
+                             }
+                           }
+                     }),
+                     $5"
 
-# create index with custom type mapping
+
+# template to create an index with child field mapping
+#    and custom type mappings
+# $0 = name
+# $1 = bucket
+# $2 = top-level type
+# $3 = top-level field
+# $4 = child type
+# $5 = child field
+# $6 = store docs
+# $7 = optional type field
+-
+  name: create_index_with_child_field_nested_type_mapping
+  actions:
+    -
+      template: _put_index_with_type_mapping
+      args: "$0, $1, $2, ({
+                     '$2': {
+                             'dynamic': false,
+                             'enabled': true,
+                             'properties': {
+                               '$3': {
+                                 'dynamic': false,
+                                 'enabled': true,
+                                 'fields': [
+                                   {
+                                     'analyzer': '',
+                                     'include_in_all': true,
+                                     'include_term_vectors': true,
+                                     'index': true,
+                                     'name': '$3',
+                                     'store': $6,
+                                     'type': 'text'
+                                   }
+                                 ]
+                               },
+                                '$4': {
+                                  'dynamic': false,
+                                  'enabled': true,
+                                  'properties': {
+                                    'status': {
+                                      'dynamic': false,
+                                      'enabled': true,
+                                      'fields': [
+                                        {
+                                          'analyzer': '',
+                                          'include_in_all': true,
+                                          'include_term_vectors': true,
+                                          'index': true,
+                                          'name': '$5',
+                                          'store': $6,
+                                          'type': 'text'
+                                        }
+                                      ]
+                                    }
+                                  }
+                                }
+                             }
+                           }
+                     }),
+                     $7"
+
+# helper template to create an index with custom type mappings
 # $0 = name
 # $1 = bucket
 # $2 = type
-# $3 = field
+# $3 = type mappings
+# $4 = optional type field
 -
-  name: custom_type_mapping_field
+  name: _put_index_with_type_mapping
   actions:
     -
       template: _put_index
       args: "$0, ({
                         'type': 'fulltext-index',
-                         'name': '$1',
+                         'name': '$2',
                          'sourceType': 'couchbase',
-                         'sourceName': '$2',
+                         'sourceName': '$1',
                          'planParams': {
                            'maxPartitionsPerPIndex': 171
                          },
                          'params': {
                            'doc_config': {
                              'mode': 'type_field',
-                             'type_field': 'type'
+                             'type_field': '{{if gt (len `$4`) 2}}$4{{else}}type{{end}}'
                            },
                            'mapping': {
                              'default_mapping': {
@@ -43,29 +142,7 @@
                              },
                              'index_dynamic': true,
                              'store_dynamic': false,
-                             'types': {
-                               '$1': {
-                                 'dynamic': false,
-                                 'enabled': true,
-                                 'properties': {
-                                   '$3': {
-                                     'dynamic': false,
-                                     'enabled': true,
-                                     'fields': [
-                                       {
-                                         'analyzer': '',
-                                         'include_in_all': true,
-                                         'include_term_vectors': true,
-                                         'index': true,
-                                         'name': '$3',
-                                         'store': true,
-                                         'type': 'text'
-                                       }
-                                     ]
-                                   }
-                                 }
-                               }
-                             }
+                             'types': $3
                            },
                            'store': {
                              'kvStoreName': 'mossStore'
@@ -73,6 +150,17 @@
                          },
                          'sourceParams': {}
                       })"
+
+
+# top level template to put index via curl
+# $0 = name of index
+# $1 = index definition
+-
+  name: _put_index
+  actions:
+    -
+      image:  appropriate/curl
+      command: "-X PUT -u {{.RestUsername}}:{{.RestPassword}} -H Content-Type:application/json http://{{.Nodes | .Service `fts` | net 0}}:8094/api/index/$0 -d {{ `$1` | to_double_quote | wrap_single_quote }}"
 
 # query index using match field
 # $0 = name of the index
@@ -85,15 +173,3 @@
       command: "-s -u {{.RestUsername}}:{{.RestPassword}} -X POST -H Content-Type: application/json
                http://{{.Nodes | .Service `fts` | net 0}}:8094/api/index/$0/query -d '{ \"from\": 0, \"indexName\": \"$0\", \"fields\": [\"*\"], \"explain\": false, \"ctl\": {\"timeout\": 0, \"consistency\": {\"vectors\": {}, \"level\": \"\"}}, \"query\": { \"match\": \"$1\"}, \"size\": 1000}'"
       repeat: -1
-
-
-
-# top level template to put index via curl
-# $0 = name of index
-# $1 = index definition
--
-  name: _put_index
-  actions:
-    -
-      image:  appropriate/curl
-      command: "-X PUT -u {{.RestUsername}}:{{.RestPassword}} -H Content-Type:application/json http://{{.Nodes | .Service `fts` | net 0}}:8094/api/index/$0 -d {{ `$1` | to_double_quote | wrap_single_quote }}"
