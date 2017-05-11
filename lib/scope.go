@@ -231,6 +231,18 @@ func (s *Scope) InitNodes() {
 		}
 
 		// set data path, or use default if unset
+		if s.Provider.GetType() == "dev" {
+			default_path := fmt.Sprintf("%s/%s", "/tmp/data", name)
+			if server.DataPath == "" {
+				CreateFile(default_path, ".dummy")
+				server.DataPath = default_path
+			}
+			if server.IndexPath == "" {
+				CreateFile(default_path, ".dummy")
+				server.IndexPath = default_path
+			}
+		}
+
 		if server.DataPath != "" {
 			command = append(
 				command,
