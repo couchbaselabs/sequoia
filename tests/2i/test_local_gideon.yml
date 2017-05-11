@@ -34,13 +34,13 @@
 ############### run mutations ################
 -
   image: sequoiatools/gideon
-  command: "kv --ops {{.Scale 10}} --create 20 --update 60 --delete 20     --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+  command: "kv --ops {{.Scale 2}} --create 20 --update 60 --delete 20     --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
   alias: GideonContainer1
 -
-  command: "kv --ops {{.Scale 10}} --create 20 --update 60 --delete 20 --sizes 64 96   --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
+  command: "kv --ops {{.Scale 2}} --create 20 --update 60 --delete 20 --sizes 64 96   --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
   alias: GideonContainer2
 -
-  command: "kv --ops {{.Scale 10}} --create 20 --update 60 --delete 20 --sizes 64 96   --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}}"
+  command: "kv --ops {{.Scale 2}} --create 20 --update 60 --delete 20 --sizes 64 96   --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}}"
   alias: GideonContainer3
 -
   command: "kv --ops {{.Scale 1}} --create 20 --update 60 --delete 20 --sizes 512  --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}}"
@@ -52,6 +52,7 @@
    command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_result on `default`(result)'"
 -
    command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o1_result on `other-1`(result)'"
+   wait: true
 -
    command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o3_result on `other-3`(result)'"
    wait: true
@@ -156,38 +157,38 @@
   template: attack_query
   args: 0, 10, {{$.QueryNodePort}},
         delete from default where rating > 0 limit 100
-  duration: 900
+  duration: 300
 -
   # load data
   template: attack_query
   args: 0, 10, {{$.QueryNodePort}},
          delete from \`other-1\` where claim like \"\%1\%\" limit 100
-  duration: 900
+  duration: 300
 -
   template: attack_query
   args: 0, 10, {{$.QueryNodePort}},
         delete from \`other-2\` where result = \"SUCCESS\" limit 100
-  duration: 900
+  duration: 300
 -
   template: attack_query
   args: 0, 10, {{$.QueryNodePort}},
         delete from \`other-3\` where rating > 0 limit 100
-  duration: 900
+  duration: 300
   wait: true
 
 ############### run creates ################
 -
   image: sequoiatools/gideon
   command: "kv --ops {{.Scale 10}} --create 100     --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
-  duration: 30
+  duration: 60
 -
   command: "kv --ops {{.Scale 10}} --create 100  --sizes 64 96   --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
-  duration: 30
+  duration: 60
 -
   command: "kv --ops {{.Scale 10}} --create 100  --sizes 64 96   --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}}"
-  duration: 30
+  duration: 60
 -
   command: "kv --ops {{.Scale 1}} --create 100  --sizes 512  --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}}"
-  duration: 30
+  duration: 60
   wait: true
 
