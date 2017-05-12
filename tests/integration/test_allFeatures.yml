@@ -1,6 +1,6 @@
 ---
 -
-  include: tests/templates/rebalance.yml, tests/templates/vegeta.yml, tests/templates/kv.yml
+  include: tests/templates/rebalance.yml, tests/templates/vegeta.yml, tests/templates/kv.yml, tests/templates/fts.yml
 
 #============ delete phase ============
 -
@@ -78,6 +78,29 @@
   template: rebalance_out
   args: "{{.NthDataNode 1}}:{{.RestPort}}"
   wait: true
+
+
+#============ fts ============
+# create fts index with custom child field using result key as type
+-
+  template: create_index_with_child_field
+  args: "{{.FTSNodePort}}, good_state, default, SUCCESS, state, false, result"
+  wait: true
+
+# create fts index with nested type mappings and store results
+-
+  template: create_index_with_child_field_nested_type_mapping
+  args: "{{.FTSNodePort}}, social, default, gideon, description, profile, status, true"
+
+# direct search on state key
+-
+  template: query_fts
+  args: "{{.FTSNodePort}}, -1, {{.Scale 30}}, good_state, +state:9C"
+
+# regex search on subfield profile.status with description exclusion
+-
+  template: query_fts
+  args: "{{.FTSNodePort}}, -1, {{.Scale 30}}, social, '+profile.status:41* -description:32*'"
 
 #============ start xdcr replications ============
 -
