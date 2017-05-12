@@ -1,0 +1,32 @@
+---
+-
+  include: tests/templates/fts.yml, tests/templates/kv.yml
+
+
+# create index with custom child field using result key as type
+-
+  template: create_index_with_child_field
+  args: "{{.FTSNodePort}}, good_state, default, SUCCESS, state, false, result"
+  wait: true
+
+# create index with nested type mappings and store results
+-
+  template: create_index_with_child_field_nested_type_mapping
+  args: "{{.FTSNodePort}}, social, default, gideon, description, profile, status, true"
+  wait: true
+
+# start data loading
+-
+  image: sequoiatools/gideon
+  command: "kv --ops {{.Scale 1000}} --create 10 --get 90  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+
+# direct search on state key
+-
+  template: query_fts
+  args: "{{.FTSNodePort}}, 120, 10, good_state, +state:9C"
+
+# regex search on subfield profile.status with description exclusion
+-
+  template: query_fts
+  args: "{{.FTSNodePort}}, 120, 10, social, '+profile.status:41* -description:32*'"
+  wait: true
