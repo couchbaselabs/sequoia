@@ -495,6 +495,11 @@ func (t *Test) runActions(scope Scope, loop int, actions []ActionSpec) {
 			task.Entrypoint = []string{action.Entrypoint}
 		}
 
+		// pull latest version of container if we haven't already
+		if *t.Flags.SkipPull == false && !t.Cm.DidPull(task.Image) {
+			t.Cm.PullImage(task.Image)
+		}
+
 		// run task
 		if task.Async == true {
 			go t.runTask(&scope, &task, &action)

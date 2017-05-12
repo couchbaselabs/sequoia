@@ -139,6 +139,7 @@ type ContainerManager struct {
 	ProviderType         string
 	SwarmClients         []*docker.Client
 	ContainerClientCache cmap.ConcurrentMap
+	imageStatus          map[string]string
 }
 
 func NewDockerClient(clientUrl string) *docker.Client {
@@ -176,6 +177,7 @@ func NewContainerManager(clientUrl, provider string) *ContainerManager {
 		ProviderType:         provider,
 		SwarmClients:         []*docker.Client{},
 		ContainerClientCache: cmap.New(),
+		imageStatus:          make(map[string]string),
 	}
 
 	// get all swarm nodes
@@ -461,6 +463,11 @@ func (cm *ContainerManager) CheckImageExists(image string) bool {
 	return found
 }
 
+func (cm *ContainerManager) DidPull(repo string) bool {
+	_, exists := cm.imageStatus[repo]
+	return exists
+}
+
 func (cm *ContainerManager) PullImage(repo string) error {
 	msg := UtilTaskMsg("[pull]", repo)
 	cm.TapHandle.Ok(true, msg)
@@ -491,6 +498,8 @@ func (cm *ContainerManager) pullImage(client *docker.Client, repo string, ch cha
 	}
 	err := client.PullImage(imgOpts, docker.AuthConfiguration{})
 	ch <- err
+
+	cm.imageStatus[repo] = "y"
 }
 
 func (cm *ContainerManager) PullTaggedImage(repo, tag string) {
