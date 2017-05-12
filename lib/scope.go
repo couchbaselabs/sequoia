@@ -225,6 +225,28 @@ func (s *Scope) WaitForNodes() {
 	s.Spec.ApplyToAllServersAsync(waitForNodesOp)
 }
 
+func (s *Scope) GetPath(path, name string) string {
+
+	// set data path, or use default if unset
+	dataPath := "/opt/couchbase/var/lib/couchbase/data"
+
+	if s.Provider.GetType() == "dev" {
+
+		devDataPath := fmt.Sprintf("%s/%s", "/tmp/data", name)
+		CreateFile(devDataPath, ".dummy")
+		dataPath = devDataPath
+
+	} else if path != "" {
+
+		// paths cannot be used for docker/swarm providers
+		if s.Provider.GetType() != "docker" && s.Provider.GetType() != "swarm" {
+			dataPath = path
+		}
+	}
+
+	return dataPath
+}
+
 func (s *Scope) InitNodes() {
 
 	var image = "sequoiatools/couchbase-cli"
@@ -237,43 +259,17 @@ func (s *Scope) InitNodes() {
 			"-p", server.RestPassword,
 		}
 
-		// set data path, or use default if unset
-		if s.Provider.GetType() == "dev" {
-			default_path := fmt.Sprintf("%s/%s", "/tmp/data", name)
-			if server.DataPath == "" {
-				CreateFile(default_path, ".dummy")
-				server.DataPath = default_path
-			}
-			if server.IndexPath == "" {
-				CreateFile(default_path, ".dummy")
-				server.IndexPath = default_path
-			}
-		}
+		server.DataPath = s.GetPath(server.DataPath, name)
+		command = append(
+			command,
+			"--node-init-data-path",
+			server.DataPath)
 
-		if server.DataPath != "" {
-			command = append(
-				command,
-				"--node-init-data-path",
-				server.DataPath)
-		} else {
-			command = append(
-				command,
-				"--node-init-data-path",
-				"/opt/couchbase/var/lib/couchbase/data")
-		}
-
-		// set index path, or use default if unset
-		if server.IndexPath != "" {
-			command = append(
-				command,
-				"--node-init-index-path",
-				server.IndexPath)
-		} else {
-			command = append(
-				command,
-				"--node-init-index-path",
-				"/opt/couchbase/var/lib/couchbase/data")
-		}
+		server.IndexPath = s.GetPath(server.IndexPath, name)
+		command = append(
+			command,
+			"--node-init-index-path",
+			server.IndexPath)
 
 		desc := "init node " + ip
 		task := ContainerTask{
