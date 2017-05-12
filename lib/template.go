@@ -192,6 +192,12 @@ func (t *TemplateResolver) ViewPort() string {
 	return t.Attr("view_port", nodes)
 }
 
+// Shortcut: {{.ClusterNodes | .Attr `fts_port`}}
+func (t *TemplateResolver) FTSPort() string {
+	nodes := t.ClusterNodes()
+	return t.Attr("fts_port", nodes)
+}
+
 // Shortcut: {{.QueryNode | noport}}:{{.QueryPort}}
 func (t *TemplateResolver) QueryNodePort() string {
 	return fmt.Sprintf("%s:%s", t.NoPort(t.QueryNode()), t.QueryPort())
@@ -219,6 +225,25 @@ func (t *TemplateResolver) NthDataNode(n int) string {
 	} // otherwise everything is data
 
 	return t.Address(n, nodes)
+}
+
+// Shortcut: .FTSNode | .Service `fts` | net 0
+func (t *TemplateResolver) FTSNode() string {
+	nodes := t.ClusterNodes()
+	serviceNodes := t.Service("fts", nodes)
+	return t.Address(0, serviceNodes)
+}
+
+// Shortcut: {{.FTSNode | noport}}:{{.FTSPort}}
+func (t *TemplateResolver) FTSNodePort() string {
+	return fmt.Sprintf("%s:%s", t.NoPort(t.FTSNode()), t.FTSPort())
+}
+
+// Shortcut: .ClusterNodes | .Service `fts` | net N
+func (t *TemplateResolver) NthFTSNode(n int) string {
+	nodes := t.ClusterNodes()
+	serviceNodes := t.Service("fts", nodes)
+	return t.Address(n, serviceNodes)
 }
 
 func (t *TemplateResolver) Attr(key string, servers []ServerSpec) string {

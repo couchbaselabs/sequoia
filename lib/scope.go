@@ -119,6 +119,13 @@ func NewScope(flags TestFlags, cm *ContainerManager) Scope {
 				spec.Servers[i].QueryPort = "8093"
 			}
 		}
+		if spec.Servers[i].FTSPort == "" {
+			if provider.GetType() == "dev" {
+				spec.Servers[i].FTSPort = fmt.Sprintf("%d", 9200+i)
+			} else {
+				spec.Servers[i].FTSPort = "8094"
+			}
+		}
 	}
 	var loops = 0
 	if *flags.Continue == true {
