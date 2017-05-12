@@ -6,12 +6,11 @@
   name: create_index
   actions:
     -
-      image:  appropriate/curl
       template: _put_index
-      args: "$0, $1, ({
+      args: "$0, $2, ({
                     'type': 'fulltext-index',
                     'sourceType': 'couchbase',
-                    'sourceName': '$2'
+                    'sourceName': '$1'
                  })"
 
 # template to create an index with child field mapping
