@@ -19,19 +19,19 @@
 # create index on buckets
 -
   template: create_index
-  args: "default, st_index"
+  args: "{{.FTSNodePort}}, default, st_index"
   wait: true
 
 # run field matching queries
 -
-  template: query_index_field
-  args: "st_index, 5F"
+  template: query_fts
+  args: "{{.FTSNodePort}}, -1, 10, st_index, 5F"
 -
-  template: query_index_field
-  args: "st_index, 0B"
+  template: query_fts
+  args: "{{.FTSNodePort}}, -1, 10, st_index, 0B"
 -
-  template: query_index_field
-  args: "st_index, C5"
+  template: query_fts
+  args: "{{.FTSNodePort}}, -1, 10, st_index, CF"
 
 # scale cluster up
 -
@@ -48,15 +48,15 @@
 # make some more indexes across buckets
 -
   template: create_index
-  args: "{{.NthBucket 1}}, st_index02"
+  args: "{{.FTSNodePort}}, {{.NthBucket 1}}, st_index02"
   wait: true
 -
   template: create_index
-  args: "{{.NthBucket 2}}, st_index03"
+  args: "{{.FTSNodePort}}, {{.NthBucket 2}}, st_index03"
   wait: true
 -
   template: create_index
-  args: "default, st_index04"
+  args: "{{.FTSNodePort}}, default, st_index04"
   wait: true
 
 # scale cluster up more
@@ -75,14 +75,14 @@
 
 # start queries on new indexes
 -
-  template: query_index_field
-  args: "st_index02, C5"
+  template: query_fts
+  args: "{{.FTSNodePort}}, -1, 10, st_index02, C5"
 -
-  template: query_index_field
-  args: "st_index03, C5"
+  template: query_fts
+  args: "{{.FTSNodePort}}, -1, 10, st_index03, C5"
 -
-  template: query_index_field
-  args: "st_index04, C5"
+  template: query_fts
+  args: "{{.FTSNodePort}}, -1, 10, st_index04, C5"
 
 # scale back down
 -
