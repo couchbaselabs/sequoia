@@ -1,0 +1,14 @@
+#!/bin/bash
+if [ "$2" == "couchbase.service" ]; then
+   service couchbase-server $1
+else
+
+   if [ "$0" == "/usr/sbin/reboot" ]; then
+       # fake reboot
+       service couchbase-server stop
+       sleep 10
+       service couchbase-server start
+   else
+       exec /bin/systemctl.bin "$@"
+   fi
+fi
