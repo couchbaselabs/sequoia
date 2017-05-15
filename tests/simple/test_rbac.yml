@@ -1,4 +1,11 @@
 -
+  image: sequoiatools/couchbase-cli
+  command: "user-manage -c {{.Orchestrator}} -u {{.RestUsername}} -p {{.RestPassword}} 
+                                             --rbac-username SimpleUser 
+                                             --rbac-password password 
+                                             --roles admin --auth-domain local --set"
+  
+-
   image: sequoiatools/gideon
   command: "kv --ops 1000 --create 100  --hosts {{.Orchestrator}}"
   duration: 30 
