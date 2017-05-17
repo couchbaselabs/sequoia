@@ -1,0 +1,263 @@
+-
+  include: tests/templates/kv.yml
+
+############### data loading ################
+-
+  image: sequoiatools/gideon
+  command: "kv --ops {{.Scale 5000}} --create 30 --get 70 --delete 10     --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+-
+  command: "kv --ops {{.Scale 2000}} --create 60 --get 40 --sizes 64 96   --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
+-
+  command: "kv --ops {{.Scale 2000}} --create 60 --get 40 --sizes 64 96   --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}}"
+-
+  command: "kv --ops {{.Scale 100}} --create 100 --sizes 1024  --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}}"
+
+
+###############  create indexes ################
+-
+   image: sequoiatools/cbq
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_rating on `default`(rating) using GSI with {\"num_replica\":1}'"
+-
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_claims on `default`(claim) using GSI with {\"num_replica\":2}'"
+-
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_result on `default`(result) using GSI with {\"num_replica\":1, \"defer_build\": true}'"
+-
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create primary index on `default` using GSI with {\"num_replica\":2}'"
+-
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o1_rating on `other-1`(rating) using GSI with {\"num_replica\":2}'"
+-
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o1_claims on `other-1`(claim) using GSI with {\"num_replica\":1, \"defer_build\": true}'"
+-
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o1_result on `other-1`(result) using GSI with {\"num_replica\":1}'"
+-
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o2_rating on `other-2`(rating) using GSI with {\"num_replica\":2}'"
+-
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o2_claims on `other-2`(claim) using GSI with {\"num_replica\":1}'"
+-
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o2_result on `other-2`(result) using GSI with {\"num_replica\":2}'"
+-
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o3_rating on `other-3`(rating) using GSI with {\"num_replica\":1, \"defer_build\": true}'"`
+-
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o3_claims on `other-3`(claim) using GSI with {\"num_replica\":1}'"
+-
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o3_result on `other-3`(result) using GSI with {\"num_replica\":2}'"
+-
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='build index on `default`(result)"
+-
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='build index on `other-3`(rating)"
+-
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='build index on `other-3`(rating)"
+   wait: true
+
+
+############### run queries ################
+-
+  template: attack_query
+  args: 0, 10, {{$.QueryNodePort}},
+        select SUM(rating) from default where rating > 0 limit 50
+  duration: 60
+-
+  # load data
+  template: attack_query
+  args: 0, 10, {{$.QueryNodePort}},
+         select SUM(rating) from `other-1` where rating > 100  limit 50
+  duration: 60
+-
+  template: attack_query
+  args: 0, 10, {{$.QueryNodePort}},
+        select SUM(rating) from `other-2` where result = SUCCESS limit 50
+  duration: 60
+-
+  template: attack_query
+  args: 0, 10, {{$.QueryNodePort}},
+        select SUM(rating) from `other-3` where claim like A% limit 20
+  duration: 60
+-
+  template: attack_query
+  args: 0, 10, {{$.QueryNodePort}},
+        select SUM(rating) from `other-3` where claim like A% limit 20
+  duration: 60
+
+############### run creates ################
+-
+  image: sequoiatools/gideon
+  command: "kv --ops {{.Scale 1000}} --create 100     --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+  duration: 60
+-
+  command: "kv --ops {{.Scale 1000}} --create 100  --sizes 64 96   --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
+  duration: 60
+-
+  command: "kv --ops {{.Scale 1000}} --create 100  --sizes 64 96   --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}}"
+  duration: 60
+-
+  command: "kv --ops {{.Scale 1000}} --create 100  --sizes 512  --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}}"
+  duration: 60
+
+
+###############  Rebalance-in single node ################
+-
+   image: sequoiatools/couchbase-cli
+   command: "server-add -c {{.Orchestrator}}:{{.RestPort}}
+       --server-add  {{.Nodes | net 6}}:{{.RestPort}}
+       --services index
+       -u  {{.RestUsername}} -p  {{.RestPassword}}
+       --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
+   wait: true
+-
+   command:  "rebalance -c {{.Orchestrator}}:{{.RestPort}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
+
+###############  Rebalance-out single node ################
+-
+   image: sequoiatools/couchbase-cli
+   command:  "rebalance -c  {{.Orchestrator}}:{{.RestPort}} --server-remove {{.Nodes | net 5}}:{{.RestPort}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   wait: true
+
+###############  Swap single index node ################
+-
+   image: sequoiatools/couchbase-cli
+   command: "server-add -c  {{.Orchestrator}}:{{.RestPort}}
+       --server-add  {{.Nodes | net 7}}:{{.RestPort}}
+       --services index,data
+       -u  {{.RestUsername}} -p  {{.RestPassword}}
+       --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
+   wait: true
+-
+   image: sequoiatools/couchbase-cli
+   command:  "rebalance -c  {{.Orchestrator}}:{{.RestPort}} --server-remove {{.Nodes | net 4}}:{{.RestPort}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   wait: true
+
+###############  Rebalance-in two nodes ################
+-
+   image: sequoiatools/couchbase-cli
+   command: "server-add -c {{.Orchestrator}}:{{.RestPort}}
+       --server-add  {{.Nodes | net 4}}:{{.RestPort}}
+       --services index
+       -u  {{.RestUsername}} -p  {{.RestPassword}}
+       --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
+   wait: true
+-
+   image: sequoiatools/couchbase-cli
+   command: "server-add -c {{.Orchestrator}}:{{.RestPort}}
+       --server-add  {{.Nodes | net 5}}:{{.RestPort}}
+       --services index
+       -u  {{.RestUsername}} -p  {{.RestPassword}}
+       --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
+   wait: true
+-
+   image: sequoiatools/couchbase-cli
+   command:  "rebalance -c {{.Orchestrator}}:{{.RestPort}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   wait: true
+
+###############  Rebalance-out two nodes ################
+-
+   image: sequoiatools/couchbase-cli
+   command:  "rebalance -c  {{.Orchestrator}}:{{.RestPort}} --server-remove {{.Nodes | net 6}}:{{.RestPort}} {{.Nodes | net 7}}:{{.RestPort}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   wait: true
+
+###############  Swap Rebalance two nodes ################
+-
+   image: sequoiatools/couchbase-cli
+   command: "server-add -c {{.Orchestrator}}:{{.RestPort}}
+       --server-add  {{.Nodes | net 6}}:{{.RestPort}}
+       --services index
+       -u  {{.RestUsername}} -p  {{.RestPassword}}
+       --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
+   wait: true
+-
+   image: sequoiatools/couchbase-cli
+   command: "server-add -c {{.Orchestrator}}:{{.RestPort}}
+       --server-add  {{.Nodes | net 7}}:{{.RestPort}}
+       --services index
+       -u  {{.RestUsername}} -p  {{.RestPassword}}
+       --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
+   wait: true
+
+-
+   image: sequoiatools/couchbase-cli
+   command:  "rebalance -c  {{.Orchestrator}}:{{.RestPort}} --server-remove {{.Nodes | net 4}}:{{.RestPort}} {{.Nodes | net 5}}:{{.RestPort}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   wait: true
+
+###############  Failover and addback ################
+-
+   image: sequoiatools/couchbase-cli
+   command: "failover -c {{.Orchestrator}}:{{.RestPort}}
+       --server-failover {{.Nodes | net 6}}:{{.RestPort}} --force
+       -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   wait: true
+-
+   command: "server-add -c {{.Orchestrator}}:{{.RestPort}}
+       --server-add  {{.Nodes | net 6}}:{{.RestPort}}
+       --services index
+       -u  {{.RestUsername}} -p  {{.RestPassword}}
+       --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
+   wait: true
+-
+   command:  "rebalance -c {{.Orchestrator}}:{{.RestPort}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   wait: true
+
+###############  Failover and rebalance out ################
+-
+   image: sequoiatools/couchbase-cli
+   command: "failover -c {{.Orchestrator}}:{{.RestPort}}
+       --server-failover {{.Nodes | net 7}}:{{.RestPort}} --force
+       -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   wait: true
+
+-
+   command:  "rebalance -c  {{.Orchestrator}}:{{.RestPort}} --server-remove {{.Nodes | net 7}}:{{.RestPort}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   wait: true
+
+###############  Rebalance-out single node ################
+-
+   image: sequoiatools/couchbase-cli
+   command:  "rebalance -c  {{.Orchestrator}}:{{.RestPort}} --server-remove {{.Nodes | net 6}}:{{.RestPort}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   wait: true
+
+###############  Drop all Indexes ################
+-
+   image: sequoiatools/cbq
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='drop index `default`'"
+-
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='drop index `default`.default_rating'"
+-
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='drop index `other-1`.o1_rating'"
+-
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='drop index `other-1`.o1_claims'"
+-
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='drop index `other-2`.o2_results'"
+-
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='drop index `other-3`.o3_rating'"
+-
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='drop index `other-3`.o3_results'"
+   wait: true
+###############  Recreate all Indexes ################
+-
+   image: sequoiatools/cbq
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_claims on `default`(claim) using GSI'"
+-
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create primary index on `default` using GSI'"
+
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o1_result on `other-1`(result) using GSI'"
+-
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o2_claims on `other-2`(claim) using GSI'"
+-
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o3_claims on `other-3`(claim) using GSI'"
+   wait: true
+
+###############  Rebalance-out last index node ################
+-
+   image: sequoiatools/couchbase-cli
+   command:  "rebalance -c  {{.Orchestrator}}:{{.RestPort}} --server-remove {{.Nodes | net 3}}:{{.RestPort}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   wait: true
+
+
+
+
+
+
+
+
+
+
+
+
