@@ -21,6 +21,9 @@ servers: # each server tag represents a cluster
       services:
         query: 1
         index: 1
+        fts: 1
+        fts_start: 6
+        data: 6
       rest_username: Administrator
       rest_password: password
       data_path: "/data"

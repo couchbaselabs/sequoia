@@ -15,14 +15,14 @@ servers: # each server tag represents a cluster
   -
       name: local
       count: 8
-      ram: 40% 
-      index_ram: 50% 
+      ram: 40%
+      index_ram: 50%
       index_storage: forestdb
       services:
         query: 1
         index: 1
         fts: 1
-        fts_start: 3
+        fts_start: 6
         data: 6
       rest_username: Administrator
       rest_password: password
