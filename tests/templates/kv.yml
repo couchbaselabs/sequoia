@@ -3,9 +3,9 @@
   actions:
     -
       image: sequoiatools/pillowfight
-      command: "-U  couchbase://$0/$1{{if le 5.0 .Version}}?select_bucket=true{{end}} $2{{if le 5.0 .Version}} -P $3{{end}}"
+      command: "-U  couchbase://$0/$1{{if le 5.0 $.Version}}?select_bucket=true{{end}} $2{{if le 5.0 $.Version}} -P $3{{end}}"
 
-- 
+-
   name: pillowfight_small
   actions:
     -
@@ -58,3 +58,24 @@
                   {{else}}{{false}}{{end}}
               {{else}}{{false}}{{end}}"
       wait: true
+
+# runs the pillowfight template followed by wait
+# $0 = node
+# $1 = bucket
+# $2 = pillowfight args
+# $3 = rbac user
+# $4 = concurrent loaders
+# $5 = wait
+-
+   name: pillowfight_and_wait
+   actions:
+     -
+       template: pillowfight
+       args: "$0, $1, $2, $3"
+       concurrency: "$4"
+       wait: false
+     -
+       image: sequoiatools/cmd
+       entrypoint: sleep
+       command: "$5"
+       wait: true
