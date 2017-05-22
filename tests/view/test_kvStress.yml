@@ -113,7 +113,7 @@
 #============ update 100k items at 1xScale============
 -
    template: pillowfight
-   args "{{.Orchestrator}}, {{.Bucket}}, -I {{.Scale 100000}} -B 100 -c {{.Scale 1000}}, , {{.AuthPassword}}"
+   args: "{{.Orchestrator}}, {{.Bucket}}, -I {{.Scale 100000}} -B 100 -c {{.Scale 1000}}, , {{.AuthPassword}}"
    wait: true
 
 #============ add back============
