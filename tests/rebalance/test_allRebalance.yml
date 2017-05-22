@@ -76,6 +76,10 @@
   args: "{{.NthDataNode 2}}, full"
   wait: true
 -
+  # enable autofailover settings
+  template: autofailover
+  args: "{{.NthDataNode 2}, 5, full}"
+-
   # back to default group
   template: group_move_servers
   args: "kvgroup2, 'Group 1', {{.NthDataNode 2}}"

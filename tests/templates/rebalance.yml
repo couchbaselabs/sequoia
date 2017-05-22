@@ -198,4 +198,81 @@
       requires: "{{ eq `windows` .Platform}}"
       template: wait_for_rebalance
 
+-
+# Enable autofailover on cluster
+# $0 = Timeout for autofailover
+  name: enable_autofailover
+  actions:
+    -
+      image: sequoiatools/couchbase-cli
+      command: "setting-autofailover -c  {{.Orchestrator}}:{{.RestPort}}
+                -u  {{.RestUsername}} -p  {{.RestPassword}}
+                --enable-auto-failover=1 --auto-failover-timeout=$0"
+      wait: true
 
+-
+# Disable autofailover setting for cluster
+  name: disable_autofailover
+  actions:
+    -
+      image: sequoiatools/couchbase-cli
+      command: "setting-autofailover -c  {{.Orchestrator}}:{{.RestPort}}
+                -u  {{.RestUsername}} -p  {{.RestPassword}}
+                --enable-auto-failover=0"
+      wait: true
+
+-
+# Fail a node by killing the memcached
+# $0 = Server to fail
+  name: memcached_kill
+  actions:
+    -
+      image: "vijayviji/sshpass"
+      command: "sshpass -p {{.SSHPassword}} scp -o StrictHostKeyChecking=no
+                  {{.SSHUsername}}@$0 kill -SIGSTOP $(pgrep memcached)"
+
+-
+# Restart memcached process on server
+# $0 = Server where memcached has to be started
+  name: start_memcached
+  actions:
+    -
+      image: "vijayviji/sshpass"
+      command: "sshpass -p {{.SSHPassword}} scp -o StrictHostKeyChecking=no
+                  {{.SSHUsername}}@$0 kill -SIGCONT $(pgrep memcached)"
+
+-
+# Enable autofailover and fail a node. Recover the node and disable
+# autofailover
+# $0 = node to fail
+# $1 = Autofailover timeout
+# $2 = Recovery type
+  name: autofailover
+  actions:
+    -
+      template: enable_autofailover
+      args: "$1"
+      wait: true
+    -
+      template: memcached_kill
+      args: "$0"
+      wait: true
+    -
+      wait: true
+      duration: 60
+    -
+      template: start_memcached
+      wait: true
+    -
+      wait: true
+      duration: 30
+    -
+      template: recover_node
+      args: "$0, $2"
+      wait: true
+    -
+      template: rebalance
+      wait: true
+    -
+      template: disable_autofailover
+      wait: true
