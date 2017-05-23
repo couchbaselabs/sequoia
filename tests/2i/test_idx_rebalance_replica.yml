@@ -36,7 +36,7 @@
 -
    command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o2_result on `other-2`(result) using GSI with {\"num_replica\":2}'"
 -
-   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o3_rating on `other-3`(rating) using GSI with {\"num_replica\":1, \"defer_build\": true}'"`
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o3_rating on `other-3`(rating) using GSI with {\"num_replica\":1, \"defer_build\": true}'"
 -
    command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o3_claims on `other-3`(claim) using GSI with {\"num_replica\":1}'"
 -
