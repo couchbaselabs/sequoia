@@ -2,9 +2,9 @@
 users:
   -
     name: default
-    password: password 
-    roles: admin 
-    auth_type: builtin
+    password: password
+    roles: admin
+    auth_domain: local
 
 buckets: # define single default bucket
   -
@@ -17,7 +17,7 @@ buckets: # define single default bucket
 servers: # define a single server with link named 'local'
   -
      name: local
-     ram: 3000 
+     ram: 3000
      count: 1
      rest_username: Administrator
      rest_password: password
