@@ -38,11 +38,13 @@
   #
   # $2 host
   # $3 query statement
+  # $4 user auth
+  # $5 pass auth
   name: attack_query
   actions:
     -
       image: sequoiatools/vegeta
-      commandraw: sh -c './run.sh $0 $1 POST http://{{$.RestUsername}}:{{$.RestPassword}}@{{$.QueryNodePort}}/query/service "$3"'
+      commandraw: sh -c './run.sh $0 $1 POST http://{{if gt (len `$4`) 2}}$4{{else}}{{$.RestUsername}}{{end}}:{{if gt (len `$5`) 2}}$5{{else}}{{$.RestPassword}}{{end}}@{{$.QueryNodePort}}/query/service "$3"'
 
 
 -

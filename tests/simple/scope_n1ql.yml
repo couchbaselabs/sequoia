@@ -1,16 +1,23 @@
 ---
+users:
+  -
+    name: default
+    password: password
+    roles: admin
+    auth_domain: local
+
 buckets: # define single default bucket
   -
     name: default
-    ram: 75% 
+    ram: 75%
     replica: 1
     type: couchbase
 
 servers: # define 4 servers
   -
      name: local.st.couchbase.com
-     ram: 40% 
-     index_ram: 10% 
+     ram: 40%
+     index_ram: 10%
      count: 4
      rest_username: Administrator
      rest_password: password
@@ -19,5 +26,6 @@ servers: # define 4 servers
      services:
        query: 2
        index: 1
-     index_storage: memory_optimized 
+     index_storage: memory_optimized
      buckets: default
+     users: default

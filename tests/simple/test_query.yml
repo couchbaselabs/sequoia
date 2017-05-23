@@ -1,16 +1,17 @@
 -
+  include: tests/templates/kv.yml, tests/templates/vegeta.yml
+
+-
   image: sequoiatools/gideon
-  command: "kv --ops {{.Scale 100}} --create 30 --get 70 --delete 10 --expire 100 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
-  duration: 15 # run data loading for 15 seconds
+  command: "kv --ops {{.Scale 100}} --create 100   --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+
 -
   image: sequoiatools/cbq
   command: "-e=http://{{.QueryNode}}:8093  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_rating on `default`(rating)'"
-  wait: true 
+  wait: true
 
 -
-  # run 10 instances of queries for 30s 
-  image: sequoiatools/curloop
-  command: "n1ql.sh {{.QueryNode}}:8093 'select SUM(rating) from default where rating > 0'"
-  concurrency: 10
-  duration: 30
+  template: attack_query
+  args: "30s, 100, {{.QueryNodePort}},
+        select * from default where rating > 0 limit 20, default, password"
   wait: true
