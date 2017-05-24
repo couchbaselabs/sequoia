@@ -17,7 +17,7 @@ servers: # each server tag represents a cluster
       count: 8
       ram: 40%
       index_ram: 50%
-      index_storage: forestdb
+      index_storage: default
       services:
         query: 1
         index: 1
