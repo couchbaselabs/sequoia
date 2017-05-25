@@ -5,6 +5,21 @@ users:
       password: password
       roles: admin
       auth_domain: local
+  -
+      name: other-1
+      password: password
+      roles: admin
+      auth_domain: local
+  -
+      name: other-2
+      password: password
+      roles: admin
+      auth_domain: local
+  -
+      name: other-3
+      password: password
+      roles: admin
+      auth_domain: local
 
 buckets:
   -
@@ -23,7 +38,7 @@ servers: # each server tag represents a cluster
       count: 8
       ram: 70%
       index_ram: 20%
-      index_storage: plasma
+      index_storage: default
       services:
         index: 5
         index_start: 3
@@ -35,4 +50,4 @@ servers: # each server tag represents a cluster
       index_path: "/data"
       init_nodes: 6
       buckets: default,other
-      users: default
+      users: default,other-1,other-2,other-3
