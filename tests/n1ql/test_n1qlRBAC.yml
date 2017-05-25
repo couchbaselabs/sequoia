@@ -1,0 +1,93 @@
+-
+  include: tests/templates/kv.yml,tests/templates/vegeta.yml
+
+###############  create indexes ################
+-
+   image: sequoiatools/cbq
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_rating on `default`(rating)'"
+-
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_claims on `default`(claim)'"
+-
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_result on `default`(result)'"
+
+
+###############  start data loading ################
+-
+  image: sequoiatools/gideon
+  command: "kv --ops 10000 --sizes 64 --create 70 --get 10 --delete 20  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+  concurrency: "{{.Scale 1}}"
+-
+  image: sequoiatools/gideon
+  command: "kv --ops 20000 --sizes 64 --create 100  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+  concurrency: "{{.Scale 1}}"
+
+#############  create roles ###################
+-
+  image: couchbase-cli
+  command: "user-manage -c {{.Orchestrator}} -u Administrator -p password
+                                         --rbac-username queryUser1
+					 --rbac-password password1
+					 --roles query_select(default) --auth-domain local --set"
+-
+  image: couchbase-cli
+  command: "user-manage -c {{.Orchestrator}} -u Administrator -p password
+                                         --rbac-username queryUser2
+                                         --rbac-password password2
+                                         --roles query_insert(default) --auth-domain local --set"
+
+-
+  image: couchbase-cli
+  command: "user-manage -c {{.Orchestrator}} -u Administrator -p password
+                                         --rbac-username queryUser3
+                                         --rbac-password password3
+                                         --roles query_update(default) --auth-domain local --set"
+
+-
+  image: couchbase-cli
+  command: "user-manage -c {{.Orchestrator}} -u Administrator -p password
+                                         --rbac-username queryUser4
+                                         --rbac-password password4
+                                         --roles query_delete(default) --auth-domain local --set"
+
+-
+  image: couchbase-cli
+  command: "user-manage -c {{.Orchestrator}} -u Administrator -p password
+                                         --rbac-username queryUser5
+                                         --rbac-password password5
+                                         --roles query_manage_index(default) --auth-domain local --set"
+
+############ query with roles ##############
+-
+  template: attack_query
+  args: "0, 300, {{.QueryNodePort}},
+        select * from default where result = 'SUCCESS' limit 20, queryUser1, password1"
+  wait: true
+
+-
+  template: attack_query
+  args: "0, 300, {{.QueryNodePort}},
+        insert into default (KEY UUID(), VALUE name) SELECT name from default  WHERE rating > 600, queryUser2, password2"
+  wait: true
+
+-
+  template: attack_query
+  args: "0, 300, {{.QueryNodePort}},
+        update default set name = 'test' WHERE claim is not missing, queryUser3, password3"
+  wait: true
+
+-
+  template: attack_query
+  args: "0, 300, {{.QueryNodePort}},
+        delete from default where rating < 700 limit 20, queryUser4, password4"
+  wait: true
+-
+  template: attack_query
+  args: "0, 300, {{.QueryNodePort}},
+        create index idx_build on `default`(build), queryUser5, password5"
+  wait: true
+
+### until 100M items ######
+-
+   template: wait_for_items
+   args: "{{.Bucket}}, 100000000"
+
