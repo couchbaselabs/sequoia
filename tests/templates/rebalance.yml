@@ -228,7 +228,7 @@
   actions:
     -
       image: "vijayviji/sshpass"
-      command: "sshpass -p {{.SSHPassword}} scp -o StrictHostKeyChecking=no
+      command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no
                   {{.SSHUsername}}@$0 kill -SIGSTOP $(pgrep memcached)"
 
 -
@@ -238,7 +238,7 @@
   actions:
     -
       image: "vijayviji/sshpass"
-      command: "sshpass -p {{.SSHPassword}} scp -o StrictHostKeyChecking=no
+      command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no
                   {{.SSHUsername}}@$0 kill -SIGCONT $(pgrep memcached)"
 
 -
@@ -258,12 +258,17 @@
       args: "$0"
       wait: true
     -
+      image: sequoiatools/cmd
+      entrypoint: sleep
       wait: true
       duration: 60
     -
       template: start_memcached
+      args: "$0"
       wait: true
     -
+      image: sequoiatools/cmd
+      entrypoint: sleep
       wait: true
       duration: 30
     -
