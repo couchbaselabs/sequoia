@@ -176,6 +176,7 @@
 # $2 rate
 # $3 index
 # $4 query
+# $5 extra args
 -
   name: query_fts
   actions:
@@ -185,4 +186,5 @@
                     -duration $1
                     -rate $2
                     -url http://{{.RestUsername}}:{{.RestPassword}}@$0/api/index/$3/query
-                    -query $4"
+                    -query $4
+                    $5"
