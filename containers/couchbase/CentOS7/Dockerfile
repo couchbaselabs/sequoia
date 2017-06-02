@@ -92,7 +92,7 @@ RUN echo "*        hard    nproc           unlimited" >> /etc/security/limits.co
 RUN echo "ulimit -u unlimited" >> /home/couchbase/.bashrc
 RUN sed -i 's/--user couchbase/--user root/' /etc/init.d/couchbase-server || true
 
-CMD "./start.sh"
+CMD ["./start.sh"]
 # pass -noinput so it doesn't drop us in the erlang shell
 
 #VOLUME /opt/couchbase/var
