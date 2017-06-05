@@ -31,6 +31,7 @@ func ParseTemplate(s *Scope, command string) string {
 		"to_double_quote":   tResolv.ToDoubleQuotes,
 		"wrap_single_quote": tResolv.WrapSingleQuote,
 		"ftoint":            tResolv.FloatToInt,
+		"strtoint":          tResolv.StrToInt,
 		"last":              tResolv.LastItem,
 		"contains":          tResolv.Contains,
 		"excludes":          tResolv.Excludes,
@@ -536,6 +537,12 @@ func (t *TemplateResolver) MkRange(args ...int) []int {
 // returns status string of container id
 func (t *TemplateResolver) FloatToInt(v float64) int {
 	return int(v)
+}
+
+func (t *TemplateResolver) StrToInt(v string) int {
+	i, err := strconv.Atoi(strings.TrimSpace(v))
+	logerr(err)
+	return i
 }
 
 // returns last item of a collection

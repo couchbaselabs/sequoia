@@ -1,0 +1,8 @@
+#!/bin/sh
+# Curl + JQ
+
+AUTH=$1
+HOST=$2
+BUCKET=$3
+STAT=$4
+curl -s -u $AUTH $HOST/pools/default/buckets/$BUCKET/stats | jq .op.samples.$STAT[-1]

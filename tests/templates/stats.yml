@@ -1,0 +1,52 @@
+
+# template to wait for cluster to enter dgm
+# $0 = bucket
+# $1 = active item ratio
+-
+  name: wait_for_dgm
+  actions:
+    -
+      template: wait_for_stat
+      args: "{{.RestUsername}}:{{.RestPassword}},
+             {{.Orchestrator}}:{{.RestPort}},
+             $0, vb_active_resident_items_ratio, ge, $1"
+
+
+
+# template to wait for number of items in the cluster
+# $0 = bucket
+# $1 = items
+-
+  name: wait_for_items
+  actions:
+    -
+      template: wait_for_stat
+      args: "{{.RestUsername}}:{{.RestPassword}},
+             {{.Orchestrator}}:{{.RestPort}},
+             $0, curr_items, le, $1"
+
+
+
+# base template for waiting on any kind of stat
+# $0 = auth
+# $1 = host
+# $2 = bucket
+# $3 = stat
+# $4 = comparator
+# $5 = value
+-
+  name: wait_for_stat
+  actions:
+    -
+      image: sequoiatools/stats
+      command: "$0 $1 $2 $3"
+      repeat: -1
+      # repeat until the requested value is reached
+      until: "{{if .AllLogs `__self__`}}
+                  {{with $val:=(.TailLogs `__self__` 1 | strtoint)}}
+                    {{$4 $5 $val}}
+                  {{else}}{{false}}{{end}}
+              {{else}}{{false}}{{end}}"
+      wait: true
+
+
