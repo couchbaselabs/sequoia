@@ -1,0 +1,19 @@
+---
+- include: tests/templates/stats.yml
+
+# import the create_indexes section from fts test
+- test: tests/simple/test_fts.yml
+  section: create_indexes
+
+# load some data
+- image: sequoiatools/gideon
+  command: "kv --ops {{.Scale 10000}} --create 100  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+
+# do some queries
+- test: tests/simple/test_fts.yml
+  section: query_indexes
+
+# wait will we reach 100k items
+- template: wait_for_items
+  args: "default, 100000"
+  wait: true

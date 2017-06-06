@@ -5,6 +5,9 @@
 
 # create index with custom child field using result key as type
 -
+  section_start: create_indexes
+
+-
   template: create_index_with_child_field
   args: "{{.FTSNodePort}}, good_state, default, SUCCESS, state, false, result"
   wait: true
@@ -14,6 +17,8 @@
   template: create_index_with_child_field_nested_type_mapping
   args: "{{.FTSNodePort}}, social, default, gideon, description, profile, status, true"
   wait: true
+-
+  section_end: create_indexes
 
 # start data loading
 -
@@ -22,11 +27,12 @@
 
 # direct search on state key
 -
+  section_tag: query_indexes
   template: query_fts
-  args: "{{.FTSNodePort}}, 120, 10, good_state, +state:9C"
+  args: "{{.FTSNodePort}}, 120, 10, good_state, +state:9C, -size 10"
 
 # regex search on subfield profile.status with description exclusion
 -
   template: query_fts
-  args: "{{.FTSNodePort}}, 120, 10, social, '+profile.status:41* -description:32*'"
+  args: "{{.FTSNodePort}}, 120, 10, social, '+profile.status:41* -description:32*', -size 10"
   wait: true
