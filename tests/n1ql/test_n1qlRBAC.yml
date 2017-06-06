@@ -1,5 +1,5 @@
 -
-  include: tests/templates/kv.yml,tests/templates/vegeta.yml
+  include: tests/templates/stats.yml,tests/templates/vegeta.yml
 
 ###############  create indexes ################
 -
