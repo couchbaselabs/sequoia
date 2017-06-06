@@ -23,27 +23,31 @@ type CollectionManager struct {
 }
 
 type ActionSpec struct {
-	Describe    string
-	Image       string
-	Command     string
-	CommandRaw  string
-	Wait        bool
-	CondWait    string
-	Before      string
-	Entrypoint  string
-	Requires    string
-	Concurrency string
-	Duration    string
-	Alias       string
-	Repeat      int
-	Until       string
-	Include     string
-	Template    string
-	Args        string
-	Test        string
-	Scope       string
-	ForEach     string
-	Client      ClientActionSpec
+	Describe     string
+	Image        string
+	Command      string
+	CommandRaw   string
+	Wait         bool
+	CondWait     string
+	Before       string
+	Entrypoint   string
+	Requires     string
+	Concurrency  string
+	Duration     string
+	Alias        string
+	Repeat       int
+	Until        string
+	Include      string
+	Template     string
+	Args         string
+	Test         string
+	Scope        string
+	ForEach      string
+	Section      string
+	SectionStart string `yaml:"section_start"`
+	SectionEnd   string `yaml:"section_end"`
+	SectionTag   string `yaml:"section_tag"`
+	Client       ClientActionSpec
 }
 
 // returns yaml formattable string
@@ -224,7 +228,9 @@ func (t *Test) Run(scope Scope) {
 		for loops = 0; loops < repeat; loops++ {
 			t.runActions(scope, loops, t.Actions)
 			// kill test containers
-			t.DoContainerCleanup(scope)
+			if *t.Flags.SkipCleanup == false {
+				t.DoContainerCleanup(scope)
+			}
 		}
 	}
 	t.Cm.TapHandle.AutoPlan()
@@ -365,7 +371,33 @@ func (t *Test) runActions(scope Scope, loop int, actions []ActionSpec) {
 		if action.Test != "" {
 			// referencing external test
 			testActions := ActionsFromFile(action.Test)
-			t.Actions = testActions
+
+			// filter by section if provided
+			sectionName := action.Section
+			if sectionName != "" {
+				t.Actions = []ActionSpec{}
+				isWithinSection := false
+				for _, action := range testActions {
+					if action.SectionStart == sectionName {
+						isWithinSection = true
+					}
+					if action.SectionEnd == sectionName {
+						isWithinSection = false
+					}
+
+					// add action if it's within a section or matches tag
+					if isWithinSection || (action.SectionTag == sectionName) {
+						t.Actions = append(t.Actions, action)
+					}
+
+					// add any includes needed for test actions
+					if action.Include != "" {
+						t.Actions = append(t.Actions, action)
+					}
+				}
+			} else {
+				t.Actions = testActions
+			}
 
 			// save test options
 			setup := t.Flags.SkipSetup
