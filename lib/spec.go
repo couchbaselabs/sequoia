@@ -93,7 +93,7 @@ func (s *ServerSpec) InitNodeServices() {
 	// and second set index to avoid
 	// overlapping if possible when specific
 	// number of service types provided
-	indexStartPos := numNodes - numQueryNodes - numIndexNodes
+	indexStartPos := numNodes - numQueryNodes - numIndexNodes - numFtsNodes
 	if customIndexStart > 0 {
 		// override
 		indexStartPos = customIndexStart - 1
@@ -102,24 +102,24 @@ func (s *ServerSpec) InitNodeServices() {
 		indexStartPos = 0
 	}
 
-	// fts defaults on same box as index machine
-	// override with fts_start
-	ftsStartPos := indexStartPos
-	if customFtsStart > 0 {
-		// override
-		ftsStartPos = customFtsStart - 1
-	}
-	if ftsStartPos >= numNodes {
-		ftsStartPos = 0
-	}
-
-	queryStartPos := numNodes - numQueryNodes
+	queryStartPos := numNodes - numQueryNodes - numFtsNodes
 	if customQueryStart > 0 {
 		// override
 		queryStartPos = customQueryStart - 1
 	}
 	if queryStartPos >= numNodes {
 		queryStartPos = 0
+	}
+
+	// fts defaults on last machine
+	// override with fts_start
+	ftsStartPos := numNodes - numFtsNodes
+	if customFtsStart > 0 {
+		// override
+		ftsStartPos = customFtsStart - 1
+	}
+	if ftsStartPos >= numNodes {
+		ftsStartPos = 0
 	}
 
 	for i = 0; i < numNodes; i = i + 1 {
