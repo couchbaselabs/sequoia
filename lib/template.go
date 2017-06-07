@@ -396,6 +396,20 @@ func (t *TemplateResolver) Address(index int, servers []ServerSpec) string {
 	return t.Scope.Provider.GetHostAddress(name)
 }
 
+// Get the IP of the container
+func (t *TemplateResolver) ContainerIP(alias string) string {
+	// check if alias exist in scope vars
+	if id, ok := t.Scope.GetVarsKV(alias); ok {
+		if t.Scope.Cm.CheckContainerExists(id) {
+			container, err  := t.Scope.Cm.Client.InspectContainer(id)
+			if err == nil {
+				return container.NetworkSettings.IPAddress;
+			}
+		}
+	}
+	return "<node_not_found>"
+}
+
 func (t *TemplateResolver) AuthUser(index int, servers []ServerSpec) *RbacSpec {
 	for _, spec := range servers {
 		for i, userSpec := range spec.RbacSpecs {
