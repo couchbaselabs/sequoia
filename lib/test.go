@@ -631,13 +631,29 @@ func (t *Test) ResolveTemplateActions(scope Scope, action ActionSpec) []ActionSp
 		argOffset := 0
 		for i, arg := range allArgs {
 			arg = strings.TrimSpace(arg)
-			if strings.Index(arg, "(") != -1 {
-				// this is a multi arg string
-				// concatentate until we reach ")"
-				multiArg = true
-				lastArg = strings.Replace(arg, "(", "", 1)
-				argOffset++
-				continue
+			leftParenPos := strings.Index(arg, "(")
+			parenIsEscaped := false
+			if leftParenPos != -1 {
+				if leftParenPos > 0 {
+					leadingParenChar := string(arg[leftParenPos-1])
+					if leadingParenChar == "\\" {
+
+						// remove the escape from the action
+						arg = strings.Replace(arg, "\\", "", 1)
+
+						// skip
+						parenIsEscaped = true
+					}
+				}
+
+				if parenIsEscaped == false {
+					// this is a multi arg string
+					// concatentate until we reach ")"
+					multiArg = true
+					lastArg = strings.Replace(arg, "(", "", 1)
+					argOffset++
+					continue
+				}
 			}
 			if multiArg == true {
 				arg = fmt.Sprintf("%s,%s", lastArg, arg)
