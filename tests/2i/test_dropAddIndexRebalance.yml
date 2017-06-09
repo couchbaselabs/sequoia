@@ -1,7 +1,7 @@
 -
-  include: tests/templates/kv.yml
+  include: tests/templates/kv.yml, tests/templates/vegeta.yml, tests/templates/rebalance.yml
 
-############### data loading ################
+############# data loading ################
 -
   image: sequoiatools/gideon
   command: "kv --ops {{.Scale 5000}} --create 30 --get 70 --delete 10     --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
@@ -47,37 +47,29 @@
    wait: true
 
 
-# ###############  query index ################
+###############  query index ################
 -
-  image: sequoiatools/curloop
-  command: "n1ql.sh {{.QueryNodePort}} 'select SUM(rating) from default where rating > 0 limit 50'"
+  # run http attacks against view with various skip param
+  template: attack_query
+  args: "{{.QueryNodePort}}, 0, {{.Scale 10}},'select * from default where rating > 0  limit 50'"
 -
-  command: "n1ql.sh {{.QueryNodePort}} 'select SUM(rating) from `other-1` where rating > 100  limit 50'"
+  args: "{{.QueryNodePort}}, 0, {{.Scale 10}},'select * from `other-1` where rating > 100  limit 50'"
 -
-  command: "n1ql.sh {{.QueryNodePort}} 'select SUM(rating) from `other-2` where result = SUCCESS limit 50'"
+  args: "{{.QueryNodePort}}, 0, {{.Scale 10}},'select SUM\\(rating) from `other-2` where result = SUCCESS limit 50'"
 -
-  command: "n1ql.sh {{.QueryNodePort}} 'select SUM(rating) from `other-3` where claim like A% limit 20'"
+  args: "{{.QueryNodePort}}, 0, {{.Scale 10}},'select SUM\\(rating) from `other-3` where claim like A% limit 20'"
 -
-  command: "n1ql.sh {{.QueryNodePort}} 'delete from default where rating < 300'"
+  args: "{{.QueryNodePort}}, 0, {{.Scale 10}},'delete from default where rating < 300'"
 -
-  command: "n1ql.sh {{.QueryNodePort}} 'delete from default where rating > 700'"
+  args: "{{.QueryNodePort}}, 0, {{.Scale 10}},'delete from default where rating > 700'"
 -
-  command: "n1ql.sh {{.QueryNodePort}} 'delete from default where rating > 300 and rating < 700'"
+  args: "{{.QueryNodePort}}, 0, {{.Scale 10}},'delete from default where rating > 300 and rating < 700'"
 
 
-###############  swap indexer ################
--
-   image: sequoiatools/couchbase-cli
-   command: "server-add -c  {{.Orchestrator}}:{{.RestPort}}
-       --server-add  {{.ClusterNodes | net 6}}:{{.RestPort}}
-       --services index,data
-       -u  {{.RestUsername}} -p  {{.RestPassword}}
-       --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
-   wait: true
--
-   image: sequoiatools/couchbase-cli
-   command:  "rebalance -c  {{.Orchestrator}}:{{.RestPort}} --server-remove {{.Nodes | .Service `index` | net 1}}:{{.RestPort}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
-   alias: SwapRebId
+# ###############  swap indexer ################
+- template: rebalance_swap
+  args: "{{.InActiveNode}}, {{.IndexNode}}, (index,data)"
+  alias: SwapRebId
 
 
 ###############  drop indexes during rebalance ################
@@ -110,22 +102,13 @@
 
 
 ###############  swap hard-failover(orchestrator.index) ################
--
-   image: sequoiatools/couchbase-cli
-   command: "failover -c {{.Orchestrator}}:{{.RestPort}}
-       --server-failover {{.Nodes | .Service `index` | net 0}}:{{.RestPort}} --force
-       -u  {{.RestUsername}} -p  {{.RestPassword}}"
-   wait: true
--
-   command: "server-add -c {{.Orchestrator}}:{{.RestPort}}
-       --server-add  {{.ClusterNodes | net 7}}:{{.RestPort}}
-       --services index,data
-       -u  {{.RestUsername}} -p  {{.RestPassword}}
-       --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
-   wait: true
--
-   command:  "rebalance -c {{.Orchestrator}}:{{.RestPort}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
-   alias: SwapFailId
+- template: failover_node_forced
+  args: "{{.IndexNode}}"
+  wait: true
+- template: rebalance_in
+  args: "{{.InActiveNode}}, (index, data)"
+  alias: SwapFailId
+
 
 ###############  'when' hard failover is done add back all indexes ################
 -
@@ -163,41 +146,25 @@
 
 
 ############### data loading for some time ################
--
-  template: pillowfight
+- template: pillowfight
   args: "{{.Orchestrator}}, {{.Bucket}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 4  --rate-limit {{.Scale 2000}}, {{.AuthPassword}}"
   duration: 600  # 10 min data loading
   wait: true
 
 ######  failover recently added index nodes  ######
--
-   before: "{{.Status `SwapFailId` | eq `exited`}}"
-   image: sequoiatools/couchbase-cli
-   command: "failover -c  {{.Orchestrator}}:{{.RestPort}}
-       --server-failover {{.ClusterNodes | net 6}}:{{.RestPort}}
-       -u  {{.RestUsername}} -p  {{.RestPassword}}"
-   wait: true
--
-   command:  "rebalance -c  {{.Orchestrator}}:{{.RestPort}} --server-remove {{.ClusterNodes | net 7}}:{{.RestPort}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
-   wait: true
+- before: "{{.Status `SwapFailId` | eq `exited`}}"
+  template: failover_node
+  args: "{{.LastIndexNode}}"
+  wait: true
+- template: rebalance_in
+  args: "{{.IndexNode}}"
+  wait: true
 
 
-#### add back index nodes ####
--
-  image: sequoiatools/couchbase-cli
-  command: "server-add -c  {{.Orchestrator}}:{{.RestPort}}
-      --server-add  {{.ClusterNodes | net 4}}:{{.RestPort}}
-      --services index
-      -u  {{.RestUsername}} -p  {{.RestPassword}}
-      --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
-  wait: true
--
-  command: "server-add -c  {{.Orchestrator}}:{{.RestPort}}
-      --server-add  {{.ClusterNodes | net 5}}:{{.RestPort}}
-      --services index
-      -u  {{.RestUsername}} -p  {{.RestPassword}}
-      --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
-  wait: true
--
-  command:  "rebalance -c  {{.Orchestrator}}:{{.RestPort}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
+# #### add back index nodes ####
+- template: add_node
+  args: "{{.InActiveNode}}, index"
+- args: "{{.InActiveNode}}, index"
+
+- template: rebalance
   wait: true
