@@ -431,7 +431,16 @@ func (t *Test) runActions(scope Scope, loop int, actions []ActionSpec) {
 			continue
 		}
 
-		if action.Template != "" {
+		// check if action provides args to a template
+		if action.Args != "" {
+			if action.Template == "" {
+				// use last template
+				if lastAction.Template != "" {
+					action.Template = lastAction.Template
+				} else {
+					ecolorsay("ERROR: cannot provide args without template: " + action.Args)
+				}
+			}
 			// run template actions
 			if templateActions, ok := t.Templates[action.Template]; ok {
 				templateActions = t.ResolveTemplateActions(scope, action)
@@ -439,12 +448,21 @@ func (t *Test) runActions(scope Scope, loop int, actions []ActionSpec) {
 			} else {
 				ecolorsay("WARNING template not found: " + action.Template)
 			}
+
+			lastAction = action
 			continue
 		}
 
 		if action.Image == "" {
-			// reuse last action image
-			action.Image = lastAction.Image
+			if lastAction.Image != "" {
+				// reuse last action image
+				action.Image = lastAction.Image
+			}
+
+			if action.Template == "" && lastAction.Template != "" {
+				// reuse last action template
+				action.Template = lastAction.Template
+			}
 
 			// reuse last action requires
 			if action.Requires == "" {
