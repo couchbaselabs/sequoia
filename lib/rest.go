@@ -22,16 +22,13 @@ type NodeSelf struct {
 	Version           string
 }
 
-type NodeStatuses struct {
-	Statuses map[string]NodeStatus
-}
+type NodeStatuses map[string]NodeStatus
 
 type NodeStatus struct {
-	Status      map[string]string
-	Healthy     map[string]string
-	OtpNode     map[string]string
-	Replication map[string]int
-	Dataless    map[string]bool
+	Status      string
+	OtpNode     string
+	Replication float64
+	Dataless    bool
 }
 
 func (r *RestClient) GetServerVersion() string {
@@ -86,8 +83,7 @@ func (r *RestClient) NodeHasService(service, host string) bool {
 func (r *RestClient) NodeIsSingle(host string) bool {
 
 	n := r.GetHostNodeStatuses(host)
-	single := len(n.Statuses) == 1
-
+	single := len(n) == 1
 	return single
 }
 
