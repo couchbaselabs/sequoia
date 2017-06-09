@@ -228,6 +228,33 @@ func (t *TemplateResolver) NthDataNode(n int) string {
 	return t.Address(n, nodes)
 }
 
+// Shortcut: .ClusterNodes | .Service `index` | net 0
+func (t *TemplateResolver) IndexNode() string {
+	nodes := t.ClusterNodes()
+	serviceNodes := t.Service("index", nodes)
+	return t.Address(0, serviceNodes)
+}
+
+// Shortcut: .ClusterNodes | .Service `index` | net N
+func (t *TemplateResolver) NthIndexNode(n int) string {
+	nodes := t.ClusterNodes()
+	serviceNodes := t.Service("index", nodes)
+	return t.Address(n, serviceNodes)
+}
+
+// Shortcut: .ClusterNodes | .Service `index` | net -1
+func (t *TemplateResolver) LastIndexNode() string {
+	nodes := t.ClusterNodes()
+	serviceNodes := t.Service("index", nodes)
+	addr := t.Address(len(serviceNodes[0].Names)-1, serviceNodes)
+	return addr
+}
+
+// Shortcut: {{.IndexNode | noport}}:{{.RestPort}}
+func (t *TemplateResolver) IndexNodePort() string {
+	return fmt.Sprintf("%s:%s", t.NoPort(t.IndexNode()), t.RestPort())
+}
+
 // Shortcut: .FTSNode | .Service `fts` | net 0
 func (t *TemplateResolver) FTSNode() string {
 	nodes := t.ClusterNodes()
@@ -347,7 +374,6 @@ func (t *TemplateResolver) ActiveNodes(servers []ServerSpec) []string {
 // Get ALL nodes from Cluster Spec that are single (not active)
 func (t *TemplateResolver) InActiveNodes(servers []ServerSpec) []string {
 	return t.NodesByAvailability(servers, false)
-
 }
 
 // Get ONE node from ANY cluster where:

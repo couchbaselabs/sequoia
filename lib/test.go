@@ -432,7 +432,7 @@ func (t *Test) runActions(scope Scope, loop int, actions []ActionSpec) {
 		}
 
 		// check if action provides args to a template
-		if action.Args != "" {
+		if action.Template != "" || action.Args != "" {
 			if action.Template == "" {
 				// use last template
 				if lastAction.Template != "" {
