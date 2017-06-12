@@ -1,0 +1,188 @@
+---
+-
+  include: tests/templates/rebalance.yml, tests/templates/vegeta.yml, tests/templates/kv.yml, tests/templates/fts.yml
+
+# delete phase
+- requires: "{{ eq false .DoOnce}}"
+  template: attack_query
+  duration: 3600
+  args: "{{.QueryNodePort}}, 0, {{.Scale 10}},'delete from default where rating < 300'"
+- args: "{{.QueryNodePort}}, 0, {{.Scale 10}},'delete from default where rating > 700'"
+- args: "{{.QueryNodePort}}, 0, {{.Scale 10}},'delete from default where rating > 300 and rating < 700'"
+  wait: true
+
+
+# start tpcc indexing
+- image: sequoiatools/tpcc
+  requires:  "{{.Version | le 4.0 | eq .DoOnce}}"
+  command:  "./run.sh {{.QueryNodePort}} util/cbcrindex.sql"
+  wait: true
+- image: sequoiatools/tpcc
+  requires:  "{{.Version | le 4.0}}"
+  command: "python tpcc.py --duration 259200 --client {{.Scale 1}} --warehouses 5 --no-execute n1ql
+                            --query-url {{.QueryNodePort}} --userid {{.RestUsername}} --password {{.RestPassword}}"
+- requires:  "{{.Version | le 4.0}}"
+  command: "python tpcc.py --duration 2259200 --client {{.Scale 1}}
+                             --warehouses 5 --no-load n1ql  --query-url {{.QueryNodePort}}"
+
+
+# create primary index
+- image: sequoiatools/cbq
+  command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_rating on `default`(rating)'"
+
+
+# replica index creation
+- test: tests/2i/test_idx_rebalance_replica.yml
+  section: create_replica_indexes
+
+# run http attacks against n1ql with various skip param
+- template: attack_query
+  args: "0, 10, {{$.QueryNodePort}},
+        delete from default where rating > 0 limit 100"
+- foreach: "{{range $i, $offset := mkrange 0 500 100}}"
+  template: attack_query
+  args: "0, {{$.Scale 5}}, {{$.QueryNodePort}},
+        select * from default where rating > 100 limit 100 offset {{$offset}}"
+  alias: "N1qlQ{{$i}}"
+
+# replica data loading for 30 minutes with docs that will expire after 1 hour
+- image: sequoiatools/gideon
+  duration: 1800
+  command: "kv --ops {{.Scale 1000}} --create 10 --get 90 --sizes 64 96  --expire 100 --ttl 3600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
+- command: "kv --ops {{.Scale 1000}} --create 10 --get 90 --sizes 64 96  --expire 100 --ttl 3600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}}"
+- command: "kv --ops {{.Scale 1000}} --create 10 --get 90 --sizes 64 96  --expire 100 --ttl 3600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}}"
+
+
+
+# query replica indexes
+- test: tests/2i/test_idx_rebalance_replica.yml
+  section: query_replica_indexes
+
+
+# continous kv loading
+# the json loader stops after 2 hours
+- template: pillowfight
+  args: "{{.Orchestrator}}, {{.Bucket}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 4  --rate-limit {{.Scale 2000}}, {{.AuthPassword}}"
+- image: sequoiatools/gideon
+  command: "kv --ops {{.Scale 100}} --create 10 --get 90 --expire 100 --ttl 660  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 16000"
+- duration: 7200
+  command: "kv --ops {{.Scale 2000}} --create 15 --get 80 --delete 5  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 512 128 1024 2048"
+
+
+# run http attacks against view with various skip param
+- foreach: "{{range $i, $view := strlist `stats` `array` `padd`}}"
+  template: attack_view
+  args: "0, 10, {{$.NthDataNode $i}},
+         {{$.Bucket}},
+         scale,
+         {{$view}},
+         limit={{$.Scale 10}}&stale=update_after&connection_timeout=60000"
+
+
+# rebalance out a node
+- template: rebalance_out
+  args: "{{.NthDataNode 1}}:{{.RestPort}}"
+  wait: true
+
+
+# create fts index with custom child field using result key as type
+- template: create_index_with_child_field
+  args: "{{.FTSNodePort}}, good_state, default, SUCCESS, state, false, result"
+  wait: true
+
+
+# create fts index with nested type mappings and store results
+- template: create_index_with_child_field_nested_type_mapping
+  args: "{{.FTSNodePort}}, social, default, gideon, description, profile, status, true"
+
+
+# direct search on state key
+- template: query_fts
+  args: "{{.FTSNodePort}}, -1, {{.Scale 10}}, good_state, +state:9C, -size 100"
+
+
+# regex search on subfield profile.status with description exclusion
+- template: query_fts
+  args: "{{.FTSNodePort}}, -1, {{.Scale 10}}, social, '+profile.status:41* -description:32*', -size 100"
+
+
+# start xdcr replications
+- image: sequoiatools/couchbase-cli
+  requires:  "{{eq true .DoOnce }}"
+  command:  "xdcr-setup -c {{.Orchestrator}}:{{.RestPort}} --create --xdcr-cluster-name remote
+        --xdcr-hostname {{.Nodes | .Cluster 1 | net 0}}
+        --xdcr-username {{.Nodes | .Cluster 1 | .Attr `rest_username`}}
+        --xdcr-password {{.Nodes | .Cluster 1 | .Attr `rest_password`}}"
+  wait: true
+- command: "xdcr-replicate -c {{.Orchestrator}}:{{.RestPort}}
+        --create
+        --xdcr-cluster-name remote
+        --xdcr-from-bucket {{.Bucket}}
+        --xdcr-to-bucket {{.Nodes | .Cluster 1 | bucket 0}}"
+  wait: true
+
+
+# load 1M items
+- template: pillowfight_htp
+  wait: true
+
+
+# swap rebalance
+- template: rebalance_swap
+  args: "{{.NthDataNode 1}}, {{.NthDataNode 2}}"
+
+
+# remove an index node
+- template: rebalance_out
+  args: "{{.IndexNode}}"
+  wait: true
+
+
+# recreate replica index during swap
+- test: tests/2i/test_idx_rebalance_replica.yml
+  section: recreate_replica_indexes
+
+
+# change the topologies on the 2i test
+- test: tests/2i/test_idx_rebalance_replica.yml
+  section: change_indexer_topologies
+
+
+# quick update batch
+- template: pillowfight_htp
+  wait: true
+
+
+# swap failover
+- template: add_node
+  args: "{{.NthDataNode 2}}"
+- template: failover_node_forced
+  args: "{{.NthDataNode 1}}"
+- template: rebalance
+  wait: true
+
+
+# quick update batch
+- template: pillowfight_htp
+  wait: true
+
+
+# swap hard failover
+- template: add_node
+  args: "{{.NthDataNode 1}}"
+- template: failover_node
+  args: "{{.NthDataNode 2}}"
+- template: failover_node_forced
+  args: "{{.NthDataNode 3}}"
+- template: rebalance
+  wait: true
+
+
+# quick update batch
+- template: pillowfight_htp
+  wait: true
+
+
+# run the entire dropAddIndex test
+- test: tests/2i/test_dropAddIndexRebalance.yml
+  section_skip: data_loading
