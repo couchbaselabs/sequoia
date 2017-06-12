@@ -563,15 +563,23 @@ func (t *Test) runActions(scope Scope, loop int, actions []ActionSpec) {
 			t.Cm.PullImage(task.Image)
 		}
 
-		// run task
-		if task.Async == true {
-			go t.runTask(&scope, &task, &action)
-		} else {
-			t.runTask(&scope, &task, &action)
-		}
+		if *t.Flags.DryRun == false {
+			// run task
 
+			if task.Async == true {
+				go t.runTask(&scope, &task, &action)
+			} else {
+				t.runTask(&scope, &task, &action)
+			}
+
+			time.Sleep(5 * time.Second)
+		} else if len(task.Command) > 1 {
+			// just print command output without actually running
+			fmt.Println(task.Image,
+				fmt.Sprintf("[wait:%t]", action.Wait),
+				strings.Join(task.Command, " "))
+		}
 		lastAction = action
-		time.Sleep(5 * time.Second)
 	}
 
 }

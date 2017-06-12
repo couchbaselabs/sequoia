@@ -40,6 +40,7 @@ type TestFlags struct {
 	Override         *string
 	Version          *string
 	Exec             *bool
+	DryRun           *bool
 	DefaultFlagSet   *flag.FlagSet
 	ImageFlagSet     *flag.FlagSet
 	CleanFlagSet     *flag.FlagSet
@@ -213,6 +214,10 @@ func (f *TestFlags) AddDefaultFlags(fset *flag.FlagSet) {
 		"expose_ports",
 		false,
 		"expose container ports for url access")
+	f.DryRun = fset.Bool(
+		"dry_run",
+		false,
+		"just print out commands without running test")
 	f.Scale = fset.Int(
 		"scale",
 		1,
