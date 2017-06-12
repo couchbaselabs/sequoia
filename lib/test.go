@@ -47,6 +47,7 @@ type ActionSpec struct {
 	SectionStart string `yaml:"section_start"`
 	SectionEnd   string `yaml:"section_end"`
 	SectionTag   string `yaml:"section_tag"`
+	SectionSkip  string `yaml:"section_skip"`
 	Client       ClientActionSpec
 }
 
@@ -373,7 +374,14 @@ func (t *Test) runActions(scope Scope, loop int, actions []ActionSpec) {
 			testActions := ActionsFromFile(action.Test)
 
 			// filter by section if provided
-			sectionName := action.Section
+			var sectionName string
+			if action.SectionSkip != "" {
+				sectionName = action.SectionSkip
+			} else {
+				sectionName = action.Section
+			}
+
+			excludedActions := []ActionSpec{}
 			if sectionName != "" {
 				t.Actions = []ActionSpec{}
 				isWithinSection := false
@@ -388,15 +396,20 @@ func (t *Test) runActions(scope Scope, loop int, actions []ActionSpec) {
 					// add action if it's within a section or matches tag
 					if isWithinSection || (action.SectionTag == sectionName) {
 						t.Actions = append(t.Actions, action)
-					}
-
-					// add any includes needed for test actions
-					if action.Include != "" {
+					} else if action.Include != "" {
+						// add any includes needed for test actions
 						t.Actions = append(t.Actions, action)
+					} else {
+						excludedActions = append(excludedActions, action)
 					}
 				}
 			} else {
 				t.Actions = testActions
+			}
+
+			if action.SectionSkip != "" {
+				// skipped actions
+				t.Actions = excludedActions
 			}
 
 			// save test options
