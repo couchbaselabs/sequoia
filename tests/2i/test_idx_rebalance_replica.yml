@@ -14,6 +14,7 @@
 
 
 ###############  create indexes ################
+- section_start: create_replica_indexes
 
 -
    image: sequoiatools/cbq
@@ -50,8 +51,10 @@
    command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='build index on `other-3`(rating)"
    wait: true
 
+- section_end: create_replica_indexes
 
 # ###############  run queries ################
+- section_start: query_replica_indexes
 - template: attack_query
 - args: "{{.QueryNodePort}}, 0, {{.Scale 10}},'select SUM\\(result) from default where result > 0 limit 50'"
 - args: "{{.QueryNodePort}}, 0, {{.Scale 10}},'select claim from default where result > 0 limit 50'"
@@ -59,6 +62,7 @@
 - args: "{{.QueryNodePort}}, 0, {{.Scale 10}},'select * from `other-1` where result > 100  limit 50'"
 - args: "{{.QueryNodePort}}, 0, {{.Scale 10}},'select SUM\\(result) from `other-2` where claim like c% limit 50'"
 - args: "{{.QueryNodePort}}, 0, {{.Scale 10}},'select SUM\\(result) from `other-3` where rating like a% limit 20'"
+- section_end: query_replica_indexes
 
 
 ############### run creates ################
@@ -76,6 +80,7 @@
   command: "kv --ops {{.Scale 1000}} --create 30 --get 70 --delete 10  --sizes 512  --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}}"
   duration: 1200
 
+- section_start: change_indexer_topologies
 
 ###############  Rebalance-in single node ################
 - template: rebalance_in
@@ -135,8 +140,10 @@
   args: "{{.NthIndexNode 2}}"
   wait: true
 
+- section_end: change_indexer_topologies
 
 ###############  Drop some Indexes ################
+- section_start: recreate_replica_indexes
 -
    image: sequoiatools/cbq
    command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='drop index `default`'"
@@ -168,6 +175,7 @@
    command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o3_claims on `other-3`(claim) using GSI'"
    wait: true
 
+- section_end: recreate_replica_indexes
 
 ###############  Rebalance-out last index node ################
 -
