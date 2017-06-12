@@ -62,6 +62,17 @@
            {{if ge .Version 4.0}}--services {{if gt (len `$1`) 2}}$1{{else}}data{{end}}{{end}}"
       wait: true
 
+# readd a failover node to server
+# $0 node to add back
+# $1 optional orchestrator
+-
+  name: readd_node
+  command: "server-readd
+            -c {{if gt (len `$1`) 2}}$1{{else}}{{.Orchestrator}}{{end}}:{{.RestPort}}
+            --server-add $0
+            -u  {{.RestUsername}} -p  {{.RestPassword}}"
+  wait: true
+
 # swap rebalance 1x1 node
 # $0 server to add
 # $1 server to remove
