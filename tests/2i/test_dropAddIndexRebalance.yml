@@ -16,34 +16,34 @@
 ###############  create indexes ################
 -
    image: sequoiatools/cbq
-   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_rating on `default`(rating)'"
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_rating on `{{.Bucket}}`(rating)'"
 -
-   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_claims on `default`(claim)'"
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_claims on `{{.Bucket}}`(claim)'"
 -
-   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_result on `default`(result)'"
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_result on `{{.Bucket}}`(result)'"
    wait: true
 -
-   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create primary index on `default`'"
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create primary index on `{{.Bucket}}`'"
 -
-   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o1_rating on `other-1`(rating)'"
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o1_rating on `{{.NthBucket 1}}`(rating)'"
    wait: true
 -
-   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o1_claims on `other-1`(claim)'"
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o1_claims on `{{.NthBucket 1}}`(claim)'"
 -
-   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o1_result on `other-1`(result)'"
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o1_result on `{{.NthBucket 1}}`(result)'"
 -
-   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o2_rating on `other-2`(rating)'"
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o2_rating on `{{.NthBucket 2}}`(rating)'"
 -
-   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o2_claims on `other-2`(claim)'"
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o2_claims on `{{.NthBucket 2}}`(claim)'"
 -
-   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o2_result on `other-2`(result)'"
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o2_result on `{{.NthBucket 2}}`(result)'"
    wait: true
 -
-   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o3_rating on `other-3`(rating)'"
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o3_rating on `{{.NthBucket 3}}`(rating)'"
 -
-   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o3_claims on `other-3`(claim)'"
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o3_claims on `{{.NthBucket 3}}`(claim)'"
 -
-   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o3_result on `other-3`(result)'"
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o3_result on `{{.NthBucket 3}}`(result)'"
    wait: true
 
 
@@ -53,11 +53,11 @@
   template: attack_query
   args: "{{.QueryNodePort}}, 0, {{.Scale 10}},'select * from default where rating > 0  limit 50'"
 -
-  args: "{{.QueryNodePort}}, 0, {{.Scale 10}},'select * from `other-1` where rating > 100  limit 50'"
+  args: "{{.QueryNodePort}}, 0, {{.Scale 10}},'select * from `{{.NthBucket 1}}` where rating > 100  limit 50'"
 -
-  args: "{{.QueryNodePort}}, 0, {{.Scale 10}},'select SUM\\(rating) from `other-2` where result = SUCCESS limit 50'"
+  args: "{{.QueryNodePort}}, 0, {{.Scale 10}},'select SUM\\(rating) from `{{.NthBucket 2}}` where result = SUCCESS limit 50'"
 -
-  args: "{{.QueryNodePort}}, 0, {{.Scale 10}},'select SUM\\(rating) from `other-3` where claim like A% limit 20'"
+  args: "{{.QueryNodePort}}, 0, {{.Scale 10}},'select SUM\\(rating) from `{{.NthBucket 3}}` where claim like A% limit 20'"
 -
   args: "{{.QueryNodePort}}, 0, {{.Scale 10}},'delete from default where rating < 300'"
 -
@@ -75,13 +75,13 @@
 ###############  drop indexes during rebalance ################
 -
    image: sequoiatools/cbq
-   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='drop index `default`'"
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='drop index `{{.Bucket}}`'"
 -
-   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='drop index `other-1`.o1_rating'"
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='drop index `{{.NthBucket 1}}`.o1_rating'"
 -
-   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='drop index `other-2`.o2_rating'"
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='drop index `{{.NthBucket 2}}`.o2_rating'"
 -
-   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='drop index `other-3`.o3_rating'"
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='drop index `{{.NthBucket 3}}`.o3_rating'"
 
 
 
@@ -90,13 +90,13 @@
    before: "{{.Status `SwapRebId` | eq `exited`}}"
    image: sequoiatools/cbq
    wait: true
-   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create primary index on `default`'"
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create primary index on `{{.Bucket}}`'"
 -
-   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o3_rating on `other-3`(rating)'"
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o3_rating on `{{.NthBucket 3}}`(rating)'"
 -
-   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='drop index `other-2`.o2_claims'"
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='drop index `{{.NthBucket 2}}`.o2_claims'"
 -
-   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='drop index `other-3`.o3_claims'"
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='drop index `{{.NthBucket 3}}`.o3_claims'"
 
 
 
@@ -113,34 +113,34 @@
 ###############  'when' hard failover is done add back all indexes ################
 -
    image: sequoiatools/cbq
-   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_rating on `default`(rating)'"
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_rating on `{{.Bucket}}`(rating)'"
 -
-   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_claims on `default`(claim)'"
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_claims on `{{.Bucket}}`(claim)'"
 -
-   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_result on `default`(result)'"
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_result on `{{.Bucket}}`(result)'"
    wait: true
 -
-   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create primary index on `default`'"
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create primary index on `{{.Bucket}}`'"
 -
-   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o1_rating on `other-1`(rating)'"
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o1_rating on `{{.NthBucket 1}}`(rating)'"
    wait: true
 -
-   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o1_claims on `other-1`(claim)'"
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o1_claims on `{{.NthBucket 1}}`(claim)'"
 -
-   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o1_result on `other-1`(result)'"
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o1_result on `{{.NthBucket 1}}`(result)'"
 -
-   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o2_rating on `other-2`(rating)'"
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o2_rating on `{{.NthBucket 2}}`(rating)'"
 -
-   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o2_claims on `other-2`(claim)'"
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o2_claims on `{{.NthBucket 2}}`(claim)'"
 -
-   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o2_result on `other-2`(result)'"
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o2_result on `{{.NthBucket 2}}`(result)'"
    wait: true
 -
-   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o3_rating on `other-3`(rating)'"
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o3_rating on `{{.NthBucket 3}}`(rating)'"
 -
-   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o3_claims on `other-3`(claim)'"
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o3_claims on `{{.NthBucket 3}}`(claim)'"
 -
-   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o3_result on `other-3`(result)'"
+   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o3_result on `{{.NthBucket 3}}`(result)'"
    wait: true
 
 
