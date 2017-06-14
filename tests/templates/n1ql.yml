@@ -12,9 +12,9 @@
       wait: true
 -
   # run attack against a query node
-  # $0 host
-  # $1 duration
-  # $2 rate
+  # $0 duration
+  # $1 rate
+  # $2 host
   # $3 query
 
   # $4 optional username
@@ -24,9 +24,9 @@
     -
       image: sequoiatools/cbdozer
       command: "-method POST
-                -duration $1
-                -rate $2
-                -url http://{{if gt (len `$4`) 2}}$4{{else}}{{$.RestUsername}}{{end}}:{{if gt (len `$5`) 2}}$5{{else}}{{$.RestPassword}}{{end}}@$0/query/service
+                -duration $0
+                -rate $1
+                -url http://{{if gt (len `$4`) 2}}$4{{else}}{{$.RestUsername}}{{end}}:{{if gt (len `$5`) 2}}$5{{else}}{{$.RestPassword}}{{end}}@$2/query/service
                 -body $3"
 
 -

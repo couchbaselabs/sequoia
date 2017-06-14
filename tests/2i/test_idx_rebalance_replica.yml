@@ -33,12 +33,12 @@
 # ###############  run queries ################
 - section_start: query_replica_indexes
 - template: attack_query
-  args: "{{.QueryNodePort}}, 0, {{.Scale 10}},'select SUM\\(result) from default where result > 0 limit 50'"
-- args: "{{.QueryNodePort}}, 0, {{.Scale 10}},'select claim from default where result > 0 limit 50'"
-- args: "{{.QueryNodePort}}, 0, {{.Scale 10}},'select SUM\\(result) from `{{.NthBucket 1}}` where result > 100  limit 50'"
-- args: "{{.QueryNodePort}}, 0, {{.Scale 10}},'select * from `{{.NthBucket 1}}` where result > 100  limit 50'"
-- args: "{{.QueryNodePort}}, 0, {{.Scale 10}},'select SUM\\(result) from `{{.NthBucket 2}}` where claim like c% limit 50'"
-- args: "{{.QueryNodePort}}, 0, {{.Scale 10}},'select SUM\\(result) from `{{.NthBucket 3}}` where rating like a% limit 20'"
+  args: "0, {{.Scale 10}}, {{.QueryNodePort}}, 'select SUM\\(result) from default where result > 0 limit 50'"
+- args: "0, {{.Scale 10}}, {{.QueryNodePort}}, 'select claim from default where result > 0 limit 50'"
+- args: "0, {{.Scale 10}}, {{.QueryNodePort}}, 'select SUM\\(result) from `{{.NthBucket 1}}` where result > 100  limit 50'"
+- args: "0, {{.Scale 10}}, {{.QueryNodePort}}, 'select * from `{{.NthBucket 1}}` where result > 100  limit 50'"
+- args: "0, {{.Scale 10}}, {{.QueryNodePort}}, 'select SUM\\(result) from `{{.NthBucket 2}}` where claim like c% limit 50'"
+- args: "0, {{.Scale 10}}, {{.QueryNodePort}}, 'select SUM\\(result) from `{{.NthBucket 3}}` where rating like a% limit 20'"
 - section_end: query_replica_indexes
 
 
