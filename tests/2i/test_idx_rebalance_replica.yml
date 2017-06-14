@@ -11,23 +11,22 @@
 ###############  create indexes ################
 - section_start: create_replica_indexes
 - template: cbq
-  args: "create index default_rating on `{{.Bucket}}`(rating) using GSI with {\"num_replica\":1}"
-- args: "create index default_rating on `{{.Bucket}}`(rating) using GSI with {\"num_replica\":1}"
-- args: "create index default_claims on `{{.Bucket}}`(claim) using GSI with {\"num_replica\":2}"
-- args: "create index default_result on `{{.Bucket}}`(result) using GSI with {\"num_replica\":1, \"defer_build\": true}"
-- args: "create primary index on `{{.Bucket}}` using GSI with {\"num_replica\":2}"
-- args: "create index o1_rating on `{{.NthBucket 1}}`(rating) using GSI with {\"num_replica\":2}"
-- args: "create index o1_claims on `{{.NthBucket 1}}`(claim) using GSI with {\"num_replica\":1, \"defer_build\": true}"
-- args: "create index o1_result on `{{.NthBucket 1}}`(result) using GSI with {\"num_replica\":1}"
-- args: "create index o2_rating on `{{.NthBucket 2}}`(rating) using GSI with {\"num_replica\":2}"
-- args: "create index o2_claims on `{{.NthBucket 2}}`(claim) using GSI with {\"num_replica\":1}"
-- args: "create index o2_result on `{{.NthBucket 2}}`(result) using GSI with {\"num_replica\":2}"
-- args: "create index o3_rating on `{{.NthBucket 3}}`(rating) using GSI with {\"num_replica\":1, \"defer_build\": true}"
-- args: "create index o3_claims on `{{.NthBucket 3}}`(claim) using GSI with {\"num_replica\":1}"
-- args: "create index o3_result on `{{.NthBucket 3}}`(result) using GSI with {\"num_replica\":2}"
-- args: "build index on `{{.Bucket}}`(result)"
-- args: "build index on `{{.NthBucket 3}}`(rating)"
-- args: "build index on `{{.NthBucket 3}}`(rating)"
+  args: "'create index default_rating on `{{.Bucket}}`\\(rating) using GSI with {\\\"num_replica\\\":1}'"
+- args: "'create index default_claims on `{{.Bucket}}`\\(claim) using GSI with {\\\"num_replica\\\":2}'"
+- args: "'create index default_result on `{{.Bucket}}`\\(result) using GSI with {\\\"num_replica\\\":1,\\\"defer_build\\\": true}'"
+- args: "'create primary index on `{{.Bucket}}` using GSI with {\\\"num_replica\\\":2}'"
+- args: "'create index o1_rating on `{{.NthBucket 1}}`\\(rating) using GSI with {\\\"num_replica\\\":2}'"
+- args: "'create index o1_claims on `{{.NthBucket 1}}`\\(claim) using GSI with {\\\"num_replica\\\":1,\\\"defer_build\\\": true}'"
+- args: "'create index o1_result on `{{.NthBucket 1}}`\\(result) using GSI with {\\\"num_replica\\\":1}'"
+- args: "'create index o2_rating on `{{.NthBucket 2}}`\\(rating) using GSI with {\\\"num_replica\\\":2}'"
+- args: "'create index o2_claims on `{{.NthBucket 2}}`\\(claim) using GSI with {\\\"num_replica\\\":1}'"
+- args: "'create index o2_result on `{{.NthBucket 2}}`\\(result) using GSI with {\\\"num_replica\\\":2}'"
+- args: "'create index o3_rating on `{{.NthBucket 3}}`\\(rating) using GSI with {\\\"num_replica\\\":1,\\\"defer_build\\\": true}'"
+- args: "'create index o3_claims on `{{.NthBucket 3}}`\\(claim) using GSI with {\\\"num_replica\\\":1}'"
+- args: "'create index o3_result on `{{.NthBucket 3}}`\\(result) using GSI with {\\\"num_replica\\\":2}'"
+- args: "'build index on `{{.Bucket}}`\\(result)'"
+- args: "'build index on `{{.NthBucket 3}}`\\(rating)'"
+- args: "'build index on `{{.NthBucket 3}}`\\(rating)'"
 - section_end: create_replica_indexes
 
 # ###############  run queries ################
@@ -126,11 +125,11 @@
 
 ###############  Recreate some Indexes ################
 - template: cbq
-  args: "create index default_claims on `{{.Bucket}}`(claim) using GSI"
-- args: "create primary index on `{{.Bucket}}` using GSI"
-- args: "create index o1_result on `{{.NthBucket 1}}`(result) using GSI"
-- args: "create index o2_claims on `{{.NthBucket 2}}`(claim) using GSI"
-- args: "create index o3_claims on `{{.NthBucket 3}}`(claim) using GSI"
+  args: "'create index default_claims on `{{.Bucket}}`\\(claim) using GSI'"
+- args: "'create primary index on `{{.Bucket}}` using GSI'"
+- args: "'create index o1_result on `{{.NthBucket 1}}`\\(result) using GSI'"
+- args: "'create index o2_claims on `{{.NthBucket 2}}`\\(claim) using GSI'"
+- args: "'create index o3_claims on `{{.NthBucket 3}}`\\(claim) using GSI'"
 - section_end: recreate_replica_indexes
 
 ###############  Rebalance-out last index node ################
