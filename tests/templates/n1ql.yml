@@ -1,3 +1,16 @@
+# reusable template for common cbq tasks
+#
+# $0 query
+- name: cbq
+  actions:
+    -
+      image: sequoiatools/cbq
+      command: "-e=http://{{.QueryNodePort}}
+                -u={{.RestUsername}}
+                -p={{.RestPassword}}
+                -script='$0'"
+      wait: true
+-
   # run attack against a query node
   # $0 host
   # $1 duration
