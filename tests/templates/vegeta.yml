@@ -31,39 +31,6 @@
       args: "$0, $1, {{$node | to_ip }}, $2, $3, $4, $5"
 
 
-
-  # run attack against a query node
-  # $0 host
-  # $1 duration
-  # $2 rate
-  # $3 query
-
-  # $4 optional username
-  # $5 optional password
-- name: attack_query
-  actions:
-    -
-      image: sequoiatools/cbdozer
-      command: "-method POST
-                -duration $1
-                -rate $2
-                -url http://{{if gt (len `$4`) 2}}$4{{else}}{{$.RestUsername}}{{end}}:{{if gt (len `$5`) 2}}$5{{else}}{{$.RestPassword}}{{end}}@$0/query/service
-                -body $3"
-
--
-  # run attack against all query nodes
-  # $0 attack duration
-  # $1 attack rate
-  #
-  # $2 query statement
-  name: attack_query_all_nodes
-  actions:
-    -
-      foreach: "{{range $i, $node := (index (.Service `n1ql` .Nodes) 0).Names}}"
-      template: attack_query
-      args: $0, $1, {{$node | to_ip }}:{{$.QueryPort}}, $2
-
-
 -
   # save results from vegeta attack
   # $0 container

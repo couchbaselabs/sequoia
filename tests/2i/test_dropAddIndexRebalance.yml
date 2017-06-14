@@ -1,5 +1,5 @@
 -
-  include: tests/templates/kv.yml, tests/templates/vegeta.yml, tests/templates/rebalance.yml
+  include: tests/templates/kv.yml, tests/templates/n1ql.yml, tests/templates/rebalance.yml
 
 ############# data loading ################
 - section_start: data_loading
