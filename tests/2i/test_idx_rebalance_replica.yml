@@ -61,7 +61,7 @@
 
 ###############  Rebalance-out single node ################
 - template: rebalance_out
-  args: "{{IndexNode}}"
+  args: "{{.IndexNode}}"
   wait: true
 
 ###############  Swap single index node ################
