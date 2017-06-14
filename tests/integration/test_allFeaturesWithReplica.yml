@@ -26,11 +26,6 @@
                              --warehouses 5 --no-load n1ql  --query-url {{.QueryNodePort}}"
 
 
-# create primary index
-- image: sequoiatools/cbq
-  command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_rating on `default`(rating)'"
-
-
 # replica index creation
 - test: tests/2i/test_idx_rebalance_replica.yml
   section: create_replica_indexes
