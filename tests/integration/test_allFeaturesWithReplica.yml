@@ -2,16 +2,6 @@
 -
   include: tests/templates/rebalance.yml, tests/templates/vegeta.yml, tests/templates/kv.yml, tests/templates/fts.yml, tests/templates/n1ql.yml
 
-# delete phase
-- requires: "{{ eq false .DoOnce}}"
-  template: attack_query
-  duration: 3600
-  args: "{{.QueryNodePort}}, 0, {{.Scale 10}},'delete from default where rating < 300'"
-- args: "{{.QueryNodePort}}, 0, {{.Scale 10}},'delete from default where rating > 700'"
-- args: "{{.QueryNodePort}}, 0, {{.Scale 10}},'delete from default where rating > 300 and rating < 700'"
-  wait: true
-
-
 # start tpcc indexing
 - image: sequoiatools/tpcc
   requires:  "{{.Version | le 4.0 | eq .DoOnce}}"
@@ -187,3 +177,14 @@
 # run the entire dropAddIndex test
 - test: tests/2i/test_dropAddIndexRebalance.yml
   section_skip: data_loading
+
+# delete phase
+- template: attack_query
+  duration: 3600
+  args: "{{.QueryNodePort}}, 0, {{.Scale 10}},'delete from default where rating < 300'"
+- args: "{{.QueryNodePort}}, 0, {{.Scale 10}},'delete from default where rating > 700'"
+- args: "{{.QueryNodePort}}, 0, {{.Scale 10}},'delete from default where rating > 300 and rating < 700'"
+  wait: true
+
+
+
