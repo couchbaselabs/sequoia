@@ -15,6 +15,7 @@ type TestFlags struct {
 	TestFile         *string `yaml:"test"`
 	Client           *string
 	Provider         *string
+	ProviderConfig   *string `yaml:"provider_config"`
 	Platform         *string
 	ImageName        *string
 	ContainerName    *string
@@ -163,6 +164,10 @@ func (f *TestFlags) AddDefaultFlags(fset *flag.FlagSet) {
 		"provider",
 		"docker",
 		"couchbase provider")
+	f.ProviderConfig = fset.String(
+		"provider_config",
+		"",
+		"couchbase provider configuration filename")
 	f.Platform = fset.String(
 		"platform",
 		"linux",

@@ -4,7 +4,7 @@ Sequoia decouples test and provisioning from the mechanisms that provide couchba
 
 ```go
 type Provider interface {
-	ProvideCouchbaseServers(servers []ServerSpec)
+	ProvideCouchbaseServers(filename *string, servers []ServerSpec)
 	GetHostAddress(name string) string
 	GetType() string
 	GetRestUrl(name string) string

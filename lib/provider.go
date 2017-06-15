@@ -24,9 +24,10 @@ const ( // iota is reset to 0
 
 const UBUNTU_OS_DIR = "Ubuntu14"
 const CENTOS_OS_DIR = "CentOS7"
+const DEFAULT_DOCKER_PROVIDER_CONF = "providers/docker/options.yml"
 
 type Provider interface {
-	ProvideCouchbaseServers(servers []ServerSpec)
+	ProvideCouchbaseServers(filename *string, servers []ServerSpec)
 	GetHostAddress(name string) string
 	GetType() string
 	GetRestUrl(name string) string
@@ -147,7 +148,7 @@ func (p *FileProvider) GetRestUrl(name string) string {
 	return p.GetHostAddress(name) + ":8091"
 }
 
-func (p *FileProvider) ProvideCouchbaseServers(servers []ServerSpec) {
+func (p *FileProvider) ProvideCouchbaseServers(filename *string, servers []ServerSpec) {
 	var hostNames string
 	hostFile := fmt.Sprintf("providers/file/%s", p.HostFile)
 	ReadYamlFile(hostFile, &hostNames)
@@ -185,7 +186,7 @@ func (p *ClusterRunProvider) GetRestUrl(name string) string {
 	return "<no_host>"
 }
 
-func (p *ClusterRunProvider) ProvideCouchbaseServers(servers []ServerSpec) {
+func (p *ClusterRunProvider) ProvideCouchbaseServers(filename *string, servers []ServerSpec) {
 	var i int
 	for _, server := range servers {
 		for _, name := range server.Names {
@@ -235,10 +236,14 @@ func (p *DockerProvider) NumCouchbaseServers() int {
 	return count
 }
 
-func (p *DockerProvider) ProvideCouchbaseServers(servers []ServerSpec) {
+func (p *DockerProvider) ProvideCouchbaseServers(filename *string, servers []ServerSpec) {
 
 	var providerOpts DockerProviderOpts
-	ReadYamlFile("providers/docker/options.yml", &providerOpts)
+	if (filename == nil || len(*filename) == 0) {
+		*filename = DEFAULT_DOCKER_PROVIDER_CONF
+
+	}
+	ReadYamlFile(*filename, &providerOpts)
 	p.Opts = &providerOpts
 	var build = p.Opts.Build
 
@@ -426,11 +431,15 @@ func (p *SwarmProvider) ProvideCouchbaseServer(serverName string, portOffset int
 	colorsay("start couchbase http://" + p.GetRestUrl(serverName))
 }
 
-func (p *SwarmProvider) ProvideCouchbaseServers(servers []ServerSpec) {
+func (p *SwarmProvider) ProvideCouchbaseServers(filename *string, servers []ServerSpec) {
+
+	if (filename == nil || len(*filename) == 0) {
+		*filename = DEFAULT_DOCKER_PROVIDER_CONF
+	}
 
 	// read provider options
 	var providerOpts DockerProviderOpts
-	ReadYamlFile("providers/docker/options.yml", &providerOpts)
+	ReadYamlFile(*filename, &providerOpts)
 	p.Opts = &providerOpts
 
 	// start based on number of containers

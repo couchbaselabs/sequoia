@@ -173,7 +173,7 @@ func (t *Test) Run(scope Scope) {
 				t.Cm.RemoveAllContainers()
 			}
 		}
-		scope.Provider.ProvideCouchbaseServers(scope.Spec.Servers)
+		scope.Provider.ProvideCouchbaseServers(t.Flags.ProviderConfig, scope.Spec.Servers)
 		if t.Flags.Mode == "" {
 			scope.Setup()
 		} else { // just wait for resources
@@ -185,7 +185,7 @@ func (t *Test) Run(scope Scope) {
 	} else if (scope.Provider.GetType() != "docker") &&
 		(scope.Provider.GetType() != "swarm") {
 		// non-dynamic IP's need to be extrapolated before test
-		scope.Provider.ProvideCouchbaseServers(scope.Spec.Servers)
+		scope.Provider.ProvideCouchbaseServers(t.Flags.ProviderConfig, scope.Spec.Servers)
 		scope.InitCli()
 	} else {
 		// not doing setup but need to get cb versions
@@ -370,7 +370,7 @@ func (t *Test) runActions(scope Scope, loop int, actions []ActionSpec) {
 				}
 			}
 			scope.Spec = newSpec
-			scope.Provider.ProvideCouchbaseServers(scope.Spec.Servers)
+			scope.Provider.ProvideCouchbaseServers(t.Flags.ProviderConfig, scope.Spec.Servers)
 			scope.Setup()
 		}
 		if action.Test != "" {
