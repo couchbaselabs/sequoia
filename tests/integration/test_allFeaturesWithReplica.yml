@@ -109,6 +109,16 @@
   wait: true
 
 
+
+# add some rbac users
+- test: tests/n1ql/test_n1qlRBAC.yml
+  section: add_users
+
+# start rbac queries
+- test: tests/n1ql/test_n1qlRBAC.yml
+  section: rbac_query
+
+
 # load 1M items
 - template: pillowfight_htp
   wait: true
