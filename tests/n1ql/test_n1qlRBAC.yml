@@ -23,46 +23,37 @@
 
 #############  create roles ###################
 - section_start: add_users
--
-  image: couchbase-cli
+- image: sequoiatools/couchbase-cli
   command: "user-manage -c {{.Orchestrator}} -u Administrator -p password
                                          --rbac-username queryUser1
            --rbac-password password1
-           --roles query_select(default) --auth-domain local --set"
--
-  image: couchbase-cli
-  command: "user-manage -c {{.Orchestrator}} -u Administrator -p password
+           --roles query_select[{{.Bucket}}] --auth-domain local --set"
+- command: "user-manage -c {{.Orchestrator}} -u Administrator -p password
                                          --rbac-username queryUser2
                                          --rbac-password password2
-                                         --roles query_insert(default) --auth-domain local --set"
+                                         --roles query_insert[{{.Bucket}}] --auth-domain local --set"
 
--
-  image: couchbase-cli
-  command: "user-manage -c {{.Orchestrator}} -u Administrator -p password
+- command: "user-manage -c {{.Orchestrator}} -u Administrator -p password
                                          --rbac-username queryUser3
                                          --rbac-password password3
-                                         --roles query_update(default) --auth-domain local --set"
+                                         --roles query_update[{{.Bucket}}] --auth-domain local --set"
 
--
-  image: couchbase-cli
-  command: "user-manage -c {{.Orchestrator}} -u Administrator -p password
+- command: "user-manage -c {{.Orchestrator}} -u Administrator -p password
                                          --rbac-username queryUser4
                                          --rbac-password password4
-                                         --roles query_delete(default) --auth-domain local --set"
+                                         --roles query_delete[{{.Bucket}}] --auth-domain local --set"
 
--
-  image: couchbase-cli
-  command: "user-manage -c {{.Orchestrator}} -u Administrator -p password
+- command: "user-manage -c {{.Orchestrator}} -u Administrator -p password
                                          --rbac-username queryUser5
                                          --rbac-password password5
-                                         --roles query_manage_index(default) --auth-domain local --set"
+                                         --roles query_manage_index[{{.Bucket}}] --auth-domain local --set"
 - section_end: add_users
 
 ############ query with roles ##############
 - section_start: rbac_query
 
 - image: sequoiatools/cbq
-  command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='insert into `{{.Bucket}}`(KEY UUID(), VALUE name) SELECT name from `{{.Bucket}}`  WHERE rating > 600, queryUser2, password2'"
+  command: "-e=http://{{.QueryNodePort}}  -u=queryUser2 -p=password2 -script='insert into `{{.Bucket}}`(KEY UUID(), VALUE name) SELECT name from `{{.Bucket}}`  WHERE rating > 600'"
   repeat: -1
 - template: attack_query
   args: "0, {{.Scale 10}}, {{.QueryNodePort}}, 'select * from `{{.Bucket}}` where result=\\\"SUCCESS\\\" limit 20, queryUser1, password1'"
@@ -70,10 +61,8 @@
         'update `{{.Bucket}}` set name = \\\"test\\\" WHERE claim is not missing, queryUser3, password3'"
 - args: "0, {{.Scale 10}}, {{.QueryNodePort}},
         'delete from `{{.Bucket}}` where rating < 700 limit 20, queryUser4, password4'"
-  wait: true
 - args: "0, {{.Scale 10}}, {{.QueryNodePort}},
         'create index idx_build on `{{.Bucket}}`\\(build), queryUser5, password5'"
-  wait: true
 - section_end: rbac_query
 
 ### until 100M items ######
