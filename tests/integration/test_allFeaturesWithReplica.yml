@@ -181,9 +181,9 @@
 # delete phase
 - template: attack_query
   duration: 3600
-  args: "{{.QueryNodePort}}, 0, {{.Scale 10}},'delete from default where rating < 300'"
-- args: "{{.QueryNodePort}}, 0, {{.Scale 10}},'delete from default where rating > 700'"
-- args: "{{.QueryNodePort}}, 0, {{.Scale 10}},'delete from default where rating > 300 and rating < 700'"
+  args: "0, {{.Scale 10}}, {{.QueryNodePort}}, 'delete from default where rating < 300'"
+- args: "0, {{.Scale 10}}, {{.QueryNodePort}}, 'delete from default where rating > 700'"
+- args: "0, {{.Scale 10}}, {{.QueryNodePort}}, 'delete from default where rating > 300 and rating < 700'"
   wait: true
 
 
