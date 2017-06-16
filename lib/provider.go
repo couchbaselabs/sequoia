@@ -425,7 +425,7 @@ func (p *SwarmProvider) ProvideCouchbaseServer(serverName string, portOffset int
 		ServiceSpec: spec,
 	}
 
-	_, container := p.Cm.RunContainerAsService(options, 30)
+	_, container, _ := p.Cm.RunContainerAsService(options, 30)
 	p.ActiveContainers[serverName] = container.ID
 
 	colorsay("start couchbase http://" + p.GetRestUrl(serverName))

@@ -196,6 +196,9 @@ func (t *Test) Run(scope Scope) {
 		return
 	}
 
+	// start topology watcher
+	scope.StartTopologyWatcher()
+
 	// run at least <repeat> times or forever if -1
 	// run can be terminated if Duration flag set
 	repeat := *t.Flags.Repeat

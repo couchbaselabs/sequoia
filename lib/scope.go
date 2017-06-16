@@ -132,11 +132,8 @@ func NewScope(flags TestFlags, cm *ContainerManager) Scope {
 		loops++ // we've already done first pass
 	}
 
-	rest := RestClient{
-		Clusters: spec.Servers,
-		Provider: provider,
-		Cm:       cm,
-	}
+	rest := NewRestClient(spec.Servers, provider, cm)
+
 	return Scope{
 		spec,
 		cm,
@@ -161,6 +158,12 @@ func (s *Scope) Setup() {
 	s.RebalanceClusters()
 	s.CreateBuckets()
 	s.CreateViews()
+}
+
+func (s *Scope) StartTopologyWatcher() {
+	if s.Rest.IsWatching == false {
+		go s.Rest.WatchForTopologyChanges()
+	}
 }
 
 func (s *Scope) Teardown() {

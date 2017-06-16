@@ -733,7 +733,7 @@ func (cm *ContainerManager) ContainerForService(service *swarm.Service) (*docker
 	return nil, nil
 }
 
-func (cm *ContainerManager) RunContainerAsService(opts docker.CreateServiceOptions, wait int) (chan TaskResult, *docker.Container) {
+func (cm *ContainerManager) RunContainerAsService(opts docker.CreateServiceOptions, wait int) (chan TaskResult, *docker.Container, string) {
 
 	var container *docker.Container
 	service := cm.RunService(opts)
@@ -762,7 +762,7 @@ func (cm *ContainerManager) RunContainerAsService(opts docker.CreateServiceOptio
 	// save ID
 	cm.IDs = append(cm.IDs, container.ID)
 
-	return c, container
+	return c, container, service.ID
 
 }
 
@@ -775,7 +775,7 @@ func (cm *ContainerManager) RunContainerTask(task *ContainerTask) (chan TaskResu
 		// run container within service
 		options := cm.NewServiceOptions(task.Image, task.Command)
 		task.UpdateServiceOptions(&options)
-		ch, container = cm.RunContainerAsService(options, 30)
+		ch, container, _ = cm.RunContainerAsService(options, 30)
 	} else {
 		// run container against standalone docker host
 		options := cm.NewContainerOptions(task.Image, task.Command)
@@ -875,18 +875,20 @@ func (cm *ContainerManager) HandleResults(idChans *[]chan TaskResult, echan chan
 	}
 }
 
-func (cm *ContainerManager) RunRestContainer(cmd []string) string {
+func (cm *ContainerManager) RunRestContainer(cmd []string) (string, string) {
 	var rest_container_id string
+	rest_container_svc_id := ""
 	image := "appropriate/curl"
 
 	if cm.ProviderType == "swarm" {
 
 		// as swarm
 		opts := cm.NewServiceOptions(image, cmd)
-		ch, _ := cm.RunContainerAsService(opts, 30)
+		ch, _, svcId := cm.RunContainerAsService(opts, 30)
 		rc := <-ch
 		logerr(rc.Error)
 		rest_container_id = rc.ID
+		rest_container_svc_id = svcId
 
 	} else {
 
@@ -899,7 +901,7 @@ func (cm *ContainerManager) RunRestContainer(cmd []string) string {
 
 	}
 
-	return rest_container_id
+	return rest_container_id, rest_container_svc_id
 }
 
 func GenerateLinkPairs(linksTo string) []string {
