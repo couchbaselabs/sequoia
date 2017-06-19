@@ -38,7 +38,6 @@ servers: # each server tag represents a cluster
         query: 1
         index: 3
         fts: 1
-        data: 5
       rest_username: Administrator
       rest_password: password
       data_path: "/data"

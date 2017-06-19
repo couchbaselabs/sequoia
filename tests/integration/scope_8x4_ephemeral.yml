@@ -14,7 +14,7 @@ users:
 servers: # each server tag represents a cluster
   -
       name: local
-      count: 8
+      count: 10
       ram: 40%
       index_ram: 50%
       index_storage: memopt
@@ -22,15 +22,13 @@ servers: # each server tag represents a cluster
         query: 1
         index: 1
         fts: 1
-        fts_start: 6
-        data: 6
       rest_username: Administrator
       rest_password: password
       data_path: "/data"
       index_path: "/data"
       rest_port: 8091
       query_port: 8093
-      init_nodes: 8
+      init_nodes: 10
       buckets: default,CUSTOMER,DISTRICT,HISTORY,ITEM,NEW_ORDER,ORDERS,ORDER_LINE,STOCK,WAREHOUSE
       users: default
   -
