@@ -342,7 +342,11 @@ func (t *Test) runActions(scope Scope, loop int, actions []ActionSpec) {
 			}
 			continue
 		}
-
+		if action.SectionStart != "" ||
+			action.SectionEnd != "" ||
+			action.SectionTag != "" {
+			continue
+		}
 		if action.Scope != "" {
 			// transform cluster scope
 			newSpec := NewScopeSpec(action.Scope)
@@ -562,7 +566,9 @@ func (t *Test) runActions(scope Scope, loop int, actions []ActionSpec) {
 		}
 
 		// pull latest version of container if we haven't already
-		if *t.Flags.SkipPull == false && !t.Cm.DidPull(task.Image) {
+		if *t.Flags.SkipPull == false &&
+			task.Image != "" &&
+			!t.Cm.DidPull(task.Image) {
 			t.Cm.PullImage(task.Image)
 		}
 
