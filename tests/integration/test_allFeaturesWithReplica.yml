@@ -176,6 +176,9 @@
 - template: rebalance
   wait: true
 
+# do auto failover
+- template: autofailover
+  args: "{{.NthDataNode 1 | noport}}, 5, full"
 
 # quick update batch
 - template: pillowfight_htp
