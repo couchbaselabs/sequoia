@@ -416,12 +416,14 @@ func (t *Test) runActions(scope Scope, loop int, actions []ActionSpec) {
 			setup := t.Flags.SkipSetup
 			teardown := t.Flags.SkipTeardown
 			cleanup := t.Flags.SkipCleanup
+			duration := t.Flags.Duration
 
 			ok := true
+			zero := 0
 			t.Flags.SkipSetup = &ok
 			t.Flags.SkipTeardown = &ok
 			t.Flags.SkipCleanup = &ok
-
+			t.Flags.Duration = &zero
 			// run test
 			t.Run(scope)
 
@@ -429,6 +431,7 @@ func (t *Test) runActions(scope Scope, loop int, actions []ActionSpec) {
 			t.Flags.SkipSetup = setup
 			t.Flags.SkipTeardown = teardown
 			t.Flags.SkipCleanup = cleanup
+			t.Flags.Duration = duration
 			continue
 		}
 
