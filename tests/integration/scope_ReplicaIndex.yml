@@ -29,13 +29,13 @@ users:
 servers: # each server tag represents a cluster
   -
       name: local
-      count: 10
+      count: 11
       ram: 40%
       index_ram: 50%
       fts_ram: 70%
       index_storage: default
       services:
-        query: 1
+        query: 2
         index: 3
         fts: 1
       rest_username: Administrator
@@ -44,18 +44,18 @@ servers: # each server tag represents a cluster
       index_path: "/data"
       rest_port: 8091
       query_port: 8093
-      init_nodes: 10
+      init_nodes: 11
       buckets: default,CUSTOMER,DISTRICT,HISTORY,ITEM,NEW_ORDER,ORDERS,ORDER_LINE,STOCK,WAREHOUSE
       users: default,CUSTOMER,DISTRICT,HISTORY
   -
       name: remote
-      count: 2
+      count: 1
       ram: 60%
       rest_username: Administrator
       rest_password: password
       data_path: "/data"
       rest_port: 8091
-      init_nodes: 2
+      init_nodes: 1
       buckets: remote
       users: remote
 
