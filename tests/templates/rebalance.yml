@@ -81,7 +81,7 @@
   name: rebalance_swap
   actions:
     -
-      template: rebalance_in
+      template: add_node
       args: "$0, ($2)"
     -
       template: rebalance_out
