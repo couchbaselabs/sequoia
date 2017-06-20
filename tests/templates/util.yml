@@ -68,7 +68,7 @@
                 -c {{.}}
                 -u {{$.RestUsername}}
                 -p {{$.RestPassword}}
-                --nodes={{.}}"
+                --nodes={{.}}:{{$.RestPort}}"
     -
       # loop until status is 'collected'
       image: sequoiatools/couchbase-cli
