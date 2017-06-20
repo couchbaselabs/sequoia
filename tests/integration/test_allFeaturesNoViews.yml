@@ -80,14 +80,14 @@
   args: "{{.FTSNodePort}}, social, default, gideon, description, profile, status, true"
 
 # direct search on state key
--
-  template: query_fts
-  args: "{{.FTSNodePort}}, -1, {{.Scale 30}}, good_state, +state:9C"
+- template: query_fts
+  args: "{{.FTSNodePort}}, -1, {{.Scale 3}}, good_state, +state:9C, -size 10"
+
 
 # regex search on subfield profile.status with description exclusion
--
-  template: query_fts
-  args: "{{.FTSNodePort}}, -1, {{.Scale 30}}, social, '+profile.status:41* -description:32*'"
+- template: query_fts
+  args: "{{.FTSNodePort}}, -1, {{.Scale 3}}, social, +profile.status:4121*, -size 10"
+
 
 #============ start xdcr replications ============
 -
