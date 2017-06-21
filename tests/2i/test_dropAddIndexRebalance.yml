@@ -50,22 +50,15 @@
 
 
 ###############  query index ################
--
-  # run http attacks against view with various skip param
-  template: attack_query
-  args: "{{.QueryNodePort}}, 0, {{.Scale 10}},'select * from default where rating > 0  limit 50'"
--
-  args: "{{.QueryNodePort}}, 0, {{.Scale 10}},'select * from `{{.NthBucket 1}}` where rating > 100  limit 50'"
--
-  args: "{{.QueryNodePort}}, 0, {{.Scale 10}},'select SUM\\(rating) from `{{.NthBucket 2}}` where result = SUCCESS limit 50'"
--
-  args: "{{.QueryNodePort}}, 0, {{.Scale 10}},'select SUM\\(rating) from `{{.NthBucket 3}}` where claim like A% limit 20'"
--
-  args: "{{.QueryNodePort}}, 0, {{.Scale 10}},'delete from default where rating < 300'"
--
-  args: "{{.QueryNodePort}}, 0, {{.Scale 10}},'delete from default where rating > 700'"
--
-  args: "{{.QueryNodePort}}, 0, {{.Scale 10}},'delete from default where rating > 300 and rating < 700'"
+# run http attacks against view with various skip param
+- template: attack_query
+  args: "0, {{.Scale 10}}, {{.QueryNodePort}}, 'select * from default where rating > 0  limit 50'"
+- args: "0, {{.Scale 10}}, {{.QueryNodePort}}, 'select * from `{{.NthBucket 1}}` where rating > 100  limit 50'"
+- args: "0, {{.Scale 10}}, {{.QueryNodePort}}, 'select SUM\\(rating) from `{{.NthBucket 2}}` where result = SUCCESS limit 50'"
+- args: "0, {{.Scale 10}}, {{.QueryNodePort}}, 'select SUM\\(rating) from `{{.NthBucket 3}}` where claim like A% limit 20'"
+- args: "0, {{.Scale 10}}, {{.QueryNodePort}}, 'delete from default where rating < 300'"
+- args: "0, {{.Scale 10}}, {{.QueryNodePort}}, 'delete from default where rating > 700'"
+- args: "0, {{.Scale 10}}, {{.QueryNodePort}}, 'delete from default where rating > 300 and rating < 700'"
 
 
 # ###############  swap indexer ################
@@ -88,7 +81,7 @@
 
 
 ###############  'when' swap rebalance is done add back some and drop others ################
--  
+-
    before: "{{.Status `SwapRebId` | eq `exited`}}"
    image: sequoiatools/cbq
    wait: true
