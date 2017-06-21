@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -26,6 +27,7 @@ type ActionSpec struct {
 	Describe     string
 	Image        string
 	Command      string
+	Volumes      string
 	CommandRaw   string
 	Wait         bool
 	CondWait     string
@@ -173,19 +175,27 @@ func (t *Test) Run(scope Scope) {
 				t.Cm.RemoveAllContainers()
 			}
 		}
+
 		scope.Provider.ProvideCouchbaseServers(t.Flags.ProviderConfig, scope.Spec.Servers)
+
 		if t.Flags.Mode == "" {
-			scope.Setup()
+			scope.SetupServer()
 		} else { // just wait for resources
 			if t.Flags.Exec == nil || *t.Flags.Exec == false {
-				scope.WaitForNodes()
+				scope.WaitForServers()
 			}
 		}
+
+		// Setup Sync Gateways
+		scope.Provider.ProvideSyncGateways(scope.Spec.SyncGateways)
+		scope.SetupSyncGateways()
+		scope.WriteHostConfig()
 
 	} else if (scope.Provider.GetType() != "docker") &&
 		(scope.Provider.GetType() != "swarm") {
 		// non-dynamic IP's need to be extrapolated before test
 		scope.Provider.ProvideCouchbaseServers(t.Flags.ProviderConfig, scope.Spec.Servers)
+		// TODO: Support Sync gateway in this configuration
 		scope.InitCli()
 	} else {
 		// not doing setup but need to get cb versions
@@ -287,7 +297,6 @@ func (t *Test) runActions(scope Scope, loop int, actions []ActionSpec) {
 			t.runActions(scope, loop, rangeActions)
 			continue
 		}
-
 		if action.Client.Op != "" {
 			key := action.Client.Container
 
@@ -385,7 +394,7 @@ func (t *Test) runActions(scope Scope, loop int, actions []ActionSpec) {
 			}
 			scope.Spec = newSpec
 			scope.Provider.ProvideCouchbaseServers(t.Flags.ProviderConfig, scope.Spec.Servers)
-			scope.Setup()
+			scope.SetupServer()
 		}
 		if action.Test != "" {
 			// referencing external test
@@ -560,10 +569,36 @@ func (t *Test) runActions(scope Scope, loop int, actions []ActionSpec) {
 			action.Describe = fmt.Sprintf("start %s: %s", action.Image, strings.Join(command, " "))
 		}
 
+		// If volumes are supplies, the container will mount them
+		// when launching. The formate of the volume string should be:
+		// "<path-to-container>/folder1:/<path-in-container>/folder1,<path-to-container>/file1:/<path-in-container>/file2"
+		// folder1 and file1 must be in the samd
+		volumes := []string{}
+		if action.Volumes != "" {
+			volumes = strings.Split(action.Volumes, ",")
+
+			// Build an absolute path to the mount location assuming we are executing
+			// seqouia from the root of the repository
+			exPath, err := filepath.Abs(filepath.Dir(os.Args[0]))
+			chkerr(err)
+
+			// Prepend the cwd to the volume mount host path
+			// if there is not an absolute path defined
+			for i, volume := range volumes {
+				v := strings.TrimSpace(volume)
+				if !strings.HasPrefix(v, "/") {
+					v = exPath + "/" + v
+				}
+				colorsay("Mounting :" + v)
+				volumes[i] = v
+			}
+		}
+
 		// compile task
 		task := ContainerTask{
 			Name:        *t.Flags.ContainerName,
 			Describe:    action.Describe,
+			Volumes:     volumes,
 			Image:       action.Image,
 			Command:     command,
 			Async:       !action.Wait,

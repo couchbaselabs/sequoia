@@ -14,11 +14,12 @@ package sequoia
 
 import (
 	"fmt"
-	"github.com/streamrail/concurrent-map"
 	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/streamrail/concurrent-map"
 )
 
 type Scope struct {
@@ -88,7 +89,7 @@ func NewScope(flags TestFlags, cm *ContainerManager) Scope {
 	}
 
 	// create provider of resources for scope
-	provider := NewProvider(flags, spec.Servers)
+	provider := NewProvider(flags, spec.Servers, spec.SyncGateways)
 
 	// update defaults from spec based on provider
 	for i, _ := range spec.Servers {
@@ -146,9 +147,8 @@ func NewScope(flags TestFlags, cm *ContainerManager) Scope {
 	}
 }
 
-func (s *Scope) Setup() {
-
-	s.WaitForNodes()
+func (s *Scope) SetupServer() {
+	s.WaitForServers()
 	s.InitRestContainer()
 	s.InitCli()
 	s.InitNodes()
@@ -158,6 +158,17 @@ func (s *Scope) Setup() {
 	s.RebalanceClusters()
 	s.CreateBuckets()
 	s.CreateViews()
+}
+
+func (s *Scope) SetupSyncGateways() {
+	s.WaitForSyncGateways()
+}
+
+// WriteHostConfig writes a json representation of the topology
+// that is used by mobile testkit to run functional tests
+// against Sync Gateway
+func (s *Scope) WriteHostConfig() {
+	GenerateMobileHostDefinition(s)
 }
 
 func (s *Scope) StartTopologyWatcher() {
@@ -194,12 +205,12 @@ func (s *Scope) InitCli() {
 
 }
 
-func (s *Scope) WaitForNodes() {
+func (s *Scope) WaitForServers() {
 
 	var image = "martin/wait"
 
 	// use martin/wait container to wait for node to listen on port 8091
-	waitForNodesOp := func(name string, server *ServerSpec, done chan bool) {
+	waitForServersOp := func(name string, server *ServerSpec, done chan bool) {
 
 		ip := s.Provider.GetHostAddress(name)
 		ipPort := strings.Split(ip, ":")
@@ -225,7 +236,40 @@ func (s *Scope) WaitForNodes() {
 	}
 
 	// verify nodes
-	s.Spec.ApplyToAllServersAsync(waitForNodesOp)
+	s.Spec.ApplyToAllServersAsync(waitForServersOp)
+}
+
+func (s *Scope) WaitForSyncGateways() {
+
+	var image = "martin/wait"
+
+	// use martin/wait container to wait for Sync Gateway to listen on port 4984
+	waitForSyncGatewaysOp := func(name string, syncGateway *SyncGatewaySpec, done chan bool) {
+
+		ip := s.Provider.GetHostAddress(name)
+		ipPort := strings.Split(ip, ":")
+		if len(ipPort) == 1 {
+			// use default port
+			ip = ip + ":4984"
+		}
+
+		command := []string{"-c", ip, "-t", "120"}
+		desc := "wait for " + ip
+		task := ContainerTask{
+			Describe: desc,
+			Image:    image,
+			Command:  command,
+			Async:    false,
+		}
+		if s.Provider.GetType() == "docker" {
+			task.LinksTo = name
+		}
+
+		s.Cm.Run(&task)
+		done <- true
+	}
+
+	s.Spec.ApplyToAllSyncGatewayAsync(waitForSyncGatewaysOp)
 }
 
 func (s *Scope) GetPath(path, name string) string {

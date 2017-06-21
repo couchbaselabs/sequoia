@@ -54,6 +54,13 @@ type ServerSpec struct {
 	RbacSpecs    []RbacSpec
 }
 
+type SyncGatewaySpec struct {
+	Name        string
+	Names       []string
+	Count       uint8
+	CountOffset uint8
+}
+
 type ViewSpec struct {
 	Name   string
 	Map    string
@@ -67,11 +74,12 @@ type DDocSpec struct {
 }
 
 type ScopeSpec struct {
-	Buckets []BucketSpec
-	Servers []ServerSpec
-	Views   []ViewSpec
-	DDocs   []DDocSpec `yaml:"ddocs"`
-	Users   []RbacSpec
+	Buckets      []BucketSpec
+	Servers      []ServerSpec
+	SyncGateways []SyncGatewaySpec
+	Views        []ViewSpec
+	DDocs        []DDocSpec `yaml:"ddocs"`
+	Users        []RbacSpec
 }
 
 func (s *ServerSpec) InitNodeServices() {
@@ -175,6 +183,24 @@ func (s *ScopeSpec) ApplyToAllServersAsync(operation func(string, *ServerSpec, c
 	}
 }
 
+func (s *ScopeSpec) ApplyToAllSyncGatewayAsync(operation func(string, *SyncGatewaySpec, chan bool)) {
+
+	waitChans := []chan bool{}
+	for i, syncGateway := range s.SyncGateways {
+		endIdx := len(syncGateway.Names)
+		for _, syncGatewayName := range syncGateway.Names[:endIdx] {
+			c := make(chan bool)
+			// allowed apply func to modify server
+			go operation(syncGatewayName, &s.SyncGateways[i], c)
+			waitChans = append(waitChans, c)
+		}
+	}
+
+	for _, c := range waitChans {
+		<-c
+	}
+}
+
 func (s *ScopeSpec) ApplyToServers(operation func(string, *ServerSpec),
 	startIdx int, endIdx int) {
 
@@ -248,7 +274,6 @@ func NewScopeSpec(fileName string) ScopeSpec {
 
 func SpecFromYaml(fileName string) ScopeSpec {
 	var spec ScopeSpec
-
 	// init from yaml
 	ReadYamlFile(fileName, &spec)
 	ConfigureSpec(&spec)
@@ -325,6 +350,9 @@ func ConfigureSpec(spec *ScopeSpec) {
 		spec.Servers[i].InitNodeServices()
 	}
 
+	for i, syncGateway := range spec.SyncGateways {
+		spec.SyncGateways[i].Names = ExpandServerName(syncGateway.Name, syncGateway.Count, 1)
+	}
 }
 
 // some common defaults when not defined in yaml scope

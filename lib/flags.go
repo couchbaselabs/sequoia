@@ -19,6 +19,7 @@ type TestFlags struct {
 	Platform         *string
 	ImageName        *string
 	ContainerName    *string
+	Network          *string
 	ImageCommand     *string
 	ImageWait        *bool
 	SkipSetup        *bool `yaml:"skip_setup"`
@@ -246,6 +247,9 @@ func (f *TestFlags) AddDefaultFlags(fset *flag.FlagSet) {
 	f.ContainerName = fset.String(
 		"container_name", "",
 		"name container created from image")
+	f.Network = fset.String(
+		"network", "",
+		"Docker network to create and use for containers / test")
 	f.Override = fset.String(
 		"override", "",
 		"override params, ie servers:local.count=1,servers:remote.count=1")

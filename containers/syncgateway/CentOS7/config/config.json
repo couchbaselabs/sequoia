@@ -1,0 +1,32 @@
+{
+  "log":[
+    "*",
+    "Import+"
+  ],
+  "databases":{
+    "db":{
+      "users":{
+        "GUEST":{
+          "disabled":false,
+          "admin_channels":[
+            "*"
+          ]
+        },
+        "testuser":{
+          "admin_channels":[
+            "ch_testuser"
+          ],
+          "password":"ch_password"
+        }
+      },
+      "server":"node0",
+      "bucket":"data-bucket",
+      "password":"password",
+      "import_docs":"continuous",
+      "unsupported":{
+        "enable_extended_attributes":true,
+        "replicator_2":true
+      }
+    }
+  }
+}

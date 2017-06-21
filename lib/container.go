@@ -8,22 +8,24 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/docker/docker/api/types/swarm"
-	"github.com/fsouza/go-dockerclient"
-	"github.com/streamrail/concurrent-map"
-	"github.com/tahmmee/tap.go"
 	"io"
 	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/docker/docker/api/types/swarm"
+	"github.com/fsouza/go-dockerclient"
+	"github.com/streamrail/concurrent-map"
+	"github.com/tahmmee/tap.go"
 )
 
 type ContainerTask struct {
 	Name        string
 	Describe    string
 	Image       string
+	Volumes     []string
 	ImageAlias  string
 	Command     []string
 	LinksTo     string
@@ -43,8 +45,12 @@ type TaskResult struct {
 	Error   error
 }
 
-func (cm *ContainerManager) NewContainerOptions(image string, cmd []string) docker.CreateContainerOptions {
-	hostConfig := docker.HostConfig{}
+func (cm *ContainerManager) NewContainerOptions(image string, cmd []string, binds []string) docker.CreateContainerOptions {
+
+	hostConfig := docker.HostConfig{
+		Binds: binds,
+	}
+
 	config := docker.Config{
 		Image: image,
 		Cmd:   cmd,
@@ -132,6 +138,7 @@ func (t *ContainerTask) UpdateServiceOptions(options *docker.CreateServiceOption
 type ContainerManager struct {
 	Client               *docker.Client
 	Endpoint             string
+	Network              string
 	TagId                map[string]string
 	IDs                  []string
 	Services             []string
@@ -163,13 +170,14 @@ func NewDockerClient(clientUrl string) *docker.Client {
 	return client
 }
 
-func NewContainerManager(clientUrl, provider string) *ContainerManager {
+func NewContainerManager(clientUrl, provider string, network string) *ContainerManager {
 
 	var client *docker.Client = NewDockerClient(clientUrl)
 
 	cm := ContainerManager{
 		Client:               client,
 		Endpoint:             clientUrl,
+		Network:              network,
 		TagId:                make(map[string]string),
 		IDs:                  []string{},
 		Services:             []string{},
@@ -189,6 +197,31 @@ func NewContainerManager(clientUrl, provider string) *ContainerManager {
 		cm.ProviderType = "swarm"
 	}
 	return &cm
+}
+
+// CreateNetwork will create a docker network that containers
+// can be attached to. Each container on a network will be able to
+// see other containers on that network. It can be used as an alternative
+// to Links.
+func (cm *ContainerManager) CreateNetwork(name string) {
+	colorsay(fmt.Sprintf("Creating network: %s", name))
+	networkOpts := docker.CreateNetworkOptions{
+		Name:           name,
+		CheckDuplicate: true,
+	}
+	_, err := cm.Client.CreateNetwork(networkOpts)
+	chkerr(err)
+}
+
+// AddContainerToNetwork add connected a container to the network specified
+// at runtime and set in the provider
+func (cm *ContainerManager) AddContainerToNetwork(container *docker.Container) {
+	colorsay(fmt.Sprintf("Adding %s -> network %s", container.ID, cm.Network))
+	connectNetworkOptions := docker.NetworkConnectionOptions{
+		Container: container.ID,
+	}
+	err := cm.Client.ConnectNetwork(cm.Network, connectNetworkOptions)
+	chkerr(err)
 }
 
 func (cm *ContainerManager) CreateSwarmClients(clientUrl string) []*docker.Client {
@@ -280,7 +313,7 @@ func (cm *ContainerManager) GetAllServices() []swarm.Service {
 	return services
 }
 
-func (cm *ContainerManager) ExecContainer(id string) error {
+func (cm *ContainerManager) ExecContainer(id string, cmd []string, detach bool) error {
 	client := cm.ClientForContainer(id)
 
 	// create the exec session
@@ -290,7 +323,7 @@ func (cm *ContainerManager) ExecContainer(id string) error {
 		AttachStdout: true,
 		AttachStderr: true,
 		Tty:          true,
-		Cmd:          []string{"bash"}, //TODO: we may not always want that
+		Cmd:          cmd,
 	}
 	exec, err := client.CreateExec(createOpts)
 	chkerr(err)
@@ -302,7 +335,7 @@ func (cm *ContainerManager) ExecContainer(id string) error {
 		ErrorStream:  os.Stderr,
 		Tty:          true,
 		RawTerminal:  true,
-		Detach:       false,
+		Detach:       detach,
 	}
 	return client.StartExec(exec.ID, startOpts)
 }
@@ -670,6 +703,11 @@ func (cm *ContainerManager) RunContainer(opts docker.CreateContainerOptions) (ch
 	err = cm.StartContainer(container.ID, nil)
 	logerr(err)
 
+	// Add to network if network is defined
+	if cm.Network != "" {
+		cm.AddContainerToNetwork(container)
+	}
+
 	go cm.WaitContainer(container, c)
 
 	// save ID
@@ -778,7 +816,7 @@ func (cm *ContainerManager) RunContainerTask(task *ContainerTask) (chan TaskResu
 		ch, container, _ = cm.RunContainerAsService(options, 30)
 	} else {
 		// run container against standalone docker host
-		options := cm.NewContainerOptions(task.Image, task.Command)
+		options := cm.NewContainerOptions(task.Image, task.Command, task.Volumes)
 		task.UpdateContainerOptions(&options)
 		ch, container = cm.RunContainer(options)
 	}
@@ -892,8 +930,9 @@ func (cm *ContainerManager) RunRestContainer(cmd []string) (string, string) {
 
 	} else {
 
-		// normal docker
-		options := cm.NewContainerOptions(image, cmd)
+		// normal docker, no volume mounts
+		volumes := []string{}
+		options := cm.NewContainerOptions(image, cmd, volumes)
 		_, container := cm.RunContainer(options)
 		_, err := cm.Client.WaitContainer(container.ID)
 		logerr(err)

@@ -1,0 +1,3 @@
+- image: sequoiatools/testkit-net
+  command: dotnet run --replication-endpoint blip://172.17.0.3:4984/db --runtime-min 1 --max-docs 100
+  wait: true

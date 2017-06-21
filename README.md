@@ -31,6 +31,11 @@ From the command-line:
 
 ```
 
+### Running with a docker network (EXPERIMENTAL)
+```
+./sequoia -scope tests/simple/scope_medium.yml -test tests/simple/test_views.yml --network cbl
+```
+
 Refer to [Test Syntax](https://github.com/couchbaselabs/sequoia/wiki/Test-Syntax) for more information about how to build out your test and scopes.
 
 ## Client
