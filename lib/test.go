@@ -682,6 +682,7 @@ func (t *Test) ResolveTemplateActions(scope Scope, action ActionSpec) []ActionSp
 			leftParenPos := strings.Index(arg, "(")
 			parenIsEscaped := false
 			if leftParenPos != -1 {
+
 				if leftParenPos > 0 {
 					leadingParenChar := string(arg[leftParenPos-1])
 					if leadingParenChar == "\\" {
@@ -696,11 +697,17 @@ func (t *Test) ResolveTemplateActions(scope Scope, action ActionSpec) []ActionSp
 
 				if parenIsEscaped == false {
 					// this is a multi arg string
-					// concatentate until we reach ")"
-					multiArg = true
 					lastArg = strings.Replace(arg, "(", "", 1)
-					argOffset++
-					continue
+
+					if strings.Index(arg, ")") != -1 {
+						// but only has single item
+						arg = strings.Replace(lastArg, ")", "", 1)
+					} else {
+						// concatentate until we reach ")"
+						multiArg = true
+						argOffset++
+						continue
+					}
 				}
 			}
 			if multiArg == true {
