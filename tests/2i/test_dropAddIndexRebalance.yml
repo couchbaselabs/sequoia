@@ -63,7 +63,7 @@
 
 # ###############  swap indexer ################
 - template: rebalance_swap
-  args: "{{.InActiveNode}}, {{.IndexNode}}, (index,data)"
+  args: "{{.InActiveNode}}, {{.IndexNode}}, index"
   alias: SwapRebId
 
 
@@ -101,7 +101,7 @@
   args: "{{.IndexNode}}"
   wait: true
 - template: rebalance_in
-  args: "{{.InActiveNode}}, (index, data)"
+  args: "{{.InActiveNode}}, index"
   alias: SwapFailId
 
 
