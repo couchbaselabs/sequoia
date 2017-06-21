@@ -85,7 +85,12 @@
   args: "{{.InActiveNode}}, index"
 - args: "{{.InActiveNode}}, index"
 - template: rebalance_out
-  args: "({{.NthIndexNode 2}},{{.NthIndexNode 3}})"
+  args: "({{.NthDataNode 1}})"
+  wait: true
+
+###############  Add back data node ################
+- template: rebalance_in
+  args: "{{.InActiveNode}}"
   wait: true
 
 
@@ -101,7 +106,7 @@
 
 ###############  Failover and rebalance out ################
 - template: failover_node_forced
-  args: "{{.NthIndexNode 3}}"
+  args: "{{.NthIndexNode 1}}"
 - template: rebalance
   wait: true
 
@@ -110,6 +115,12 @@
   args: "{{.NthIndexNode 2}}"
   wait: true
 
+
+###############  Add back index nodes  ################
+- template: add_node
+  args: "{{.InActiveNode}}, index"
+- args: "{{.InActiveNode}}, index"
+- template: rebalance_in
 - section_end: change_indexer_topologies
 
 ###############  Drop some Indexes ################
