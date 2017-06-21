@@ -184,6 +184,10 @@
 - template: pillowfight_htp
   wait: true
 
+# remove an index node
+- template: rebalance_out
+  args: "{{.IndexNode}}"
+  wait: true
 
 # run the entire dropAddIndex test
 - test: tests/2i/test_dropAddIndexRebalance.yml
@@ -196,6 +200,3 @@
 - args: "0, {{.Scale 10}}, {{.QueryNodePort}}, 'delete from default where rating > 700'"
 - args: "0, {{.Scale 10}}, {{.NthQueryNode 1}}:{{.QueryPort}}, 'delete from default where rating > 300 and rating < 700'"
   wait: true
-
-
-
