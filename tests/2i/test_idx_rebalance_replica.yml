@@ -115,13 +115,13 @@
 ###############  Drop some Indexes ################
 - section_start: recreate_replica_indexes
 - template: cbq
-  args: "drop index `{{.Bucket}}`'"
-- args: "drop index `{{.Bucket}}`.default_rating"
-- args: "drop index `{{.NthBucket 1}}`.o1_rating"
-- args: "drop index `{{.NthBucket 1}}`.o1_claims"
-- args: "drop index `{{.NthBucket 2}}`.o2_results"
-- args: "drop index `{{.NthBucket 3}}`.o3_rating"
-- args: "drop index `{{.NthBucket 3}}`.o3_results"
+  args: "'drop index `{{.Bucket}}`'"
+- args: "'drop index `{{.Bucket}}`.default_rating'"
+- args: "'drop index `{{.NthBucket 1}}`.o1_rating'"
+- args: "'drop index `{{.NthBucket 1}}`.o1_claims'"
+- args: "'drop index `{{.NthBucket 2}}`.o2_results'"
+- args: "'drop index `{{.NthBucket 3}}`.o3_rating'"
+- args: "'drop index `{{.NthBucket 3}}`.o3_results'"
 
 ###############  Recreate some Indexes ################
 - template: cbq
