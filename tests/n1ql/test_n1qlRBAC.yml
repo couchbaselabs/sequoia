@@ -53,15 +53,14 @@
 - section_start: rbac_query
 
 - image: sequoiatools/cbq
-  command: "-e=http://{{.QueryNodePort}}  -u=queryUser2 -p=password2 -script='insert into `{{.Bucket}}`(KEY UUID(), VALUE name) SELECT name from `{{.Bucket}}`  WHERE rating > 600'"
-  repeat: -1
+  command: "-e=http://queryUser2:password2:{{.QueryNodePort}}  -u=queryUser2 -p=password2 -script='insert into `{{.Bucket}}`(KEY UUID(), VALUE name) SELECT name from `{{.Bucket}}`  WHERE rating > 600'"
 - template: attack_query
-  args: "0, {{.Scale 10}}, {{.QueryNodePort}}, 'select * from `{{.Bucket}}` where result=\\\"SUCCESS\\\" limit 20, queryUser1, password1'"
-- args: "0, {{.Scale 10}}, {{.QueryNodePort}},
+  args: "0, {{.Scale 3}}, {{.QueryNodePort}}, 'select * from `{{.Bucket}}` where result=\\\"SUCCESS\\\" limit 20, queryUser1, password1'"
+- args: "0, {{.Scale 3}}, {{.NthQueryNode 1}}:{{.QueryPort}},
         'update `{{.Bucket}}` set name = \\\"test\\\" WHERE claim is not missing, queryUser3, password3'"
-- args: "0, {{.Scale 10}}, {{.QueryNodePort}},
-        'delete from `{{.Bucket}}` where rating < 700 limit 20, queryUser4, password4'"
-- args: "0, {{.Scale 10}}, {{.QueryNodePort}},
+- args: "0, {{.Scale 3}}, {{.QueryNodePort}},
+        'delete from 3 `{.Bucket}}` where rating < 700 limit 20, queryUser4, password4'"
+- args: "0, {{.Scale 3}}, {{.NthQueryNode 1}}:{{.QueryPort}},
         'create index idx_build on `{{.Bucket}}`\\(build), queryUser5, password5'"
 - section_end: rbac_query
 
