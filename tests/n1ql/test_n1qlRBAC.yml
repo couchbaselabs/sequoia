@@ -31,7 +31,7 @@
 - command: "user-manage -c {{.Orchestrator}} -u Administrator -p password
                                          --rbac-username queryUser2
                                          --rbac-password password2
-                                         --roles query_insert[{{.Bucket}}] --auth-domain local --set"
+                                         --roles query_select[{{.Bucket}}],query_insert[{{.Bucket}}] --auth-domain local --set"
 
 - command: "user-manage -c {{.Orchestrator}} -u Administrator -p password
                                          --rbac-username queryUser3
@@ -51,17 +51,17 @@
 
 ############ query with roles ##############
 - section_start: rbac_query
-
 - image: sequoiatools/cbq
-  command: "-e=http://queryUser2:password2:{{.QueryNodePort}}  -u=queryUser2 -p=password2 -script='insert into `{{.Bucket}}`(KEY UUID(), VALUE name) SELECT name from `{{.Bucket}}`  WHERE rating > 600'"
+  command: "-e=http://{{.QueryNodePort}}  -u=queryUser2 -p=password2 -script='insert into `{{.Bucket}}`(KEY claim, VALUE rating) SELECT claim, rating from `{{.Bucket}}` WHERE rating > 300 limit 10'"
+  repeat: -1
 - template: attack_query
-  args: "0, {{.Scale 3}}, {{.QueryNodePort}}, 'select * from `{{.Bucket}}` where result=\\\"SUCCESS\\\" limit 20, queryUser1, password1'"
+  args: "0, {{.Scale 3}}, {{.QueryNodePort}}, 'select * from `{{.Bucket}}` where result=\\\"SUCCESS\\\" limit 20', queryUser1, password1"
 - args: "0, {{.Scale 3}}, {{.NthQueryNode 1}}:{{.QueryPort}},
-        'update `{{.Bucket}}` set name = \\\"test\\\" WHERE claim is not missing, queryUser3, password3'"
+        'update `{{.Bucket}}` set name = \\\"test\\\" WHERE claim is not missing limit 10', queryUser3, password3"
 - args: "0, {{.Scale 3}}, {{.QueryNodePort}},
-        'delete from 3 `{.Bucket}}` where rating < 700 limit 20, queryUser4, password4'"
-- args: "0, {{.Scale 3}}, {{.NthQueryNode 1}}:{{.QueryPort}},
-        'create index idx_build on `{{.Bucket}}`\\(build), queryUser5, password5'"
+        'delete from  `{{.Bucket}}` where rating < 700 limit 20', queryUser4, password4"
+- image: sequoiatools/cbq
+  command: "-e=http://{{.QueryNodePort}}  -u=queryUser5 -p=password5 -script='create index usr5_city_idx on `{{.Bucket}}`(city)'"
 - section_end: rbac_query
 
 ### until 100M items ######
