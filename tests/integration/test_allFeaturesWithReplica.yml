@@ -37,11 +37,11 @@
 # run http attacks against n1ql with various skip param
 - template: attack_query
   args: "0, 10, {{$.NthQueryNode 1}}:{{$.QueryPort}},
-        delete from default where rating > 0 limit 100"
+        delete from default where rating > 0 limit {{$.Scale 10}}"
 - foreach: "{{range $i, $offset := mkrange 0 500 100}}"
   template: attack_query
   args: "0, {{$.Scale 5}}, {{$.NthQueryNode 1}}:{{$.QueryPort}},
-        select * from default where rating > 100 limit 100 offset {{$offset}}"
+        select * from default where rating > 100 limit {{$.Scale 10}} offset {{$offset}}"
   alias: "N1qlQ{{$i}}"
 
 
@@ -196,7 +196,7 @@
 # delete phase
 - template: attack_query
   duration: 3600
-  args: "0, {{.Scale 10}}, {{.NthQueryNode 1}}:{{.QueryPort}}, 'delete from default where rating < 300'"
-- args: "0, {{.Scale 10}}, {{.QueryNodePort}}, 'delete from default where rating > 700'"
-- args: "0, {{.Scale 10}}, {{.NthQueryNode 1}}:{{.QueryPort}}, 'delete from default where rating > 300 and rating < 700'"
+  args: "0, {{.Scale 10}}, {{.NthQueryNode 1}}:{{.QueryPort}}, 'delete from default where rating < 300 limit {{.Scale 10}}'"
+- args: "0, {{.Scale 10}}, {{.QueryNodePort}}, 'delete from default where rating > 700 limit {{.Scale 10}}'"
+- args: "0, {{.Scale 10}}, {{.NthQueryNode 1}}:{{.QueryPort}}, 'delete from default where rating > 300 and rating < 700 limit {{.Scale 10}}'"
   wait: true
