@@ -17,6 +17,8 @@
       template: wait_for_rebalance
       args: "$0"
 
+    - template: wait_after_rebalance
+
 # rebalance out a single node
 # $0 = server to remove
 -
@@ -32,6 +34,8 @@
       # windows requires special status watching
       requires: "{{ eq `windows` .Platform}}"
       template: wait_for_rebalance
+
+    - template: wait_after_rebalance
 
 # rebalance in a single node
 # $0 = server to add
@@ -106,6 +110,14 @@
               {{else}}
                 {{false}}
               {{end}}"
+
+# helper method to provide additional wait after rebalancing
+- name: wait_after_rebalance
+  actions:
+    - image: sequoiatools/cmd
+      entrypoint: sleep
+      command: 60
+      wait: true
 
 # waits for current rebalance to finish on the cluster by IP
 -
