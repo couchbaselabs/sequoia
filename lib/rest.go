@@ -74,7 +74,7 @@ func (r *RestClient) WatchForTopologyChanges() {
 				r.resetCache()
 				r.TopologyChanged = true
 				// we're rebalancing, relax
-				time.Sleep(60 * time.Second)
+				time.Sleep(120 * time.Second)
 			}
 			if r.TopologyChanged == false {
 				// nodes cached and no topology changes have occured
