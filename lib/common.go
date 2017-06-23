@@ -233,6 +233,6 @@ func StringToJson(data string, v interface{}) {
 	blob := []byte(data)
 	err := json.Unmarshal(blob, &v)
 	if err != nil {
-		fmt.Println("warning using 'json' filter: ", err)
+		fmt.Println("warning using 'json' filter: ", err, blob)
 	}
 }
