@@ -39,6 +39,7 @@ func ParseTemplate(s *Scope, command string) string {
 		"strlist":           tResolv.StrList,
 		"mkrange":           tResolv.MkRange,
 		"to_ip":             tResolv.ToIp,
+		"active":            tResolv.ActiveFilter,
 	}
 	tmpl, err := template.New("t").Funcs(netFunc).Parse(command)
 	logerr(err)
@@ -422,14 +423,34 @@ func (t *TemplateResolver) Address(index int, servers []ServerSpec) string {
 	return t.Scope.Provider.GetHostAddress(name)
 }
 
+// Template function: `active`
+// filters out server list to nth active node
+func (t *TemplateResolver) ActiveFilter(index int, servers []ServerSpec) string {
+
+	activeNodes := t.NodesByAvailability(servers, true)
+	if len(activeNodes) <= index {
+		return "<node_not_found>"
+	}
+
+	var name = activeNodes[index]
+	return t.Scope.Provider.GetHostAddress(name)
+}
+
+// Shortcut: .ClusterNodes | .Service `index` | active n
+func (t *TemplateResolver) ActiveIndexNode(index int) string {
+	nodes := t.ClusterNodes()
+	serviceNodes := t.Service("index", nodes)
+	return t.ActiveFilter(index, serviceNodes)
+}
+
 // Get the IP of the container
 func (t *TemplateResolver) ContainerIP(alias string) string {
 	// check if alias exist in scope vars
 	if id, ok := t.Scope.GetVarsKV(alias); ok {
 		if t.Scope.Cm.CheckContainerExists(id) {
-			container, err  := t.Scope.Cm.Client.InspectContainer(id)
+			container, err := t.Scope.Cm.Client.InspectContainer(id)
 			if err == nil {
-				return container.NetworkSettings.IPAddress;
+				return container.NetworkSettings.IPAddress
 			}
 		}
 	}
