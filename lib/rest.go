@@ -11,8 +11,7 @@ type RestClient struct {
 	Provider        Provider
 	Cm              *ContainerManager
 	TopologyChanged bool
-	nodeSelfCache   cmap.ConcurrentMap
-	nodeStatusCache cmap.ConcurrentMap
+	nodeCache       cmap.ConcurrentMap
 	IsWatching      bool
 }
 
@@ -46,53 +45,35 @@ func NewRestClient(clusters []ServerSpec, provider Provider, cm *ContainerManage
 		Provider:        provider,
 		Cm:              cm,
 		TopologyChanged: true,
+		nodeCache:       cmap.New(),
 		IsWatching:      false,
 	}
 
-	rest.resetCache()
 	return rest
 }
 
 func (r *RestClient) resetCache() {
-	r.nodeSelfCache = cmap.New()
-	r.nodeStatusCache = cmap.New()
+
+	for k := range r.nodeCache.Items() {
+		r.nodeCache.Remove(k)
+	}
 }
 
 func (r *RestClient) WatchForTopologyChanges() {
 	r.IsWatching = true
-	ch := make(chan bool, 10)
 
 	for {
 
-		// wait before next check
-		time.Sleep(20 * time.Second)
+		// wait before checking rebalance status
+		time.Sleep(10 * time.Second)
 
+		// reset cache if any of the clusters are rebalancing
 		for _, cluster := range r.Clusters {
-
 			orchestrator := cluster.Names[0]
 			if r.ClusterIsRebalancing(orchestrator) {
 				r.resetCache()
-				r.TopologyChanged = true
-				// we're rebalancing, relax
-				time.Sleep(120 * time.Second)
 			}
-			if r.TopologyChanged == false {
-				// nodes cached and no topology changes have occured
-				continue
-			}
-			for _, host := range cluster.Names {
-				go func(h string) {
-					ch <- true
-					nodeSelf := r.getHostNodeSelf(h)
-					r.nodeSelfCache.Set(h, nodeSelf)
-					nodeStatus := r.getHostNodeStatuses(h)
-					r.nodeStatusCache.Set(h, nodeStatus)
-					<-ch
-				}(host)
-			}
-
 		}
-		r.TopologyChanged = false
 	}
 
 	r.IsWatching = false
@@ -180,7 +161,7 @@ func (r *RestClient) GetAuth(host string) string {
 
 func (r *RestClient) GetHostNodeSelf(host string) NodeSelf {
 
-	if val, ok := r.nodeSelfCache.Get(host); ok {
+	if val, ok := r.cacheGet("self", host); ok {
 		return val.(NodeSelf)
 	}
 	return r.getHostNodeSelf(host)
@@ -191,14 +172,16 @@ func (r *RestClient) getHostNodeSelf(host string) NodeSelf {
 	url := r.Provider.GetRestUrl(host)
 	auth := r.GetAuth(host)
 	n := r.GetNodeSelf(auth, url)
+	r.cacheSet("self", host, n)
 	return n
 }
 
 func (r *RestClient) GetHostNodeStatuses(host string) NodeStatuses {
 
-	if val, ok := r.nodeStatusCache.Get(host); ok {
+	if val, ok := r.cacheGet("status", host); ok {
 		return val.(NodeStatuses)
 	}
+
 	return r.getHostNodeStatuses(host)
 }
 
@@ -206,6 +189,7 @@ func (r *RestClient) getHostNodeStatuses(host string) NodeStatuses {
 	url := r.Provider.GetRestUrl(host)
 	auth := r.GetAuth(host)
 	n := r.GetNodeStatuses(auth, url)
+	r.cacheSet("status", host, n)
 	return n
 }
 
@@ -238,7 +222,13 @@ func (r *RestClient) JsonRequest(auth, restUrl string, v interface{}) {
 
 	// convert logs to json
 	resp := r.Cm.GetLogs(id, "all")
-	StringToJson(resp, &v)
+	parseErr := StringToJson(resp, &v)
+
+	// reset cache if we got a bad response
+	// as this indicates unstable cluster
+	if parseErr != nil {
+		r.resetCache()
+	}
 
 	// remove container
 	if r.Cm.ProviderType == "swarm" {
@@ -248,4 +238,14 @@ func (r *RestClient) JsonRequest(auth, restUrl string, v interface{}) {
 		err := r.Cm.RemoveContainer(id)
 		logerr(err)
 	}
+}
+
+func (r *RestClient) cacheGet(ctx, key string) (interface{}, bool) {
+	cacheKey := fmt.Sprintf("%s/%s", ctx, key)
+	return r.nodeCache.Get(cacheKey)
+}
+
+func (r *RestClient) cacheSet(ctx, key string, val interface{}) {
+	cacheKey := fmt.Sprintf("%s/%s", ctx, key)
+	r.nodeCache.Set(cacheKey, val)
 }
