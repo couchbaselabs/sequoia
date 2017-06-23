@@ -60,12 +60,12 @@
 
 ###############  Rebalance-out single node ################
 - template: rebalance_out
-  args: "{{.IndexNode}}"
+  args: "{{.ActiveIndexNode 0}}"
   wait: true
 
 ###############  Swap single index node ################
 - template: rebalance_swap
-  args: "{{.InActiveNode}}, {{.IndexNode}}, index"
+  args: "{{.InActiveNode}}, {{.ActiveIndexNode 0}}, index"
   wait: true
 
 ###############  Rebalance-in two nodes ################
@@ -77,7 +77,7 @@
 
 ###############  Rebalance-out two nodes ################
 - template: rebalance_out
-  args: "({{.NthIndexNode 0}},{{.NthIndexNode 1}})"
+  args: "({{.ActiveIndexNode 0}},{{.ActiveIndexNode 2}})"
   wait: true
 
 ###############  Swap Rebalance two nodes ################
@@ -106,13 +106,13 @@
 
 ###############  Failover and rebalance out ################
 - template: failover_node_forced
-  args: "{{.NthIndexNode 1}}"
+  args: "{{.ActiveIndexNode 1}}"
 - template: rebalance
   wait: true
 
 ###############  Rebalance-out single node ################
 - template: rebalance_out
-  args: "{{.NthIndexNode 2}}"
+  args: "{{.ActiveIndexNode 2}}"
   wait: true
 
 
