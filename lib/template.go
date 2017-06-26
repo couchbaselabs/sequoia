@@ -432,8 +432,7 @@ func (t *TemplateResolver) ActiveFilter(index int, servers []ServerSpec) string 
 		return "<node_not_found>"
 	}
 
-	var name = activeNodes[index]
-	return t.Scope.Provider.GetHostAddress(name)
+	return activeNodes[index]
 }
 
 // Shortcut: .ClusterNodes | .Service `index` | active n
