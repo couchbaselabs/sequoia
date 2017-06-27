@@ -150,7 +150,7 @@
 
 # swap failover
 - template: add_node
-  args: "{{.NthDataNode 2}}"
+  args: "{{.InActiveNode}}"
 - template: failover_node_forced
   args: "{{.NthDataNode 1}}"
 - template: rebalance
@@ -168,7 +168,7 @@
 
 # swap hard failover
 - template: add_node
-  args: "{{.NthDataNode 1}}"
+  args: "{{.InActiveNode}}"
 - template: failover_node
   args: "{{.NthDataNode 2}}"
 - template: failover_node_forced
