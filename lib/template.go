@@ -377,14 +377,10 @@ func (t *TemplateResolver) InActiveNodes(servers []ServerSpec) []string {
 	return t.NodesByAvailability(servers, false)
 }
 
-func (t *TemplateResolver) NthInActiveNode(n int) string {
-	return t.NodeFromClusterByAvailability(n, false)
-}
-
 // Get ONE node from ANY cluster where:
 //		isActive = true, node is in cluster
 //		isActive = false, node is not in cluster
-func (t *TemplateResolver) NodeFromClusterByAvailability(n int, isActive bool) string {
+func (t *TemplateResolver) NodeFromClusterByAvailability(n int, isActive bool, indexOverride int) string {
 
 	servers := t.Cluster(n, t.Nodes())
 	var nodes []string
@@ -397,10 +393,17 @@ func (t *TemplateResolver) NodeFromClusterByAvailability(n int, isActive bool) s
 	numNodes := len(nodes)
 	ip := "<node_not_found>"
 	if numNodes > 0 {
-		// omitting orchestrator if possible
-		ip = nodes[0]
-		if ip == t.Orchestrator() && numNodes > 1 {
-			ip = nodes[1]
+
+		// get node at specific offset in list of avaialable nodes
+		if indexOverride > 0 && (numNodes > indexOverride) {
+			ip = nodes[indexOverride]
+		} else {
+			// get first node omitting orchestrator if possible
+			ip = nodes[0]
+			if ip == t.Orchestrator() && numNodes > 1 {
+				ip = nodes[1]
+			}
+
 		}
 	}
 
@@ -409,12 +412,16 @@ func (t *TemplateResolver) NodeFromClusterByAvailability(n int, isActive bool) s
 
 // Get ONE node from FIRST cluster that is Active
 func (t *TemplateResolver) ActiveNode() string {
-	return t.NodeFromClusterByAvailability(0, true)
+	return t.NodeFromClusterByAvailability(0, true, 0)
 }
 
 // Get ONE node from FIRST cluster that is InActive
 func (t *TemplateResolver) InActiveNode() string {
-	return t.NodeFromClusterByAvailability(0, false)
+	return t.NodeFromClusterByAvailability(0, false, 0)
+}
+
+func (t *TemplateResolver) NthInActiveNode(n int) string {
+	return t.NodeFromClusterByAvailability(0, false, n)
 }
 
 // Template function: `net`
