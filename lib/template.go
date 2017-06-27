@@ -377,6 +377,10 @@ func (t *TemplateResolver) InActiveNodes(servers []ServerSpec) []string {
 	return t.NodesByAvailability(servers, false)
 }
 
+func (t *TemplateResolver) NthInActiveNode(n int) string {
+	return t.NodeFromClusterByAvailability(n, false)
+}
+
 // Get ONE node from ANY cluster where:
 //		isActive = true, node is in cluster
 //		isActive = false, node is not in cluster

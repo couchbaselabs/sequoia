@@ -82,8 +82,8 @@
 
 ###############  Swap Rebalance two nodes ################
 - template: add_node
-  args: "{{.InActiveNode}}, index"
-- args: "{{.InActiveNode}}, index"
+  args: "{{.NthInActiveNode 0}}, index"
+- args: "{{.NthInActiveNode 1}}, index"
 - template: rebalance_out
   args: "({{.NthDataNode 1}})"
   wait: true
@@ -118,9 +118,9 @@
 
 ###############  Add back index nodes  ################
 - template: add_node
-  args: "{{.InActiveNode}}, index"
-- args: "{{.InActiveNode}}, index"
-- template: rebalance_in
+  args: "{{.NthInActiveNode 0}}, index"
+- args: "{{.NthInActiveNode 1}}, index"
+- template: rebalance
 - section_end: change_indexer_topologies
 
 ###############  Drop some Indexes ################
