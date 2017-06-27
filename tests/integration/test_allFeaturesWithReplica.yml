@@ -143,6 +143,13 @@
                              --warehouses 5 --no-load n1ql  --query-url {{.NthQueryNode 1}}:{{.QueryPort}}"
 
 
+# remove the extra index node
+- template: rebalance_out
+  args: "{{.IndexNode}}"
+  wait: true
+
+
+
 # quick update batch
 - template: pillowfight_htp
   wait: true
