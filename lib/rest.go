@@ -61,6 +61,7 @@ func (r *RestClient) resetCache() {
 
 func (r *RestClient) WatchForTopologyChanges() {
 	r.IsWatching = true
+	r.resetCache()
 
 	for {
 
@@ -86,7 +87,7 @@ func (r *RestClient) GetServerVersion() string {
 }
 
 func (r *RestClient) GetMemTotal(host string) int {
-	n := r.GetHostNodeSelf(host)
+	n := r.getHostNodeSelf(host)
 	q := n.MemoryTotal
 	if q == 0 {
 		time.Sleep(5 * time.Second)
@@ -97,7 +98,7 @@ func (r *RestClient) GetMemTotal(host string) int {
 }
 
 func (r *RestClient) GetMemReserved(host string) int {
-	n := r.GetHostNodeSelf(host)
+	n := r.getHostNodeSelf(host)
 	q := n.McdMemoryReserved
 	if q == 0 {
 		time.Sleep(5 * time.Second)
@@ -108,7 +109,7 @@ func (r *RestClient) GetMemReserved(host string) int {
 }
 
 func (r *RestClient) GetIndexQuota(host string) int {
-	n := r.GetHostNodeSelf(host)
+	n := r.getHostNodeSelf(host)
 	q := n.IndexMemoryQuota
 	if q == 0 {
 		time.Sleep(5 * time.Second)
