@@ -49,13 +49,13 @@ servers: # each server tag represents a cluster
       users: default,CUSTOMER,DISTRICT,HISTORY
   -
       name: remote
-      count: 1
+      count: 2
       ram: 60%
       rest_username: Administrator
       rest_password: password
       data_path: "/data"
       rest_port: 8091
-      init_nodes: 1
+      init_nodes: 2
       buckets: remote
       users: remote
 
