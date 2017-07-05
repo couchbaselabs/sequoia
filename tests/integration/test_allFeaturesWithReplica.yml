@@ -4,7 +4,7 @@
 
 # continous kv loading
 - template: pillowfight
-  args: "{{.Orchestrator}}, {{.Bucket}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 4  --rate-limit {{.Scale 2000}}, {{.AuthPassword}}"
+  args: "{{.Orchestrator}}, {{.Bucket}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 2000}}, {{.AuthPassword}}"
 
 # rebalance out a node
 - template: rebalance_out
@@ -19,10 +19,12 @@
 # replica data loading for 30 minutes with docs that will expire after 1 hour
 - image: sequoiatools/gideon
   duration: 1800
-  command: "kv --ops {{.Scale 1000}} --create 10 --get 90 --sizes 64 96  --expire 100 --ttl 3600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
-- command: "kv --ops {{.Scale 1000}} --create 10 --get 90 --sizes 64 96  --expire 100 --ttl 3600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}}"
-- command: "kv --ops {{.Scale 1000}} --create 10 --get 90 --sizes 64 96  --expire 100 --ttl 3600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}}"
-
+  command: "kv --ops {{.Scale 500}} --create 10 --delete 8 --get 82 --sizes 64 96  --expire 100 --ttl 3600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
+  duration: 1800
+- command: "kv --ops {{.Scale 500}} --create 10 --delete 8 --get 82 --sizes 64 96  --expire 100 --ttl 3600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}}"
+  duration: 1800
+- command: "kv --ops {{.Scale 500}} --create 10 --delete 8 --get 82 --sizes 64 96  --expire 100 --ttl 3600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}}"
+  duration: 1800
 
 # query replica indexes
 - test: tests/2i/test_idx_rebalance_replica.yml
@@ -47,10 +49,10 @@
 
 # more json docs on default bucket
 - image: sequoiatools/gideon
-  command: "kv --ops {{.Scale 1000}} --create 10 --get 90 --expire 100 --ttl 660  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes  512 128 1024 2048 16000"
-- command: "kv --ops {{.Scale 2000}} --create 100  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 64"
+  command: "kv --ops {{.Scale 500}} --create 10 --delete 8 --get 92 --expire 100 --ttl 660  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes  512 128 1024 2048 16000"
+- command: "kv --ops {{.Scale 500}} --create 100  --expire 100 --ttl 660 --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 64"
   duration: 600
-- command: "kv --ops {{.Scale 6000}} --create 15 --get 80 --delete 5  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 128"
+- command: "kv --ops {{.Scale 600}} --create 15 --get 80 --delete 5  --expire 100 --ttl 660 --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 128"
   duration: 7200
 
 
@@ -165,7 +167,7 @@
 
 # load some new docs
 - image: sequoiatools/gideon
-  command: "kv --ops {{.Scale 2000}} --create 100  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 64"
+  command: "kv --ops {{.Scale 500}} --create 100  --expire 100 --ttl 660 --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 64"
   duration: 1800
 
 # quick update batch
@@ -199,11 +201,3 @@
 # run the entire dropAddIndex test
 - test: tests/2i/test_dropAddIndexRebalance.yml
   section_skip: data_loading
-
-# delete phase
-- template: attack_query
-  duration: 3600
-  args: "0, {{.Scale 10}}, {{.NthQueryNode 1}}:{{.QueryPort}}, 'delete from default where rating < 300 limit {{.Scale 10}}'"
-- args: "0, {{.Scale 10}}, {{.QueryNodePort}}, 'delete from default where rating > 700 limit {{.Scale 10}}'"
-- args: "0, {{.Scale 10}}, {{.NthQueryNode 1}}:{{.QueryPort}}, 'delete from default where rating > 300 and rating < 700 limit {{.Scale 10}}'"
-  wait: true
