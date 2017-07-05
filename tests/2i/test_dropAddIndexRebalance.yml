@@ -148,11 +148,11 @@
 
 ######  failover recently added index nodes  ######
 - before: "{{.Status `SwapFailId` | eq `exited`}}"
-  template: failover_node
+  template: failover_node_forced
   args: "{{.LastIndexNode}}"
   wait: true
 - template: rebalance_in
-  args: "{{.IndexNode}}"
+  args: "{{.InActiveNode}}, index"
   wait: true
 
 
