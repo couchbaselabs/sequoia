@@ -103,6 +103,7 @@
 - template: rebalance_in
   args: "{{.InActiveNode}}"
   alias: SwapFailId
+  wait: true
 
 
 ###############  'when' hard failover is done add back all indexes ################
