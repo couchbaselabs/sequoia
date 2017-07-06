@@ -101,7 +101,7 @@
   args: "{{.IndexNode}}"
   wait: true
 - template: rebalance_in
-  args: "{{.InActiveNode}}, index"
+  args: "{{.InActiveNode}}"
   alias: SwapFailId
 
 
@@ -158,8 +158,7 @@
 
 # #### add back index nodes ####
 - template: add_node
-  args: "{{.InActiveNode}}, index"
-- args: "{{.InActiveNode}}, index"
-
+  args: "{{.NthInActiveNode 0}}, index"
+- args: "{{.NthInActiveNode 1}}, index"
 - template: rebalance
   wait: true

@@ -201,3 +201,9 @@
 # run the entire dropAddIndex test
 - test: tests/2i/test_dropAddIndexRebalance.yml
   section_skip: data_loading
+
+- template: add_node
+  args: "{{.NthInActiveNode 0}}"
+- args: "{{.NthInActiveNode 1}}"
+- template: rebalance
+  wait: true
