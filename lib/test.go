@@ -223,7 +223,7 @@ func (t *Test) Run(scope Scope) {
 	if repeat == -1 {
 		// run forever
 		for {
-			t.runActions(scope, loops, t.Actions)
+			t.runRepeatableActions(scope, loops, t.Actions)
 			// kill test containers
 			t.DoContainerCleanup(scope)
 
@@ -232,7 +232,7 @@ func (t *Test) Run(scope Scope) {
 	} else {
 		repeat++
 		for loops = 0; loops < repeat; loops++ {
-			t.runActions(scope, loops, t.Actions)
+			t.runRepeatableActions(scope, loops, t.Actions)
 			// kill test containers
 			if *t.Flags.SkipCleanup == false {
 				t.DoContainerCleanup(scope)
@@ -261,6 +261,15 @@ func (t *Test) WaitForCollect() {
 		colorsay("collect in progress")
 		<-t.CollMgr.Ch[i]
 	}
+}
+
+func (t *Test) runRepeatableActions(scope Scope, loop int, actions []ActionSpec) {
+	// run actions
+	t.runActions(scope, loop, actions)
+
+	// restore the original test actions because runActions has the side-effect
+	// of modifying the Actions member for running nested templates, tests, and sections
+	t.Actions = actions
 }
 
 func (t *Test) runActions(scope Scope, loop int, actions []ActionSpec) {
@@ -426,6 +435,7 @@ func (t *Test) runActions(scope Scope, loop int, actions []ActionSpec) {
 			teardown := t.Flags.SkipTeardown
 			cleanup := t.Flags.SkipCleanup
 			duration := t.Flags.Duration
+			repeat := t.Flags.Repeat
 
 			ok := true
 			zero := 0
@@ -433,6 +443,8 @@ func (t *Test) runActions(scope Scope, loop int, actions []ActionSpec) {
 			t.Flags.SkipTeardown = &ok
 			t.Flags.SkipCleanup = &ok
 			t.Flags.Duration = &zero
+			t.Flags.Repeat = &action.Repeat
+
 			// run test
 			t.Run(scope)
 
@@ -441,6 +453,7 @@ func (t *Test) runActions(scope Scope, loop int, actions []ActionSpec) {
 			t.Flags.SkipTeardown = teardown
 			t.Flags.SkipCleanup = cleanup
 			t.Flags.Duration = duration
+			t.Flags.Repeat = repeat
 			continue
 		}
 
