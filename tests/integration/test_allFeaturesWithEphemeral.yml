@@ -56,7 +56,7 @@
    duration: 3600  # 1 hour of main loader
 -
    image: sequoiatools/gideon
-   command: "kv --ops {{.Scale 100}} --create 10 --get 90 --expire 100 --ttl 660  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 16000"
+   command: "kv --ops {{.Scale 100}} --create 10 --get 90 --expire 90 --ttl 660  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 16000"
 -
    duration: 3600  # 1 hour of main loader
    command: "kv --ops {{.Scale 2000}} --create 15 --get 80 --delete 5 --expire 90 --ttl 1800 --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 512 128 1024 2048"
