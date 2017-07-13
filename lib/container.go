@@ -85,7 +85,7 @@ func (cm *ContainerManager) NewServiceOptions(image string, cmd []string) docker
 	annotations := swarm.Annotations{Name: serviceName}
 	policy := swarm.RestartPolicy{Condition: swarm.RestartPolicyConditionNone}
 	placement := swarm.Placement{Constraints: []string{"node.labels.zone == client"}}
-	taskSpec := swarm.TaskSpec{ContainerSpec: containerSpec,
+	taskSpec := swarm.TaskSpec{ContainerSpec: &containerSpec,
 		RestartPolicy: &policy,
 		Placement:     &placement}
 

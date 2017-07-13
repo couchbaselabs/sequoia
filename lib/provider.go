@@ -239,7 +239,7 @@ func (p *DockerProvider) NumCouchbaseServers() int {
 func (p *DockerProvider) ProvideCouchbaseServers(filename *string, servers []ServerSpec) {
 
 	var providerOpts DockerProviderOpts
-	if (filename == nil || len(*filename) == 0) {
+	if filename == nil || len(*filename) == 0 {
 		*filename = DEFAULT_DOCKER_PROVIDER_CONF
 
 	}
@@ -412,7 +412,7 @@ func (p *SwarmProvider) ProvideCouchbaseServer(serverName string, portOffset int
 	serviceName := strings.Replace(serverName, ".", "-", -1)
 	containerSpec := swarm.ContainerSpec{Image: imgName}
 	placement := swarm.Placement{Constraints: []string{"node.labels.zone == " + zone}}
-	taskSpec := swarm.TaskSpec{ContainerSpec: containerSpec, Placement: &placement}
+	taskSpec := swarm.TaskSpec{ContainerSpec: &containerSpec, Placement: &placement}
 	annotations := swarm.Annotations{Name: serviceName}
 	endpointSpec := swarm.EndpointSpec{Ports: portConfig}
 	spec := swarm.ServiceSpec{
@@ -433,7 +433,7 @@ func (p *SwarmProvider) ProvideCouchbaseServer(serverName string, portOffset int
 
 func (p *SwarmProvider) ProvideCouchbaseServers(filename *string, servers []ServerSpec) {
 
-	if (filename == nil || len(*filename) == 0) {
+	if filename == nil || len(*filename) == 0 {
 		*filename = DEFAULT_DOCKER_PROVIDER_CONF
 	}
 
