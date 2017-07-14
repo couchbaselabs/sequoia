@@ -440,7 +440,7 @@ func (p *DockerProvider) ProvideSyncGateways(syncGateways []SyncGatewaySpec) {
 
 			// If network is not provided, link pairs so that the Sync Gateway container can talk to server
 			var linkPairs []string
-			if p.UseNetwork {
+			if !p.UseNetwork {
 				linkPairsString := p.GetLinkPairs()
 				linkPairs = strings.Split(linkPairsString, ",")
 			} else {
