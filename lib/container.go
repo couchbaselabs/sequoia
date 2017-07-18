@@ -213,17 +213,6 @@ func (cm *ContainerManager) CreateNetwork(name string) {
 	chkerr(err)
 }
 
-// AddContainerToNetwork add connected a container to the network specified
-// at runtime and set in the provider
-func (cm *ContainerManager) AddContainerToNetwork(container *docker.Container) {
-	colorsay(fmt.Sprintf("Adding %s -> network %s", container.ID, cm.Network))
-	connectNetworkOptions := docker.NetworkConnectionOptions{
-		Container: container.ID,
-	}
-	err := cm.Client.ConnectNetwork(cm.Network, connectNetworkOptions)
-	chkerr(err)
-}
-
 func (cm *ContainerManager) CreateSwarmClients(clientUrl string) []*docker.Client {
 
 	clients := []*docker.Client{cm.Client}
@@ -694,6 +683,11 @@ func (cm *ContainerManager) StartContainer(id string, hostConfig *docker.HostCon
 
 func (cm *ContainerManager) RunContainer(opts docker.CreateContainerOptions) (chan TaskResult, *docker.Container) {
 
+	// If we have defined a network, use that network in host config
+	if cm.Network != "" {
+		opts.HostConfig.NetworkMode = cm.Network
+	}
+
 	container, err := cm.Client.CreateContainer(opts)
 	logerr(err)
 
@@ -701,12 +695,8 @@ func (cm *ContainerManager) RunContainer(opts docker.CreateContainerOptions) (ch
 
 	// start container
 	err = cm.StartContainer(container.ID, nil)
-	logerr(err)
 
-	// Add to network if network is defined
-	if cm.Network != "" {
-		cm.AddContainerToNetwork(container)
-	}
+	logerr(err)
 
 	go cm.WaitContainer(container, c)
 

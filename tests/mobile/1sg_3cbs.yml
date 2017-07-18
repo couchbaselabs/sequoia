@@ -15,7 +15,7 @@ buckets:
 
 servers:
   -
-     name: cbs
+     name: cbs.st
      ram: 90%
      count: 3
      rest_username: Administrator
@@ -27,5 +27,5 @@ servers:
 
 syncgateways:
   -
-    name: sg
+    name: sg.st
     count: 1

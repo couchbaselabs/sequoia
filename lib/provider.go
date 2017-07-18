@@ -253,7 +253,6 @@ func (p *DockerProvider) GetType() string {
 }
 
 func (p *DockerProvider) GetHostAddress(name string) string {
-	var ipAddress string
 
 	id, ok := p.ActiveContainers[name]
 	if ok == false {
@@ -269,9 +268,16 @@ func (p *DockerProvider) GetHostAddress(name string) string {
 	}
 	container, err := p.Cm.Client.InspectContainer(id)
 	chkerr(err)
-	ipAddress = container.NetworkSettings.IPAddress
 
-	return ipAddress
+	var host string
+	if !p.UseNetwork {
+		host = container.NetworkSettings.IPAddress
+	} else {
+		// strip the prefix "/"
+		host = container.Name[1:]
+	}
+
+	return host
 }
 
 func (p *DockerProvider) NumCouchbaseServers() int {
@@ -679,12 +685,6 @@ func (p *DockerProvider) GetLinkPairs() string {
 func (p *DockerProvider) GetRestUrl(name string) string {
 
 	addr := fmt.Sprintf("%s:8091", p.GetHostAddress(name))
-	return addr
-}
-
-func (p *DockerProvider) GetSyncGatewayRestUrl(name string) string {
-
-	addr := fmt.Sprintf("%s:4984", p.GetHostAddress(name))
 	return addr
 }
 
