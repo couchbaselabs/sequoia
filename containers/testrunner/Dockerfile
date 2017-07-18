@@ -23,6 +23,7 @@ RUN pip install -U pip setuptools
 RUN pip install paramiko &&\
     pip install gevent &&\
     pip install boto &&\
+    pip install httplib2 &&\
     pip install pyyaml &&\
     pip install couchbase
 
