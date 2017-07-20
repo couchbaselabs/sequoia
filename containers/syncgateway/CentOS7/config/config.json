@@ -19,10 +19,10 @@
           "password":"ch_password"
         }
       },
-      "server":"node0",
+      "server":"http://node0:8091",
       "bucket":"data-bucket",
       "password":"password",
-      "import_docs":"continuous",
+      CHANNEL_INDEX
       "unsupported":{
         "enable_extended_attributes":true,
         "replicator_2":true

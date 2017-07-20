@@ -61,6 +61,17 @@ type SyncGatewaySpec struct {
 	CountOffset uint8
 }
 
+type AccelSpec struct {
+	Name        string
+	Names       []string
+	Count       uint8
+	CountOffset uint8
+}
+
+type LoadBalancerSpec struct {
+	Name string
+}
+
 type ViewSpec struct {
 	Name   string
 	Map    string
@@ -77,6 +88,8 @@ type ScopeSpec struct {
 	Buckets      []BucketSpec
 	Servers      []ServerSpec
 	SyncGateways []SyncGatewaySpec
+	Accels       []AccelSpec
+	LoadBalancer LoadBalancerSpec
 	Views        []ViewSpec
 	DDocs        []DDocSpec `yaml:"ddocs"`
 	Users        []RbacSpec
@@ -192,6 +205,24 @@ func (s *ScopeSpec) ApplyToAllSyncGatewayAsync(operation func(string, *SyncGatew
 			c := make(chan bool)
 			// allowed apply func to modify server
 			go operation(syncGatewayName, &s.SyncGateways[i], c)
+			waitChans = append(waitChans, c)
+		}
+	}
+
+	for _, c := range waitChans {
+		<-c
+	}
+}
+
+func (s *ScopeSpec) ApplyToAllAccelsAsync(operation func(string, *AccelSpec, chan bool)) {
+
+	waitChans := []chan bool{}
+	for i, accel := range s.Accels {
+		endIdx := len(accel.Names)
+		for _, accelName := range accel.Names[:endIdx] {
+			c := make(chan bool)
+			// allowed apply func to modify server
+			go operation(accelName, &s.Accels[i], c)
 			waitChans = append(waitChans, c)
 		}
 	}
@@ -350,8 +381,14 @@ func ConfigureSpec(spec *ScopeSpec) {
 		spec.Servers[i].InitNodeServices()
 	}
 
+	// Add Sync Gateway names to spec
 	for i, syncGateway := range spec.SyncGateways {
 		spec.SyncGateways[i].Names = ExpandServerName(syncGateway.Name, syncGateway.Count, 1)
+	}
+
+	// Add Accel names to spec
+	for i, accel := range spec.Accels {
+		spec.Accels[i].Names = ExpandServerName(accel.Name, accel.Count, 1)
 	}
 }
 

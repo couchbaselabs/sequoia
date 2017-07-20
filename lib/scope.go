@@ -89,7 +89,7 @@ func NewScope(flags TestFlags, cm *ContainerManager) Scope {
 	}
 
 	// create provider of resources for scope
-	provider := NewProvider(flags, spec.Servers, spec.SyncGateways)
+	provider := NewProvider(flags, spec.Servers, spec.SyncGateways, spec.Accels, spec.LoadBalancer)
 
 	// update defaults from spec based on provider
 	for i, _ := range spec.Servers {
@@ -158,10 +158,6 @@ func (s *Scope) SetupServer() {
 	s.RebalanceClusters()
 	s.CreateBuckets()
 	s.CreateViews()
-}
-
-func (s *Scope) SetupSyncGateways() {
-	s.WaitForSyncGateways()
 }
 
 // WriteHostConfig writes a json representation of the topology
@@ -239,7 +235,7 @@ func (s *Scope) WaitForServers() {
 	s.Spec.ApplyToAllServersAsync(waitForServersOp)
 }
 
-func (s *Scope) WaitForSyncGateways() {
+func (s *Scope) WaitForMobile() {
 
 	var image = "martin/wait"
 
@@ -269,7 +265,34 @@ func (s *Scope) WaitForSyncGateways() {
 		done <- true
 	}
 
+	// use martin/wait container to wait for Accel to listen on port 4984
+	waitForAccelsOp := func(name string, accel *AccelSpec, done chan bool) {
+
+		ip := s.Provider.GetHostAddress(name)
+		ipPort := strings.Split(ip, ":")
+		if len(ipPort) == 1 {
+			// use default port
+			ip = ip + ":4985"
+		}
+
+		command := []string{"-c", ip, "-t", "120"}
+		desc := "wait for " + ip
+		task := ContainerTask{
+			Describe: desc,
+			Image:    image,
+			Command:  command,
+			Async:    false,
+		}
+		if s.Provider.GetType() == "docker" {
+			task.LinksTo = name
+		}
+
+		s.Cm.Run(&task)
+		done <- true
+	}
+
 	s.Spec.ApplyToAllSyncGatewayAsync(waitForSyncGatewaysOp)
+	s.Spec.ApplyToAllAccelsAsync(waitForAccelsOp)
 }
 
 func (s *Scope) GetPath(path, name string) string {

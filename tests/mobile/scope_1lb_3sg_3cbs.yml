@@ -1,0 +1,30 @@
+---
+users:
+  - name: data-bucket
+    password: password
+    roles: admin
+    auth_domain: local
+
+buckets:
+  - name: data-bucket
+    ram: 100%
+    replica: 1
+    type: couchbase
+
+servers:
+  - name: cbs.st
+    ram: 90%
+    count: 3
+    rest_username: Administrator
+    rest_password: password
+    rest_port: 8091
+    init_nodes: 3
+    buckets: data-bucket
+    users: data-bucket
+
+syncgateways:
+  - name: sg.st
+    count: 3
+
+loadbalancer:
+  name: lb.st

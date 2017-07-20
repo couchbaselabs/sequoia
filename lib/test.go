@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -188,7 +187,17 @@ func (t *Test) Run(scope Scope) {
 
 		// Setup Sync Gateways
 		scope.Provider.ProvideSyncGateways(scope.Spec.SyncGateways)
-		scope.SetupSyncGateways()
+
+		// Setup Accels
+		scope.Provider.ProvideAccels(scope.Spec.Accels)
+
+		// Wait for Sync Gateways / Accels to be available
+		scope.WaitForMobile()
+
+		// If load balancer is defined in scope
+		// Add Sync Gateway to the load balancer
+		scope.Provider.ProvideLoadBalancer(scope.Spec.LoadBalancer)
+
 		scope.WriteHostConfig()
 
 	} else if (scope.Provider.GetType() != "docker") &&
@@ -570,28 +579,12 @@ func (t *Test) runActions(scope Scope, loop int, actions []ActionSpec) {
 		}
 
 		// If volumes are supplies, the container will mount them
-		// when launching. The formate of the volume string should be:
+		// when launching. The format of the volume string should be:
 		// "<path-to-container>/folder1:/<path-in-container>/folder1,<path-to-container>/file1:/<path-in-container>/file2"
 		// folder1 and file1 must be in the samd
 		volumes := []string{}
 		if action.Volumes != "" {
-			volumes = strings.Split(action.Volumes, ",")
-
-			// Build an absolute path to the mount location assuming we are executing
-			// seqouia from the root of the repository
-			exPath, err := filepath.Abs(filepath.Dir(os.Args[0]))
-			chkerr(err)
-
-			// Prepend the cwd to the volume mount host path
-			// if there is not an absolute path defined
-			for i, volume := range volumes {
-				v := strings.TrimSpace(volume)
-				if !strings.HasPrefix(v, "/") {
-					v = exPath + "/" + v
-				}
-				colorsay("Mounting :" + v)
-				volumes[i] = v
-			}
+			volumes = BuildVolumes(action.Volumes)
 		}
 
 		// compile task

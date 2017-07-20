@@ -1,0 +1,29 @@
+{
+  "adminInterface":"0.0.0.0:4985",
+  "log":[
+    "*",
+    "Import+"
+  ],
+  "cluster_config":{
+    "server":"http://node0:8091",
+    "data_dir":".",
+    "bucket":"data-bucket",
+    "password":"password"
+  },
+  "databases":{
+    "db":{
+      "server":"http://node0:8091",
+      "bucket":"index-bucket",
+      "password":"password",
+      "unsupported": {
+         "enable_extended_attributes":true
+      },
+      "channel_index":{
+        "server":"http://node0:8091",
+        "bucket":"index-bucket",
+        "password":"password",
+        "writer":true
+      }
+    }
+  }
+}

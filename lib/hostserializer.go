@@ -53,6 +53,30 @@ func GenerateMobileHostDefinition(s *Scope) {
 		}
 	}
 
+	// Add Accels to host file
+	count = 1
+	accelHosts := []map[string]string{}
+	for _, accelSpec := range s.Spec.Accels {
+		for _, name := range accelSpec.Names {
+			hostEntry := make(map[string]string)
+			hostEntry["name"] = fmt.Sprintf("ac%d", count)
+			hostEntry["ip"] = name
+			accelHosts = append(accelHosts, hostEntry)
+			hosts = append(hosts, hostEntry)
+			count++
+		}
+	}
+
+	// Add loadbalancer if in the spec
+	loadBalancers := []map[string]string{}
+	if s.Spec.LoadBalancer.Name != "" {
+		hostEntry := make(map[string]string)
+		hostEntry["name"] = fmt.Sprintf("lb%d", count)
+		hostEntry["ip"] = s.Spec.LoadBalancer.Name
+		loadBalancers = append(loadBalancers, hostEntry)
+		hosts = append(hosts, hostEntry)
+	}
+
 	environment := map[string]bool{
 		"xattrs_enabled":  false,
 		"cbs_ssl_enabled": false,
@@ -64,8 +88,8 @@ func GenerateMobileHostDefinition(s *Scope) {
 		Environment:      environment,
 		CouchbaseServers: couchbaseServerHosts,
 		SyncGateways:     syncGatewayHosts,
-		SgAccels:         []map[string]string{},
-		LoadBalancers:    []map[string]string{},
+		SgAccels:         accelHosts,
+		LoadBalancers:    loadBalancers,
 		LoadGenerators:   []map[string]string{},
 	}
 
