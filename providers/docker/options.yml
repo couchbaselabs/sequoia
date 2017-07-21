@@ -1,4 +1,4 @@
-# container os, supported values = ubuntu14, centos7
+# container os, supported values = ubuntu14, centos7, windows2012
 os: centos7 
 
 # build version
