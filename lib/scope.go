@@ -618,7 +618,7 @@ func (s *Scope) CreateBuckets() {
 					"--enable-flush", "1", "--wait",
 				}
 				if bucket.Sasl != "" {
-					command = append(command, "--bucket-password", bucket.Sasl)
+					command = append(command, "--password", bucket.Sasl)
 				}
 				if bucket.Eviction != "" {
 					command = append(command, "--bucket-eviction-policy", bucket.Eviction)
