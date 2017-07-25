@@ -645,3 +645,35 @@ func (t *TemplateResolver) DDoc(name string) string {
 	}
 	return val
 }
+
+// returns list of all sync gateways
+func (t *TemplateResolver) SyncGateways() []SyncGatewaySpec {
+	return t.Scope.Spec.SyncGateways
+}
+
+// request a specific sync gateway from list
+func (t *TemplateResolver) NthSyncGateway(index int) string {
+	val := ""
+
+	// only using first set of indexes
+	// TODO: additional sets can be used for xdcr cases
+	syncSpecs := t.SyncGateways()
+	if len(syncSpecs) > 0 {
+		gateways := t.SyncGateways()[0].Names
+		if len(gateways) > index {
+			val = gateways[index]
+		}
+	}
+	return val
+}
+
+// returns first sync gateway from list
+func (t *TemplateResolver) SyncGateway() string {
+	name := t.NthSyncGateway(0)
+	val := "<sg_not_found>"
+	fmt.Println(name)
+	if name != "" {
+		val = t.Scope.Provider.GetHostAddress(name)
+	}
+	return val
+}

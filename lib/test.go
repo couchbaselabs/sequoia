@@ -202,9 +202,9 @@ func (t *Test) Run(scope Scope) {
 
 	} else if (scope.Provider.GetType() != "docker") &&
 		(scope.Provider.GetType() != "swarm") {
-		// non-dynamic IP's need to be extrapolated before test
+		//non-dynamic IP's need to be extrapolated before test
 		scope.Provider.ProvideCouchbaseServers(t.Flags.ProviderConfig, scope.Spec.Servers)
-		// TODO: Support Sync gateway in this configuration
+		scope.Provider.ProvideSyncGateways(scope.Spec.SyncGateways)
 		scope.InitCli()
 	} else {
 		// not doing setup but need to get cb versions
