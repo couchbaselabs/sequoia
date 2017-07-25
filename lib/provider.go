@@ -211,13 +211,40 @@ func (p *FileProvider) ProvideCouchbaseServers(filename *string, servers []Serve
 	}
 }
 
-// ProvideSyncGateways should work with FileProvider (TODO)
 func (p *FileProvider) ProvideSyncGateways(syncGateways []SyncGatewaySpec) {
-	// If user specifies FileProvider and includes a Sync Gateway Spec, panic
-	// until this is supported
-	if len(syncGateways) > 0 {
-		panic("Unsupported provider (FileProvider) for Sync Gateway")
+	// If user specifies FileProvider and includes a Sync Gateway Spec
+	// lookup yml keys prefixed with 'syncgateway'
+	var hostNames string
+	hostFile := fmt.Sprintf("providers/file/%s", p.HostFile)
+	ReadYamlFile(hostFile, &hostNames)
+	hosts := strings.Split(hostNames, " ")
+	gatewayHosts := []string{}
+	for _, host := range hosts {
+		parts := strings.Split(host, ",")
+		prefix := parts[0]
+		if prefix == "syncgateway" {
+			if len(parts) > 1 {
+				ip := parts[1]
+				gatewayHosts = append(gatewayHosts, ip)
+			}
+		}
 	}
+
+	// provide an ip for each gateway
+	for _, syncGateway := range syncGateways {
+
+		syncGatewayNameList := ExpandServerName(syncGateway.Name, syncGateway.Count, syncGateway.CountOffset+1)
+		for _, syncGatewayName := range syncGatewayNameList {
+
+			var i int
+			if i < len(gatewayHosts) {
+				p.ServerNameIp[syncGatewayName] = gatewayHosts[i]
+			}
+			i++
+		}
+
+	}
+
 }
 
 // ProvideSyncGateways should work with FileProvider (TODO)
