@@ -633,16 +633,19 @@ func (p *DockerProvider) ProvideLoadBalancer(loadBalancer LoadBalancerSpec) {
 
 		// Build string of Sync Gateway endpoints
 		var syncGatewayEndpoints string
+		var syncGatewayAdminEndpoints string
 		for _, syncGateway := range p.SyncGateways {
 			for _, syncGatewayName := range syncGateway.Names {
 				colorsay(fmt.Sprintf("Adding %s:4984 to load balancer", syncGatewayName))
 				syncGatewayEndpoints += fmt.Sprintf("server %s:4984;\n", syncGatewayName)
+				syncGatewayAdminEndpoints += fmt.Sprintf("server %s:4985;\n", syncGatewayName)
 			}
 		}
 
 		// Render the Sync Gateway enpoints
 		nginxConf := string(bytes)
-		nginxConf = strings.Replace(nginxConf, "UPSTREAM_SYNCGATEWAYS", syncGatewayEndpoints, -1)
+		nginxConf = strings.Replace(nginxConf, "PUBLIC_UPSTREAM_SYNCGATEWAYS", syncGatewayEndpoints, -1)
+		nginxConf = strings.Replace(nginxConf, "ADMIN_UPSTREAM_SYNCGATEWAYS", syncGatewayAdminEndpoints, -1)
 
 		// Write the rendered file
 		err = ioutil.WriteFile("containers/syncgateway/nginx.conf.j2", []byte(nginxConf), 0644)

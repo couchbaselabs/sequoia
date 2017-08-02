@@ -80,6 +80,7 @@ func GenerateMobileHostDefinition(s *Scope) {
 	environment := map[string]bool{
 		"xattrs_enabled":  false,
 		"cbs_ssl_enabled": false,
+		"sg_lb_enabled":   false,
 	}
 
 	// TODO: SgAccels, LoadBalancers, LoadGenerators

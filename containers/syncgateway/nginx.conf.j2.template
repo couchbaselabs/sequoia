@@ -26,10 +26,18 @@ events {
 #           server 192.168.33.12:4984;
 #       }
 #
+#       upstream sync_gateway_admin {
+#           server 192.168.33.11:4985;
+#           server 192.168.33.12:4985;
+#       }
 
 http {
     upstream sync_gateway {
-       UPSTREAM_SYNCGATEWAYS
+       PUBLIC_UPSTREAM_SYNCGATEWAYS
+    }
+
+    upstream sync_gateway_admin {
+       ADMIN_UPSTREAM_SYNCGATEWAYS
     }
 
     server {
@@ -38,6 +46,21 @@ http {
         client_max_body_size 20m;
         location / {
             proxy_pass              http://sync_gateway;
+            proxy_pass_header       Accept;
+            proxy_pass_header       Server;
+            proxy_http_version      1.1;
+            keepalive_requests      1000;
+            keepalive_timeout       360s;
+            proxy_read_timeout      360s;
+        }
+    }
+
+    server {
+        listen 4985;
+        server_name  myservice.example.org;
+        client_max_body_size 20m;
+        location / {
+            proxy_pass              http://sync_gateway_admin;
             proxy_pass_header       Accept;
             proxy_pass_header       Server;
             proxy_http_version      1.1;
