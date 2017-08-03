@@ -28,6 +28,7 @@ const ( // iota is reset to 0
 
 const UBUNTU_OS_DIR = "Ubuntu14"
 const CENTOS_OS_DIR = "CentOS7"
+const WINDOWS_OS_DIR = "Windows2012"
 const DEFAULT_DOCKER_PROVIDER_CONF = "providers/docker/options.yml"
 
 type Provider interface {
@@ -415,6 +416,9 @@ func (p *DockerProvider) ProvideCouchbaseServers(filename *string, servers []Ser
 			if p.Opts.OS == "centos7" {
 				osPath = CENTOS_OS_DIR
 			}
+			if p.Opts.OS == "windows2012" {
+            	osPath = WINDOWS_OS_DIR
+            }
 			var imgName = fmt.Sprintf("couchbase_%s.%s",
 				build,
 				strings.ToLower(osPath))
@@ -724,6 +728,9 @@ func (p *SwarmProvider) ProvideCouchbaseServer(serverName string, portOffset int
 	if p.Opts.OS == "centos7" {
 		osPath = CENTOS_OS_DIR
 	}
+	if p.Opts.OS == "windows2012" {
+        osPath = WINDOWS_OS_DIR
+    }
 	var imgName = fmt.Sprintf("couchbase_%s.%s",
 		build,
 		strings.ToLower(osPath))
