@@ -160,6 +160,37 @@ func (s *Scope) SetupServer() {
 	s.CreateViews()
 }
 
+func (s *Scope) SetupMobile() {
+	waitForResources := false
+
+	// Setup Sync Gateways
+	if len(s.Spec.SyncGateways) > 0 {
+		s.Provider.ProvideSyncGateways(s.Spec.SyncGateways)
+		waitForResources = true
+	}
+
+	// Setup Accels
+	if len(s.Spec.Accels) > 0 {
+		s.Provider.ProvideAccels(s.Spec.Accels)
+		waitForResources = true
+	}
+
+	// Wait for Sync Gateways / Accels to be available
+	if waitForResources {
+		s.WaitForMobile()
+	}
+
+	// If load balancer is defined in scope
+	// Add Sync Gateway to the load balancer
+	if s.Spec.LoadBalancer.Name != "" {
+		s.Provider.ProvideLoadBalancer(s.Spec.LoadBalancer)
+	}
+
+	if waitForResources {
+		s.WriteHostConfig()
+	}
+}
+
 // WriteHostConfig writes a json representation of the topology
 // that is used by mobile testkit to run functional tests
 // against Sync Gateway

@@ -185,20 +185,7 @@ func (t *Test) Run(scope Scope) {
 			}
 		}
 
-		// Setup Sync Gateways
-		scope.Provider.ProvideSyncGateways(scope.Spec.SyncGateways)
-
-		// Setup Accels
-		scope.Provider.ProvideAccels(scope.Spec.Accels)
-
-		// Wait for Sync Gateways / Accels to be available
-		scope.WaitForMobile()
-
-		// If load balancer is defined in scope
-		// Add Sync Gateway to the load balancer
-		scope.Provider.ProvideLoadBalancer(scope.Spec.LoadBalancer)
-
-		scope.WriteHostConfig()
+		scope.SetupMobile()
 
 	} else if (scope.Provider.GetType() != "docker") &&
 		(scope.Provider.GetType() != "swarm") {
