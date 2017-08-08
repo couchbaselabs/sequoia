@@ -1,15 +1,15 @@
 # container os, supported values = ubuntu14, centos7
-os: centos7 
+os: centos7
 
 # build version
-build: 5.0.0-3217
+build: 5.0.0-3456
 
-sync_gateway_version: 1.5.0-494
+sync_gateway_version: null
 
-accel_version: 1.5.0-494
+accel_version: null
 
 # override build... ie http://latestbuilds.hq.couchbase.com/couchbase-server-enterprise_x86_64_3.1.5-1859-rel.deb"
-build_url_override: null 
+build_url_override: null
 
 # Resource optimization
 # ------------
@@ -28,7 +28,7 @@ cpuquota:  100000
  # ie 4GB = 4000000000
 memory:  0
 
-# Total memory limit (memory + swap); set -1 to enable unlimited swap. 
+# Total memory limit (memory + swap); set -1 to enable unlimited swap.
 # You must use this with memory and make the swap value larger than memory
 memoryswap: 0
 
