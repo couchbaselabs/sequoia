@@ -285,11 +285,32 @@ func ApplyFlagOverrides(overrides string, opts interface{}) {
 			vals := subparts[1]
 
 			switch key {
-
+			case "docker":
+				// override opts from DockerProvider
+				dockerOpts, ok := opts.(*DockerProviderOpts)
+				if !ok {
+					continue
+				}
+				attrs := strings.Split(vals, "=")
+				_k := attrs[0]
+				_v := attrs[1]
+				switch _k {
+				case "build":
+					dockerOpts.Build = _v
+				case "os":
+					dockerOpts.OS = _v
+				case "memory":
+					if mem, err := strconv.ParseInt(_v, 10, 64); err == nil {
+						fmt.Println(dockerOpts.Memory, mem)
+						dockerOpts.Memory = mem
+					}
+				case "url":
+					dockerOpts.BuildUrlOverride = _v
+				}
 			case "servers":
 				scopeSpec, ok := opts.(*ScopeSpec)
 				if !ok {
-					return
+					continue
 				}
 				vals := strings.Split(vals, ".")
 				for i, server := range scopeSpec.Servers {

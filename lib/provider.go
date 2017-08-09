@@ -376,6 +376,7 @@ func (p *DockerProvider) ProvideCouchbaseServers(filename *string, servers []Ser
 
 	ReadYamlFile(*filename, &providerOpts)
 	p.Opts = &providerOpts
+	ApplyFlagOverrides(*p.Flags.Override, p.Opts)
 	var build = p.Opts.Build
 
 	// start based on number of containers
@@ -425,7 +426,7 @@ func (p *DockerProvider) ProvideCouchbaseServers(filename *string, servers []Ser
 				strings.ToLower(osPath))
 			exists := p.Cm.CheckImageExists(imgName)
 
-			if exists == false {
+			if exists == false || (p.Opts.BuildUrlOverride != "") {
 
 				var buildArgs = BuildArgsForVersion(p.Opts)
 				var contextDir = fmt.Sprintf("containers/couchbase/%s/", osPath)
