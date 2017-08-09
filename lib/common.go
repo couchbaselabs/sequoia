@@ -301,7 +301,6 @@ func ApplyFlagOverrides(overrides string, opts interface{}) {
 					dockerOpts.OS = _v
 				case "memory":
 					if mem, err := strconv.ParseInt(_v, 10, 64); err == nil {
-						fmt.Println(dockerOpts.Memory, mem)
 						dockerOpts.Memory = mem
 					}
 				case "url":
@@ -314,7 +313,13 @@ func ApplyFlagOverrides(overrides string, opts interface{}) {
 				}
 				vals := strings.Split(vals, ".")
 				for i, server := range scopeSpec.Servers {
-					if server.Name == vals[0] {
+					selectedCluster := vals[0]
+					if vals[0] == "*" {
+						// matching all clusters
+						selectedCluster = server.Name
+					}
+
+					if server.Name == selectedCluster {
 						attrs := strings.Split(vals[1], "=")
 						_k := ToCamelCase(attrs[0])
 						_v := attrs[1]
