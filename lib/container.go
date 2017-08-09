@@ -517,6 +517,7 @@ func (cm *ContainerManager) pullImage(client *docker.Client, repo string, ch cha
 
 	imgOpts := docker.PullImageOptions{
 		Repository: repo,
+		Tag:        "latest",
 	}
 	err := client.PullImage(imgOpts, docker.AuthConfiguration{})
 	ch <- err
