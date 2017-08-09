@@ -12,7 +12,9 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"reflect"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -264,4 +266,55 @@ func BuildVolumes(volumes string) []string {
 	}
 
 	return volumeParts
+}
+
+func ApplyFlagOverrides(overrides string, opts interface{}) {
+	// Apply overrides from flags to various types
+
+	parts := strings.Split(overrides, ",")
+	for _, component := range parts {
+		subparts := strings.Split(component, ":")
+		if len(subparts) > 2 {
+			// rejoin if already had colon
+			subparts = []string{subparts[0],
+				strings.Join(subparts[1:], ":"),
+			}
+		}
+		if len(subparts) == 2 {
+			key := subparts[0]
+			vals := subparts[1]
+
+			switch key {
+
+			case "servers":
+				scopeSpec, ok := opts.(*ScopeSpec)
+				if !ok {
+					return
+				}
+				vals := strings.Split(vals, ".")
+				for i, server := range scopeSpec.Servers {
+					if server.Name == vals[0] {
+						attrs := strings.Split(vals[1], "=")
+						_k := ToCamelCase(attrs[0])
+						_v := attrs[1]
+
+						// reflect to spec field
+						rspec := reflect.ValueOf(&server)
+						el := rspec.Elem()
+						val := el.FieldByName(_k)
+						switch val.Kind() {
+						case reflect.Uint8:
+							// update fuild as uint
+							u, _ := strconv.ParseUint(_v, 10, 8)
+							val.SetUint(u)
+						case reflect.String:
+							// update fuild as string
+							val.SetString(_v)
+						}
+						scopeSpec.Servers[i] = server
+					}
+				}
+			}
+		}
+	}
 }

@@ -14,7 +14,6 @@ package sequoia
 
 import (
 	"fmt"
-	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -33,50 +32,6 @@ type Scope struct {
 	Rest     RestClient
 }
 
-func ApplyOverrides(overrides string, spec *ScopeSpec) {
-	parts := strings.Split(overrides, ",")
-	for _, component := range parts {
-		subparts := strings.Split(component, ":")
-		if len(subparts) > 2 {
-			// rejoin if already had colon
-			subparts = []string{subparts[0],
-				strings.Join(subparts[1:], ":"),
-			}
-		}
-		if len(subparts) == 2 {
-			key := subparts[0]
-			vals := strings.Split(subparts[1], ".")
-
-			switch key {
-			case "servers": // server override
-				for i, server := range spec.Servers {
-					if server.Name == vals[0] {
-						attrs := strings.Split(vals[1], "=")
-						_k := ToCamelCase(attrs[0])
-						_v := attrs[1]
-
-						// reflect to spec field
-						rspec := reflect.ValueOf(&server)
-						el := rspec.Elem()
-						val := el.FieldByName(_k)
-						switch val.Kind() {
-						case reflect.Uint8:
-							// update fuild as uint
-							u, _ := strconv.ParseUint(_v, 10, 8)
-							val.SetUint(u)
-						case reflect.String:
-							// update fuild as string
-							val.SetString(_v)
-						}
-						spec.Servers[i] = server
-					}
-				}
-			} // TODO: add in bucket, ddoc overrides
-		}
-	}
-
-}
-
 func NewScope(flags TestFlags, cm *ContainerManager) Scope {
 
 	// init from yaml or ini
@@ -84,7 +39,7 @@ func NewScope(flags TestFlags, cm *ContainerManager) Scope {
 
 	// apply overrides
 	if params := flags.Override; params != nil {
-		ApplyOverrides(*params, &spec)
+		ApplyFlagOverrides(*params, &spec)
 		ConfigureSpec(&spec)
 	}
 
