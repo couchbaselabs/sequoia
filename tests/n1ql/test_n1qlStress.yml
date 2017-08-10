@@ -1,50 +1,34 @@
--
-  include: tests/templates/stats.yml
+- include: tests/templates/stats.yml,tests/templates/n1ql.yml
 
 ###############  num slicewriters = 1 ################
--
-  image: appropriate/curl
+- image: appropriate/curl
   command: "-v -u Administrator:password -H Content-Type:application/json -X POST
            http://{{.Nodes | .Service `index` | net 0}}:9102/settings -d '{\"indexer.numSliceWriters\" : 1}'"
 
 ###############  create indexes ################
--
-   image: sequoiatools/cbq
-   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_rating on `default`(rating)'"
--
-   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_claims on `default`(claim)'"
--
-   command: "-e=http://{{.Nodes | .Service `n1ql` | net 1 | noport}}:{{.QueryPort}} -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_result on `default`(result)'"
+- template: cbq
+  args: "'create index default_rating on `{{.Bucket}}`\\(rating)'"
+- args: "'create index default_claims on `{{.Bucket}}`\\(claim)'"
+- args: "'create index default_result on `{{.Bucket}}`\\(result)'"
 
 
 ###############  start data loading ################
--
-  image: sequoiatools/gideon
-  command: "kv --ops 10000 --sizes 64 --create 70 --get 10 --delete 20  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+- image: sequoiatools/gideon
+  command: "kv --ops 5000 --sizes 64 --create 70 --get 10 --delete 20  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
   concurrency: "{{.Scale 1}}"
--
-  image: sequoiatools/gideon
-  command: "kv --ops 20000 --sizes 64 --create 100  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+- command: "kv --ops 1000 --sizes 64 --create 100  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
   concurrency: "{{.Scale 1}}" 
 
 # ###############  query both query nodes ################
--
-  image: sequoiatools/curloop
-  command: "n1ql.sh {{.QueryNodePort}} 'select * from default where rating > 0 limit 50'"
--
-  command: "n1ql.sh {{.QueryNodePort}} 'select * from default where result is not null limit 20'"
--
-  command: "n1ql.sh {{.Nodes | .Service `n1ql` | net 1 | noport}}:{{.QueryPort}} 'select * from default where claim is not null limit 100'"
--
-  command: "n1ql.sh {{.QueryNodePort}} 'delete from default where rating < 300'"
--
-  command: "n1ql.sh {{.QueryNodePort}} 'delete from default where rating > 700'"
--
-  command: "n1ql.sh {{.Nodes | .Service `n1ql` | net 1 | noport}}:{{.QueryPort}} 'delete from default where rating > 300 and rating < 700'"
-
+- template: attack_query
+  args: "0, {{.Scale 3}}, {{.QueryNodePort}}, 'select * from default where rating > 0 limit 50'"
+- args: "0, {{.Scale 3}}, {{.QueryNodePort}}, 'select * from default where result is not null limit 20'"
+- args: "0, {{.Scale 3}}, {{.NthQueryNode 1}}, 'select * from default where claim is not null limit 100'"
+- args: "0, {{.Scale 10}}, {{.QueryNodePort}}, 'delete from default where rating < 300 limit 10'"
+- args: "0, {{.Scale 10}}, {{.QueryNodePort}}, 'delete from default where rating > 700 limit 10'"
+- args: "0, {{.Scale 10}}, {{.NthQueryNode 1}}, 'delete from default where rating > 300 and rating < 700 limit 10'"
 
 ### until 100M items ######
--
-   template: wait_for_items
-   args: "{{.Bucket}}, 100000000"
+- template: wait_for_items
+  args: "{{.Bucket}}, 100000000"
 
