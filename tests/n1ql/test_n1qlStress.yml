@@ -17,7 +17,7 @@
   command: "kv --ops 5000 --sizes 64 --create 70 --get 10 --delete 20  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
   concurrency: "{{.Scale 1}}"
 - command: "kv --ops 1000 --sizes 64 --create 100  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
-  concurrency: "{{.Scale 1}}" 
+  concurrency: "{{.Scale 1}}"
 
 # ###############  query both query nodes ################
 - template: attack_query
@@ -28,7 +28,7 @@
 - args: "0, {{.Scale 10}}, {{.QueryNodePort}}, 'delete from default where rating > 700 limit 10'"
 - args: "0, {{.Scale 10}}, {{.NthQueryNode 1}}, 'delete from default where rating > 300 and rating < 700 limit 10'"
 
-### until 100M items ######
+### until at least 5M items ######
 - template: wait_for_items
-  args: "{{.Bucket}}, 100000000"
+  args: "{{.Bucket}}, {{.Scale 5000000}}"
 
