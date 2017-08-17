@@ -10,5 +10,6 @@ RUN bower install  -F  --allow-root
 RUN npm install grunt-cli grunt-contrib-concat grunt-contrib-uglify
 RUN ./node_modules/.bin/grunt 
 WORKDIR ../
-COPY start.sh start.sh 
+COPY start.sh start.sh
+EXPOSE 8200
 ENTRYPOINT ["./start.sh"]
