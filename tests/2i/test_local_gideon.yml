@@ -37,7 +37,7 @@
   command: "kv --ops {{.Scale 2}} --create 20 --update 60 --delete 20     --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
   alias: GideonContainer1
 -
-  command: "kv --ops {{.Scale 2}} --create 20 --update 60 --delete 20 --sizes 64 96   --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
+  command: "kv --ops {{.Scale 1}} --create 20 --update 60 --delete 20 --sizes 64 96   --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
   alias: GideonContainer2
 -
   command: "kv --ops {{.Scale 2}} --create 20 --update 60 --delete 20 --sizes 64 96   --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}}"
@@ -63,8 +63,10 @@
    wait: true
 -
    command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_claim on `default`(claim)'"
+   wait: true
 -
    command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o2_claim on `other-2`(claim)'"
+   wait: true
 -
    command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o3_claim on `other-3`(claim)'"
    wait: true
@@ -79,19 +81,18 @@
 -
   command: "n1ql.sh {{.QueryNodePort}} 'select claim from default where result > 0 limit 50'"
 -
-  command: "n1ql.sh {{.QueryNodePort}} 'select SUM(result) from `other-1` where result > 100  limit 50'"
+  command: "n1ql.sh {{.QueryNodePort}} 'select SUM(result) from `other-2` where result > 100  limit 50'"
 -
   command: "n1ql.sh {{.QueryNodePort}} 'select * from `other-1` where result > 100  limit 50'"
 -
-  command: "n1ql.sh {{.QueryNodePort}} 'select SUM(result) from `other-2` where claim like c% limit 50'"
+  command: "n1ql.sh {{.QueryNodePort}} 'select SUM(result) from `other-1` where claim like \"c%\" limit 50'"
 -
-  command: "n1ql.sh {{.QueryNodePort}} 'select SUM(result) from `other-3` where rating like a% limit 20'"
+  command: "n1ql.sh {{.QueryNodePort}} 'select SUM(result) from `other-3` where rating like \"a%\" limit 20'"
 -
   command: "n1ql.sh {{.QueryNodePort}} 'delete from default where result < 300'"
 -
   command: "n1ql.sh {{.QueryNodePort}} 'delete from default where result > 700'"
--
-  command: "n1ql.sh {{.QueryNodePort}} 'delete from default where result > 300 and result < 700'"
+
 
 ###############  drop indexes during rebalance ################
 -
@@ -156,23 +157,22 @@
 -
   template: attack_query
   args: 0, 10, {{$.QueryNodePort}},
-        delete from default where rating > 0 limit 100
-  duration: 300
--
-  # load data
-  template: attack_query
-  args: 0, 10, {{$.QueryNodePort}},
-         delete from \`other-1\` where claim like \"\%1\%\" limit 100
-  duration: 300
--
-  template: attack_query
-  args: 0, 10, {{$.QueryNodePort}},
-        delete from \`other-2\` where result = \"SUCCESS\" limit 100
+        delete from \`other-2\` where result = \\\"SUCCESS\\\" limit 100
   duration: 300
 -
   template: attack_query
   args: 0, 10, {{$.QueryNodePort}},
         delete from \`other-3\` where rating > 0 limit 100
+  duration: 90
+-
+  template: attack_query
+  args: 0, 10, {{$.QueryNodePort}},
+         delete from \`other-1\` where claim like \\\"%1%\\\" limit 100
+  duration: 300
+-
+  template: attack_query
+  args: 0, 10, {{$.QueryNodePort}},
+        delete from default where rating > 0 limit 100
   duration: 300
   wait: true
 
@@ -180,15 +180,15 @@
 -
   image: sequoiatools/gideon
   command: "kv --ops {{.Scale 10}} --create 100     --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
-  duration: 60
+  duration: 30
 -
   command: "kv --ops {{.Scale 10}} --create 100  --sizes 64 96   --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
-  duration: 60
+  duration: 15
 -
   command: "kv --ops {{.Scale 10}} --create 100  --sizes 64 96   --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}}"
-  duration: 60
+  duration: 30
 -
   command: "kv --ops {{.Scale 1}} --create 100  --sizes 512  --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}}"
-  duration: 60
+  duration: 30
   wait: true
 
