@@ -79,7 +79,7 @@ func (t *ContainerTask) UpdateContainerOptions(options *docker.CreateContainerOp
 
 }
 
-func (cm *ContainerManager) NewServiceOptions(image string, cmd []string) docker.CreateServiceOptions {
+func (cm *ContainerManager) NewServiceOptions(image string, cmd []string, network string) docker.CreateServiceOptions {
 
 	// makes generic service options
 	serviceName := RandStr(8)
@@ -90,14 +90,19 @@ func (cm *ContainerManager) NewServiceOptions(image string, cmd []string) docker
 
 	annotations := swarm.Annotations{Name: serviceName}
 	policy := swarm.RestartPolicy{Condition: swarm.RestartPolicyConditionNone}
-	placement := swarm.Placement{Constraints: []string{"node.labels.zone == client"}}
-	taskSpec := swarm.TaskSpec{ContainerSpec: &containerSpec,
-		RestartPolicy: &policy,
-		Placement:     &placement}
+	taskSpec := swarm.TaskSpec{
+		ContainerSpec: &containerSpec,
+		RestartPolicy: &policy}
 
+	if network != "" {
+		networkConfig := swarm.NetworkAttachmentConfig{Target: network}
+		networks := []swarm.NetworkAttachmentConfig{networkConfig}
+		taskSpec.Networks = networks
+	}
+
+	//Placement:     &placement,
 	// service spec requires port config to be placed on swarm nework
-	portConfig := []swarm.PortConfig{swarm.PortConfig{}}
-	endpointSpec := swarm.EndpointSpec{Ports: portConfig}
+	endpointSpec := swarm.EndpointSpec{}
 
 	// create service spec
 	spec := swarm.ServiceSpec{
@@ -220,47 +225,53 @@ func (cm *ContainerManager) CreateSwarmClients(clientUrl string) []*docker.Clien
 	// get all swarm nodes
 	opts := docker.ListNodesOptions{}
 	nodes, err := cm.Client.ListNodes(opts)
-
 	logerr(err)
+
 	for _, n := range nodes {
 		status := n.ManagerStatus
+		var addr string
 		if status != nil {
 			if status.Leader == true {
 				continue // leader is already added
 			}
 			if status.Reachability == swarm.ReachabilityReachable {
-				addr := strings.Split(status.Addr, ":")[0]
-				hostname := n.Description.Hostname
-				endpointUrl, _ := url.Parse(cm.Endpoint)
-				if endpointUrl.Scheme == "" {
-					// parse again with scheme
-					endpointUrl, _ = url.Parse("http://" + cm.Endpoint)
-				}
-				clientParts := strings.Split(endpointUrl.Host, ":")
-				port := ""
-				if len(clientParts) == 2 {
-					port = fmt.Sprintf(":%s", clientParts[1])
-				}
-
-				// override cert paths if https
-				scheme := endpointUrl.Scheme
-				if scheme == "https" {
-					// update cert path to reflect hostname
-					path := os.Getenv("DOCKER_CERT_PATH")
-					pathBase := filepath.Dir(path)
-					newPath := filepath.Join(pathBase, hostname)
-					os.Setenv("DOCKER_CERT_PATH", newPath)
-				}
-
-				// create new client
-				swarmClientUrl := fmt.Sprintf("%s://%s%s", scheme, addr, port)
-				newClient := NewDockerClient(swarmClientUrl)
-				clients = append(clients, newClient)
+				addr = strings.Split(status.Addr, ":")[0]
 			}
+		} else {
+			// worker node
+			addr = strings.Split(n.Status.Addr, ":")[0]
 		}
+
+		hostname := n.Description.Hostname
+		endpointUrl, _ := url.Parse(cm.Endpoint)
+		if endpointUrl == nil || endpointUrl.Scheme == "" {
+			// parse again with scheme
+			endpointUrl, _ = url.Parse("http://" + cm.Endpoint)
+		}
+		clientParts := strings.Split(endpointUrl.Host, ":")
+		port := ""
+		if len(clientParts) == 2 {
+			port = fmt.Sprintf(":%s", clientParts[1])
+		}
+
+		// override cert paths if https
+		scheme := endpointUrl.Scheme
+		if scheme == "https" {
+			// update cert path to reflect hostname
+			path := os.Getenv("DOCKER_CERT_PATH")
+			pathBase := filepath.Dir(path)
+			newPath := filepath.Join(pathBase, hostname)
+			os.Setenv("DOCKER_CERT_PATH", newPath)
+		}
+
+		// create new client
+		swarmClientUrl := fmt.Sprintf("%s://%s%s", scheme, addr, port)
+		newClient := NewDockerClient(swarmClientUrl)
+		clients = append(clients, newClient)
 	}
 
 	return clients
+
 }
 
 func (cm *ContainerManager) AllClients() []*docker.Client {
@@ -661,9 +672,11 @@ func (cm *ContainerManager) WaitContainer(container *docker.Container, c chan Ta
 
 	if rc != 0 && rc != 137 {
 		// log on error
-		emsg := fmt.Sprintf("%s%s\n%s\n",
-			"\n\nError occurred on container, try:\n",
-			"docker logs "+container.ID[:6],
+		emsg := fmt.Sprintf("%s%s:%s\n%s\n%s\n",
+			"\n\nError occurred on container - ",
+			container.Config.Image,
+			container.Config.Cmd,
+			"\ndocker logs "+container.ID[:6],
 			"docker start "+container.ID[:6])
 		ecolorsay(emsg)
 		cm.LogContainer(container.ID, os.Stdout, false)
@@ -802,7 +815,7 @@ func (cm *ContainerManager) RunContainerTask(task *ContainerTask) (chan TaskResu
 	var ch chan TaskResult
 	if cm.ProviderType == "swarm" {
 		// run container within service
-		options := cm.NewServiceOptions(task.Image, task.Command)
+		options := cm.NewServiceOptions(task.Image, task.Command, cm.Network)
 		task.UpdateServiceOptions(&options)
 		ch, container, _ = cm.RunContainerAsService(options, 30)
 	} else {
@@ -912,7 +925,7 @@ func (cm *ContainerManager) RunRestContainer(cmd []string) (string, string) {
 	if cm.ProviderType == "swarm" {
 
 		// as swarm
-		opts := cm.NewServiceOptions(image, cmd)
+		opts := cm.NewServiceOptions(image, cmd, cm.Network)
 		ch, _, svcId := cm.RunContainerAsService(opts, 30)
 		rc := <-ch
 		logerr(rc.Error)

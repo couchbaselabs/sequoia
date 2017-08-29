@@ -753,10 +753,23 @@ func (p *SwarmProvider) ProvideCouchbaseServer(serverName string, portOffset int
 
 	serviceName := strings.Replace(serverName, ".", "-", -1)
 	containerSpec := swarm.ContainerSpec{Image: imgName}
-	placement := swarm.Placement{Constraints: []string{"node.labels.zone == " + zone}}
-	taskSpec := swarm.TaskSpec{ContainerSpec: &containerSpec, Placement: &placement}
+	taskSpec := swarm.TaskSpec{ContainerSpec: &containerSpec}
+	endpointSpec := swarm.EndpointSpec{}
+
+	// put on ingress network
+	networks := []swarm.NetworkAttachmentConfig{}
+	if p.ExposePorts() {
+		networks = append(networks, swarm.NetworkAttachmentConfig{Target: "ingress"})
+		endpointSpec = swarm.EndpointSpec{Ports: portConfig}
+	}
+
+	if p.Flags.Network != nil {
+		network := swarm.NetworkAttachmentConfig{Target: *p.Flags.Network}
+		networks = append(networks, network)
+		taskSpec.Networks = networks
+	}
 	annotations := swarm.Annotations{Name: serviceName}
-	endpointSpec := swarm.EndpointSpec{Ports: portConfig}
+
 	spec := swarm.ServiceSpec{
 		Annotations:  annotations,
 		TaskTemplate: taskSpec,
@@ -853,7 +866,11 @@ func (p *SwarmProvider) GetHostAddress(name string) string {
 
 	container, err := client.InspectContainer(id)
 	chkerr(err)
-	ipAddress = container.NetworkSettings.Networks["ingress"].IPAddress
+	network := "ingress"
+	if p.Flags.Network != nil {
+		network = *p.Flags.Network
+	}
+	ipAddress = container.NetworkSettings.Networks[network].IPAddress
 
 	return ipAddress
 }
