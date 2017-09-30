@@ -195,6 +195,13 @@ func (s *Scope) WaitForServers() {
 	waitForServersOp := func(name string, server *ServerSpec, done chan bool) {
 
 		ip := s.Provider.GetHostAddress(name)
+		parts := strings.Split(ip, ",")
+                prefix := parts[0]
+                if prefix == "syncgateway" || prefix == "elasticsearch" {
+                        if len(parts) > 1 {
+                                ip := parts[1]
+			}
+		}
 		ipPort := strings.Split(ip, ":")
 		if len(ipPort) == 1 {
 			// use default port
