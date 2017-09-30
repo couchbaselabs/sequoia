@@ -199,7 +199,7 @@ func (s *Scope) WaitForServers() {
                 prefix := parts[0]
                 if prefix == "syncgateway" || prefix == "elasticsearch" {
                         if len(parts) > 1 {
-                                ip := parts[1]
+                                ip = parts[1]
 			}
 		}
 		ipPort := strings.Split(ip, ":")
