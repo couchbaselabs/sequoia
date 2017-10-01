@@ -316,6 +316,11 @@ func (s *Scope) InitNodes() {
 
 	initNodesOp := func(name string, server *ServerSpec, done chan bool) {
 		ip := s.Provider.GetHostAddress(name)
+		parts := strings.Split(ip, ",")
+		prefix := parts[0]
+                if prefix == "syncgateway" || prefix == "elasticsearch" {
+			return
+		}
 		command := []string{"node-init",
 			"-c", ip,
 			"-u", server.RestUsername,
@@ -506,6 +511,12 @@ func (s *Scope) AddNodes() {
 		orchestrator := server.Names[0]
 		orchestratorIp := s.Provider.GetHostAddress(orchestrator)
 		ip := s.Provider.GetHostAddress(name)
+
+		parts := strings.Split(ip, ",")
+                prefix := parts[0]
+                if prefix == "syncgateway" || prefix == "elasticsearch" {
+                        return
+                }
 
 		if name == orchestrator {
 			return // not adding self
@@ -871,6 +882,12 @@ func (s *Scope) RemoveNodes() {
 		orchestrator := server.Names[0]
 		orchestratorIp := s.Provider.GetHostAddress(orchestrator)
 		ip := s.Provider.GetHostAddress(name)
+		
+		parts := strings.Split(ip, ",")
+                prefix := parts[0]
+                if prefix == "syncgateway" || prefix == "elasticsearch" {
+                        return
+                }
 
 		if name == orchestrator {
 			return // not removing self
