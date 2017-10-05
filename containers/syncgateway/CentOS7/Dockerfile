@@ -14,7 +14,7 @@ RUN yum -y update && \
     yum clean all
 
 # Install Sync Gateway
-RUN wget http://latestbuilds.hq.couchbase.com/couchbase-sync-gateway/$VERSION/$VERSION-$BUILD_NO/$PKG && \
+RUN wget http://latestbuilds.service.couchbase.com/builds/latestbuilds/sync_gateway/$VERSION/$BUILD_NO/$PKG && \
     rpm -i $PKG && \
     rm $PKG
 
