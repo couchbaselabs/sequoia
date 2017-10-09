@@ -1,0 +1,41 @@
+-
+  # include rebalance and group templates
+  include: tests/templates/kv.yml, tests/templates/backuprestore.yml, tests/templates/vegeta.yml, tests/templates/rebalance.yml
+-
+  template: rebalance_out
+  args: "{{.Nodes | net 2}}"
+  wait: true
+############### data loading ################
+-
+  image: sequoiatools/gideon
+  command: "kv --ops {{.Scale 2000}} --create 100 --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+  alias: GideonContainer1
+  duration: 14400
+-
+  command: "kv --ops {{.Scale 2000}} --create 100  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
+  alias: GideonContainer2
+  duration: 14400
+  wait: true
+-
+  template: configure_backup_repo
+  args: "{{.Orchestrator}}, /backup"
+  wait: true
+-
+  template: backup_cluster
+  args: "{{.Orchestrator}}, {{.Orchestrator}}, /backup"
+  wait: true
+
+-
+  template: restore_backup
+  args: "{{.Orchestrator}}, {{.Nodes | .Cluster 1 | net 0}}, /backup"
+  wait: true
+
+-
+  image: mihirkamdar/validate
+  command: "{{.Orchestrator}}:{{.RestPort}} {{.RestUsername}} {{.RestPassword}} {{.Nodes | .Cluster 1 | net 0}}:{{.RestPort}} {{.RestUsername}} {{.RestPassword}}"
+  wait: true
+
+#-
+#  template: clean_backup_repo
+#  args: "{{.Orchestrator}}, /backup"
+#  wait: true

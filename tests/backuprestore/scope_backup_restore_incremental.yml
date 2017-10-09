@@ -1,0 +1,46 @@
+---
+users:
+  -
+      name: default
+      password: password
+      roles: admin
+      auth_domain: local
+  -
+      name: other
+      password: password
+      roles: admin
+      auth_domain: local
+
+buckets:
+  -
+      name: default
+      ram: 50%
+      eviction: fullEviction
+      replica: 0
+  -
+      name: other
+      count: 1
+      ram: 50%
+      eviction: fullEviction
+      replica: 0
+
+
+servers: # each server tag represents a cluster
+  -
+      name: local
+      count: 5
+      ram: 95%
+      rest_username: Administrator
+      rest_password: password
+      init_nodes: 5
+      buckets: default, other
+      users: default,other
+  -
+      name: remote
+      count: 1
+      ram: 95%
+      rest_username: Administrator
+      rest_password: password
+      init_nodes: 1
+      buckets: default, other
+      users: default,other

@@ -1,0 +1,466 @@
+-
+  include: tests/templates/kv.yml, tests/templates/backuprestore.yml, tests/templates/rebalance.yml
+
+############### data loading ################
+-
+  image: sequoiatools/gideon
+  command: "kv --ops {{.Scale 1500}} --create 55 --update 25 --delete 20 --expire 15 --ttl 600 --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+  #command: "kv --ops {{.Scale 2000}} --create 65 --update 25 --delete 10 --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+  concurrency: 2
+  alias: GideonContainer1
+-
+  command: "kv --ops {{.Scale 750}} --create 55 --update 25 --delete 20 --expire 15 --ttl 600 --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
+  #command: "kv --ops {{.Scale 2000}} --create 65 --update 25 --delete 10 --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
+  alias: GideonContainer2
+-
+  section_start: incremental_backup_iteration
+# Initial Loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+# Take first backup
+-
+  template: configure_backup_repo
+  args: "{{.Orchestrator}}, /backupdata/"
+  wait: true
+-
+  template: backup_cluster
+  args: "{{.Orchestrator}}, {{.Orchestrator}}, /backupdata/"
+  wait: true
+
+# Rebalance out a node
+-
+  template: rebalance_out
+  args: "{{.Nodes | net 2}}"
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+# Take 2nd backup
+-
+  template: backup_cluster
+  args: "{{.Orchestrator}}, {{.Orchestrator}}, /backupdata/"
+  wait: true
+
+# Rebalance-in a node
+-
+  template: rebalance_in
+  args: "{{.Nodes | net 2}}"
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+# Take 3rd backup
+-
+  template: backup_cluster
+  args: "{{.Orchestrator}}, {{.Orchestrator}}, /backupdata/"
+  wait: true
+
+# Failover and add back a node
+-
+  template: failover_node_forced
+  args: "{{.Nodes | net 2}}"
+  wait: true
+-
+  template: recover_node
+  args: "{{.Nodes | net 2}}, delta"
+  wait: true
+-
+  template: rebalance
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+# Take 4th backup
+-
+  template: backup_cluster
+  args: "{{.Orchestrator}}, {{.Orchestrator}}, /backupdata/"
+  wait: true
+
+# Failover and rebalance out a node
+-
+  template: failover_node_forced
+  args: "{{.Nodes | net 2}}"
+  wait: true
+-
+  template: rebalance
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+# Take 5th backup
+-
+  template: backup_cluster
+  args: "{{.Orchestrator}}, {{.Orchestrator}}, /backupdata/"
+  wait: true
+
+# Flush Bucket
+-
+  image: sequoiatools/couchbase-cli
+  command:  "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 1}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+# Take 6th backup
+-
+  template: backup_cluster
+  args: "{{.Orchestrator}}, {{.Orchestrator}}, /backupdata/"
+  wait: true
+
+# Merge all backups
+-
+  image: mihirkamdar/cbbackupmgr
+  command: "cbbackupmerge.py {{.Orchestrator}} {{.SSHUsername}} {{.SSHPassword}} /backupdata/"
+  wait: true
+
+# Rebalance-in a node
+-
+  template: rebalance_in
+  args: "{{.Nodes | net 2}}"
+  wait: true
+
+-
+  section_end: incremental_backup_iteration
+
+#################Iteration 2#########################
+
+
+# Data Loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+# Take 7th backup
+-
+  template: backup_cluster
+  args: "{{.Orchestrator}}, {{.Orchestrator}}, /backupdata/"
+  wait: true
+
+# Rebalance out a node
+-
+  template: rebalance_out
+  args: "{{.Nodes | net 2}}"
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+# Take 8th backup
+-
+  template: backup_cluster
+  args: "{{.Orchestrator}}, {{.Orchestrator}}, /backupdata/"
+  wait: true
+
+# Rebalance-in a node
+-
+  template: rebalance_in
+  args: "{{.Nodes | net 2}}"
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+# Take 9th backup
+-
+  template: backup_cluster
+  args: "{{.Orchestrator}}, {{.Orchestrator}}, /backupdata/"
+  wait: true
+
+# Failover and add back a node
+-
+  template: failover_node_forced
+  args: "{{.Nodes | net 2}}"
+  wait: true
+-
+  template: recover_node
+  args: "{{.Nodes | net 2}}, delta"
+  wait: true
+-
+  template: rebalance
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+# Take 10th backup
+-
+  template: backup_cluster
+  args: "{{.Orchestrator}}, {{.Orchestrator}}, /backupdata/"
+  wait: true
+
+# Failover and rebalance out a node
+-
+  template: failover_node_forced
+  args: "{{.Nodes | net 2}}"
+  wait: true
+-
+  template: rebalance
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+# Take 11th backup
+-
+  template: backup_cluster
+  args: "{{.Orchestrator}}, {{.Orchestrator}}, /backupdata/"
+  wait: true
+
+# Flush Bucket
+-
+  image: sequoiatools/couchbase-cli
+  command:  "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 1}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+# Take 12th backup
+-
+  template: backup_cluster
+  args: "{{.Orchestrator}}, {{.Orchestrator}}, /backupdata/"
+  wait: true
+
+# Merge all backups
+-
+  image: mihirkamdar/cbbackupmgr
+  command: "cbbackupmerge.py {{.Orchestrator}} {{.SSHUsername}} {{.SSHPassword}} /backupdata/"
+  wait: true
+
+#################Iteration 3#########################
+# Rebalance-in a node
+-
+  template: rebalance_in
+  args: "{{.Nodes | net 2}}"
+  wait: true
+
+# Data Loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+# Take 13th backup
+-
+  template: backup_cluster
+  args: "{{.Orchestrator}}, {{.Orchestrator}}, /backupdata/"
+  wait: true
+
+# Rebalance out a node
+-
+  template: rebalance_out
+  args: "{{.Nodes | net 2}}"
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+# Take 14th backup
+-
+  template: backup_cluster
+  args: "{{.Orchestrator}}, {{.Orchestrator}}, /backupdata/"
+  wait: true
+
+# Rebalance-in a node
+-
+  template: rebalance_in
+  args: "{{.Nodes | net 2}}"
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+# Take 15th backup
+-
+  template: backup_cluster
+  args: "{{.Orchestrator}}, {{.Orchestrator}}, /backupdata/"
+  wait: true
+
+# Failover and add back a node
+-
+  template: failover_node_forced
+  args: "{{.Nodes | net 2}}"
+  wait: true
+-
+  template: recover_node
+  args: "{{.Nodes | net 2}}, delta"
+  wait: true
+-
+  template: rebalance
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+# Take 16th backup
+-
+  template: backup_cluster
+  args: "{{.Orchestrator}}, {{.Orchestrator}}, /backupdata/"
+  wait: true
+
+# Failover and rebalance out a node
+-
+  template: failover_node_forced
+  args: "{{.Nodes | net 2}}"
+  wait: true
+-
+  template: rebalance
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+# Take 17th backup
+-
+  template: backup_cluster
+  args: "{{.Orchestrator}}, {{.Orchestrator}}, /backupdata/"
+  wait: true
+
+# Flush Bucket
+-
+  image: sequoiatools/couchbase-cli
+  command:  "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 1}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+# Stop data loading
+-
+  client:
+    op: rm
+    container: "GideonContainer1"
+    wait: true
+-
+  client:
+    op: rm
+    container: "GideonContainer2"
+    wait: true
+
+# Sleep after stopping data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# Compact buckets
+-
+  image: sequoiatools/couchbase-cli
+  command:  "bucket-compact -c  {{.Orchestrator}}:{{.RestPort}} --bucket={{.NthBucket 1}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
+  wait: true
+-
+  image: sequoiatools/couchbase-cli
+  command:  "bucket-compact -c  {{.Orchestrator}}:{{.RestPort}} --bucket={{.Bucket}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
+  wait: true
+
+# Sleep after compacting buckets
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+# Take 18th backup
+-
+  template: backup_cluster
+  args: "{{.Orchestrator}}, {{.Orchestrator}}, /backupdata/"
+  wait: true
+
+# Merge all backups
+-
+  image: mihirkamdar/cbbackupmgr
+  command: "cbbackupmerge.py {{.Orchestrator}} {{.SSHUsername}} {{.SSHPassword}} /backupdata/"
+  wait: true
+
+
+#################Finally#########################
+
+# Restore backup
+-
+  template: restore_backup
+  args: "{{.Orchestrator}}, {{.Nodes | .Cluster 1 | net 0}}, /backupdata/"
+  wait: true
+
+# Sleep after restore to allow expired items to be deleted
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+# Validate no. of items on src and dest clusters
+-
+  image: mihirkamdar/validate
+  command: "{{.Orchestrator}}:{{.RestPort}} {{.RestUsername}} {{.RestPassword}} {{.Nodes | .Cluster 1 | net 0}}:{{.RestPort}} {{.RestUsername}} {{.RestPassword}}"
+  wait: true
+
