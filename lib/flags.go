@@ -71,7 +71,9 @@ func NewTestFlags() TestFlags {
 }
 
 func (f *TestFlags) SetFlagVals() {
-	switch f.Mode {
+	mode := strings.Split(f.Mode, ":")[0]
+
+	switch mode {
 
 	case "image":
 		// image flagset
@@ -83,7 +85,7 @@ func (f *TestFlags) SetFlagVals() {
 		f.AddCleanFlags(f.CleanFlagSet)
 	case "testrunner", "sdk":
 		// external framework flagset
-		f.FrameworkFlagSet = flag.NewFlagSet(f.Mode, flag.ExitOnError)
+		f.FrameworkFlagSet = flag.NewFlagSet(mode, flag.ExitOnError)
 		f.AddDefaultFlags(f.FrameworkFlagSet)
 		f.AddTestrunnerFlags(f.FrameworkFlagSet)
 
@@ -105,7 +107,9 @@ func (f *TestFlags) SetFlagVals() {
 }
 
 func (f *TestFlags) Parse() {
-	switch f.Mode {
+	mode := strings.Split(f.Mode, ":")[0]
+
+	switch mode {
 	case "image":
 		f.ImageFlagSet.Parse(f.Args[1:])
 	case "testrunner":

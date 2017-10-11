@@ -127,7 +127,8 @@ func NewTest(flags TestFlags, cm *ContainerManager) Test {
 	// define test actions from config and flags
 	var templates = make(map[string][]ActionSpec)
 	var actions []ActionSpec
-	switch flags.Mode {
+	mode := strings.Split(flags.Mode, ":")[0]
+	switch mode {
 	case "image":
 		actions = ActionsFromArgs(*flags.ImageName, *flags.ImageCommand, *flags.ImageWait)
 	case "testrunner", "sdk":
