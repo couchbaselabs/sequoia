@@ -1,0 +1,39 @@
+{  
+   "appname":"bucket_op_function",
+   "id":0,
+   "depcfg":{  
+      "buckets":[  
+         {  
+            "alias":"dst",
+            "bucket_name":"default-dst"
+         }
+      ],
+      "metadata_bucket":"metadata",
+      "source_bucket":"default"
+   },
+   "appcode":"function OnUpdate(doc, meta) {\n    //log('creating document on dst : ', meta.id);\n    dst[meta.id] = \"from bucket op\";\n}\nfunction OnDelete(meta) {\n    //log('deleting document: ', meta.id);\n    delete dst[meta.id];\n}",
+   "settings":{  
+      "checkpoint_interval":10000,
+      "cleanup_timers":false,
+      "cpp_worker_thread_count":2,
+      "dcp_stream_boundary":"from_now",
+      "deadline_timeout":3,
+      "deployment_status":true,
+      "description":"",
+      "enable_recursive_mutation":true,
+      "execution_timeout":1,
+      "lcb_inst_capacity":5,
+      "log_level":"TRACE",
+      "processing_status":true,
+      "rbacpass":"password",
+      "rbacrole":"admin",
+      "rbacuser":"default",
+      "skip_timer_threshold":86400,
+      "sock_batch_size":1,
+      "tick_duration":5000,
+      "timer_processing_tick_interval":500,
+      "timer_worker_pool_size":3,
+      "worker_count":3
+   }
+}
+

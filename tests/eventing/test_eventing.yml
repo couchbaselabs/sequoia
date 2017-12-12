@@ -1,0 +1,98 @@
+-
+  include: tests/templates/kv.yml, tests/templates/vegeta.yml
+
+############### create and deploy functions ################
+-
+  image: sequoiatools/eventing
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_function.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} cron_timer_op.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} doc_timer_op.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
+
+############### data loading ################
+-
+  image: sequoiatools/gideon
+  requires:  "{{eq true .DoOnce}}"
+  command: "kv --ops {{.Scale 1000}} --create 55 --update 25 --delete 20 --expire 75 --ttl 600 --sizes 64 96 --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+  alias: GideonContainer1
+-
+  command: "kv --ops {{.Scale 100}} --create 100 --update 25 --expire 100 --ttl 600 --sizes 64 96 --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}}"
+  alias: GideonContainer2
+-
+  command: "kv --ops {{.Scale 100}} --create 100 --update 25 --expire 100 --ttl 600 --hosts {{.Orchestrator}} --sizes 64 96 --bucket {{.NthBucket 4}}"
+  alias: GideonContainer3
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+############### undeploy functions ################
+-
+  image: sequoiatools/eventing
+  requires:  "{{eq true .DoOnce}}"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_function.json {{.RestUsername}} {{.RestPassword}} undeploy"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} cron_timer_op.json {{.RestUsername}} {{.RestPassword}} undeploy"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} doc_timer_op.json {{.RestUsername}} {{.RestPassword}} undeploy"
+  wait: true
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+############### redeploy functions ################
+-
+  image: sequoiatools/eventing
+  requires:  "{{eq true .DoOnce}}"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_function.json {{.RestUsername}} {{.RestPassword}} deploy"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} cron_timer_op.json {{.RestUsername}} {{.RestPassword}} deploy"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} doc_timer_op.json {{.RestUsername}} {{.RestPassword}} deploy"
+  wait: true
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+############### undeploy functions ################
+-
+  image: sequoiatools/eventing
+  requires:  "{{eq true .DoOnce}}"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_function.json {{.RestUsername}} {{.RestPassword}} undeploy"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} cron_timer_op.json {{.RestUsername}} {{.RestPassword}} undeploy"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} doc_timer_op.json {{.RestUsername}} {{.RestPassword}} undeploy"
+  wait: true
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+############### delete functions ################
+-
+  image: sequoiatools/eventing
+  requires:  "{{eq true .DoOnce}}"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_function.json {{.RestUsername}} {{.RestPassword}} delete"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} cron_timer_op.json {{.RestUsername}} {{.RestPassword}} delete"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} doc_timer_op.json {{.RestUsername}} {{.RestPassword}} delete"
+  wait: true
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true

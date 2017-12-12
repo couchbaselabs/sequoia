@@ -1,0 +1,38 @@
+{  
+   "appname":"cron_timer_op",
+   "id":0,
+   "depcfg":{  
+      "buckets":[  
+         {  
+            "alias":"dst_bucket3",
+            "bucket_name":"other-dst-2"
+         }
+      ],
+      "metadata_bucket":"metadata",
+      "source_bucket":"other-2"
+   },
+   "appcode":"function OnUpdate(doc, meta) {\n    //log('creating document on dst : ', meta.id);\n    var expiry = Math.round((new Date()).getTime() / 1000) + 5;\n    cronTimer(NDtimerCallbackCreate, meta.id, expiry);\n}\nfunction OnDelete(meta) {\n    //log('deleting document: ', meta.id);\n    var expiry = Math.round((new Date()).getTime() / 1000) + 180;\n    cronTimer(NDtimerCallbackN1QL, meta.id, expiry);\n}\nfunction NDtimerCallbackCreate(docid, expiry) {\n    dst_bucket3[docid] = 'from NDtimerCallbackCreate';\n}\nfunction NDtimerCallbackN1QL(docid, expiry) {\n    delete dst_bucket3[docid];\n}",
+   "settings":{  
+      "checkpoint_interval":10000,
+      "cleanup_timers":false,
+      "cpp_worker_thread_count":2,
+      "dcp_stream_boundary":"from_now",
+      "deadline_timeout":3,
+      "deployment_status":true,
+      "description":"",
+      "enable_recursive_mutation":false,
+      "execution_timeout":1,
+      "lcb_inst_capacity":5,
+      "log_level":"TRACE",
+      "processing_status":true,
+      "rbacpass":"password",
+      "rbacrole":"admin",
+      "rbacuser":"other-2",
+      "skip_timer_threshold":86400,
+      "sock_batch_size":1,
+      "tick_duration":5000,
+      "timer_processing_tick_interval":500,
+      "timer_worker_pool_size":3,
+      "worker_count":3
+   }
+}

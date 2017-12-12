@@ -82,6 +82,13 @@ func NewScope(flags TestFlags, cm *ContainerManager) Scope {
 				spec.Servers[i].FTSPort = "8094"
 			}
 		}
+		if spec.Servers[i].EventingPort == "" {
+			if provider.GetType() == "dev" {
+				spec.Servers[i].EventingPort = fmt.Sprintf("%d", 9200+i)
+			} else {
+				spec.Servers[i].EventingPort = "8096"
+			}
+		}
 	}
 	var loops = 0
 	if *flags.Continue == true {

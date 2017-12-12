@@ -1,0 +1,48 @@
+-
+  include: tests/templates/kv.yml, tests/templates/vegeta.yml
+
+############### create and deploy functions ################
+-
+  image: sequoiatools/eventing
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_function.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} cron_timer_op.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} doc_timer_op.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
+  wait: true
+
+############### data loading ################
+-
+  image: sequoiatools/gideon
+  command: "kv --ops {{.Scale 1000}} --create 100 --update 25 --delete 20 --expire 75 --ttl 600 --sizes 64 96 --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+  alias: GideonContainer1
+  duration: 3600
+-
+  command: "kv --ops {{.Scale 1000}} --create 100 --update 25 --delete 20 --expire 75 --ttl 600 --sizes 64 96 --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}}"
+  alias: GideonContainer2
+  duration: 3600
+-
+  command: "kv --ops {{.Scale 1000}} --create 100 --update 25 --delete 20 --expire 75 --ttl 600 --hosts {{.Orchestrator}} --sizes 64 96 --bucket {{.NthBucket 4}}"
+  alias: GideonContainer3
+  duration: 3600
+  wait: true
+
+# stop gideon data loading
+-
+  client:
+    op: rm
+    container: GideonContainer1
+-
+  client:
+    op: rm
+    container: GideonContainer2
+-
+  client:
+    op: rm
+    container: GideonContainer3
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
