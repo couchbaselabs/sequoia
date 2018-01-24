@@ -206,6 +206,12 @@ func (t *TemplateResolver) EventingPort() string {
 	return t.Attr("eventing_port", nodes)
 }
 
+// Shortcut: {{.ClusterNodes | .Attr `analytics_port`}}
+func (t *TemplateResolver) AnalyticsPort() string {
+	nodes := t.ClusterNodes()
+	return t.Attr("analytics_port", nodes)
+}
+
 // Shortcut: {{.QueryNode | noport}}:{{.QueryPort}}
 func (t *TemplateResolver) QueryNodePort() string {
 	return fmt.Sprintf("%s:%s", t.NoPort(t.QueryNode()), t.QueryPort())
@@ -297,6 +303,25 @@ func (t *TemplateResolver) EventingNodePort() string {
 func (t *TemplateResolver) NthEventingNode(n int) string {
 	nodes := t.ClusterNodes()
 	serviceNodes := t.Service("eventing", nodes)
+	return t.Address(n, serviceNodes)
+}
+
+// Shortcut: .AnalyticsNode | .Service `analytics` | net 0
+func (t *TemplateResolver) AnalyticsNode() string {
+	nodes := t.ClusterNodes()
+	serviceNodes := t.Service("analytics", nodes)
+	return t.Address(0, serviceNodes)
+}
+
+// Shortcut: {{.AnalyticsNode | noport}}:{{.AnalyticsPort}}
+func (t *TemplateResolver) AnalyticsNodePort() string {
+	return fmt.Sprintf("%s:%s", t.NoPort(t.AnalyticsNode()), t.AnalyticsPort())
+}
+
+// Shortcut: .ClusterNodes | .Service `analytics` | net N
+func (t *TemplateResolver) NthAnalyticsNode(n int) string {
+	nodes := t.ClusterNodes()
+	serviceNodes := t.Service("analytics", nodes)
 	return t.Address(n, serviceNodes)
 }
 

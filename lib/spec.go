@@ -42,6 +42,7 @@ type ServerSpec struct {
 	FTSPort      string `yaml:"fts_port"`
 	QueryPort    string `yaml:"query_port"`
 	EventingPort string `yaml:"eventing_port"`
+	AnalyticsPort   string  `yaml:"analytics_port"`
 	InitNodes    uint8  `yaml:"init_nodes"`
 	DataPath     string `yaml:"data_path"`
 	IndexPath    string `yaml:"index_path"`
@@ -105,10 +106,12 @@ func (s *ServerSpec) InitNodeServices() {
 	numFtsNodes := s.Services["fts"]
 	numDataNodes := s.Services["data"]
 	numEventingNodes := s.Services["eventing"]
+	numAnalyticsNodes := s.Services["analytics"]
 	customIndexStart := s.Services["index_start"]
 	customQueryStart := s.Services["query_start"]
 	customFtsStart := s.Services["fts_start"]
 	customEventingStart := s.Services["eventing_start"]
+	customAnalyticsStart := s.Services["analytics_start"]
 
 	s.NodeServices = make(map[string][]string)
 
@@ -117,6 +120,16 @@ func (s *ServerSpec) InitNodeServices() {
 	// and second set eventing to avoid
 	// overlapping if possible when specific
 	// number of service types provided
+
+	analyticsStartPos := numNodes - numQueryNodes - numIndexNodes - numFtsNodes - numEventingNodes - numAnalyticsNodes
+	if customAnalyticsStart > 0 {
+	    // override
+	    analyticsStartPos = customAnalyticsStart - 1
+	}
+	if customAnalyticsStart >= numNodes {
+	    analyticsStartPos = 0
+	}
+
 
 	eventingStartPos := numNodes - numQueryNodes - numIndexNodes - numFtsNodes - numEventingNodes
 	if customEventingStart > 0 {
@@ -159,6 +172,10 @@ func (s *ServerSpec) InitNodeServices() {
 	for i = 0; i < numNodes; i = i + 1 {
 		name := s.Names[i]
 		s.NodeServices[name] = []string{}
+		if i >= analyticsStartPos && numAnalyticsNodes > 0 {
+			s.NodeServices[name] = append(s.NodeServices[name], "analytics")
+			numAnalyticsNodes--
+		}
 		if i >= eventingStartPos && numEventingNodes > 0 {
 			s.NodeServices[name] = append(s.NodeServices[name], "eventing")
 			numEventingNodes--
@@ -294,6 +311,8 @@ func (s *ScopeSpec) ToAttr(attr string) string {
 		return "FTSPort"
 	case "eventing_port":
 		return "EventingPort"
+	case "analytics_port":
+	    return "AnalyticsPort"
 	}
 
 	return ""
