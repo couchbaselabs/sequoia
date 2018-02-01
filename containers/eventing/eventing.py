@@ -4,6 +4,7 @@ import os
 from datetime import datetime
 import httplib2
 import json
+import time
 
 
 class EventingOperations():
@@ -65,6 +66,9 @@ class EventingOperations():
                 print status, content, header
                 raise Exception("Failed to deploy application")
 
+            self.check_deployment_status(appname)
+
+
         elif self.operation == "deploy":
             eventing_endpoint = "saveAppTempStore"
             method = "POST"
@@ -85,6 +89,8 @@ class EventingOperations():
             if not status:
                 print status, content, header
                 raise Exception("Failed to deploy application")
+
+            self.check_deployment_status(appname)
 
         elif self.operation == "undeploy":
 
@@ -203,6 +209,7 @@ class EventingOperations():
                                          "value=" + json.dumps(stats).encode(
                                              "ascii",
                                              "ignore"), headers)
+        print response,content
 
     def _http_request(self, appname, method, eventing_endpoint, app_definition,
                       timeout=120):
@@ -232,6 +239,29 @@ class EventingOperations():
             return True, content, response
         else:
             return False, content, response
+
+    def check_deployment_status(self,appname):
+        authorization = base64.encodestring('%s:%s' % (self.username, self.password))
+
+        headers = {'Content-type': 'application/json', 'Authorization': 'Basic %s' % authorization}
+        url = "http://" + self.hostname + ":" + self.port + "/_p/event/getDeployedApps"
+        method="GET"
+
+        response, content = httplib2.Http(timeout=120).request(uri=url, method=method, headers=headers)
+        result=json.loads(content)
+        status=response['status']
+        if not status:
+            print status, result, headers
+            raise Exception("Failed to get deployed apps")
+        count = 0
+        while appname not in result and count < 20:
+            time.sleep(30)
+            count += 1
+            response, content = httplib2.Http(timeout=120).request(uri=url, method=method, headers=headers)
+            result = json.loads(content)
+        if count == 20:
+            raise Exception(
+                'Eventing took lot of time to come out of bootstrap state or did not successfully bootstrap')
 
 
 if __name__ == '__main__':

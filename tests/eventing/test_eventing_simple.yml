@@ -13,33 +13,30 @@
 
 ############### data loading ################
 -
-  image: sequoiatools/gideon
-  command: "kv --ops {{.Scale 1000}} --create 100 --update 25 --delete 20 --expire 75 --ttl 600 --sizes 64 96 --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
-  alias: GideonContainer1
-  duration: 3600
+  image: sequoiatools/populate_data
+  command: "-bucket {{.Bucket}} -count 6000000 -doc travel_sample -user Administrator -pass password -expiry 1200 -ops 1000 http://{{.Orchestrator}}:8091"
+  alias: populate_data1
 -
-  command: "kv --ops {{.Scale 1000}} --create 100 --update 25 --delete 20 --expire 75 --ttl 600 --sizes 64 96 --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}}"
-  alias: GideonContainer2
-  duration: 3600
+  command: "-bucket {{.NthBucket 3}} -count 6000000 -doc travel_sample -user Administrator -pass password -expiry 1200 -ops 1000 http://{{.Orchestrator}}:8091"
+  alias: populate_data2
 -
-  command: "kv --ops {{.Scale 1000}} --create 100 --update 25 --delete 20 --expire 75 --ttl 600 --hosts {{.Orchestrator}} --sizes 64 96 --bucket {{.NthBucket 4}}"
-  alias: GideonContainer3
-  duration: 3600
+  command: "-bucket {{.NthBucket 4}} -count 6000000 -doc travel_sample -user Administrator -pass password -expiry 1200 -ops 1000 http://{{.Orchestrator}}:8091"
+  alias: populate_data3
   wait: true
 
 # stop gideon data loading
 -
   client:
     op: rm
-    container: GideonContainer1
+    container: populate_data1
 -
   client:
     op: rm
-    container: GideonContainer2
+    container: populate_data2
 -
   client:
     op: rm
-    container: GideonContainer3
+    container: populate_data3
 
 -
   image: sequoiatools/cmd

@@ -45,11 +45,9 @@ buckets:
   -
       name: default
       ram: 30%
-      eviction: fullEviction
   -
       name: default-dst
       ram: 18%
-      eviction: fullEviction
   -
       name: other
       count: 2
