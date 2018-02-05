@@ -68,7 +68,7 @@ servers: # each server tag represents a cluster
   -
       name: local
       count: 4
-      ram: 95%
+      ram: 80%
       services:
         eventing: 1
         eventing_start: 4

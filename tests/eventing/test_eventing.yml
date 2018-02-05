@@ -1,6 +1,20 @@
 -
   include: tests/templates/kv.yml, tests/templates/vegeta.yml
 
+############### data loading ################
+-
+  image: sequoiatools/populate_data
+  requires: "{{eq true .DoOnce}}"
+  command: "-bucket {{.Bucket}} -count 6000000 -doc travel_sample -user Administrator -pass password -expiry 1200 -ops 1000 http://{{.Orchestrator}}:8091"
+  alias: populate_data1
+-
+  command: "-bucket {{.NthBucket 3}} -count 6000000 -doc travel_sample -user Administrator -pass password -expiry 1200 -ops 1000 http://{{.Orchestrator}}:8091"
+  alias: populate_data2
+-
+  command: "-bucket {{.NthBucket 4}} -count 6000000 -doc travel_sample -user Administrator -pass password -expiry 1200 -ops 1000 http://{{.Orchestrator}}:8091"
+  alias: populate_data3
+
+
 ############### create and deploy functions ################
 -
   image: sequoiatools/eventing
@@ -9,19 +23,6 @@
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} cron_timer_op.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} doc_timer_op.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
-
-############### data loading ################
--
-  image: sequoiatools/gideon
-  requires:  "{{eq true .DoOnce}}"
-  command: "kv --ops {{.Scale 1000}} --create 55 --update 25 --delete 20 --expire 75 --ttl 600 --sizes 64 96 --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
-  alias: GideonContainer1
--
-  command: "kv --ops {{.Scale 100}} --create 100 --update 25 --expire 100 --ttl 600 --sizes 64 96 --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}}"
-  alias: GideonContainer2
--
-  command: "kv --ops {{.Scale 100}} --create 100 --update 25 --expire 100 --ttl 600 --hosts {{.Orchestrator}} --sizes 64 96 --bucket {{.NthBucket 4}}"
-  alias: GideonContainer3
 
 -
   image: sequoiatools/cmd
@@ -32,24 +33,22 @@
 ############### undeploy functions ################
 -
   image: sequoiatools/eventing
-  requires:  "{{eq true .DoOnce}}"
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_function.json {{.RestUsername}} {{.RestPassword}} undeploy"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_function.json {{.RestUsername}} {{.RestPassword}} undeploy true"
 -
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} cron_timer_op.json {{.RestUsername}} {{.RestPassword}} undeploy"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} cron_timer_op.json {{.RestUsername}} {{.RestPassword}} undeploy true"
 -
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} doc_timer_op.json {{.RestUsername}} {{.RestPassword}} undeploy"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} doc_timer_op.json {{.RestUsername}} {{.RestPassword}} undeploy true"
   wait: true
 
 -
   image: sequoiatools/cmd
   entrypoint: sleep
-  command: "300"
+  command: "600"
   wait: true
 
 ############### redeploy functions ################
 -
   image: sequoiatools/eventing
-  requires:  "{{eq true .DoOnce}}"
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_function.json {{.RestUsername}} {{.RestPassword}} deploy"
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} cron_timer_op.json {{.RestUsername}} {{.RestPassword}} deploy"
@@ -66,12 +65,11 @@
 ############### undeploy functions ################
 -
   image: sequoiatools/eventing
-  requires:  "{{eq true .DoOnce}}"
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_function.json {{.RestUsername}} {{.RestPassword}} undeploy"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_function.json {{.RestUsername}} {{.RestPassword}} undeploy true"
 -
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} cron_timer_op.json {{.RestUsername}} {{.RestPassword}} undeploy"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} cron_timer_op.json {{.RestUsername}} {{.RestPassword}} undeploy true"
 -
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} doc_timer_op.json {{.RestUsername}} {{.RestPassword}} undeploy"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} doc_timer_op.json {{.RestUsername}} {{.RestPassword}} undeploy true"
   wait: true
 
 -
@@ -83,7 +81,6 @@
 ############### delete functions ################
 -
   image: sequoiatools/eventing
-  requires:  "{{eq true .DoOnce}}"
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_function.json {{.RestUsername}} {{.RestPassword}} delete"
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} cron_timer_op.json {{.RestUsername}} {{.RestPassword}} delete"
