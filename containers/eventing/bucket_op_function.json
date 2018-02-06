@@ -23,7 +23,7 @@
       "enable_recursive_mutation":true,
       "execution_timeout":1,
       "lcb_inst_capacity":5,
-      "log_level":"TRACE",
+      "log_level":"INFO",
       "processing_status":true,
       "rbacpass":"password",
       "rbacrole":"admin",

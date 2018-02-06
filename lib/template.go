@@ -325,6 +325,13 @@ func (t *TemplateResolver) NthAnalyticsNode(n int) string {
 	return t.Address(n, serviceNodes)
 }
 
+// Shortcut: .ClusterNodes | .Service `analytics` | active n
+func (t *TemplateResolver) ActiveAnalyticsNode(analytics int) string {
+	nodes := t.ClusterNodes()
+	serviceNodes := t.Service("analytics", nodes)
+	return t.ActiveFilter(analytics, serviceNodes)
+}
+
 func (t *TemplateResolver) Attr(key string, servers []ServerSpec) string {
 	attr := t.Scope.Spec.ToAttr(key)
 	spec := reflect.ValueOf(servers[0])

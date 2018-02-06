@@ -70,22 +70,7 @@ class EventingOperations():
 
 
         elif self.operation == "deploy":
-            eventing_endpoint = "saveAppTempStore"
-            method = "POST"
-            app_definition['settings']['processing_status'] = True
-            app_definition['settings']['deployment_status'] = True
-            status, content, header = self._http_request(appname, method,
-                                                         eventing_endpoint,
-                                                         app_definition)
-            if not status:
-                print status, content, header
-                raise Exception("Failed to save application")
-
-            eventing_endpoint = "setSettings"
-            status, content, header = self._http_request(appname, method,
-                                                         eventing_endpoint,
-                                                         app_definition[
-                                                             'settings'])
+            status, content, header = self.deploy(appname)
             if not status:
                 print status, content, header
                 raise Exception("Failed to deploy application")
@@ -98,22 +83,7 @@ class EventingOperations():
             if self.dump_stats:
                 self.write_stats_to_diagnostics_bucket()
 
-            eventing_endpoint = "saveAppTempStore"
-            method = "POST"
-            app_definition['settings']['processing_status'] = False
-            app_definition['settings']['deployment_status'] = False
-            status, content, header = self._http_request(appname, method,
-                                                         eventing_endpoint,
-                                                         app_definition)
-            if not status:
-                print status, content, header
-                raise Exception("Failed to save application")
-
-            eventing_endpoint = "setSettings"
-            status, content, header = self._http_request(appname, method,
-                                                         eventing_endpoint,
-                                                         app_definition[
-                                                             'settings'])
+            status, content, header = self.undeploy(appname)
             if not status:
                 print status, content, header
                 raise Exception("Failed to undeploy application")
@@ -188,7 +158,7 @@ class EventingOperations():
 
         stats_url = "http://" + self.hostname + ":8096/api/v1/stats"
 
-        http = httplib2.Http()
+        http = httplib2.Http(timeout=120)
         authorization = base64.encodestring(
             '%s:%s' % (self.username, self.password))
         headers = {'Content-type': 'application/x-www-form-urlencoded',
@@ -203,7 +173,7 @@ class EventingOperations():
         stats["stats"] = stats_content
         stats["timestamp"] = str(datetime.now())
 
-        diagnostics_bucket_url = "http://" + self.hostname + ":" + self.port + "/pools/default/buckets/test_diagnostics/docs/" + docid
+        diagnostics_bucket_url = "http://" + self.hostname + ":8091"+ "/pools/default/buckets/test_diagnostics/docs/" + docid
 
         response, content = http.request(diagnostics_bucket_url, "POST",
                                          "value=" + json.dumps(stats).encode(
@@ -240,11 +210,42 @@ class EventingOperations():
         else:
             return False, content, response
 
+    def _http_request_public(self, appname, method, eventing_endpoint, app_definition,
+                      timeout=120):
+        authorization = base64.encodestring(
+            '%s:%s' % (self.username, self.password))
+
+        headers = {'Content-type': 'application/json',
+                   'Authorization': 'Basic %s' % authorization}
+
+        url = "http://" + self.hostname + ":" + self.port + "/api/v1/functions/" + appname
+
+        if method != "DELETE":
+            response, content = httplib2.Http(timeout=timeout).request(url,
+                                                                       method,
+                                                                       json.dumps(
+                                                                           app_definition).encode(
+                                                                           "ascii",
+                                                                           "ignore"),
+                                                                       headers)
+        else:
+            response, content = httplib2.Http(timeout=timeout).request(uri=url,
+                                                                       method=method,
+                                                                       headers=headers)
+        print content, response
+
+        if response['status'] in ['200', '201', '202']:
+            return True, content, response
+        else:
+            return False, content, response
+
+
+
     def check_deployment_status(self,appname):
         authorization = base64.encodestring('%s:%s' % (self.username, self.password))
 
         headers = {'Content-type': 'application/json', 'Authorization': 'Basic %s' % authorization}
-        url = "http://" + self.hostname + ":" + self.port + "/_p/event/getDeployedApps"
+        url = "http://" + self.hostname + ":8091" + "/_p/event/getDeployedApps"
         method="GET"
 
         response, content = httplib2.Http(timeout=120).request(uri=url, method=method, headers=headers)
@@ -262,6 +263,51 @@ class EventingOperations():
         if count == 20:
             raise Exception(
                 'Eventing took lot of time to come out of bootstrap state or did not successfully bootstrap')
+
+    def deploy(self,appname):
+        authorization = base64.encodestring('%s:%s' % (self.username, self.password))
+
+        headers = {'Content-type': 'application/json', 'Authorization': 'Basic %s' % authorization}
+
+        url = "http://" + self.hostname + ":" + self.port + "/api/v1/functions/" + appname +"/settings"
+        body="{\"deployment_status\":true,\"processing_status\":true}"
+        response, content = httplib2.Http(timeout=120).request(uri=url, method="POST", headers=headers,body=body)
+        print content, response
+
+        if response['status'] in ['200', '201', '202']:
+            return True, content, response
+        else:
+            return False, content, response
+
+    def undeploy(self,appname):
+        authorization = base64.encodestring('%s:%s' % (self.username, self.password))
+
+        headers = {'Content-type': 'application/json', 'Authorization': 'Basic %s' % authorization}
+
+        url = "http://" + self.hostname + ":" + self.port + "/api/v1/functions/" + appname +"/settings"
+        body="{\"deployment_status\":false,\"processing_status\":false}"
+        response, content = httplib2.Http(timeout=120).request(uri=url, method="POST", headers=headers,body=
+                                                                           body)
+        print content, response
+
+        if response['status'] in ['200', '201', '202']:
+            return True, content, response
+        else:
+            return False, content, response
+
+    def delete(self,appname):
+        authorization = base64.encodestring('%s:%s' % (self.username, self.password))
+
+        headers = {'Content-type': 'application/json', 'Authorization': 'Basic %s' % authorization}
+
+        url = "http://" + self.hostname + ":" + self.port + "/api/v1/functions/" + appname
+        response, content = httplib2.Http(timeout=120).request(uri=url, method="DELETE", headers=headers)
+        print content, response
+
+        if response['status'] in ['200', '201', '202']:
+            return True, content, response
+        else:
+            return False, content, response
 
 
 if __name__ == '__main__':

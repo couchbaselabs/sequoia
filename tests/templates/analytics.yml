@@ -4,7 +4,7 @@
 - name: cbq
   actions:
     - image: sequoiatools/cbq
-      command: "-e=http://{{.Nodes | net 2}}:8095
+      command: "-e=http://{{.ActiveAnalyticsNode 0}}:8095
                 -u={{.RestUsername}}
                 -p={{.RestPassword}}
                 -script='$0'
@@ -18,7 +18,7 @@
 - name: analytics_rest
   actions:
     - image: sequoiatools/analytics
-      command: "analytics.sh {{.Nodes | net 2}}:8095 $0 {{.RestUsername}}:{{.RestPassword}}"
+      command: "analytics.sh {{.ActiveAnalyticsNode 0}}:8095 $0 {{.RestUsername}}:{{.RestPassword}}"
       wait: true
     -
       image: sequoiatools/cmd
@@ -43,7 +43,7 @@
                 -rate $1
                 -url http://{{if gt (len `$4`) 2}}$4{{else}}{{$.RestUsername}}{{end}}:{{if gt (len `$5`) 2}}$5{{else}}{{$.RestPassword}}{{end}}@$2:8095/query/service
                 -body $3"
-
+      alias: $6
 -
   # run attack against all query nodes
   # $0 attack duration
@@ -57,4 +57,14 @@
       template: attack_query
       args: $0, $1, {{$node | to_ip }}:{{$.QueryPort}}, $2
 
+
+-
+# Fail a node by killing the memcached
+# $0 = Server to fail
+  name: analytics_kill
+  actions:
+    -
+      image: "vijayviji/sshpass"
+      command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no
+                  {{.SSHUsername}}@$0 kill -SIGSTOP $(pgrep cbas)"
 

@@ -23,6 +23,7 @@
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} cron_timer_op.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} doc_timer_op.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
+  wait: true
 
 -
   image: sequoiatools/cmd
@@ -33,11 +34,11 @@
 ############### undeploy functions ################
 -
   image: sequoiatools/eventing
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_function.json {{.RestUsername}} {{.RestPassword}} undeploy true"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} bucket_op_function.json {{.RestUsername}} {{.RestPassword}} undeploy true"
 -
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} cron_timer_op.json {{.RestUsername}} {{.RestPassword}} undeploy true"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} cron_timer_op.json {{.RestUsername}} {{.RestPassword}} undeploy true"
 -
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} doc_timer_op.json {{.RestUsername}} {{.RestPassword}} undeploy true"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} doc_timer_op.json {{.RestUsername}} {{.RestPassword}} undeploy true"
   wait: true
 
 -
@@ -49,11 +50,11 @@
 ############### redeploy functions ################
 -
   image: sequoiatools/eventing
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_function.json {{.RestUsername}} {{.RestPassword}} deploy"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} bucket_op_function.json {{.RestUsername}} {{.RestPassword}} deploy"
 -
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} cron_timer_op.json {{.RestUsername}} {{.RestPassword}} deploy"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} cron_timer_op.json {{.RestUsername}} {{.RestPassword}} deploy"
 -
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} doc_timer_op.json {{.RestUsername}} {{.RestPassword}} deploy"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} doc_timer_op.json {{.RestUsername}} {{.RestPassword}} deploy"
   wait: true
 
 -
@@ -65,11 +66,11 @@
 ############### undeploy functions ################
 -
   image: sequoiatools/eventing
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_function.json {{.RestUsername}} {{.RestPassword}} undeploy true"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} bucket_op_function.json {{.RestUsername}} {{.RestPassword}} undeploy true"
 -
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} cron_timer_op.json {{.RestUsername}} {{.RestPassword}} undeploy true"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} cron_timer_op.json {{.RestUsername}} {{.RestPassword}} undeploy true"
 -
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} doc_timer_op.json {{.RestUsername}} {{.RestPassword}} undeploy true"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} doc_timer_op.json {{.RestUsername}} {{.RestPassword}} undeploy true"
   wait: true
 
 -
