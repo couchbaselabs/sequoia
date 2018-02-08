@@ -4,7 +4,7 @@
 - name: cbq
   actions:
     - image: sequoiatools/cbq
-      command: "-e=http://{{.ActiveAnalyticsNode 0}}:8095
+      command: "-e=http://{{.Nodes | net 1}}:8095
                 -u={{.RestUsername}}
                 -p={{.RestPassword}}
                 -script='$0'
@@ -18,7 +18,7 @@
 - name: analytics_rest
   actions:
     - image: sequoiatools/analytics
-      command: "analytics.sh {{.ActiveAnalyticsNode 0}}:8095 $0 {{.RestUsername}}:{{.RestPassword}}"
+      command: "analytics.sh {{.Nodes | net 1}}:8095 $0 {{.RestUsername}}:{{.RestPassword}}"
       wait: true
     -
       image: sequoiatools/cmd
