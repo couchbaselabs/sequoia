@@ -52,10 +52,10 @@
 
 # ###############  run queries ################
 - template: attack_query
-  args: "86400, 1, {{.ActiveAnalyticsNode 0}}, 'select SUM\\(result) from ds1 where result > 0 limit 50',,,query1"
-- args: "86400, 1, {{.ActiveAnalyticsNode 0}}, 'select claim from ds1 where result > 0 limit 50',,,query2"
-- args: "86400, 1, {{.ActiveAnalyticsNode 0}}, 'select SUM\\(result) from ds2 where result > 100  limit 50',,,query3"
-- args: "86400, 1, {{.ActiveAnalyticsNode 0}}, 'select * from ds2 where result > 100  limit 50',,,query4"
+  args: "86400, 12, {{.Nodes | net 1}}, 'select SUM\\(result) from ds1 where result > 0 limit 50',,,query1"
+- args: "86400, 12, {{.Nodes | net 1}}, 'select claim from ds1 where result > 0 limit 50',,,query2"
+- args: "86400, 12, {{.Nodes | net 1}}, 'select SUM\\(result) from ds2 where result > 100  limit 50',,,query3"
+- args: "86400, 12, {{.Nodes | net 1}}, 'select * from ds2 where result > 100  limit 50',,,query4"
 
 
 # ###############  connect queries ################
@@ -84,7 +84,7 @@
 
 ###############  Rebalance-out single node ################
 - template: rebalance_out
-  args: "{{.ActiveAnalyticsNode 1}}, analytics"
+  args: "{{.Nodes | net 2}}, analytics"
   wait: true
 
 
