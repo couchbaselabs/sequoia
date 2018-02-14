@@ -235,3 +235,14 @@
 - args: "drop bucket bucket4;"
   wait: true
 
+###############  Swap Rebalance ################
+- template: rebalance_swap
+  args: "{{.Nodes | net 2}},{{.Nodes | net 5}}, analytics"
+  wait: true
+
+# ###############sleep for 300secs###############
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
