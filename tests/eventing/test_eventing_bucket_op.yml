@@ -1,0 +1,70 @@
+-
+  include: tests/templates/kv.yml, tests/templates/vegeta.yml
+
+############### data loading ################
+-
+  image: sequoiatools/populate_data
+  requires: "{{eq true .DoOnce}}"
+  command: "-bucket {{.Bucket}} -count 6000000 -doc travel_sample -user Administrator -pass password -expiry 1200 -ops 1000 http://{{.Orchestrator}}:8091"
+  alias: populate_data1
+
+
+############### create and deploy functions ################
+-
+  image: sequoiatools/eventing
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_function.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
+  wait: true
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+############### undeploy functions ################
+-
+  image: sequoiatools/eventing
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} bucket_op_function.json {{.RestUsername}} {{.RestPassword}} undeploy true"
+  wait: true
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+############### redeploy functions ################
+-
+  image: sequoiatools/eventing
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} bucket_op_function.json {{.RestUsername}} {{.RestPassword}} deploy"
+  wait: true
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+############### undeploy functions ################
+-
+  image: sequoiatools/eventing
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} bucket_op_function.json {{.RestUsername}} {{.RestPassword}} undeploy true"
+  wait: true
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+############### delete functions ################
+-
+  image: sequoiatools/eventing
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_function.json {{.RestUsername}} {{.RestPassword}} delete"
+  wait: true
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
