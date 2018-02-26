@@ -66,5 +66,5 @@
     -
       image: "vijayviji/sshpass"
       command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no
-                  {{.SSHUsername}}@$0 kill -SIGSTOP $(pgrep cbas)"
+                  {{.SSHUsername}}@$0 kill -SIGKILL $(pgrep cbas)"
 
