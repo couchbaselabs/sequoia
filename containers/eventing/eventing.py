@@ -88,6 +88,8 @@ class EventingOperations():
                 print status, content, header
                 raise Exception("Failed to undeploy application")
 
+            self.check_undeployment_status(appname)
+
         elif self.operation == "pause":
             eventing_endpoint = "saveAppTempStore"
             method = "POST"
@@ -170,15 +172,12 @@ class EventingOperations():
         # write to bucket
         docid = datetime.now().strftime('%Y%m%d%H%M%S')
         stats = {}
-        stats["stats"] = stats_content
+        stats["stats"] = json.loads(stats_content)
         stats["timestamp"] = str(datetime.now())
-
         diagnostics_bucket_url = "http://" + self.hostname + ":8091"+ "/pools/default/buckets/test_diagnostics/docs/" + docid
 
         response, content = http.request(diagnostics_bucket_url, "POST",
-                                         "value=" + json.dumps(stats).encode(
-                                             "ascii",
-                                             "ignore"), headers)
+                                         "value=" + json.dumps(stats,indent=4, separators=(',', ': ')), headers)
         print response,content
 
     def _http_request(self, appname, method, eventing_endpoint, app_definition,
@@ -263,6 +262,29 @@ class EventingOperations():
         if count == 20:
             raise Exception(
                 'Eventing took lot of time to come out of bootstrap state or did not successfully bootstrap')
+
+    def check_undeployment_status(self,appname):
+        authorization = base64.encodestring('%s:%s' % (self.username, self.password))
+
+        headers = {'Content-type': 'application/json', 'Authorization': 'Basic %s' % authorization}
+        url = "http://" + self.hostname + ":8091" + "/_p/event/getDeployedApps"
+        method="GET"
+
+        response, content = httplib2.Http(timeout=120).request(uri=url, method=method, headers=headers)
+        result=json.loads(content)
+        status=response['status']
+        if not status:
+            print status, result, headers
+            raise Exception("Failed to get deployed apps")
+        count = 0
+        while appname in result and count < 20:
+            time.sleep(30)
+            count += 1
+            response, content = httplib2.Http(timeout=120).request(uri=url, method=method, headers=headers)
+            result = json.loads(content)
+        if count == 20:
+            raise Exception(
+                'Eventing took lot of time to undeploy')
 
     def deploy(self,appname):
         authorization = base64.encodestring('%s:%s' % (self.username, self.password))

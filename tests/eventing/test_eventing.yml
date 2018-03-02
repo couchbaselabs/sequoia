@@ -4,7 +4,6 @@
 ############### data loading ################
 -
   image: sequoiatools/populate_data
-  requires: "{{eq true .DoOnce}}"
   command: "-bucket {{.Bucket}} -count 6000000 -doc travel_sample -user Administrator -pass password -expiry 1200 -ops 1000 http://{{.Orchestrator}}:8091"
   alias: populate_data1
 -
