@@ -12,7 +12,7 @@ buckets:
       eviction: fullEviction
   -
       name: other
-      count: 2
+      count: 1
       ram: 15%
 
 
