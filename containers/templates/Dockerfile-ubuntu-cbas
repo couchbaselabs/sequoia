@@ -1,0 +1,29 @@
+FROM ubuntu:14.04
+RUN apt-get update
+RUN apt-get install -y python-software-properties software-properties-common
+RUN add-apt-repository ppa:webupd8team/java
+RUN apt-get update
+RUN apt-get install -y git curl wget zip unzip
+RUN echo "oracle-java8-installer shared/accepted-oracle-license-v1-1 select true" | sudo debconf-set-selections
+RUN apt-get install -y oracle-java8-installer
+WORKDIR /tmp
+RUN wget http://mirror.fibergrid.in/apache/maven/maven-3/3.3.9/binaries/apache-maven-3.3.9-bin.tar.gz
+RUN tar -zxvf apache-maven-3.3.9-bin.tar.gz
+RUN mv apache-maven-3.3.9 /usr/local/.
+RUN sudo ln -s /usr/local/apache-maven-3.3.9/bin/mvn /usr/bin/mvn
+RUN mvn --version
+RUN git config --global user.email "andrei.baranouski@gmail.com"
+RUN git config --global user.name "andreibaranouski"
+RUN git config --global color.ui false
+RUN mkdir -p /root/.ssh/
+RUN ssh-keyscan github.com  >> ~/.ssh/known_hosts
+RUN curl https://storage.googleapis.com/git-repo-downloads/repo > /usr/bin/repo
+RUN chmod a+x /usr/bin/repo
+# please replace 'id_rsa' file with private key when you pull private projects from github
+ADD id_rsa /root/.ssh/id_rsa
+RUN chmod 400 /root/.ssh/id_rsa
+RUN mkdir -p /root/cbas
+RUN cd /root/cbas && repo init -u git://github.com/couchbase/manifest -m analytics/master.xml && repo sync --jobs=6
+RUN cd /root/cbas/asterixdb && mvn clean install -DskipTests
+RUN cd /root/cbas && unzip ./asterixdb/asterixdb/asterix-opt/installer/target/couchbase-analytics-1.0.0-SNAPSHOT-generic.zip
+

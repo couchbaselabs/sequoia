@@ -72,11 +72,11 @@
   template: rebalance_by_ip
   args: "{{.Nodes | .Cluster 1 | net 0}}"
 -
-  template: wait_for_rebalance
-  wait: true
--
   template: wait_for_rebalance_by_ip
   args: "{{.Nodes | .Cluster 1 | net 0}}"
+-
+  template: wait_for_rebalance
+  wait: true
 
 #============ 4 failover with delta recovery at cluster A============
 -
@@ -128,11 +128,11 @@
   template: rebalance_by_ip
   args: "{{.Nodes | .Cluster 1 | net 0}}"
 -
-  template: wait_for_rebalance
-  wait: true
--
   template: wait_for_rebalance_by_ip
   args: "{{.Nodes | .Cluster 1 | net 0}}"
+-
+  template: wait_for_rebalance
+  wait: true
 
 
 #============ 8 rebalance in 2 nodes on cluster A ============

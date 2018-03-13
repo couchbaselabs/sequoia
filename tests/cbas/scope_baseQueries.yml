@@ -1,0 +1,19 @@
+---
+buckets:
+  -
+      name: default
+      ram: 80%
+      eviction: fullEviction
+
+
+servers:
+  -
+      name: local
+      count: 8
+      ram: 80%
+      rest_username: Administrator
+      rest_password: password
+      #data_path: "/data"
+      #index_path: "/data"
+      init_nodes: 6   # ONLY INIT 6 NODES
+      buckets: default
