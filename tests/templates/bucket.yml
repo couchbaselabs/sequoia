@@ -1,0 +1,22 @@
+# Update bucket replica
+-
+  name: enable-replica
+  actions:
+    -
+      image: sequoiatools/couchbase-cli
+      command: "bucket-edit
+                  -c {{.Orchestrator}}:{{.RestPort}}
+                  --username {{$.RestUsername}}
+                  --password {{$.RestPassword}}
+                  --bucket $0
+                  --bucket-replica $1"
+      wait: true
+
+
+-
+  name: stop-couchbase
+  actions:
+    -
+      image: "vijayviji/sshpass"
+      command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no
+                  {{.SSHUsername}}@$0 systemctl stop couchbase-server.service"

@@ -1,0 +1,79 @@
+-
+  include: tests/templates/bucket.yml, tests/templates/rebalance.yml
+
+- template: enable-replica
+  args: "default,2"
+- args: "other-1,2"
+
+- template: enable_autofailover
+  args: "5"
+
+-
+  image: sequoiatools/cbutil
+  command: "/cbinit.py {{.Nodes | net 2}} root couchbase stop"
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "5"
+  wait: true
+
+-
+  template: rebalance
+  wait: true
+
+-
+  image: sequoiatools/cbutil
+  command: "/cbinit.py {{.Nodes | net 2}} root couchbase start"
+  wait: true
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "60"
+  wait: true
+
+-
+  template: rebalance_in
+  args: "{{.Nodes | net 2}}, data"
+  wait: true
+
+- template: enable-replica
+  args: "default,3"
+- args: "other-1,3"
+  wait: true
+
+-
+  image: sequoiatools/cbutil
+  command: "/cbinit.py {{.Nodes | net 3}} root couchbase stop"
+-
+  command: "/cbinit.py {{.Nodes | net 4}} root couchbase stop"
+-
+  command: "/cbinit.py {{.Nodes | net 5}} root couchbase stop"
+  wait: true
+
+-
+  template: rebalance
+  wait: true
+
+-
+  image: sequoiatools/cbutil
+  command: "/cbinit.py {{.Nodes | net 3}} root couchbase start"
+-
+  command: "/cbinit.py {{.Nodes | net 4}} root couchbase start"
+-
+  command: "/cbinit.py {{.Nodes | net 5}} root couchbase start"
+  wait: true
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "60"
+  wait: true
+
+-
+  template: rebalance_in
+  args: "{{.Nodes | net 3}}, data"
+- args: "{{.Nodes | net 4}}, data"
+- args: "{{.Nodes | net 5}}, data"
+  wait: true
