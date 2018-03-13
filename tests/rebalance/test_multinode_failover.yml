@@ -16,6 +16,13 @@
 
 - template: enable_autofailover
   args: "5"
+  wait: true
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "5"
+  wait: true
 
 -
   image: sequoiatools/cbutil
@@ -24,7 +31,17 @@
 -
   image: sequoiatools/cmd
   entrypoint: sleep
-  command: "5"
+  command: "10"
+  wait: true
+
+-
+  image: sequoiatools/cbutil
+  command: "/cbinit.py {{.Nodes | net 3}} root couchbase stop"
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "10"
   wait: true
 
 -
@@ -34,6 +51,8 @@
 -
   image: sequoiatools/cbutil
   command: "/cbinit.py {{.Nodes | net 2}} root couchbase start"
+-
+  command: "/cbinit.py {{.Nodes | net 3}} root couchbase start"
   wait: true
 
 -
@@ -43,8 +62,13 @@
   wait: true
 
 -
-  template: rebalance_in
+  template: add_node
   args: "{{.Nodes | net 2}}, data"
+- args: "{{.Nodes | net 3}}, data"
+  wait: true
+
+-
+  template: rebalance
   wait: true
 
 - template: enable-replica
@@ -54,11 +78,56 @@
 
 -
   image: sequoiatools/cbutil
-  command: "/cbinit.py {{.Nodes | net 3}} root couchbase stop"
--
   command: "/cbinit.py {{.Nodes | net 4}} root couchbase stop"
+
 -
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "10"
+  wait: true
+
+-
+  image: sequoiatools/cbutil
   command: "/cbinit.py {{.Nodes | net 5}} root couchbase stop"
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "10"
+  wait: true
+
+-
+  image: sequoiatools/cbutil
+  command: "/cbinit.py {{.Nodes | net 6}} root couchbase stop"
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "10"
+  wait: true
+
+-
+  image: sequoiatools/cbutil
+  command: "/cbinit.py {{.Nodes | net 4}} root couchbase start"
+-
+  command: "/cbinit.py {{.Nodes | net 5}} root couchbase start"
+-
+  command: "/cbinit.py {{.Nodes | net 6}} root couchbase start"
+  wait: true
+
+-
+  template: recover_node
+  args: "{{.Nodes | net 4}}, delta"
+  wait: true
+
+-
+  template: recover_node
+  args: "{{.Nodes | net 5}}, delta"
+  wait: true
+
+-
+  template: recover_node
+  args: "{{.Nodes | net 6}}, delta"
   wait: true
 
 -
@@ -66,23 +135,7 @@
   wait: true
 
 -
-  image: sequoiatools/cbutil
-  command: "/cbinit.py {{.Nodes | net 3}} root couchbase start"
--
-  command: "/cbinit.py {{.Nodes | net 4}} root couchbase start"
--
-  command: "/cbinit.py {{.Nodes | net 5}} root couchbase start"
-  wait: true
-
--
   image: sequoiatools/cmd
   entrypoint: sleep
   command: "120"
-  wait: true
-
--
-  template: rebalance_in
-  args: "{{.Nodes | net 3}}, data"
-- args: "{{.Nodes | net 4}}, data"
-- args: "{{.Nodes | net 5}}, data"
   wait: true
