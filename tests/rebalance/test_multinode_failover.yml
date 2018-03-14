@@ -15,6 +15,10 @@
 - args: "other,2"
   wait: true
 
+-
+  template: rebalance
+  wait: true
+
 - template: enable_autofailover
   args: "5,2"
   wait: true
@@ -78,6 +82,11 @@
   args: "default,3"
 - args: "other,3"
   wait: true
+
+-
+  template: rebalance
+  wait: true
+
 
 - template: enable_autofailover
   args: "5,3"
