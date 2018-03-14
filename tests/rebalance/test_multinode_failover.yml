@@ -13,9 +13,10 @@
 - template: enable-replica
   args: "default,2"
 - args: "other,2"
+  wait: true
 
 - template: enable_autofailover
-  args: "5"
+  args: "5,2"
   wait: true
 
 -
@@ -27,6 +28,7 @@
 -
   image: sequoiatools/cbutil
   command: "/cbinit.py {{.Nodes | net 2}} root couchbase stop"
+  wait: true
 
 -
   image: sequoiatools/cmd
@@ -37,6 +39,7 @@
 -
   image: sequoiatools/cbutil
   command: "/cbinit.py {{.Nodes | net 3}} root couchbase stop"
+  wait: true
 
 -
   image: sequoiatools/cmd
@@ -76,9 +79,14 @@
 - args: "other,3"
   wait: true
 
+- template: enable_autofailover
+  args: "5,3"
+  wait: true
+
 -
   image: sequoiatools/cbutil
   command: "/cbinit.py {{.Nodes | net 4}} root couchbase stop"
+  wait: true
 
 -
   image: sequoiatools/cmd
@@ -89,7 +97,7 @@
 -
   image: sequoiatools/cbutil
   command: "/cbinit.py {{.Nodes | net 5}} root couchbase stop"
-
+  wait: true
 -
   image: sequoiatools/cmd
   entrypoint: sleep
@@ -99,6 +107,7 @@
 -
   image: sequoiatools/cbutil
   command: "/cbinit.py {{.Nodes | net 6}} root couchbase stop"
+  wait: true
 
 -
   image: sequoiatools/cmd

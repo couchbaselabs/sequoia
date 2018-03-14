@@ -218,7 +218,19 @@
       image: sequoiatools/couchbase-cli
       command: "setting-autofailover -c  {{.Orchestrator}}:{{.RestPort}}
                 -u  {{.RestUsername}} -p  {{.RestPassword}}
-                --enable-auto-failover=1 --auto-failover-timeout=$0"
+                --enable-auto-failover=1 --auto-failover-timeout=$0 --max-failovers=$1"
+      wait: true
+
+-
+# Enable autofailover on server group
+# $0 = Timeout for autofailover
+  name: enable_autofailover_servergroup
+  actions:
+    -
+      image: sequoiatools/couchbase-cli
+      command: "setting-autofailover -c  {{.Orchestrator}}:{{.RestPort}}
+                -u  {{.RestUsername}} -p  {{.RestPassword}} --enable-auto-failover=1
+                --enable-failover-of-server-groups=1 --auto-failover-timeout=$0"
       wait: true
 
 -
@@ -262,7 +274,7 @@
   actions:
     -
       template: enable_autofailover
-      args: "$1"
+      args: "$1,1"
       wait: true
     -
       template: memcached_kill
