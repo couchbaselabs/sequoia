@@ -151,9 +151,3 @@
 -
   template: rebalance
   wait: true
-
--
-  image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "120"
-  wait: true
