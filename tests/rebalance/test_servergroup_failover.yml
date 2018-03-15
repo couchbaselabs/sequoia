@@ -1,0 +1,76 @@
+-
+  include: tests/templates/bucket.yml, tests/templates/rebalance.yml, tests/templates/groups.yml
+
+############### data loading ################
+-
+  image: sequoiatools/gideon
+  command: "kv --ops {{.Scale 100}} --create 100  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+-
+  command: "kv --ops {{.Scale 100}} --create 100 --sizes 64 96   --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
+
+
+- template: group_create
+  requires:  "{{eq true .DoOnce}}"
+  args: "server2"
+- args: "server3"
+  wait: true
+
+-
+  template: group_move_servers
+  requires:  "{{eq true .DoOnce}}"
+  args: "'Group 1', server2, ({{.Nodes | net 2}}, {{.Nodes | net 5}}, {{.Nodes | net 6}})"
+- args: "'Group 1', server3, ({{.Nodes | net 3}}, {{.Nodes | net 7}}, {{.Nodes | net 8}})"
+  wait: true
+
+- template: enable-replica
+  args: "default,2"
+- args: "other,2"
+  wait: true
+
+-
+  template: rebalance
+  wait: true
+
+- template: enable_autofailover_servergroup
+  args: "5"
+  wait: true
+
+
+# Failing server group 3
+-
+  image: sequoiatools/cbutil
+  command: "/cbinit.py {{.Nodes | net 3}},{{.Nodes | net 7}},{{.Nodes | net 8}} root couchbase stop"
+  wait: true
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "10"
+  wait: true
+
+-
+  template: rebalance
+  wait: true
+
+
+-
+  image: sequoiatools/cbutil
+  command: "/cbinit.py {{.Nodes | net 3}},{{.Nodes | net 7}},{{.Nodes | net 8}} root couchbase start"
+  wait: true
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "10"
+  wait: true
+
+-
+  template: add_node
+  args: "{{.Nodes | net 3}}, (index,query,fts)"
+- args: "{{.Nodes | net 7}}, data"
+- args: "{{.Nodes | net 8}}, data"
+  wait: true
+
+-
+  template: rebalance
+  wait: true

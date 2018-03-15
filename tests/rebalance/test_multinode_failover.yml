@@ -5,9 +5,9 @@
 -
   image: sequoiatools/gideon
   requires:  "{{eq true .DoOnce}}"
-  command: "kv --ops {{.Scale 10}} --create 100  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+  command: "kv --ops {{.Scale 100}} --create 100  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
 -
-  command: "kv --ops {{.Scale 10}} --create 100 --sizes 64 96   --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
+  command: "kv --ops {{.Scale 100}} --create 100 --sizes 64 96   --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
 
 
 - template: enable-replica
