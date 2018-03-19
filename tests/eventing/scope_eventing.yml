@@ -72,6 +72,10 @@ servers: # each server tag represents a cluster
       services:
         eventing: 1
         eventing_start: 4
+        index: 1
+        index_start: 2
+        query: 1
+        query_start: 2
       rest_username: Administrator
       rest_password: password
       init_nodes: 4

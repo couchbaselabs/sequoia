@@ -1,5 +1,11 @@
 -
-  include: tests/templates/kv.yml, tests/templates/vegeta.yml
+  include: tests/templates/kv.yml, tests/templates/vegeta.yml, tests/templates/n1ql.yml
+
+####### create index for default bucket #####
+- template: cbq
+  requires: "{{eq true .DoOnce}}"
+  args: "create PRIMARY INDEX on default;"
+  wait: true
 
 ############### create and deploy functions ################
 -

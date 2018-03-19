@@ -1,5 +1,5 @@
 -
-  include: tests/templates/kv.yml, tests/templates/vegeta.yml, tests/templates/rebalance.yml
+  include: tests/templates/kv.yml, tests/templates/vegeta.yml, tests/templates/rebalance.yml, tests/templates/n1ql.yml
 
 ############### data loading ################
 -
@@ -12,6 +12,7 @@
 -
   command: "-bucket {{.NthBucket 4}} -count 6000000 -doc travel_sample -user Administrator -pass password -expiry 1200 -ops 1000 http://{{.Orchestrator}}:8091"
   alias: populate_data3
+
 
 
 ############### create and deploy functions ################

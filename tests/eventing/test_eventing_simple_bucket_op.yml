@@ -1,10 +1,16 @@
 -
-  include: tests/templates/kv.yml, tests/templates/vegeta.yml
+  include: tests/templates/kv.yml, tests/templates/vegeta.yml, tests/templates/n1ql.yml
 
 ############### create and deploy functions ################
 -
   image: sequoiatools/eventing
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_function.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
+  wait: true
+
+####### create index for default bucket #####
+- template: cbq
+  requires:  "{{eq true .DoOnce }}"
+  args: "'create PRIMARY INDEX on default'"
   wait: true
 
 ############### data loading ################
