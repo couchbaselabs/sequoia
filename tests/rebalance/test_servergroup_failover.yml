@@ -43,6 +43,11 @@
   wait: true
 
 -
+  template: failover_node_forced
+  args: "{{.Nodes | net 3}}"
+  wait: true
+
+-
   image: sequoiatools/cmd
   entrypoint: sleep
   command: "10"
