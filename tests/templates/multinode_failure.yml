@@ -1,0 +1,58 @@
+-
+  include: tests/templates/rebalance.yml
+
+name: multinodefailover
+actions:
+  - template: enable_autofailover
+    args: "5,2"
+    wait: true
+
+  -
+    image: sequoiatools/cmd
+    entrypoint: sleep
+    command: "10"
+    wait: true
+
+  -
+    image: sequoiatools/cbutil
+    command: "/cbinit.py $0 root couchbase stop"
+    wait: true
+  -
+    image: sequoiatools/cmd
+    entrypoint: sleep
+    command: "10"
+    wait: true
+
+  -
+    image: sequoiatools/cbutil
+    command: "/cbinit.py $1 root couchbase stop"
+    wait: true
+
+  -
+    image: sequoiatools/cmd
+    entrypoint: sleep
+    command: "10"
+    wait: true
+
+  -
+    template: rebalance
+    wait: true
+
+  -
+    image: sequoiatools/cbutil
+    command: "/cbinit.py $0 root couchbase start"
+  -
+    command: "/cbinit.py $1 root couchbase start"
+    wait: true
+
+  -
+    image: sequoiatools/cmd
+    entrypoint: sleep
+    command: "10"
+    wait: true
+
+  - template: add_node
+    args: "$0"
+  - args: "$1"
+  - template: rebalance
+    wait: true
