@@ -1,8 +1,8 @@
 -
   include: tests/templates/rebalance.yml
 
-name: multinodefailover
-actions:
+- name: multinodefailover
+  actions:
   - template: enable_autofailover
     args: "5,2"
     wait: true
