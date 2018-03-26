@@ -12,8 +12,6 @@
   image: sequoiatools/eventing
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_function.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
 -
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} cron_timer_op.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
--
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} doc_timer_op.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
   wait: true
 
@@ -25,9 +23,6 @@
 -
   command: "-bucket {{.NthBucket 3}} -count 6000000 -doc travel_sample -user Administrator -pass password -expiry 1200 -ops 1000 http://{{.Orchestrator}}:8091"
   alias: populate_data2
--
-  command: "-bucket {{.NthBucket 4}} -count 6000000 -doc travel_sample -user Administrator -pass password -expiry 1200 -ops 1000 http://{{.Orchestrator}}:8091"
-  alias: populate_data3
   wait: true
 
 # stop gideon data loading
@@ -39,10 +34,6 @@
   client:
     op: rm
     container: populate_data2
--
-  client:
-    op: rm
-    container: populate_data3
 
 -
   image: sequoiatools/cmd
