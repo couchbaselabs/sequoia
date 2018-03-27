@@ -34,6 +34,8 @@
 - args: "connect bucket bucket2;"
 - args: "connect bucket bucket3;"
 - args: "connect bucket bucket4;"
+- args: "create index idx_result1 on ds1\\(result:string);"
+- args: "create index idx_result2 on ds2\\(result:string);"
   wait: true
 
 ############### run mutations ################
@@ -53,10 +55,10 @@
 
 # ###############  run queries ################
 - template: attack_query
-  args: "86400, 12, {{.Nodes | net 2}}, 'select SUM\\(result) from ds1 where result > 0 limit 50'"
-- args: "86400, 12, {{.Nodes | net 3}}, 'select claim from ds1 where result > 0 limit 50'"
-- args: "86400, 12, {{.Nodes | net 2}}, 'select SUM\\(result) from ds2 where result > 100  limit 50'"
-- args: "86400, 12, {{.Nodes | net 3}}, 'select * from ds2 where result > 100  limit 50'"
+  args: "86400, 12, {{.Nodes | net 2}}, 'select COUNT\\(result) from ds1 where result = \\\"SUCCESS\\\" limit 50',,,query1"
+- args: "86400, 12, {{.Nodes | net 3}}, 'select claim from ds2 where result != \\\"SUCCESS\\\" limit 50',,,query2"
+- args: "86400, 12, {{.Nodes | net 2}}, 'select COUNT\\(result) from ds3 where result = \\\"SUCCESS\\\"  limit 50',,,query3"
+- args: "86400, 12, {{.Nodes | net 3}}, 'select * from ds4 where result != \\\"SUCCESS\\\"  limit 50',,,query4"
   wait: true
 
 # stop gideon data loading

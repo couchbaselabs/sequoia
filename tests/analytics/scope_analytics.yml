@@ -24,19 +24,21 @@ users:
 buckets:
   -
       name: default
-      ram: 50%
+      ram: 25%
       eviction: fullEviction
+      replica: 0
   -
       name: other
       count: 3
-      ram: 15%
+      ram: 8%
+      replica: 0
 
 
 servers: # each server tag represents a cluster
   -
       name: local
       count: 4
-      ram: 80%
+      ram: 95%
       services:
         analytics: 2
         analytics_start: 2

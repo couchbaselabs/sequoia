@@ -29,10 +29,8 @@
 - args: "create shadow dataset ds2 on bucket2;"
 - args: "create shadow dataset ds3 on bucket3;"
 - args: "create shadow dataset ds4 on bucket4;"
-- args: "create index idx_city1 on ds1\\(city:string);"
-- args: "create index idx_city2 on ds2\\(city:string);"
-- args: "create index idx_city3 on ds3\\(city:string);"
-- args: "create index idx_city4 on ds4\\(city:string);"
+- args: "create index idx_result1 on ds1\\(result:string);"
+- args: "create index idx_result2 on ds2\\(result:string);"  
   wait: true
 
 ############### run mutations ################
@@ -52,11 +50,10 @@
 
 # ###############  run queries ################
 - template: attack_query
-  args: "86400, 1, {{.Nodes | net 1}}, 'select totalCount from ds1 where totalCount > 0 limit 50',,,query1"
-- args: "86400, 1, {{.Nodes | net 1}}, 'select claim from ds2 where claim is not Null limit 50',,,query2"
-- args: "86400, 1, {{.Nodes | net 1}}, 'select totalCount from ds3 where totalCount > 0 limit 100',,,query3"
-- args: "86400, 1, {{.Nodes | net 1}}, 'select * from ds4 where totalCount > 0  limit 50',,,query4"
-
+  args: "86400, 12, {{.Nodes | net 2}}, 'select COUNT\\(result) from ds1 where result = \\\"SUCCESS\\\" limit 50',,,query1"
+- args: "86400, 12, {{.Nodes | net 3}}, 'select claim from ds2 where result != \\\"SUCCESS\\\" limit 50',,,query2"
+- args: "86400, 12, {{.Nodes | net 2}}, 'select COUNT\\(result) from ds3 where result = \\\"SUCCESS\\\"  limit 50',,,query3"
+- args: "86400, 12, {{.Nodes | net 3}}, 'select * from ds4 where result != \\\"SUCCESS\\\"  limit 50',,,query4"
 
 # ###############  connect queries ################
 - template: cbq
