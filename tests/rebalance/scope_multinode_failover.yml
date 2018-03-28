@@ -19,7 +19,7 @@ buckets:
 servers: # each server tag represents a cluster
   -
       name: local
-      count: 7
+      count: 9
       ram: 70%
       rest_username: Administrator
       rest_password: password
