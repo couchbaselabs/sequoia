@@ -29,6 +29,8 @@ servers: # each server tag represents a cluster
         query_start: 2
         fts: 3
         fts_start: 2
+      data_path: "/data"
+      index_path: "/index"
       rest_username: Administrator
       rest_password: password
       init_nodes: 9
