@@ -36,16 +36,16 @@
 ############### run mutations ################
 -
   image: sequoiatools/gideon
-  command: "kv --ops {{.Scale 10}} --create 30 --update 50 --delete 20 --expire 15 --ttl 600 --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+  command: "kv --ops {{.Scale 100}} --create 60 --update 20 --delete 20 --expire 15 --ttl 600 --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
   alias: GideonContainer1
 -
-  command: "kv --ops {{.Scale 10}} --create 30 --update 50 --delete 20 --sizes 64 96   --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
+  command: "kv --ops {{.Scale 100}} --create 50 --update 30 --delete 20 --sizes 64 96   --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
   alias: GideonContainer2
 -
-  command: "kv --ops {{.Scale 10}} --create 40 --update 40 --delete 20 --sizes 64 96   --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}}"
+  command: "kv --ops {{.Scale 100}} --create 50 --update 30 --delete 20 --sizes 64 96   --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}}"
   alias: GideonContainer3
 -
-  command: "kv --ops {{.Scale 5}} --create 60 --update 20 --delete 20 --sizes 512 --expire 50 --ttl 600 --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}}"
+  command: "kv --ops {{.Scale 50}} --create 60 --update 20 --delete 20 --sizes 512  --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}}"
   alias: GideonContainer4
 
 # ###############  run queries ################
