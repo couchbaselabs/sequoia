@@ -18,7 +18,7 @@
 ############### data loading ################
 -
   image: sequoiatools/populate_data
-  command: "-bucket {{.Bucket}} -count 6000000 -doc travel_sample -user Administrator -pass password -expiry 1200 -ops 1000 http://{{.Orchestrator}}:8091"
+  command: "-bucket {{.Bucket}} -count 1000000 -doc travel_sample -user Administrator -pass password -expiry 1200 -ops 150 http://{{.Orchestrator}}:8091"
   alias: populate_data1
 -
   command: "-bucket {{.NthBucket 3}} -count 6000000 -doc travel_sample -user Administrator -pass password -expiry 1200 -ops 1000 http://{{.Orchestrator}}:8091"
