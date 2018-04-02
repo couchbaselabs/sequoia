@@ -169,6 +169,9 @@
 - args: "{{.Nodes | net 8}}, data"
   wait: true
 
+-
+  template: rebalance
+  wait: true
 
 - template: group_create
   requires:  "{{eq true .DoOnce}}"
