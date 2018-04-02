@@ -156,13 +156,15 @@
 
 ###############  Rebalance-out 3 nodes ################
 - template: rebalance_out
-  args: "{{.Nodes | net 3}}"
+  args: "({{.Nodes | net 2}},{{.Nodes | net 3}},{{.Nodes | net 4}})"
   wait: true
 
 
 -
   template: add_node
-  args: "{{.Nodes | net 3}}, (index,query,fts)"
+  args: "{{.Nodes | net 2}}, (index,query,fts)"
+- args: "{{.Nodes | net 3}}, (index,query,fts)"
+- args: "{{.Nodes | net 4}}, (index,query,fts)"
 - args: "{{.Nodes | net 7}}, data"
 - args: "{{.Nodes | net 8}}, data"
   wait: true
@@ -229,9 +231,15 @@
   command: "10"
   wait: true
 
+- template: rebalance_out
+  args: "({{.Nodes | net 2}},{{.Nodes | net 3}},{{.Nodes | net 4}},{{.Nodes | net 7}},{{.Nodes | net 8}})"
+  wait: true
+
 -
   template: add_node
-- args: "{{.Nodes | net 3}}, data"
+  args: "{{.Nodes | net 2}}"
+- args: "{{.Nodes | net 3}}"
+- args: "{{.Nodes | net 4}}"
   wait: true
 
 -
