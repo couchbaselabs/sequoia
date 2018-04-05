@@ -4,7 +4,6 @@
 ############### data loading ################
 -
   image: sequoiatools/gideon
-  requires:  "{{eq true .DoOnce}}"
   command: "kv --ops {{.Scale 100}} --create 100  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
 -
   command: "kv --ops {{.Scale 100}} --create 100 --sizes 64 96   --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
@@ -48,7 +47,7 @@
 -
   image: sequoiatools/cmd
   entrypoint: sleep
-  command: "10"
+  command: "30"
   wait: true
 
 -
@@ -134,6 +133,12 @@
   wait: true
 
 -
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "120"
+  wait: true
+
+-
   template: recover_node
   args: "{{.Nodes | net 4}}, delta"
   wait: true
@@ -182,7 +187,6 @@
 
 -
   template: group_move_servers
-  requires:  "{{eq true .DoOnce}}"
   args: "'Group 1', server2, ({{.Nodes | net 2}}, {{.Nodes | net 5}}, {{.Nodes | net 6}})"
 - args: "'Group 1', server3, ({{.Nodes | net 3}}, {{.Nodes | net 7}}, {{.Nodes | net 8}})"
   wait: true
@@ -235,9 +239,21 @@
   wait: true
 
 
+- template: rebalance_out
+  args: "({{.Nodes | net 2}},{{.Nodes | net 4}})"
+  wait: true
+
+
 -
   template: add_node
-  args: "{{.Nodes | net 3}}"
+  args: "{{.Nodes | net 2}}"
+- args: "{{.Nodes | net 3}}"
+- args: "{{.Nodes | net 4}}"
+  wait: true
+
+-
+  template: group_move_servers
+  args: " server2, 'Group 1',({{.Nodes | net 5}}, {{.Nodes | net 6}})"
   wait: true
 
 -
