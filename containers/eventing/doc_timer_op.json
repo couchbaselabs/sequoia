@@ -3,13 +3,13 @@
 	"id": 0,
 	"depcfg": {
 		"buckets": [{
-			"alias": "dst_bucket2",
-			"bucket_name": "other-dst-1"
+			"alias": "dst",
+			"bucket_name": "doc_timer_dst"
 		}],
 		"metadata_bucket": "metadata",
-		"source_bucket": "other-1"
+		"source_bucket": "doc_timer"
 	},
-	"appcode": "function OnUpdate(doc, meta) {\n    var expiry = Math.round((new Date()).getTime() / 1000) + 180;\n    docTimer(timerCallback, meta.id, expiry);\n}\nfunction OnDelete(meta) {\n    delete dst_bucket2[meta.id];\n}\nfunction timerCallback(docid) {\n    dst_bucket2[docid] = 'from timerCallback';\n}",
+	"appcode": "function OnUpdate(doc, meta) {\n    var expiry = Math.round((new Date()).getTime() / 1000) + 180;\n    docTimer(timerCallback, meta.id, expiry);\n}\n\nfunction OnDelete(meta) {\n    delete dst[meta.id];}\n    \nfunction timerCallback(docid) {\n    dst[docid] = 'from timerCallback';\n}",
 	"settings": {
 		"app_log_max_files": 10,
 		"app_log_max_size": 10485760,
@@ -23,13 +23,13 @@
 		"data_chan_size": 10000,
 		"dcp_gen_chan_size": 10000,
 		"dcp_num_connections": 1,
-		"dcp_stream_boundary": "from_now",
-		"deadline_timeout": 3,
+		"dcp_stream_boundary": "everything",
+		"deadline_timeout": 7,
 		"deployment_status": false,
 		"description": "",
-		"enable_recursive_mutation": true,
+		"enable_recursive_mutation": false,
 		"enable_snapshot_smr": false,
-		"execution_timeout": 1,
+		"execution_timeout": 5,
 		"feedback_batch_size": 100,
 		"feedback_read_buffer_size": 65536,
 		"fuzz_offset": 0,
@@ -43,17 +43,14 @@
 		"min_page_items": 50,
 		"persist_interval": 5000,
 		"processing_status": false,
-		"rbacpass": "password",
-		"rbacrole": "admin",
-		"rbacuser": "other-1",
 		"skip_timer_threshold": 86400,
-		"sock_batch_size": 1,
+		"sock_batch_size": 100,
+		"tick_duration": 60000,
 		"timer_processing_tick_interval": 500,
-		"timer_worker_pool_size": 3,
 		"use_memory_manager": true,
 		"vb_ownership_giveup_routine_count": 3,
 		"vb_ownership_takeover_routine_count": 3,
-		"worker_count": 6,
+		"worker_count": 3,
 		"worker_feedback_queue_cap": 10000,
 		"worker_queue_cap": 100000,
 		"xattr_doc_timer_entry_prune_threshold": 100

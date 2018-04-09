@@ -4,12 +4,12 @@
 	"depcfg": {
 		"buckets": [{
 			"alias": "dst",
-			"bucket_name": "default-dst"
+			"bucket_name": "bucket_op_dst"
 		}],
 		"metadata_bucket": "metadata",
-		"source_bucket": "default"
+		"source_bucket": "bucket_op"
 	},
-	"appcode": "function OnUpdate(doc, meta) {\n    //log('creating document on dst : ', meta.id);\n     try{\n     var query = select * from default limit 1;\n     dst[meta.id] = query.execQuery();\n     }\n     catch(e){\n         log(e);\n     }\n}\nfunction OnDelete(meta) {\n    //log('deleting document: ', meta.id);\n    delete dst[meta.id];\n}",
+	"appcode": "function OnUpdate(doc, meta) {\n    try{\n        var query = select * from default limit 1;\n        dst[meta.id] = query.execQuery();  \n    }   catch(e){\n        log(e);   \n    }\n}\n    \nfunction OnDelete(meta) {\n    delete dst[meta.id];\n}",
 	"settings": {
 		"app_log_max_files": 10,
 		"app_log_max_size": 10485760,
@@ -24,12 +24,12 @@
 		"dcp_gen_chan_size": 10000,
 		"dcp_num_connections": 1,
 		"dcp_stream_boundary": "everything",
-		"deadline_timeout": 3,
-		"deployment_status": true,
+		"deadline_timeout": 62,
+		"deployment_status": false,
 		"description": "",
-		"enable_recursive_mutation": true,
+		"enable_recursive_mutation": false,
 		"enable_snapshot_smr": false,
-		"execution_timeout": 1,
+		"execution_timeout": 60,
 		"feedback_batch_size": 100,
 		"feedback_read_buffer_size": 65536,
 		"fuzz_offset": 0,
@@ -42,14 +42,11 @@
 		"max_page_items": 400,
 		"min_page_items": 50,
 		"persist_interval": 5000,
-		"processing_status": true,
-		"rbacpass": "password",
-		"rbacrole": "admin",
-		"rbacuser": "default",
+		"processing_status": false,
 		"skip_timer_threshold": 86400,
-		"sock_batch_size": 1,
+		"sock_batch_size": 100,
+		"tick_duration": 60000,
 		"timer_processing_tick_interval": 500,
-		"timer_worker_pool_size": 3,
 		"use_memory_manager": true,
 		"vb_ownership_giveup_routine_count": 3,
 		"vb_ownership_takeover_routine_count": 3,
