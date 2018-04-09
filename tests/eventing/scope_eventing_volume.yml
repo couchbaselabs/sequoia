@@ -1,0 +1,77 @@
+---
+users:
+  -
+      name: default
+      password: password
+      roles: admin
+      auth_domain: local
+  -
+      name: default-dst
+      password: password
+      roles: admin
+      auth_domain: local
+  -
+      name: other-1
+      password: password
+      roles: admin
+      auth_domain: local
+  -
+      name: other-2
+      password: password
+      roles: admin
+      auth_domain: local
+  -
+      name: other-dst-1
+      password: password
+      roles: admin
+      auth_domain: local
+  -
+      name: other-dst-2
+      password: password
+      roles: admin
+      auth_domain: local
+  -
+      name: metadata
+      password: password
+      roles: admin
+      auth_domain: local
+
+buckets:
+  -
+      name: default
+      ram: 13%
+      eviction: fullEviction
+  -
+      name: default-dst
+      ram: 13%
+      eviction: fullEviction
+  -
+      name: other-1
+      ram: 13%
+  -
+      name: other-dst-1
+      ram: 13%
+  -
+      name: metadata
+      ram: 13%
+
+servers: # each server tag represents a cluster
+  -
+      name: local
+      count: 10
+      ram: 80%
+      init_nodes: 5
+      services:
+        eventing: 2
+        eventing_start: 3
+        query: 1
+        query_start: 5
+        index: 1
+        index_start: 5
+      rest_port: 8091
+      query_port: 8093
+      rest_username: Administrator
+      rest_password: password
+      buckets: default,default-dst,other-1,other-dst-1,metadata
+      users: default,default-dst,metadata,other-1,other-2,other-dst-1,other-dst-2
+
