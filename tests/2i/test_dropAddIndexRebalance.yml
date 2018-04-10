@@ -17,18 +17,18 @@
 
 ###############  create indexes ################
 - template: cbq
-  args: "'create index default_rating on `{{.Bucket}}`\\(rating)'"
-- args: "'create index default_result on `{{.Bucket}}`\\(result)'"
-- args: "'create primary index on `{{.Bucket}}`'"
-- args: "'create index o1_rating on `{{.NthBucket 1}}`\\(rating)'"
-- args: "'create index o1_claims on `{{.NthBucket 1}}`\\(claim)'"
-- args: "'create index o1_result on `{{.NthBucket 1}}`\\(result)'"
-- args: "'create index o2_rating on `{{.NthBucket 2}}`\\(rating)'"
-- args: "'create index o2_claims on `{{.NthBucket 2}}`\\(claim)'"
-- args: "'create index o2_result on `{{.NthBucket 2}}`\\(result)'"
-- args: "'create index o3_rating on `{{.NthBucket 3}}`\\(rating)'"
-- args: "'create index o3_claims on `{{.NthBucket 3}}`\\(claim)'"
-- args: "'create index o3_result on `{{.NthBucket 3}}`\\(result)'"
+  args: "'create index default_rating on `{{.Bucket}}`\\(rating) using GSI'"
+- args: "'create index default_result on `{{.Bucket}}`\\(result) using GSI'"
+- args: "'create primary index on `{{.Bucket}}` using GSI'"
+- args: "'create index o1_rating on `{{.NthBucket 1}}`\\(rating) using GSI'"
+- args: "'create index o1_claims on `{{.NthBucket 1}}`\\(claim) using GSI'"
+- args: "'create index o1_result on `{{.NthBucket 1}}`\\(result) using GSI'"
+- args: "'create index o2_rating on `{{.NthBucket 2}}`\\(rating) using GSI'"
+- args: "'create index o2_claims on `{{.NthBucket 2}}`\\(claim) using GSI'"
+- args: "'create index o2_result on `{{.NthBucket 2}}`\\(result) using GSI'"
+- args: "'create index o3_rating on `{{.NthBucket 3}}`\\(rating) using GSI'"
+- args: "'create index o3_claims on `{{.NthBucket 3}}`\\(claim) using GSI'"
+- args: "'create index o3_result on `{{.NthBucket 3}}`\\(result) using GSI'"
 
 
 ###############  query index ################
@@ -51,18 +51,18 @@
 
 ###############  drop indexes during rebalance ################
 - template: cbq
-  args: "'drop index `{{.Bucket}}`'"
-- args: "'drop index `{{.NthBucket 1}}`.o1_rating'"
-- args: "'drop index `{{.NthBucket 2}}`.o2_rating'"
-- args: "'drop index `{{.NthBucket 3}}`.o3_rating'"
+  args: "'drop primary index on `{{.Bucket}}` using GSI'"
+- args: "'drop index `{{.NthBucket 1}}`.o1_rating using GSI'"
+- args: "'drop index `{{.NthBucket 2}}`.o2_rating using GSI'"
+- args: "'drop index `{{.NthBucket 3}}`.o3_rating using GSI'"
 
 
 ###############  'when' swap rebalance is done add back some and drop others ################
 - template: cbq
-  args: "'create primary index on `{{.Bucket}}`'"
-- args: "'create index o3_rating on `{{.NthBucket 3}}`\\(rating)'"
-- args: "'drop index `{{.NthBucket 2}}`.o2_claims'"
-- args: "'drop index `{{.NthBucket 3}}`.o3_claims'"
+  args: "'create primary index on `{{.Bucket}}` using GSI'"
+- args: "'create index o3_rating on `{{.NthBucket 3}}`\\(rating) using GSI'"
+- args: "'drop index `{{.NthBucket 2}}`.o2_claims using GSI'"
+- args: "'drop index `{{.NthBucket 3}}`.o3_claims using GSI'"
 
 
 
@@ -79,19 +79,19 @@
 
 ###############  'when' hard failover is done add back all indexes ################
 - template: cbq
-  args: "'create index default_rating on `{{.Bucket}}`\\(rating)'"
-- args: "'create index default_claims on `{{.Bucket}}`\\(claim)'"
-- args: "'create index default_result on `{{.Bucket}}`\\(result)'"
-- args: "'create primary index on `{{.Bucket}}`'"
-- args: "'create index o1_rating on `{{.NthBucket 1}}`\\(rating)'"
-- args: "'create index o1_claims on `{{.NthBucket 1}}`\\(claim)'"
-- args: "'create index o1_result on `{{.NthBucket 1}}`\\(result)'"
-- args: "'create index o2_rating on `{{.NthBucket 2}}`\\(rating)'"
-- args: "'create index o2_claims on `{{.NthBucket 2}}`\\(claim)'"
-- args: "'create index o2_result on `{{.NthBucket 2}}`\\(result)'"
-- args: "'create index o3_rating on `{{.NthBucket 3}}`\\(rating)'"
-- args: "'create index o3_claims on `{{.NthBucket 3}}`\\(claim)'"
-- args: "'create index o3_result on `{{.NthBucket 3}}`\\(result)'"
+  args: "'create index default_rating on `{{.Bucket}}`\\(rating) using GSI'"
+- args: "'create index default_claims on `{{.Bucket}}`\\(claim) using GSI'"
+- args: "'create index default_result on `{{.Bucket}}`\\(result) using GSI'"
+- args: "'create primary index on `{{.Bucket}}` using GSI'"
+- args: "'create index o1_rating on `{{.NthBucket 1}}`\\(rating) using GSI'"
+- args: "'create index o1_claims on `{{.NthBucket 1}}`\\(claim) using GSI'"
+- args: "'create index o1_result on `{{.NthBucket 1}}`\\(result) using GSI'"
+- args: "'create index o2_rating on `{{.NthBucket 2}}`\\(rating) using GSI'"
+- args: "'create index o2_claims on `{{.NthBucket 2}}`\\(claim) using GSI'"
+- args: "'create index o2_result on `{{.NthBucket 2}}`\\(result) using GSI'"
+- args: "'create index o3_rating on `{{.NthBucket 3}}`\\(rating) using GSI'"
+- args: "'create index o3_claims on `{{.NthBucket 3}}`\\(claim) using GSI'"
+- args: "'create index o3_result on `{{.NthBucket 3}}`\\(result) using GSI'"
 
 
 
