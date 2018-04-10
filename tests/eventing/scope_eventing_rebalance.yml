@@ -51,12 +51,16 @@ buckets:
       ram: 11%
       eviction: fullEviction
   -
-      name: other
-      count: 2
+      name: bucket_op
       ram: 11%
   -
-      name: other-dst
-      count: 2
+      name: bucket_op_dst
+      ram: 11%
+  -
+      name: doc_timer
+      ram: 11%
+  -
+      name: doc_timer_dst
       ram: 11%
   -
       name: metadata
@@ -83,5 +87,5 @@ servers: # each server tag represents a cluster
       query_port: 8093
       rest_username: Administrator
       rest_password: password
-      buckets: default,default-dst,metadata,other,other-dst,test_diagnostics
+      buckets: bucket_op,bucket_op_dst,metadata,doc_timer,doc_timer_dst,test_diagnostics
       users: default,default-dst,metadata,other-1,other-2,other-dst-1,other-dst-2,test_diagnostics
