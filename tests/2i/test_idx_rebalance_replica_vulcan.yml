@@ -250,8 +250,38 @@
    wait: true
 - section_end: change_indexer_topologies
 
-###############  Drop all Indexes ################
+###############  Drop some Indexes ################
 - section_start: recreate_replica_indexes
+- template: cbq
+  args: "'drop primary index on `{{.Bucket}}` using GSI'"
+- args: "'drop index `{{.Bucket}}`.default_rating using GSI'"
+- args: "'drop index `{{.NthBucket 1}}`.o1_claims using GSI'"
+- args: "'drop index `{{.NthBucket 2}}`.o2_result using GSI'"
+- args: "'drop index `{{.NthBucket 3}}`.o3_rating using GSI'"
+# Sleep for some time to allow DDL to complete in the background
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "600"
+   wait: true
+
+###############  Recreate some Indexes ################
+- template: cbq
+  args: "'create index default_rating on `{{.Bucket}}`\\(rating) using GSI'"
+- args: "'create primary index on `{{.Bucket}}` using GSI'"
+- args: "'create index o1_claims on `{{.NthBucket 1}}`\\(claim) using GSI'"
+- args: "'create index o2_result on `{{.NthBucket 2}}`\\(result) using GSI'"
+- args: "'create index o3_rating on `{{.NthBucket 3}}`\\(rating) using GSI'"
+# Sleep for some time to allow DDL to complete in the background
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "600"
+   wait: true
+- section_end: recreate_replica_indexes
+
+###############  Drop all Indexes ################
+- section_start: drop_all_indexes
 - template: cbq
   args: "'drop index `{{.Bucket}}`.default_rating'"
 - args: "'drop index `{{.Bucket}}`.default_claims'"
@@ -276,4 +306,4 @@
    entrypoint: sleep
    command: "600"
    wait: true
-- section_end: recreate_replica_indexes
+- section_end: drop_all_indexes
