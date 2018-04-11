@@ -4,10 +4,10 @@
 	"depcfg": {
 		"buckets": [{
 			"alias": "dst",
-			"bucket_name": "default-dst"
+			"bucket_name": "bucket_op_dst"
 		}],
 		"metadata_bucket": "metadata",
-		"source_bucket": "default"
+		"source_bucket": "bucket_op"
 	},
 	"appcode": "function OnUpdate(doc, meta) {\n    //log('creating document on dst : ', meta.id);\n    dst[meta.id] = 'doc created';\n}\nfunction OnDelete(meta) {\n    //log('deleting document: ', meta.id);\n    delete dst[meta.id];\n}",
 	"settings": {

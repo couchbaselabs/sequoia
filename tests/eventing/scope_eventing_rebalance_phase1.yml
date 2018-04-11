@@ -79,12 +79,7 @@ servers: # each server tag represents a cluster
       services:
         eventing: 2
         eventing_start: 2
-        query: 3
-        query_start: 5
-        index: 3
-        index_start: 5
       rest_port: 8091
-      query_port: 8093
       data_path: "/data"
       index_path: "/index"
       rest_username: Administrator

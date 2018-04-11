@@ -9,7 +9,7 @@
 		"metadata_bucket": "metadata",
 		"source_bucket": "bucket_op"
 	},
-	"appcode": "function OnUpdate(doc, meta) {\n    try{\n        var query = select * from default limit 1;\n        dst[meta.id] = query.execQuery();  \n    }   catch(e){\n        log(e);   \n    }\n}\n    \nfunction OnDelete(meta) {\n    delete dst[meta.id];\n}",
+	"appcode": "function OnUpdate(doc, meta) {\n    try{      \n    var query = select * from bucket_op limit 1;\n\tfor( var row of query){ \n       dst[meta.id] = row;  // for loop\n} \n    }  \n    catch(e){\n        log(e);    \n    }\n}\n\nfunction OnDelete(meta) {\n    delete dst[meta.id];\n}\n",
 	"settings": {
 		"app_log_max_files": 10,
 		"app_log_max_size": 10485760,
