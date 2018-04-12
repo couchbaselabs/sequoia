@@ -50,10 +50,11 @@
 
 # ###############  run queries ################
 - template: attack_query
-  args: "86400, 12, {{.Nodes | net 2}}, 'select COUNT\\(result) from ds1 where result = \\\"SUCCESS\\\" limit 50',,,query1"
-- args: "86400, 12, {{.Nodes | net 3}}, 'select claim from ds2 where result != \\\"SUCCESS\\\" limit 50',,,query2"
-- args: "86400, 12, {{.Nodes | net 2}}, 'select COUNT\\(result) from ds3 where result = \\\"SUCCESS\\\"  limit 50',,,query3"
-- args: "86400, 12, {{.Nodes | net 3}}, 'select * from ds4 where result != \\\"SUCCESS\\\"  limit 50',,,query4"
+  args: "86400, 12, {{.Nodes | net 2}}, 'SELECT name as id, result as bucketName, `type` as `Type`, array_length\\(profile.friends\\) as num_friends FROM  ds1 where result = \\\"SUCCESS\\\" and profile is not missing and array_length\\(profile.friends\\) > 5 limit 100',,,query1"
+- args: "86400, 12, {{.Nodes | net 3}}, 'SELECT name as id, result as bucketName, `type` as `Type`, array_length\\(profile.friends\\) as num_friends FROM  ds2 where result = \\\"SUCCESS\\\" and profile is not missing and array_length\\(profile.friends\\) = 5',,,query2"
+- args: "86400, 12, {{.Nodes | net 2}}, 'select sum\\(friends.num_friends\\) from \\(select array_length\\(profile.friends\\) as num_friends from ds3\\) as friends',,,query3"
+- args: "86400, 12, {{.Nodes | net 3}}, 'SELECT name as id, result as Result, `type` as `Type`, array_length\\(profile.friends\\) as num_friends FROM  ds4 where result = \\\"SUCCESS\\\" and profile is not missing and array_length\\(profile.friends\\) > 5 order by name UNION ALL SELECT name as id, result as Result, `type` as `Type`, array_length\\(profile.friends\\) as num_friends FROM  ds4 where result != \\\"SUCCESS\\\" and profile is not missing and array_length\\(profile.friends\\) = 5 order by name',,,query4"
+  wait: true
 
 # ###############  connect queries ################
 - template: cbq
