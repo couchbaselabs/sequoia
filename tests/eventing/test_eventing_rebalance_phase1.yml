@@ -8,26 +8,36 @@
   command: "-bucket {{.Bucket}} -count 6000000 -doc travel_sample -user Administrator -pass password -expiry 1200 -ops 1000 http://{{.Orchestrator}}:8091"
   alias: populate_data1
 -
-  command: "-bucket {{.NthBucket 3}} -count 6000000 -doc travel_sample -user Administrator -pass password -expiry 1200 -ops 1000 http://{{.Orchestrator}}:8091"
+  command: "-bucket {{.NthBucket 1}} -count 6000000 -doc travel_sample -user Administrator -pass password -expiry 1200 -ops 1000 http://{{.Orchestrator}}:8091"
   alias: populate_data2
+-
+  command: "-bucket {{.NthBucket 2}} -count 6000000 -doc travel_sample -user Administrator -pass password -expiry 1200 -ops 1000 http://{{.Orchestrator}}:8091"
+  alias: populate_data3
 
 ####### runing constant ops #################
 -
   image: sequoiatools/gideon
   command: "kv --ops {{.Scale 10}} --create 100 --update 100 --delete 100 --expire 100 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
   alias: GideonContainer1
-
 -
   image: sequoiatools/gideon
-  command: "kv --ops {{.Scale 10}} --create 100 --update 100 --delete 100 --expire 100 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}}"
+  command: "kv --ops {{.Scale 10}} --create 100 --update 100 --delete 100 --expire 100 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
   alias: GideonContainer2
+-
+  image: sequoiatools/gideon
+  command: "kv --ops {{.Scale 10}} --create 100 --update 100 --delete 100 --expire 100 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}}"
+  alias: GideonContainer3
 
 ############### create and deploy functions ################
 -
   image: sequoiatools/eventing
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_function_without_n1ql.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_function.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
 -
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} doc_timer_op.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_function1.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_complex_function.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_complex_function1.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
   wait: true
 
 -
@@ -67,9 +77,13 @@
 ############### undeploy functions ################
 -
   image: sequoiatools/eventing
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} bucket_op_function_without_n1ql.json {{.RestUsername}} {{.RestPassword}} undeploy true"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_function.json {{.RestUsername}} {{.RestPassword}} undeploy true"
 -
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} doc_timer_op.json {{.RestUsername}} {{.RestPassword}} undeploy true"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_function1.json {{.RestUsername}} {{.RestPassword}} undeploy true"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_complex_function.json {{.RestUsername}} {{.RestPassword}} undeploy true"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_complex_function1.json {{.RestUsername}} {{.RestPassword}} undeploy true"
   wait: true
 
 -
@@ -82,9 +96,13 @@
 ############### redeploy functions ################
 -
   image: sequoiatools/eventing
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} bucket_op_function_without_n1ql.json {{.RestUsername}} {{.RestPassword}} deploy"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_function.json {{.RestUsername}} {{.RestPassword}} deploy"
 -
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} doc_timer_op.json {{.RestUsername}} {{.RestPassword}} deploy"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_function1.json {{.RestUsername}} {{.RestPassword}} deploy"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_complex_function.json {{.RestUsername}} {{.RestPassword}} deploy"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_complex_function1.json {{.RestUsername}} {{.RestPassword}} deploy"
   wait: true
 
 -
@@ -124,9 +142,13 @@
 ############### undeploy functions ################
 -
   image: sequoiatools/eventing
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} bucket_op_function_without_n1ql.json {{.RestUsername}} {{.RestPassword}} undeploy true"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_function.json {{.RestUsername}} {{.RestPassword}} undeploy true"
 -
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} doc_timer_op.json {{.RestUsername}} {{.RestPassword}} undeploy true"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_function1.json {{.RestUsername}} {{.RestPassword}} undeploy true"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_complex_function.json {{.RestUsername}} {{.RestPassword}} undeploy true"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_complex_function1.json {{.RestUsername}} {{.RestPassword}} undeploy true"
   wait: true
 
 -
@@ -139,9 +161,13 @@
 ############### redeploy functions ################
 -
   image: sequoiatools/eventing
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} bucket_op_function_without_n1ql.json {{.RestUsername}} {{.RestPassword}} deploy"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_function.json {{.RestUsername}} {{.RestPassword}} deploy"
 -
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} doc_timer_op.json {{.RestUsername}} {{.RestPassword}} deploy"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_function1.json {{.RestUsername}} {{.RestPassword}} deploy"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_complex_function.json {{.RestUsername}} {{.RestPassword}} deploy"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_complex_function1.json {{.RestUsername}} {{.RestPassword}} deploy"
   wait: true
 
 -
@@ -201,9 +227,13 @@
 ############### undeploy functions ################
 -
   image: sequoiatools/eventing
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} bucket_op_function_without_n1ql.json {{.RestUsername}} {{.RestPassword}} undeploy true"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_function.json {{.RestUsername}} {{.RestPassword}} undeploy true"
 -
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} doc_timer_op.json {{.RestUsername}} {{.RestPassword}} undeploy true"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_function1.json {{.RestUsername}} {{.RestPassword}} undeploy true"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_complex_function.json {{.RestUsername}} {{.RestPassword}} undeploy true"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_complex_function1.json {{.RestUsername}} {{.RestPassword}} undeploy true"
   wait: true
 
 -
@@ -215,9 +245,13 @@
 ############### redeploy functions ################
 -
   image: sequoiatools/eventing
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} bucket_op_function_without_n1ql.json {{.RestUsername}} {{.RestPassword}} deploy"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_function.json {{.RestUsername}} {{.RestPassword}} deploy"
 -
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} doc_timer_op.json {{.RestUsername}} {{.RestPassword}} deploy"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_function1.json {{.RestUsername}} {{.RestPassword}} deploy"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_complex_function.json {{.RestUsername}} {{.RestPassword}} deploy"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_complex_function1.json {{.RestUsername}} {{.RestPassword}} deploy"
   wait: true
 
 -
@@ -274,18 +308,26 @@
 ############### undeploy functions ################
 -
   image: sequoiatools/eventing
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} bucket_op_function_without_n1ql.json {{.RestUsername}} {{.RestPassword}} undeploy true"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_function.json {{.RestUsername}} {{.RestPassword}} undeploy true"
 -
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} doc_timer_op.json {{.RestUsername}} {{.RestPassword}} undeploy true"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_function1.json {{.RestUsername}} {{.RestPassword}} undeploy true"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_complex_function.json {{.RestUsername}} {{.RestPassword}} undeploy true"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_complex_function1.json {{.RestUsername}} {{.RestPassword}} undeploy true"
   wait: true
 
 
 ############### delete functions ################
 -
   image: sequoiatools/eventing
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_function_without_n1ql.json {{.RestUsername}} {{.RestPassword}} delete"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_function.json {{.RestUsername}} {{.RestPassword}} delete"
 -
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} doc_timer_op.json {{.RestUsername}} {{.RestPassword}} delete"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_function1.json {{.RestUsername}} {{.RestPassword}} delete"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_complex_function.json {{.RestUsername}} {{.RestPassword}} delete"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_complex_function1.json {{.RestUsername}} {{.RestPassword}} delete"
   wait: true
 
 -

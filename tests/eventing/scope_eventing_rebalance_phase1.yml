@@ -43,24 +43,25 @@ users:
 
 buckets:
   -
-      name: default
-      ram: 11%
-      eviction: fullEviction
-  -
-      name: default-dst
-      ram: 11%
-      eviction: fullEviction
-  -
       name: bucket_op
+      ram: 11%
+  -
+      name: bucket_op_complex
+      ram: 11%
+  -
+      name: bucket_op_complex1
       ram: 11%
   -
       name: bucket_op_dst
       ram: 11%
   -
-      name: doc_timer
+      name: bucket_op_dst1
       ram: 11%
   -
-      name: doc_timer_dst
+      name: bucket_op_complex_dst
+      ram: 11%
+  -
+      name: bucket_op_complex_dst1
       ram: 11%
   -
       name: metadata
@@ -81,8 +82,7 @@ servers: # each server tag represents a cluster
         eventing_start: 2
       rest_port: 8091
       data_path: "/data"
-      index_path: "/index"
       rest_username: Administrator
       rest_password: password
-      buckets: bucket_op,bucket_op_dst,metadata,doc_timer,doc_timer_dst,test_diagnostics
+      buckets: bucket_op,bucket_op_complex,bucket_op_complex1,bucket_op_dst,bucket_op_dst1,bucket_op_complex_dst,bucket_op_complex_dst1,metadata,test_diagnostics
       users: default,default-dst,metadata,other-1,other-2,other-dst-1,other-dst-2,test_diagnostics
