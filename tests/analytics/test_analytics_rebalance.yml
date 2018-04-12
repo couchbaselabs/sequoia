@@ -48,12 +48,25 @@
   command: "kv --ops {{.Scale 50}} --create 60 --update 20 --delete 20 --sizes 512  --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}}"
   alias: GideonContainer4
 
-# ###############  run queries ################
-- template: attack_query
-  args: "86400, 12, {{.Nodes | net 2}}, 'SELECT name as id, result as bucketName, `type` as `Type`, array_length\\(profile.friends\\) as num_friends FROM  ds1 where result = \\\"SUCCESS\\\" and profile is not missing and array_length\\(profile.friends\\) > 5 limit 100',,,query1"
-- args: "86400, 12, {{.Nodes | net 3}}, 'SELECT name as id, result as bucketName, `type` as `Type`, array_length\\(profile.friends\\) as num_friends FROM  ds2 where result = \\\"SUCCESS\\\" and profile is not missing and array_length\\(profile.friends\\) = 5',,,query2"
-- args: "86400, 12, {{.Nodes | net 2}}, 'select sum\\(friends.num_friends\\) from \\(select array_length\\(profile.friends\\) as num_friends from ds3\\) as friends',,,query3"
-- args: "86400, 12, {{.Nodes | net 3}}, 'SELECT name as id, result as Result, `type` as `Type`, array_length\\(profile.friends\\) as num_friends FROM  ds4 where result = \\\"SUCCESS\\\" and profile is not missing and array_length\\(profile.friends\\) > 5 order by name UNION ALL SELECT name as id, result as Result, `type` as `Type`, array_length\\(profile.friends\\) as num_friends FROM  ds4 where result != \\\"SUCCESS\\\" and profile is not missing and array_length\\(profile.friends\\) = 5 order by name',,,query4"
+
+############### run queries ################
+- image: sequoiatools/cbdozer
+  command: "-method POST -duration 86400 -rate 12 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.Nodes | .Service `analytics` | net 0}}:8095/query/service
+            -body 'SELECT name as id, result as bucketName, `type` as `Type`, array_length(profile.friends) as num_friends FROM  ds1 where result = \"SUCCESS\" and profile is not missing and array_length(profile.friends) > 5 limit 100'"
+  alias: query1
+
+-
+  command: "-method POST -duration 86400 -rate 12 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.Nodes | .Service `analytics` | net 0}}:8095/query/service
+            -body 'SELECT name as id, result as bucketName, `type` as `Type`, array_length(profile.friends) as num_friends FROM  ds2 where result = \"SUCCESS\" and profile is not missing and array_length(profile.friends) = 5'"
+  alias: query2
+-
+  command: "-method POST -duration 86400 -rate 12 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.Nodes | .Service `analytics` | net 1}}:8095/query/service
+            -body 'select sum(friends.num_friends) from (select array_length(profile.friends) as num_friends from ds3) as friends'"
+  alias: query3
+-
+  command: "-method POST -duration 86400 -rate 12 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.Nodes | .Service `analytics` | net 1}}:8095/query/service
+            -body 'SELECT name as id, result as Result, `type` as `Type`, array_length(profile.friends) as num_friends FROM  ds4 where result = \"SUCCESS\" and profile is not missing and array_length(profile.friends) > 5 UNION ALL SELECT name as id, result as Result, `type` as `Type`, array_length(profile.friends) as num_friends FROM  ds4 where result != \"SUCCESS\" and profile is not missing and array_length(profile.friends) = 5'"
+  alias: query4
   wait: true
 
 # ###############  connect queries ################

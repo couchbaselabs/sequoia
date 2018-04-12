@@ -30,12 +30,12 @@
 - args: "create shadow dataset ds2 on bucket2;"
 - args: "create shadow dataset ds3 on bucket3;"
 - args: "create shadow dataset ds4 on bucket4;"
+- args: "create index idx_result1 on ds1\\(result:string);"
+- args: "create index idx_result2 on ds2\\(result:string);"
 - args: "connect bucket bucket1;"
 - args: "connect bucket bucket2;"
 - args: "connect bucket bucket3;"
 - args: "connect bucket bucket4;"
-- args: "create index idx_result1 on ds1\\(result:string);"
-- args: "create index idx_result2 on ds2\\(result:string);"
   wait: true
 
 ############### run mutations ################
@@ -54,11 +54,19 @@
   alias: GideonContainer4
 
 # ###############  run queries ################
-- template: attack_query
-  args: "86400, 12, {{.Nodes | net 2}}, 'SELECT name as id, result as bucketName, `type` as `Type`, array_length\\(profile.friends\\) as num_friends FROM  ds1 where result = \\\"SUCCESS\\\" and profile is not missing and array_length\\(profile.friends\\) > 5 limit 100'"
-- args: "86400, 12, {{.Nodes | net 3}}, 'SELECT name as id, result as bucketName, `type` as `Type`, array_length\\(profile.friends\\) as num_friends FROM  ds2 where result = \\\"SUCCESS\\\" and profile is not missing and array_length\\(profile.friends\\) = 5'"
-- args: "86400, 12, {{.Nodes | net 2}}, 'select sum\\(friends.num_friends\\) from \\(select array_length\\(profile.friends\\) as num_friends from ds3\\) as friends'"
-- args: "86400, 12, {{.Nodes | net 3}}, 'SELECT name as id, result as Result, `type` as `Type`, array_length\\(profile.friends\\) as num_friends FROM  ds4 where result = \\\"SUCCESS\\\" and profile is not missing and array_length\\(profile.friends\\) > 5 order by name UNION ALL SELECT name as id, result as Result, `type` as `Type`, array_length\\(profile.friends\\) as num_friends FROM  ds4 where result != \\\"SUCCESS\\\" and profile is not missing and array_length\\(profile.friends\\) = 5 order by name'"
+- image: sequoiatools/cbdozer
+  command: "-method POST -duration 86400 -rate 12 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.Nodes | .Service `analytics` | net 0}}:8095/query/service
+            -body 'SELECT name as id, result as bucketName, `type` as `Type`, array_length(profile.friends) as num_friends FROM  ds1 where result = \"SUCCESS\" and profile is not missing and array_length(profile.friends) > 5 limit 100'"
+-
+  command: "-method POST -duration 86400 -rate 12 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.Nodes | .Service `analytics` | net 0}}:8095/query/service
+            -body 'SELECT name as id, result as bucketName, `type` as `Type`, array_length(profile.friends) as num_friends FROM  ds2 where result = \"SUCCESS\" and profile is not missing and array_length(profile.friends) = 5'"
+-
+  command: "-method POST -duration 86400 -rate 12 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.Nodes | .Service `analytics` | net 1}}:8095/query/service
+            -body 'select sum(friends.num_friends) from (select array_length(profile.friends) as num_friends from ds3) as friends'"
+-
+  command: "-method POST -duration 86400 -rate 12 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.Nodes | .Service `analytics` | net 1}}:8095/query/service
+            -body 'SELECT name as id, result as Result, `type` as `Type`, array_length(profile.friends) as num_friends FROM  ds4 where result = \"SUCCESS\" and profile is not missing and array_length(profile.friends) > 5 UNION ALL SELECT name as id, result as Result, `type` as `Type`, array_length(profile.friends) as num_friends FROM  ds4 where result != \"SUCCESS\" and profile is not missing and array_length(profile.friends) = 5'"
+
   wait: true
 
 # stop gideon data loading
