@@ -67,7 +67,37 @@
   command: "-method POST -duration 86400 -rate 12 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.Nodes | .Service `analytics` | net 1}}:8095/query/service
             -body 'SELECT name as id, result as Result, `type` as `Type`, array_length(profile.friends) as num_friends FROM  ds4 where result = \"SUCCESS\" and profile is not missing and array_length(profile.friends) > 5 UNION ALL SELECT name as id, result as Result, `type` as `Type`, array_length(profile.friends) as num_friends FROM  ds4 where result != \"SUCCESS\" and profile is not missing and array_length(profile.friends) = 5'"
   alias: query4
+
+# ###############  connect queries ################
+- template: cbq
+  args: "connect bucket bucket1;"
+- args: "connect bucket bucket2;"
+- args: "connect bucket bucket3;"
+- args: "connect bucket bucket4;"
   wait: true
+
+
+# ###############sleep for 30secs###############
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "30"
+  wait: true
+
+# ###############  disconnect queries ################
+- template: cbq
+  args: "disconnect bucket bucket1;"
+- args: "disconnect bucket bucket2;"
+- args: "disconnect bucket bucket3;"
+- args: "disconnect bucket bucket4;"
+  wait: true
+
+
+###############  Rebalance-in analytics ################
+- template: rebalance_in
+  args: "{{.InActiveNode}}, analytics"
+  wait: true
+
 
 # ###############  connect queries ################
 - template: cbq
@@ -95,37 +125,7 @@
 
 ###############  Rebalance-out single node ################
 - template: rebalance_out
-  args: "{{.Nodes | net 2}}, analytics"
-  wait: true
-
-
-# ###############  connect queries ################
-- template: cbq
-  args: "connect bucket bucket1;"
-- args: "connect bucket bucket2;"
-- args: "connect bucket bucket3;"
-- args: "connect bucket bucket4;"
-  wait: true
-
-
-# ###############sleep for 30secs###############
--
-  image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "30"
-  wait: true
-
-# ###############  disconnect queries ################
-- template: cbq
-  args: "disconnect bucket bucket1;"
-- args: "disconnect bucket bucket2;"
-- args: "disconnect bucket bucket3;"
-- args: "disconnect bucket bucket4;"
-  wait: true
-
-###############  Rebalance-in analytics ################
-- template: rebalance_in
-  args: "{{.Nodes | net 4}}, analytics"
+  args: "{{.Nodes | .Service `analytics` | net 2}}"
   wait: true
 
 # ###############  connect queries ################
@@ -147,7 +147,7 @@
 
 ###############  Swap Rebalance ################
 - template: rebalance_swap
-  args: "{{.Nodes | net 5}},{{.Nodes | net 4}}, analytics"
+  args: "{{.InActiveNode}},{{.Nodes | .Service `analytics` | net 1}}, analytics"
   wait: true
 
 # ###############sleep for 300secs###############
@@ -248,7 +248,7 @@
 
 ###############  Swap Rebalance ################
 - template: rebalance_swap
-  args: "{{.Nodes | net 2}},{{.Nodes | net 5}}, analytics"
+  args: "{{.InActiveNode}},{{.Nodes | .Service `analytics` | net 1}}, analytics"
   wait: true
 
 # ###############sleep for 300secs###############
