@@ -309,7 +309,7 @@ func (t *TemplateResolver) NthEventingNode(n int) string {
 // Shortcut: .AnalyticsNode | .Service `analytics` | net 0
 func (t *TemplateResolver) AnalyticsNode() string {
 	nodes := t.ClusterNodes()
-	serviceNodes := t.Service("analytics", nodes)
+	serviceNodes := t.Service("cbas", nodes)
 	return t.Address(0, serviceNodes)
 }
 
@@ -321,14 +321,14 @@ func (t *TemplateResolver) AnalyticsNodePort() string {
 // Shortcut: .ClusterNodes | .Service `analytics` | net N
 func (t *TemplateResolver) NthAnalyticsNode(n int) string {
 	nodes := t.ClusterNodes()
-	serviceNodes := t.Service("analytics", nodes)
+	serviceNodes := t.Service("cbas", nodes)
 	return t.Address(n, serviceNodes)
 }
 
 // Shortcut: .ClusterNodes | .Service `analytics` | active n
 func (t *TemplateResolver) ActiveAnalyticsNode(analytics int) string {
 	nodes := t.ClusterNodes()
-	serviceNodes := t.Service("analytics", nodes)
+	serviceNodes := t.Service("cbas", nodes)
 	return t.ActiveFilter(analytics, serviceNodes)
 }
 
