@@ -39,6 +39,7 @@ servers: # each server tag represents a cluster
       name: local
       count: 6
       ram: 95%
+      analytics_ram: 90%
       services:
         analytics: 2
         analytics_start: 2

@@ -33,6 +33,7 @@ type ServerSpec struct {
 	Ram          string
 	IndexRam     string `yaml:"index_ram"`
 	FtsRam       string `yaml:"fts_ram"`
+	AnalyticsRam string `yaml:"analytics_ram"`
 	RestUsername string `yaml:"rest_username"`
 	RestPassword string `yaml:"rest_password"`
 	SSHUsername  string `yaml:"ssh_username"`

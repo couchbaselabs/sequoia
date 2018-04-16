@@ -436,7 +436,19 @@ func (s *Scope) InitCluster() {
 		if server.IndexStorage != "" {
 			command = append(command, "--index-storage-setting", server.IndexStorage)
 		}
-
+		// make sure if analytics services is specified that analytics ram is set
+		if strings.Index(services, "analytics") > -1 && server.AnalyticsRam == "" {
+			server.AnalyticsRam = "1024"
+		}
+		if server.AnalyticsRam != "" {
+			analyticsQuota := server.AnalyticsRam
+			if strings.Index(analyticsQuota, "%") > -1 {
+				// use percentage of memtotal
+				analyticsQuota := s.GetPercOfMemTotal(name, server, analyticsQuota)
+				server.AnalyticsRam = analyticsQuota
+			}
+			command = append(command, "--cluster-analytics-ramsize", server.AnalyticsRam)
+		}
 		command = cliCommandValidator(s.Version, command)
 
 		desc := "init cluster " + orchestrator
