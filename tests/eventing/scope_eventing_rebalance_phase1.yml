@@ -1,32 +1,37 @@
 ---
 users:
   -
-      name: default
+      name: bucket_op
       password: password
       roles: admin
       auth_domain: local
   -
-      name: default-dst
+      name: bucket_op_complex
       password: password
       roles: admin
       auth_domain: local
   -
-      name: other-1
+      name: bucket_op_complex1
       password: password
       roles: admin
       auth_domain: local
   -
-      name: other-2
+      name: bucket_op_dst
       password: password
       roles: admin
       auth_domain: local
   -
-      name: other-dst-1
+      name: bucket_op_dst1
       password: password
       roles: admin
       auth_domain: local
   -
-      name: other-dst-2
+      name: bucket_op_complex_dst
+      password: password
+      roles: admin
+      auth_domain: local
+  -
+      name: bucket_op_complex_dst1
       password: password
       roles: admin
       auth_domain: local
@@ -85,4 +90,4 @@ servers: # each server tag represents a cluster
       rest_username: Administrator
       rest_password: password
       buckets: bucket_op,bucket_op_complex,bucket_op_complex1,bucket_op_dst,bucket_op_dst1,bucket_op_complex_dst,bucket_op_complex_dst1,metadata,test_diagnostics
-      users: default,default-dst,metadata,other-1,other-2,other-dst-1,other-dst-2,test_diagnostics
+      users: bucket_op,bucket_op_complex,bucket_op_complex1,bucket_op_dst,bucket_op_dst1,bucket_op_complex_dst,bucket_op_complex_dst1,metadata,test_diagnostics
