@@ -15,7 +15,7 @@
 		"metadata_bucket": "metadata",
 		"source_bucket": "bucket_op"
 	},
-	"appcode": "function OnUpdate(doc, meta) {\n    //log('creating document on dst : ', meta.id);\n    dst[meta.id] = 'doc created';\n    dst1[meta.id + \"_dst1\"] = 'doc created';\n    dst2[meta.id + \"_dst2\"] = 'doc created';\n}\nfunction OnDelete(meta) {\n    //log('deleting document: ', meta.id);\n    delete dst[meta.id];\n    delete dst1[meta.id + \"_dst1\"];\n    delete dst2[meta.id + \"_dst2\"];\n}",
+	"appcode": "function OnUpdate(doc, meta) {\n try{\n    dst[meta.id] = 'doc created';\n    dst1[meta.id + \"_dst1\"] = 'doc created';\n    dst2[meta.id + \"_dst2\"] = 'doc created';\n    }\n catch(e){\n    log(e);\n    }\n}\nfunction OnDelete(meta) {\n    try{\n        delete dst[meta.id];\n        delete dst1[meta.id + \"_dst1\"];\n        delete dst2[meta.id + \"_dst2\"];\n    }\n    catch(e){\n        log(e);\n    }\n}",
 	"settings": {
 		"app_log_max_files": 10,
 		"app_log_max_size": 10485760,
