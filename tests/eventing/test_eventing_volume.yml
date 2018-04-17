@@ -10,13 +10,13 @@
 ############### data loading ################
 -
   image: sequoiatools/populate_data
-  command: "-bucket {{.Bucket}} -count 6000000 -doc travel_sample -user Administrator -pass password -ops 25000 http://{{.Orchestrator}}:8091"
+  command: "-bucket {{.Bucket}} -count 10000000 -doc travel_sample -user Administrator -pass password -ops 25000 http://{{.Orchestrator}}:8091"
   alias: populate_data1
 
 -
   image: sequoiatools/cmd
   entrypoint: sleep
-  command: "600"
+  command: "1200"
   wait: true
 ############### create and deploy functions ################
 -
@@ -58,8 +58,14 @@
 #################################################
 
 ###############  Rebalance-in multiple kv nodes################
-- template: rebalance_in
-  args: "({{.NthInActiveNode 0}},{{.NthInActiveNode 1}})"
+-
+  template: add_node
+  args: "{{.NthInActiveNode 0}}"
+- args: "{{.NthInActiveNode 1}}"
+  wait: true
+
+-
+  template: rebalance
   wait: true
 
 -
@@ -118,13 +124,14 @@
   duration: 300
 
 ###############  Swap Rebalance kv ################
--
-  template: add_node
-  args: "({{.NthInActiveNode 0}},{{.NthInActiveNode 1}})"
-  wait: true
-
 - template: rebalance_out
   args: "({{.NthDataNode 1}},{{.NthDataNode 2}})"
+  wait: true
+
+-
+  template: add_node
+  args: "{{.NthInActiveNode 0}}"
+- args: "{{.NthInActiveNode 1}}"
   wait: true
 
 -
@@ -160,11 +167,14 @@
 ##### Multiple eventing rebalance ###############
 #################################################
 ###############  Rebalance-in multiple eventing nodes################
-- template: rebalance_in
+- template: add_node
   args: "{{.NthInActiveNode 0}}, eventing"
-  args: "{{.NthInActiveNode 1}}, eventing"
+- args: "{{.NthInActiveNode 1}}, eventing"
   wait: true
 
+-
+  template: rebalance
+  wait: true
 -
   image: sequoiatools/cmd
   entrypoint: sleep
@@ -221,15 +231,16 @@
   duration: 300
 
 ###############  Swap Rebalance ################
+- template: rebalance_out
+  args: "({{.Nodes | .Service `eventing` | net 1}},{{.Nodes | .Service `eventing` | net 2}}))"
+  wait: true
+
 -
   template: add_node
   args: "{{.NthInActiveNode 0}}, eventing"
 - args: "{{.NthInActiveNode 1}}, eventing"
   wait: true
 
-- template: rebalance_out
-  args: "({{.Nodes | .Service `eventing` | net 1}},{{.Nodes | .Service `eventing` | net 2}}))"
-  wait: true
 
 -
   template: rebalance
@@ -264,9 +275,13 @@
 ##### Multiple kv+eventing rebalance ############
 #################################################
 ###############  Rebalance-in kv+eventing nodes ################
-- template: rebalance_in
+- template: add_node
   args: "{{.NthInActiveNode 0}}, data"
-  args: "{{.NthInActiveNode 1}}, eventing"
+- args: "{{.NthInActiveNode 1}}, eventing"
+  wait: true
+
+-
+  template: rebalance
   wait: true
 
 -
@@ -325,14 +340,14 @@
   duration: 300
 
 ###############  Swap Rebalance kv+eventing nodes ################
+- template: rebalance_out
+  args: "({{.NthDataNode 1}},{{.Nodes | .Service `eventing` | net 1}}))"
+  wait: true
+
 -
   template: add_node
   args: "{{.NthInActiveNode 0}}, data"
 - args: "{{.NthInActiveNode 1}}, eventing"
-  wait: true
-
-- template: rebalance_out
-  args: "({{.NthDataNode 1}},{{.Nodes | .Service `eventing` | net 1}}))"
   wait: true
 
 -
