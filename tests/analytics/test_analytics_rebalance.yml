@@ -51,20 +51,20 @@
 
 ############### run queries ################
 - image: sequoiatools/cbdozer
-  command: "-method POST -duration 86400 -rate 12 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.ActiveAnalyticsNode 0}}:8095/query/service
+  command: "-method POST -duration 86400 -rate 3 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.ActiveAnalyticsNode 0}}:8095/query/service
             -body 'SELECT name as id, result as bucketName, `type` as `Type`, array_length(profile.friends) as num_friends FROM  ds1 where result = \"SUCCESS\" and profile is not missing and array_length(profile.friends) > 5 limit 100'"
   alias: query1
 
 -
-  command: "-method POST -duration 86400 -rate 12 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.ActiveAnalyticsNode 0}}:8095/query/service
+  command: "-method POST -duration 86400 -rate 3 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.ActiveAnalyticsNode 0}}:8095/query/service
             -body 'SELECT name as id, result as bucketName, `type` as `Type`, array_length(profile.friends) as num_friends FROM  ds2 where result = \"SUCCESS\" and profile is not missing and array_length(profile.friends) = 5'"
   alias: query2
 -
-  command: "-method POST -duration 86400 -rate 12 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.ActiveAnalyticsNode 1}}:8095/query/service
+  command: "-method POST -duration 86400 -rate 3 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.ActiveAnalyticsNode 1}}:8095/query/service
             -body 'select sum(friends.num_friends) from (select array_length(profile.friends) as num_friends from ds3) as friends'"
   alias: query3
 -
-  command: "-method POST -duration 86400 -rate 12 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.ActiveAnalyticsNode 1}}:8095/query/service
+  command: "-method POST -duration 86400 -rate 3 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.ActiveAnalyticsNode 1}}:8095/query/service
             -body 'SELECT name as id, result as Result, `type` as `Type`, array_length(profile.friends) as num_friends FROM  ds4 where result = \"SUCCESS\" and profile is not missing and array_length(profile.friends) > 5 UNION ALL SELECT name as id, result as Result, `type` as `Type`, array_length(profile.friends) as num_friends FROM  ds4 where result != \"SUCCESS\" and profile is not missing and array_length(profile.friends) = 5'"
   alias: query4
 
