@@ -17,6 +17,10 @@ COPY eventing.py /eventing.py
 COPY eventing_validator.py /eventing_validator.py
 COPY bucket_op_function.json /bucket_op_function.json
 COPY bucket_op_function1.json /bucket_op_function1.json
+COPY bucket_op_function2.json /bucket_op_function2.json
+COPY bucket_op_function3.json /bucket_op_function3.json
+COPY bucket_op_function4.json /bucket_op_function4.json
+COPY bucket_op_function5.json /bucket_op_function5.json
 COPY bucket_op_function_with_n1ql.json /bucket_op_function_with_n1ql.json
 COPY bucket_op_complex_function.json /bucket_op_complex_function.json
 COPY bucket_op_complex_function1.json /bucket_op_complex_function1.json
