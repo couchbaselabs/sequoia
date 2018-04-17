@@ -34,24 +34,24 @@ users:
 buckets:
   -
       name: bucket_op
-      ram: 13%
+      ram: 18%
       eviction: fullEviction
   -
       name: bucket_op_dst
-      ram: 13%
+      ram: 18%
       eviction: fullEviction
   -
       name: bucket_op_dst_1
-      ram: 13%
+      ram: 18%
   -
       name: bucket_op_complex_1
-      ram: 13%
+      ram: 18%
   -
       name: bucket_op_complex_2
-      ram: 13%
+      ram: 18%
   -
       name: metadata
-      ram: 11%
+      ram: 3%
 
 servers: # each server tag represents a cluster
   -

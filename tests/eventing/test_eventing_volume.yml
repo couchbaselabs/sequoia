@@ -1,10 +1,30 @@
 -
   include: tests/templates/kv.yml, tests/templates/vegeta.yml, tests/templates/rebalance.yml, tests/templates/n1ql.yml
 
-####### create index for default bucket #####
+####### create index for different buckets for validation #####
 - template: cbq
   requires:  "{{eq true .DoOnce }}"
-  args: "'create PRIMARY INDEX on default'"
+  args: "'create PRIMARY INDEX on bucket_op'"
+  wait: true
+
+- template: cbq
+  requires:  "{{eq true .DoOnce }}"
+  args: "'create PRIMARY INDEX on bucket_op_dst'"
+  wait: true
+
+- template: cbq
+  requires:  "{{eq true .DoOnce }}"
+  args: "'create PRIMARY INDEX on bucket_op_dst_1'"
+  wait: true
+
+- template: cbq
+  requires:  "{{eq true .DoOnce }}"
+  args: "'create PRIMARY INDEX on bucket_op_complex_1'"
+  wait: true
+
+- template: cbq
+  requires:  "{{eq true .DoOnce }}"
+  args: "'create PRIMARY INDEX on bucket_op_complex_2'"
   wait: true
 
 ############### data loading ################
@@ -39,10 +59,13 @@
 -
   image: sequoiatools/eventing
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 1}} 600 60 True"
+  wait: true
 -
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 2}} 300 60 True"
+  wait: true
 -
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 3}} 200 60 True"
+  wait: true
 -
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 4}} 100 60 True"
   wait: true
@@ -50,7 +73,7 @@
 -
   image: sequoiatools/gideon
   requires:  "{{eq true .DoOnce}}"
-  command: "kv --ops {{.Scale 10000}} --create 20 --update 60 --delete 20  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+  command: "kv --ops {{.Scale 1000000}} --create 60 --get 40 --sizes 1024 4096 --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
   duration: 300
 
 #################################################
@@ -78,10 +101,13 @@
 -
   image: sequoiatools/eventing
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 1}} 600 60 True"
+  wait: true
 -
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 2}} 300 60 True"
+  wait: true
 -
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 3}} 200 60 True"
+  wait: true
 -
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 4}} 100 60 True"
   wait: true
@@ -90,7 +116,7 @@
 -
   image: sequoiatools/gideon
   requires:  "{{eq true .DoOnce}}"
-  command: "kv --ops {{.Scale 10000}} --create 20 --update 60 --delete 20  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+  command: "kv --ops {{.Scale 1000000}} --create 60 --get 40 --sizes 1024 4096  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
   duration: 300
 
 ###############  Rebalance-out multiple kv nodes ################
@@ -108,10 +134,13 @@
 -
   image: sequoiatools/eventing
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 1}} 600 60 True"
+  wait: true
 -
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 2}} 300 60 True"
+  wait: true
 -
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 3}} 200 60 True"
+  wait: true
 -
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 4}} 100 60 True"
   wait: true
@@ -120,22 +149,13 @@
 -
   image: sequoiatools/gideon
   requires:  "{{eq true .DoOnce}}"
-  command: "kv --ops {{.Scale 10000}} --create 20 --update 60 --delete 20  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+  command: "kv --ops {{.Scale 1000000}} --create 60 --get 40 --sizes 1024 4096 --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
   duration: 300
 
 ###############  Swap Rebalance kv ################
-- template: rebalance_out
-  args: "({{.NthDataNode 1}},{{.NthDataNode 2}})"
-  wait: true
-
--
-  template: add_node
-  args: "{{.NthInActiveNode 0}}"
-- args: "{{.NthInActiveNode 1}}"
-  wait: true
-
--
-  template: rebalance
+- template: rebalance_swap
+  args: "{{.NthInActiveNode 0}},{{.NthDataNode 1}}, data"
+- args: "{{.NthInActiveNode 1}},{{.NthDataNode 2}}, data"
   wait: true
 
 -
@@ -148,10 +168,13 @@
 -
   image: sequoiatools/eventing
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 1}} 600 60 True"
+  wait: true
 -
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 2}} 300 60 True"
+  wait: true
 -
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 3}} 200 60 True"
+  wait: true
 -
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 4}} 100 60 True"
   wait: true
@@ -160,7 +183,7 @@
 -
   image: sequoiatools/gideon
   requires:  "{{eq true .DoOnce}}"
-  command: "kv --ops {{.Scale 10000}} --create 20 --update 60 --delete 20  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+  command: "kv --ops {{.Scale 1000000}} --create 60 --get 40 --sizes 1024 4096  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
   duration: 300
 
 #################################################
@@ -185,10 +208,13 @@
 -
   image: sequoiatools/eventing
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 1}} 600 60 True"
+  wait: true
 -
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 2}} 300 60 True"
+  wait: true
 -
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 3}} 200 60 True"
+  wait: true
 -
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 4}} 100 60 True"
   wait: true
@@ -197,7 +223,7 @@
 -
   image: sequoiatools/gideon
   requires:  "{{eq true .DoOnce}}"
-  command: "kv --ops {{.Scale 10000}} --create 20 --update 60 --delete 20  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+  command: "kv --ops {{.Scale 1000000}} --create 60 --get 40 --sizes 1024 4096  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
   duration: 300
 
 ###############  Rebalance-out multiple eventing nodes ################
@@ -215,10 +241,13 @@
 -
   image: sequoiatools/eventing
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 1}} 600 60 True"
+  wait: true
 -
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 2}} 300 60 True"
+  wait: true
 -
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 3}} 200 60 True"
+  wait: true
 -
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 4}} 100 60 True"
   wait: true
@@ -227,23 +256,13 @@
 -
   image: sequoiatools/gideon
   requires:  "{{eq true .DoOnce}}"
-  command: "kv --ops {{.Scale 10000}} --create 20 --update 60 --delete 20  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+  command: "kv --ops {{.Scale 1000000}} --create 60 --get 40 --sizes 1024 4096  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
   duration: 300
 
 ###############  Swap Rebalance ################
-- template: rebalance_out
-  args: "({{.Nodes | .Service `eventing` | net 1}},{{.Nodes | .Service `eventing` | net 2}}))"
-  wait: true
-
--
-  template: add_node
-  args: "{{.NthInActiveNode 0}}, eventing"
-- args: "{{.NthInActiveNode 1}}, eventing"
-  wait: true
-
-
--
-  template: rebalance
+- template: rebalance_swap
+  args: "{{.NthInActiveNode 0}},{{.Nodes | .Service `eventing` | net 1}}, eventing"
+- args: "{{.NthInActiveNode 1}},{{.Nodes | .Service `eventing` | net 2}}, eventing"
   wait: true
 
 -
@@ -256,10 +275,13 @@
 -
   image: sequoiatools/eventing
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 1}} 600 60 True"
+  wait: true
 -
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 2}} 300 60 True"
+  wait: true
 -
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 3}} 200 60 True"
+  wait: true
 -
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 4}} 100 60 True"
   wait: true
@@ -268,7 +290,7 @@
 -
   image: sequoiatools/gideon
   requires:  "{{eq true .DoOnce}}"
-  command: "kv --ops {{.Scale 10000}} --create 20 --update 60 --delete 20  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+  command: "kv --ops {{.Scale 1000000}} --create 60 --get 40 --sizes 1024 4096  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
   duration: 300
 
 #################################################
@@ -294,10 +316,13 @@
 -
   image: sequoiatools/eventing
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 1}} 600 60 True"
+  wait: true
 -
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 2}} 300 60 True"
+  wait: true
 -
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 3}} 200 60 True"
+  wait: true
 -
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 4}} 100 60 True"
   wait: true
@@ -306,7 +331,7 @@
 -
   image: sequoiatools/gideon
   requires:  "{{eq true .DoOnce}}"
-  command: "kv --ops {{.Scale 10000}} --create 20 --update 60 --delete 20  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+  command: "kv --ops {{.Scale 1000000}} --create 60 --get 40 --sizes 1024 4096  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
   duration: 300
 
 ###############  Rebalance-out  kv+eventing nodes ################
@@ -324,10 +349,13 @@
 -
   image: sequoiatools/eventing
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 1}} 600 60 True"
+  wait: true
 -
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 2}} 300 60 True"
+  wait: true
 -
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 3}} 200 60 True"
+  wait: true
 -
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 4}} 100 60 True"
   wait: true
@@ -336,22 +364,13 @@
 -
   image: sequoiatools/gideon
   requires:  "{{eq true .DoOnce}}"
-  command: "kv --ops {{.Scale 10000}} --create 20 --update 60 --delete 20  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+  command: "kv --ops {{.Scale 1000000}} --create 60 --get 40 --sizes 1024 4096 --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
   duration: 300
 
 ###############  Swap Rebalance kv+eventing nodes ################
-- template: rebalance_out
-  args: "({{.NthDataNode 1}},{{.Nodes | .Service `eventing` | net 1}}))"
-  wait: true
-
--
-  template: add_node
-  args: "{{.NthInActiveNode 0}}, data"
-- args: "{{.NthInActiveNode 1}}, eventing"
-  wait: true
-
--
-  template: rebalance
+- template: rebalance_swap
+  args: "{{.NthInActiveNode 0}},{{.NthDataNode 1}}, data"
+- args: "{{.NthInActiveNode 1}},{{.Nodes | .Service `eventing` | net 1}}, eventing"
   wait: true
 
 -
@@ -364,10 +383,13 @@
 -
   image: sequoiatools/eventing
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 1}} 600 60 True"
+  wait: true
 -
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 2}} 300 60 True"
+  wait: true
 -
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 3}} 200 60 True"
+  wait: true
 -
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 4}} 100 60 True"
   wait: true
@@ -376,10 +398,13 @@
 -
   image: sequoiatools/eventing
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_function2.json {{.RestUsername}} {{.RestPassword}} delete"
+  wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_function3.json {{.RestUsername}} {{.RestPassword}} delete"
+  wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_function4.json {{.RestUsername}} {{.RestPassword}} delete"
+  wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_function5.json {{.RestUsername}} {{.RestPassword}} delete"
   wait: true
