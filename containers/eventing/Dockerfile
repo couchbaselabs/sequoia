@@ -24,5 +24,7 @@ COPY bucket_op_complex_function_with_n1ql.json /bucket_op_complex_function_with_
 COPY doc_timer_op_complex.json /doc_timer_op_complex.json
 COPY cron_timer_op.json /cron_timer_op.json
 COPY doc_timer_op.json /doc_timer_op.json
+COPY bucket_op_complex_function_integration.json /bucket_op_complex_function_integration.json
+COPY bucket_op_function_integration.json /bucket_op_function_integration.json
 
 ENTRYPOINT ["python"]

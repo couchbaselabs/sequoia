@@ -1,0 +1,83 @@
+-
+  include: tests/templates/kv.yml, tests/templates/vegeta.yml, tests/templates/rebalance.yml
+
+
+############### create and deploy functions ################
+- section_start: create_and_deploy
+-
+  image: sequoiatools/eventing
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_function_integration.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_complex_function_integration.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
+  wait: true
+- section_end: create_and_deploy
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+- section_start: topology_change
+###############  Rebalance-in eventing ################
+- template: rebalance_in
+  args: "{{.InActiveNode}}, eventing"
+  wait: true
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+###############  Rebalance-out single node ################
+- template: rebalance_out
+  args: "{{.Nodes | .Service `eventing` | net 1}}"
+  wait: true
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+###############  Swap Rebalance ################
+- template: rebalance_swap
+  args: "{{.InActiveNode}},{{.Nodes | .Service `eventing` | net 1}}, eventing"
+  wait: true
+- section_end: topology_change
+
+
+- section_start: undeploy
+############### undeploy functions ################
+-
+  image: sequoiatools/eventing
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} bucket_op_function_integration.json {{.RestUsername}} {{.RestPassword}} undeploy true"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} bucket_op_complex_function_integration.json {{.RestUsername}} {{.RestPassword}} undeploy true"
+  wait: true
+- section_end: undeploy
+
+
+- section_start: redeploy
+############### redeploy functions ################
+-
+  image: sequoiatools/eventing
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} bucket_op_function_integration.json {{.RestUsername}} {{.RestPassword}} deploy"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} bucket_op_complex_function_integration.json {{.RestUsername}} {{.RestPassword}} deploy"
+  wait: true
+- section_end: redeploy
+
+
+- section_start: delete_functions
+############### delete functions ################
+-
+  image: sequoiatools/eventing
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_function_integration.json {{.RestUsername}} {{.RestPassword}} delete"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_complex_function_integration.json {{.RestUsername}} {{.RestPassword}} delete"
+  wait: true
+- section_end: delete_functions
+
+
