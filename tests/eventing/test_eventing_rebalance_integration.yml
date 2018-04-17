@@ -12,11 +12,6 @@
   wait: true
 - section_end: create_and_deploy
 
--
-  image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "300"
-  wait: true
 
 - section_start: topology_change
 ###############  Rebalance-in eventing ################

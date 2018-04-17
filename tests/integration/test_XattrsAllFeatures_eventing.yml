@@ -26,6 +26,7 @@
 - command: "kv --ops {{.Scale 500}} --create 10 --delete 8 --get 82 --sizes 64 96  --expire 100 --ttl 3600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}}"
   duration: 1800
 
+# creating eventing handlers and deploying them
 - test: tests/eventing/test_eventing_rebalance_integration.yml
   section: create_and_deploy
 
@@ -179,6 +180,7 @@
 - template: pillowfight_htp
   wait: true
 
+# Change the topology (performs rebalance in/out/swap eventing nodes)
 - test: tests/eventing/test_eventing_rebalance_integration.yml
   section: topology_change
 
@@ -200,6 +202,7 @@
 - template: pillowfight_htp
   wait: true
 
+# undeploy eventing handlers
 - test: tests/eventing/test_eventing_rebalance_integration.yml
   section: undeploy
 
@@ -217,6 +220,10 @@
 - template: autofailover
   args: "{{.NthDataNode 1 | noport}}, 5, full"
 
+# redeploy eventing handlers
+- test: tests/eventing/test_eventing_rebalance_integration.yml
+  section: redeploy
+
 # quick update batch
 - template: pillowfight_htp
   wait: true
@@ -230,11 +237,16 @@
 - test: tests/2i/test_dropAddIndexRebalance.yml
   section_skip: data_loading
 
+# undeploy eventing handlers
+- test: tests/eventing/test_eventing_rebalance_integration.yml
+  section: undeploy
+
 - template: add_node
   args: "{{.NthInActiveNode 0}}"
 - args: "{{.NthInActiveNode 1}}"
 - template: rebalance
   wait: true
 
+# delete eventing handlers
 - test: tests/eventing/test_eventing_rebalance_integration.yml
   section: delete_functions
