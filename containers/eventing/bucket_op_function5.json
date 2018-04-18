@@ -27,7 +27,7 @@
 		"deadline_timeout": 62,
 		"deployment_status": false,
 		"description": "",
-		"enable_recursive_mutation": false,
+		"enable_recursive_mutation": true,
 		"enable_snapshot_smr": false,
 		"execution_timeout": 60,
 		"feedback_batch_size": 100,

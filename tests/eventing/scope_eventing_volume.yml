@@ -34,30 +34,36 @@ users:
 buckets:
   -
       name: bucket_op
-      ram: 18%
+      ram: 19%
+      replica: 0
       eviction: fullEviction
   -
       name: bucket_op_dst
-      ram: 18%
+      ram: 19%
+      replica: 0
       eviction: fullEviction
   -
       name: bucket_op_dst_1
-      ram: 18%
+      ram: 19%
+      replica: 0
   -
       name: bucket_op_complex_1
-      ram: 18%
+      ram: 19%
+      replica: 0
   -
       name: bucket_op_complex_2
-      ram: 18%
+      ram: 19%
+      replica: 0
   -
       name: metadata
-      ram: 3%
+      ram: 2%
+      replica: 0
 
 servers: # each server tag represents a cluster
   -
       name: local
       count: 10
-      ram: 80%
+      ram: 95%
       init_nodes: 8
       services:
         eventing: 3
