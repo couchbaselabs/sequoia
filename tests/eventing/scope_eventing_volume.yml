@@ -66,6 +66,8 @@ servers: # each server tag represents a cluster
         query_start: 6
         index: 2
         index_start: 6
+      data_path: "/data"
+      index_path: "/data"
       rest_port: 8091
       query_port: 8093
       rest_username: Administrator
