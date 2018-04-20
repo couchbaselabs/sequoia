@@ -67,11 +67,11 @@ servers: # each server tag represents a cluster
       init_nodes: 8
       services:
         eventing: 3
-        eventing_start: 3
-        query: 2
-        query_start: 6
-        index: 2
-        index_start: 6
+        eventing_start: 4
+        query: 1
+        query_start: 7
+        index: 1
+        index_start: 7
       data_path: "/data"
       index_path: "/data"
       rest_port: 8091

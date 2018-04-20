@@ -53,7 +53,7 @@
 -
   image: sequoiatools/cmd
   entrypoint: sleep
-  command: "1800"
+  command: "900"
   wait: true
 ############### validate eventing results ################
 -
