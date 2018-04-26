@@ -21,6 +21,10 @@ servers:
     init_nodes: 3
     buckets: data-bucket
     users: data-bucket
+    services:
+      data: 2
+      index: 2
+      query: 2
 
 syncgateways:
   - name: sg.st
