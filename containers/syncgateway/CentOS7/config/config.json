@@ -22,8 +22,8 @@
       "server":"http://node0:8091",
       "bucket":"data-bucket",
       "password":"password",
-      "enable_shared_bucket_access": true,
       CHANNEL_INDEX
+      "enable_shared_bucket_access": true
     }
   }
 }
