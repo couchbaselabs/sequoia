@@ -214,14 +214,8 @@
   wait: true
 
 - template: rebalance_out
-  args: "({{.NthDataNode 1}},{{.Nodes | .Service `eventing` | net 1}},{{.Nodes | .Service `eventing` | net 2}})"
+  args: "({{.NthDataNode 2}},{{.Nodes | .Service `eventing` | net 3}},{{.Nodes | .Service `eventing` | net 4}})"
   wait: true
-
-
--
-  template: rebalance
-  wait: true
-
 
 
 ############### undeploy functions ################
