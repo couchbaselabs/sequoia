@@ -449,6 +449,21 @@ func (s *Scope) InitCluster() {
 			}
 			command = append(command, "--cluster-analytics-ramsize", server.AnalyticsRam)
 		}
+
+		// make sure if eventing services is specified that eventing ram is set
+		if strings.Index(services, "eventing") > -1 && server.EventingRam == "" {
+			server.EventingRam = "256"
+		}
+		if server.EventingRam != "" {
+			eventingQuota := server.EventingRam
+			if strings.Index(eventingQuota, "%") > -1 {
+				// use percentage of memtotal
+				eventingQuota := s.GetPercOfMemTotal(name, server, eventingQuota)
+				server.EventingRam = eventingQuota
+			}
+			command = append(command, "--cluster-eventing-ramsize", server.EventingRam)
+		}
+
 		command = cliCommandValidator(s.Version, command)
 
 		desc := "init cluster " + orchestrator
