@@ -2,30 +2,30 @@
   include: tests/templates/kv.yml, tests/templates/vegeta.yml, tests/templates/rebalance.yml, tests/templates/n1ql.yml
 
 
-############### data loading ################
--
-  image: sequoiatools/populate_data
-  command: "-bucket {{.Bucket}} -count 6000000 -doc travel_sample -user Administrator -pass password -expiry 1200 -ops 1000 http://{{.Orchestrator}}:8091"
-  alias: populate_data1
--
-  command: "-bucket {{.NthBucket 1}} -count 6000000 -doc travel_sample -user Administrator -pass password -expiry 1200 -ops 1000 http://{{.Orchestrator}}:8091"
-  alias: populate_data2
--
-  command: "-bucket {{.NthBucket 2}} -count 6000000 -doc travel_sample -user Administrator -pass password -expiry 1200 -ops 1000 http://{{.Orchestrator}}:8091"
-  alias: populate_data3
+################ data loading ################
+#-
+#  image: sequoiatools/populate_data
+#  command: "-bucket {{.Bucket}} -count 6000000 -doc travel_sample -user Administrator -pass password -expiry 1200 -ops 1000 http://{{.Orchestrator}}:8091"
+#  alias: populate_data1
+#-
+#  command: "-bucket {{.NthBucket 1}} -count 6000000 -doc travel_sample -user Administrator -pass password -expiry 1200 -ops 1000 http://{{.Orchestrator}}:8091"
+#  alias: populate_data2
+#-
+#  command: "-bucket {{.NthBucket 2}} -count 6000000 -doc travel_sample -user Administrator -pass password -expiry 1200 -ops 1000 http://{{.Orchestrator}}:8091"
+#  alias: populate_data3
 
 ####### runing constant ops #################
 -
   image: sequoiatools/gideon
-  command: "kv --ops {{.Scale 10}} --create 100 --update 100 --delete 100 --expire 100 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+  command: "kv --ops {{.Scale 100}} --create 100 --update 100 --delete 100 --expire 100 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
   alias: GideonContainer1
 -
   image: sequoiatools/gideon
-  command: "kv --ops {{.Scale 10}} --create 100 --update 100 --delete 100 --expire 100 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
+  command: "kv --ops {{.Scale 100}} --create 100 --update 100 --delete 100 --expire 100 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
   alias: GideonContainer2
 -
   image: sequoiatools/gideon
-  command: "kv --ops {{.Scale 10}} --create 100 --update 100 --delete 100 --expire 100 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}}"
+  command: "kv --ops {{.Scale 100}} --create 100 --update 100 --delete 100 --expire 100 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}}"
   alias: GideonContainer3
 
 ############### create and deploy functions ################
