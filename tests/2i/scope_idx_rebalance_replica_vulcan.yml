@@ -43,7 +43,7 @@ servers: # each server tag represents a cluster
         index: 5
         index_start: 6
         query: 2
-        query_starts: 4
+        query_start: 4
       rest_username: Administrator
       rest_password: password
       data_path: "/data"
