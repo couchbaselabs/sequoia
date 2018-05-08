@@ -33,6 +33,7 @@ servers: # each server tag represents a cluster
       ram: 95%
       index_ram: 95%
       fts_ram: 85%
+      eventing_ram: 90%
       index_storage: default
       services:
         query: 2
