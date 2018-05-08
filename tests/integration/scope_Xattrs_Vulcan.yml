@@ -32,7 +32,7 @@ servers: # each server tag represents a cluster
       count: 19
       ram: 95%
       index_ram: 95%
-      fts_ram: 95%
+      fts_ram: 85%
       index_storage: default
       services:
         query: 2
