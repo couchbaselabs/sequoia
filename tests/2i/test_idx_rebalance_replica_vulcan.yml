@@ -36,9 +36,9 @@
   wait: true
 - command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_result_ratings_claims_pindex on `{{.Bucket}}`(result,rating,claim) partition by hash(rating) using GSI with {\"num_replica\":1}'"
   wait: true
-- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create primary index on `{{.NthBucket 1}}` partition by hash(claim,result,rating) using GSI with {\"num_partition\":256}'"
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create primary index on `{{.NthBucket 1}}` partition by hash(claim,result,rating) using GSI with {\"num_partition\":64}'"
   wait: true
-- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o2_result_rating on `{{.NthBucket 2}}`(result,rating) partition using hash(claim) using GSI'"
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o2_result_rating on `{{.NthBucket 2}}`(result,rating) partition by hash(claim) using GSI'"
   wait: true
 - command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o3_result_rating on `{{.NthBucket 3}}`(result,rating) partition by hash(LOWER(claim),rating) using GSI with {\"defer_build\": true}'"
 
@@ -64,21 +64,21 @@
 # ###############  run queries ################
 - section_start: query_replica_indexes
 - template: attack_query
-  args: "0, 1, {{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}, 'select DISTINCT\\(result) from default where where result is not null'"
+  args: "0, 1, {{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}, 'select DISTINCT\\(result) from default where result is not null LIMIT 200'"
 - args: "0, 1, {{.Nodes | .Service `n1ql` | net 1}}:{{.QueryPort}}, 'select * from `{{.NthBucket 1}}` limit 25 offset 1000'"
 - args: "0, 1, {{.Nodes | .Service `n1ql` | net 1}}:{{.QueryPort}}, 'select claim from `{{.NthBucket 3}}` where claim is not null limit 100'"
 
 - image: sequoiatools/cbdozer
   command: "-method POST -duration 0 -rate 1 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.Nodes | .Service `n1ql` | net 1}}:{{.QueryPort}}/query/service
-            -body 'select result,AVG(rating),MIN(rating),MAX(rating) from `{{.Bucket}}` where result = \"SUCCESS\" and rating > 800 group by result'"
+            -body 'select result,AVG(rating),MIN(rating),MAX(rating) from `{{.Bucket}}` where result = \"SUCCESS\" and rating >= 800 and rating <= 825 group by result'"
 - command: "-method POST -duration 0 -rate 1 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}/query/service
-            -body 'select result,SUM(rating) from `{{.NthBucket 1}}`where result is not null and rating >= 100 and rating <= 200 group by result'"
+            -body 'select result,SUM(rating) from `{{.NthBucket 1}}`where result is not null and rating >= 100 and rating <= 125 group by result'"
 - command: "-method POST -duration 0 -rate 1 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.Nodes | .Service `n1ql` | net 1}}:{{.QueryPort}}/query/service
-            -body 'select result,AVG(rating),MIN(rating),MAX(rating) from `{{.NthBucket 2}}` where result = \"SUCCESS\" and rating > 800 group by result'"
+            -body 'select result,AVG(rating),MIN(rating),MAX(rating) from `{{.NthBucket 2}}` where result = \"SUCCESS\" and rating >= 800 and rating <= 825 group by result'"
 - command: "-method POST -duration 0 -rate 1 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}/query/service
-            -body 'select result,SUM(rating) from `{{.NthBucket 3}}` where result is not null and rating >= 400 and rating <= 500 group by result'"
+            -body 'select result,SUM(rating) from `{{.NthBucket 3}}` where result is not null and rating >= 400 and rating <= 425 group by result'"
 - command: "-method POST -duration 0 -rate 1 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}/query/service
-            -body 'select round(min(rating),2) as min_rating,round(max(rating),2) as max_rating,round(avg(rating),2) as avg_rating from `{{.NthBucket 1}}` where rating between 500 and 1000'"
+            -body 'select round(min(rating),2) as min_rating,round(max(rating),2) as max_rating,round(avg(rating),2) as avg_rating from `{{.NthBucket 1}}` where rating between 500 and 550'"
 - section_end: query_replica_indexes
 
 ############### run creates ################
@@ -286,7 +286,7 @@
 - args: "'drop index `{{.NthBucket 2}}`.o2_rating'"
 - args: "'drop index `{{.NthBucket 3}}`.o3_rating'"
 - args: "'drop index `{{.NthBucket 3}}`.o3_claims'"
-- args: "'drop index `{{.NthBucket 3}}`.o3_results'"
+- args: "'drop index `{{.NthBucket 3}}`.o3_result'"
 - args: "'drop index `{{.Bucket}}`.default_result_ratings_claims_pindex'"
 - args: "'drop index `{{.NthBucket 2}}`.o2_result_rating'"
 - args: "'drop index `{{.NthBucket 3}}`.o3_result_rating'"
