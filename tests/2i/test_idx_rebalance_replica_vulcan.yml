@@ -34,7 +34,7 @@
   wait: true
 - command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_result_ratings_claims_pindex on `{{.Bucket}}`(result,rating,claim) partition by hash(rating) using GSI with {\"num_replica\":1}'"
   wait: true
-- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create primary index on `{{.NthBucket 1}}` partition by hash(claim,result,rating) using GSI with {\"num_partition\":64}'"
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create primary index on `{{.NthBucket 1}}` partition by hash(claim,result,rating) using GSI'"
   wait: true
 - command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o2_result_rating on `{{.NthBucket 2}}`(result,rating) partition by hash(claim) using GSI'"
   wait: true
