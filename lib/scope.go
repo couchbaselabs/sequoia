@@ -374,7 +374,7 @@ func (s *Scope) InitNodes() {
 
 func (s *Scope) InitCluster() {
 
-	var image = "sequoiatools/couchbase-cli"
+	var image = "sequoiatools/couchbase-cli:4.6"
 
 	initClusterOp := func(name string, server *ServerSpec) {
 		orchestrator := server.Names[0]
