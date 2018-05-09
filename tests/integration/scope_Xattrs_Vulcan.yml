@@ -66,15 +66,15 @@ buckets:
   -
       name: default
       sasl: password
-      ram: 50%
+      ram: 40%
       eviction: fullEviction
       ddocs: scale
   -
       name: ORDERS
-      ram: 10%
+      ram: 5%
   -
       name: ORDER_LINE
-      ram: 10%
+      ram: 5%
       ddocs: all
   -
       name: CUSTOMER
@@ -87,10 +87,10 @@ buckets:
       ram: 5%
   -
       name: WAREHOUSE
-      ram: 5%
+      ram: 10%
   -
       name: DISTRICT
-      ram: 2%
+      ram: 10%
   -
       name: HISTORY
       ram: 2%
