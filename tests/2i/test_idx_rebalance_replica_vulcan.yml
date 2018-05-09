@@ -18,10 +18,8 @@
 - command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_result on `{{.Bucket}}`(result) using GSI with {\"num_replica\":1,\"defer_build\": true}'"
 - command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create primary index on `{{.Bucket}}` using GSI with {\"num_replica\":2}'"
   wait: true
-- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o1_rating on `{{.NthBucket 1}}`(rating) using GSI with {\"num_replica\":2}'"
-  wait: true
 - command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o1_claims on `{{.NthBucket 1}}`(claim) using GSI with {\"num_replica\":1,\"defer_build\": true}'"
-- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o1_result on `{{.NthBucket 1}}`(result) using GSI with {\"num_replica\":1}'"
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o1_result_rating on `{{.NthBucket 1}}`(result,rating) using GSI with {\"num_replica\":1}'"
   wait: true
 - command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o2_rating on `{{.NthBucket 2}}`(rating) using GSI with {\"num_replica\":2}'"
   wait: true
@@ -72,7 +70,7 @@
   command: "-method POST -duration 0 -rate 1 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.Nodes | .Service `n1ql` | net 1}}:{{.QueryPort}}/query/service
             -body 'select result,AVG(rating),MIN(rating),MAX(rating) from `{{.Bucket}}` where result = \"SUCCESS\" and rating >= 800 and rating <= 825 group by result'"
 - command: "-method POST -duration 0 -rate 1 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}/query/service
-            -body 'select result,SUM(rating) from `{{.NthBucket 1}}`where result is not null and rating >= 100 and rating <= 125 group by result'"
+            -body 'select result,SUM(rating) from `{{.NthBucket 1}}` where result is not null and rating >= 100 and rating <= 125 group by result'"
 - command: "-method POST -duration 0 -rate 1 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.Nodes | .Service `n1ql` | net 1}}:{{.QueryPort}}/query/service
             -body 'select result,AVG(rating),MIN(rating),MAX(rating) from `{{.NthBucket 2}}` where result = \"SUCCESS\" and rating >= 800 and rating <= 825 group by result'"
 - command: "-method POST -duration 0 -rate 1 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}/query/service
@@ -278,9 +276,8 @@
 - args: "'drop index `{{.Bucket}}`.default_claims'"
 - args: "'drop index `{{.Bucket}}`.default_result'"
 - args: "'drop primary index on `{{.Bucket}}`'"
-- args: "'drop index `{{.NthBucket 1}}`.o1_rating'"
 - args: "'drop index `{{.NthBucket 1}}`.o1_claims'"
-- args: "'drop index `{{.NthBucket 1}}`.o1_result'"
+- args: "'drop index `{{.NthBucket 1}}`.o1_result_rating'"
 - args: "'drop index `{{.NthBucket 2}}`.o2_result'"
 - args: "'drop index `{{.NthBucket 2}}`.o2_claims'"
 - args: "'drop index `{{.NthBucket 2}}`.o2_rating'"
