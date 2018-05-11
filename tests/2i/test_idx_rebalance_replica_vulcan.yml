@@ -150,18 +150,18 @@
    wait: true
 
 ###############  Swap Rebalance two nodes ################
-- template: add_node
-  args: "{{.NthInActiveNode 0}}, index"
-- args: "{{.NthInActiveNode 1}}, index"
-- template: rebalance_out
-  args: "({{.ActiveIndexNode 0}},{{.ActiveIndexNode 2}})"
-  wait: true
+#- template: add_node
+#  args: "{{.NthInActiveNode 0}}, index"
+#- args: "{{.NthInActiveNode 1}}, index"
+#- template: rebalance_out
+#  args: "({{.ActiveIndexNode 0}},{{.ActiveIndexNode 2}})"
+#  wait: true
 # Sleep for some more time after rebalance completes
--
-   image: sequoiatools/cmd
-   entrypoint: sleep
-   command: "300"
-   wait: true
+#-
+#   image: sequoiatools/cmd
+#   entrypoint: sleep
+#   command: "300"
+#   wait: true
 
 ###############  Rebalance out data node ################
 - template: rebalance_out
@@ -215,20 +215,20 @@
    wait: true
 
 ###############  Rebalance-out single node ################
-- template: rebalance_out
-  args: "{{.ActiveIndexNode 1}}"
-  wait: true
+#- template: rebalance_out
+#  args: "{{.ActiveIndexNode 1}}"
+#  wait: true
 
 # Sleep for some more time after rebalance completes
--
-   image: sequoiatools/cmd
-   entrypoint: sleep
-   command: "300"
-   wait: true
+#-
+#   image: sequoiatools/cmd
+#   entrypoint: sleep
+#   command: "300"
+#   wait: true
 ###############  Add back index nodes  ################
 - template: add_node
   args: "{{.NthInActiveNode 0}}, index"
-- args: "{{.NthInActiveNode 1}}, index"
+#- args: "{{.NthInActiveNode 1}}, index"
 - template: rebalance
   wait: true
 # Sleep for some more time after rebalance completes
