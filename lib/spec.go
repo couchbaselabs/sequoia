@@ -23,6 +23,7 @@ type BucketSpec struct {
 	Eviction  string
 	DDocs     string
 	DDocSpecs []DDocSpec
+	Compression string
 }
 
 type ServerSpec struct {

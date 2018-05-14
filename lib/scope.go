@@ -668,6 +668,9 @@ func (s *Scope) CreateBuckets() {
 				if bucket.Eviction != "" {
 					command = append(command, "--bucket-eviction-policy", bucket.Eviction)
 				}
+				if bucket.Compression != "" {
+				    command = append(command,"--compression-mode", bucket.Compression)
+				}
 
 				desc := "bucket create " + bucketName
 				task := ContainerTask{
