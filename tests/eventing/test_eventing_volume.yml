@@ -154,7 +154,7 @@
 
 ###############  Swap Rebalance kv ################
 - template: rebalance_swap
-  args: "{{.NthInActiveNode 0}},{{.NthDataNode 1}}, data"
+  args: "{{.NthInActiveNode 0}},{{.NthDataNode 2}}, data"
   wait: true
 
 - template: rebalance_swap

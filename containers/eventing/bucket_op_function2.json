@@ -29,7 +29,7 @@
 		"description": "",
 		"enable_recursive_mutation": true,
 		"enable_snapshot_smr": false,
-		"execution_timeout": 1,
+		"execution_timeout": 60,
 		"feedback_batch_size": 100,
 		"feedback_read_buffer_size": 65536,
 		"fuzz_offset": 0,
