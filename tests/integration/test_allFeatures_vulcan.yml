@@ -100,7 +100,8 @@
         --create
         --xdcr-cluster-name remote
         --xdcr-from-bucket {{.Bucket}}
-        --xdcr-to-bucket {{.Nodes | .Cluster 1 | bucket 0}}"
+        --xdcr-to-bucket {{.Nodes | .Cluster 1 | bucket 0}}
+	--enable-compression 1"
   wait: true
 
 # undeploy eventing handlers
