@@ -3,8 +3,8 @@
 ############### data loading ################
 - image: sequoiatools/gideon
   command: "kv --ops {{.Scale 1000}} --create 30 --get 70 --delete 10  --expire 15 --ttl 600   --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
-- command: "kv --ops {{.Scale 500}} --create 60 --get 40 --sizes 64 96 --expire 20 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
-- command: "kv --ops {{.Scale 500}} --create 60 --get 40 --sizes 64 96 --expire 20 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}}"
+- command: "kv --ops {{.Scale 500}} --create 60 --get 40 --sizes 64 96 --expire 40 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
+- command: "kv --ops {{.Scale 500}} --create 60 --get 40 --sizes 64 96 --delete 20 --expire 20 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}}"
 - command: "kv --ops {{.Scale 200}} --create 100 --sizes 1024 --expire 80 --ttl 600 --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}}"
 
 
@@ -54,32 +54,32 @@
 - section_start: query_replica_indexes
 - template: attack_query
   args: "0, 1, {{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}, 'select DISTINCT\\(result) from default where result is not null LIMIT 200'"
-- args: "0, 1, {{.Nodes | .Service `n1ql` | net 1}}:{{.QueryPort}}, 'select * from `{{.NthBucket 1}}` limit 25 offset 1000'"
+#- args: "0, 1, {{.Nodes | .Service `n1ql` | net 1}}:{{.QueryPort}}, 'select * from `{{.NthBucket 1}}` limit 25 offset 1000'"
 - args: "0, 1, {{.Nodes | .Service `n1ql` | net 1}}:{{.QueryPort}}, 'select claim from `{{.NthBucket 3}}` where claim is not null limit 100'"
 
 - image: sequoiatools/cbdozer
   command: "-method POST -duration 0 -rate 1 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.Nodes | .Service `n1ql` | net 1}}:{{.QueryPort}}/query/service
-            -body 'select result,AVG(rating),MIN(rating),MAX(rating) from `{{.Bucket}}` where result is not missing and rating >= 800 and rating <= 825 group by result'"
+            -body 'select result,AVG(rating),MIN(rating),MAX(rating) from `{{.Bucket}}` where result is not missing and rating >= 800 and rating <= 810 group by result'"
 - command: "-method POST -duration 0 -rate 1 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}/query/service
-            -body 'select result,SUM(rating) from `{{.NthBucket 1}}` where result is not null and rating >= 100 and rating <= 125 group by result'"
+            -body 'select result,SUM(rating) from `{{.NthBucket 1}}` where result is not null and rating >= 115 and rating <= 125 group by result'"
+#- command: "-method POST -duration 0 -rate 1 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.Nodes | .Service `n1ql` | net 1}}:{{.QueryPort}}/query/service
+#            -body 'select result,AVG(rating),MIN(rating),MAX(rating) from `{{.NthBucket 2}}` where result is not missing and rating >= 800 and rating <= 810 group by result'"
+- command: "-method POST -duration 0 -rate 1 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}/query/service
+            -body 'select result,SUM(rating) from `{{.NthBucket 3}}` where result is not null and rating >= 410 and rating <= 420 group by result'"
 - command: "-method POST -duration 0 -rate 1 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.Nodes | .Service `n1ql` | net 1}}:{{.QueryPort}}/query/service
-            -body 'select result,AVG(rating),MIN(rating),MAX(rating) from `{{.NthBucket 2}}` where result is not missing and rating >= 800 and rating <= 825 group by result'"
-- command: "-method POST -duration 0 -rate 1 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}/query/service
-            -body 'select result,SUM(rating) from `{{.NthBucket 3}}` where result is not null and rating >= 400 and rating <= 425 group by result'"
-- command: "-method POST -duration 0 -rate 1 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}/query/service
-            -body 'select round(min(rating),2) as min_rating,round(max(rating),2) as max_rating,round(avg(rating),2) as avg_rating from `{{.NthBucket 1}}` where result is not null and rating between 500 and 550'"
+            -body 'select round(min(rating),2) as min_rating,round(max(rating),2) as max_rating,round(avg(rating),2) as avg_rating from `{{.NthBucket 2}}` where result is not null and rating between 500 and 520'"
 - section_end: query_replica_indexes
 
 ############### run creates ################
 - image: sequoiatools/gideon
   command: "kv --ops {{.Scale 1000}} --create 30 --get 70 --delete 10    --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
-  duration: 1200
+  duration: 600
 - command: "kv --ops {{.Scale 1000}} --create 50 --get 50 --delete 10  --sizes 64 96   --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
-  duration: 1200
+  duration: 600
 - command: "kv --ops {{.Scale 1000}} --create 80 --get 20 --delete 40  --sizes 64 96   --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}}"
-  duration: 1200
+  duration: 600
 - command: "kv --ops {{.Scale 1000}} --create 30 --get 70 --delete 10  --sizes 512  --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}}"
-  duration: 1200
+  duration: 600
 
 - section_start: change_indexer_topologies
 
