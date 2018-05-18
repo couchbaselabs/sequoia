@@ -49,31 +49,31 @@ users:
 buckets:
   -
       name: bucket_op
-      ram: 11%
+      ram: 13%
   -
       name: bucket_op_complex
-      ram: 11%
+      ram: 13%
   -
       name: bucket_op_complex1
-      ram: 11%
+      ram: 13%
   -
       name: bucket_op_dst
-      ram: 11%
+      ram: 13%
   -
       name: bucket_op_dst1
-      ram: 11%
+      ram: 13%
   -
       name: bucket_op_complex_dst
-      ram: 11%
+      ram: 13%
   -
       name: bucket_op_complex_dst1
-      ram: 11%
+      ram: 13%
   -
       name: metadata
-      ram: 11%
+      ram: 2%
   -
       name: test_diagnostics
-      ram: 11%
+      ram: 2%
 
 
 servers: # each server tag represents a cluster
