@@ -254,7 +254,7 @@ class EventingOperations():
             print status, result, headers
             raise Exception("Failed to get deployed apps")
         count = 0
-        while appname not in result and count < 20:
+        while appname not in result and count < 40:
             time.sleep(30)
             count += 1
             response, content = httplib2.Http(timeout=120).request(uri=url, method=method, headers=headers)
@@ -277,7 +277,7 @@ class EventingOperations():
             print status, result, headers
             raise Exception("Failed to get deployed apps")
         count = 0
-        while appname in result and count < 20:
+        while appname in result and count < 40:
             time.sleep(30)
             count += 1
             response, content = httplib2.Http(timeout=120).request(uri=url, method=method, headers=headers)
