@@ -47,6 +47,7 @@ type TestFlags struct {
 	ImageFlagSet     *flag.FlagSet
 	CleanFlagSet     *flag.FlagSet
 	FrameworkFlagSet *flag.FlagSet
+	ShowTopology     *bool
 }
 
 // parse top-level args and set test flag parsing mode
@@ -260,6 +261,10 @@ func (f *TestFlags) AddDefaultFlags(fset *flag.FlagSet) {
 	f.Version = fset.String(
 		"version", "",
 		"specify version, ie 4.6.2, 5.0.0 - default is determined by server")
+	f.ShowTopology = fset.Bool(
+		"show_topology",
+		false,
+		"print topology at the end of each cycle")
 }
 
 func (f *TestFlags) AddImageFlags(fset *flag.FlagSet) {

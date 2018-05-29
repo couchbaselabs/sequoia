@@ -24,6 +24,7 @@ type NodeSelf struct {
 	MemoryQuota       int
 	Services          []string
 	Version           string
+	Hostname          string
 }
 
 type NodeStatuses map[string]NodeStatus
@@ -37,6 +38,12 @@ type NodeStatus struct {
 
 type RebalanceStatus struct {
 	Status string
+}
+
+type ClusterInfo struct{
+    Name string
+    Nodes []NodeSelf
+
 }
 
 func NewRestClient(clusters []ServerSpec, provider Provider, cm *ContainerManager) RestClient {
@@ -215,16 +222,25 @@ func (r *RestClient) GetRebalanceStatuses(auth, url string) RebalanceStatus {
 	return s
 }
 
+func (r *RestClient) GetClusterInfo() ClusterInfo {
+    host := r.GetOrchestrator()
+	url := r.Provider.GetRestUrl(host)
+	auth := r.GetAuth(host)
+	reqUrl := fmt.Sprintf("%s/pools/default", url)
+	var s ClusterInfo
+	r.JsonRequest(auth, reqUrl, &s)
+	return s
+}
+
 //
 func (r *RestClient) JsonRequest(auth, restUrl string, v interface{}) {
 	// run curl container to make rest request
 	cmd := []string{"-u", auth, "-s", restUrl}
 	id, svcId := r.Cm.RunRestContainer(cmd)
-
+	//fmt.Println(MakeTaskMsg("appropriate/curl", id, cmd, false))
 	// convert logs to json
 	resp := r.Cm.GetLogs(id, "all")
 	parseErr := StringToJson(resp, &v)
-
 	// reset cache if we got a bad response
 	// as this indicates unstable cluster
 	if parseErr != nil {

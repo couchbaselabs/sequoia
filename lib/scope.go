@@ -32,6 +32,11 @@ type Scope struct {
 	Rest     RestClient
 }
 
+type Services struct {
+    Hostname string
+    Services []string
+}
+
 func NewScope(flags TestFlags, cm *ContainerManager) Scope {
 
 	// init from yaml or ini
@@ -127,6 +132,7 @@ func (s *Scope) SetupServer() {
 	s.RebalanceClusters()
 	s.CreateBuckets()
 	s.CreateViews()
+	//s.getClusteInfo()
 }
 
 func (s *Scope) SetupMobile() {
@@ -978,4 +984,18 @@ func (s *Scope) GetVarsKV(key string) (string, bool) {
 	} else {
 		return "", false
 	}
+}
+
+func (s *Scope) getClusteInfo(){
+    cluster :=s.Rest.GetClusterInfo()
+    serviceMap := make(map[string][]string)
+    for i:=0 ; i < len(cluster.Nodes); i++ {
+    host:=cluster.Nodes[i].Hostname
+    service:=cluster.Nodes[i].Services[0]
+    serviceMap[service]= append(serviceMap[service],host)
+    }
+    fmt.Println("########## Cluster config ##################")
+    for key, value := range serviceMap {
+    fmt.Println("###### ",key, "===== >", value," ###########")
+    }
 }

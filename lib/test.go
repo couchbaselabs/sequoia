@@ -277,6 +277,9 @@ func (t *Test) runRepeatableActions(scope Scope, loop int, actions []ActionSpec)
 	// restore the original test actions because runActions has the side-effect
 	// of modifying the Actions member for running nested templates, tests, and sections
 	t.Actions = actions
+    if *t.Flags.ShowTopology == true {
+	scope.getClusteInfo()
+    }
 }
 
 func (t *Test) runActions(scope Scope, loop int, actions []ActionSpec) {
@@ -624,7 +627,6 @@ func (t *Test) runActions(scope Scope, loop int, actions []ActionSpec) {
 		}
 		lastAction = action
 	}
-
 }
 
 func (t *Test) runTask(scope *Scope, task *ContainerTask, action *ActionSpec) {
