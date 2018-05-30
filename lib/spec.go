@@ -103,7 +103,7 @@ type ScopeSpec struct {
 func (s *ServerSpec) InitNodeServices() {
 
 	var i uint8
-	numNodes := s.Count
+	numNodes := s.InitNodes
 	numIndexNodes := s.Services["index"]
 	numQueryNodes := s.Services["query"]
 	numFtsNodes := s.Services["fts"]
