@@ -1,6 +1,6 @@
 ---
 -
-  include: tests/templates/rebalance.yml, tests/templates/vegeta.yml, tests/templates/kv.yml, tests/templates/fts.yml, tests/templates/n1ql.yml
+  include: tests/templates/rebalance.yml, tests/templates/vegeta.yml, tests/templates/kv.yml, tests/templates/fts.yml, tests/templates/n1ql.yml, test/templates/multinode_failure.yml
 
 # continous kv loading
 - template: pillowfight
@@ -165,51 +165,8 @@
   wait: true
 
 # do multinode failover
-- template: enable_autofailover
-  args: "5,3"
-  wait: true
-
--
-  image: sequoiatools/cbutil
-  command: "/cbinit.py {{.NthDataNode 1}} root couchbase stop"
-  wait: true
-
--
-  image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "10"
-  wait: true
-
--
-  image: sequoiatools/cbutil
-  command: "/cbinit.py {{.NthDataNode 2}} root couchbase stop"
-  wait: true
--
-  image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "10"
-  wait: true
-
--
-  image: sequoiatools/cbutil
-  command: "/cbinit.py {{.NthDataNode 3}} root couchbase stop"
-  wait: true
-
--
-  image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "10"
-  wait: true
-
--
-  template: rebalance
-  wait: true
-
-- template: add_node
-  args: "{{.NthInActiveNode 0}}"
-- args: "{{.NthInActiveNode 1}}"
-- args: "{{.NthInActiveNode 2}}"
-- template: rebalance
+- template: autofailover3Nodes
+  args: "{{.NthDataNode 1}},{{.NthDataNode 2}},{{.NthDataNode 3}}"
   wait: true
 
 # quick update batch
