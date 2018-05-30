@@ -35,8 +35,8 @@ servers: # each server tag represents a cluster
       fts_ram: 85%
       index_storage: default
       services:
-        query: 2
         index: 3
+        query: 2
         fts: 2
       rest_username: Administrator
       rest_password: password
@@ -44,7 +44,7 @@ servers: # each server tag represents a cluster
       index_path: "/data"
       rest_port: 8091
       query_port: 8093
-      init_nodes: 17
+      init_nodes: 16
       buckets: default,CUSTOMER,DISTRICT,HISTORY,ITEM,NEW_ORDER,ORDERS,ORDER_LINE,STOCK,WAREHOUSE
       users: default,CUSTOMER,DISTRICT,HISTORY
   -

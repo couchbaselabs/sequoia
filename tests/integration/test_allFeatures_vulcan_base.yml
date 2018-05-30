@@ -171,19 +171,9 @@
 
 -
   image: sequoiatools/cbutil
-  command: "/cbinit.py {{.NthDataNode 0}} root couchbase stop"
-  wait: true
-
--
-  image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "10"
-  wait: true
-
--
-  image: sequoiatools/cbutil
   command: "/cbinit.py {{.NthDataNode 1}} root couchbase stop"
   wait: true
+
 -
   image: sequoiatools/cmd
   entrypoint: sleep
@@ -193,6 +183,16 @@
 -
   image: sequoiatools/cbutil
   command: "/cbinit.py {{.NthDataNode 2}} root couchbase stop"
+  wait: true
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "10"
+  wait: true
+
+-
+  image: sequoiatools/cbutil
+  command: "/cbinit.py {{.NthDataNode 3}} root couchbase stop"
   wait: true
 
 -
