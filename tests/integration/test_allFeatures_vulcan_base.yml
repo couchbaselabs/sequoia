@@ -1,6 +1,6 @@
 ---
 -
-  include: tests/templates/rebalance.yml, tests/templates/vegeta.yml, tests/templates/kv.yml, tests/templates/fts.yml, tests/templates/n1ql.yml, test/templates/multinode_failure.yml
+  include: tests/templates/rebalance.yml, tests/templates/vegeta.yml, tests/templates/kv.yml, tests/templates/fts.yml, tests/templates/n1ql.yml, tests/templates/multinode_failure.yml
 
 # continous kv loading
 - template: pillowfight
