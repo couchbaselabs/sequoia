@@ -35,7 +35,7 @@ buckets:
 servers: # each server tag represents a cluster
   -
       name: local
-      count: 10
+      count: 16
       ram: 90%
       index_ram: 90%
       index_storage: default
