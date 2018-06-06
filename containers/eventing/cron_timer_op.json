@@ -20,7 +20,7 @@
       "deadline_timeout":3,
       "deployment_status":true,
       "description":"",
-      "enable_recursive_mutation":false,
+      "enable_recursive_mutation":true,
       "execution_timeout":1,
       "lcb_inst_capacity":5,
       "log_level":"INFO",
