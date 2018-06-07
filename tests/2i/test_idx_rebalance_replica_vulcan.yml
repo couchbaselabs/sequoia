@@ -19,19 +19,19 @@
 - command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create primary index on `{{.Bucket}}` using GSI with {\"num_replica\":2}'"
   wait: true
 - command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o1_claims on `{{.NthBucket 1}}`(claim) using GSI with {\"num_replica\":1,\"defer_build\": true}'"
-- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o1_result_rating on `{{.NthBucket 1}}`(result,rating) using GSI with {\"num_replica\":1}'"
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o1_result_rating on `{{.NthBucket 1}}`(rating,result) using GSI with {\"num_replica\":1}'"
   wait: true
 - command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o2_claims on `{{.NthBucket 2}}`(claim) using GSI with {\"num_replica\":1}'"
   wait: true
 - command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o3_claims on `{{.NthBucket 3}}`(claim) using GSI with {\"num_replica\":1}'"
   wait: true
-- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_result_ratings_claims_pindex on `{{.Bucket}}`(result,rating,claim) partition by hash(rating) using GSI with {\"num_replica\":1, \"num_partition\":4}'"
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_result_ratings_claims_pindex on `{{.Bucket}}`(rating,result,claim) partition by hash(rating) using GSI with {\"num_replica\":1, \"num_partition\":4}'"
   wait: true
-- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create primary index on `{{.NthBucket 1}}` partition by hash(claim,result,rating) using GSI with {\"num_partition\":4}'"
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create primary index on `{{.NthBucket 1}}` partition by hash(rating,result,claim) using GSI with {\"num_partition\":4}'"
   wait: true
-- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o2_result_rating on `{{.NthBucket 2}}`(result,rating) partition by hash(claim) using GSI with {\"num_partition\":4}'"
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o2_result_rating on `{{.NthBucket 2}}`(rating,result) partition by hash(claim) using GSI with {\"num_partition\":4}'"
   wait: true
-- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o3_result_rating on `{{.NthBucket 3}}`(result,rating) partition by hash(LOWER(claim),rating) using GSI with {\"defer_build\": true, \"num_partition\":4}'"
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o3_result_rating on `{{.NthBucket 3}}`(rating,result) partition by hash(rating,LOWER(claim)) using GSI with {\"defer_build\": true, \"num_partition\":4}'"
 
 - template: cbq
   args: "'build index on `{{.Bucket}}`\\(default_result)'"
@@ -53,7 +53,7 @@
 # ###############  run queries ################
 - section_start: query_replica_indexes
 - template: attack_query
-  args: "0, 1, {{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}, 'select DISTINCT\\(result) from default where result is not null LIMIT 200'"
+  args: "0, 1, {{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}, 'select result from default where result is not null LIMIT 200'"
 #- args: "0, 1, {{.Nodes | .Service `n1ql` | net 1}}:{{.QueryPort}}, 'select * from `{{.NthBucket 1}}` limit 25 offset 1000'"
 - args: "0, 1, {{.Nodes | .Service `n1ql` | net 1}}:{{.QueryPort}}, 'select claim from `{{.NthBucket 3}}` where claim is not null limit 100'"
 
