@@ -29,9 +29,9 @@
   wait: true
 - command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create primary index on `{{.NthBucket 1}}` partition by hash(rating,result,claim) using GSI with {\"num_partition\":4}'"
   wait: true
-- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o2_result_rating on `{{.NthBucket 2}}`(rating,result) partition by hash(claim) using GSI with {\"num_partition\":4}'"
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o2_result_rating on `{{.NthBucket 2}}`(rating,result) partition by hash(rating) using GSI with {\"num_partition\":4}'"
   wait: true
-- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o3_result_rating on `{{.NthBucket 3}}`(rating,result) partition by hash(rating,LOWER(claim)) using GSI with {\"defer_build\": true, \"num_partition\":4}'"
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o3_result_rating on `{{.NthBucket 3}}`(rating,result) partition by hash(rating,LOWER(result)) using GSI with {\"defer_build\": true, \"num_partition\":4}'"
 
 - template: cbq
   args: "'build index on `{{.Bucket}}`\\(default_result)'"
