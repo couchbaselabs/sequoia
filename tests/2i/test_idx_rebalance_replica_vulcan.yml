@@ -53,13 +53,13 @@
 # ###############  run queries ################
 - section_start: query_replica_indexes
 - template: attack_query
-  args: "0, 1, {{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}, 'select result from default where result is not null LIMIT 200'"
+  args: "0, 1, {{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}, 'select result from default where result is not null LIMIT 50000'"
 #- args: "0, 1, {{.Nodes | .Service `n1ql` | net 1}}:{{.QueryPort}}, 'select * from `{{.NthBucket 1}}` limit 25 offset 1000'"
 - args: "0, 1, {{.Nodes | .Service `n1ql` | net 1}}:{{.QueryPort}}, 'select claim from `{{.NthBucket 3}}` where claim is not null limit 100'"
 
 - image: sequoiatools/cbdozer
   command: "-method POST -duration 0 -rate 1 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.Nodes | .Service `n1ql` | net 1}}:{{.QueryPort}}/query/service
-            -body 'select result,AVG(rating),MIN(rating),MAX(rating) from `{{.Bucket}}` where result is not missing and rating >= 800 and rating <= 810 group by result'"
+            -body 'select result,AVG(rating),MIN(rating),MAX(rating) from `{{.Bucket}}` where result is not missing and rating >= 400 and rating <= 1000 group by result'"
 - command: "-method POST -duration 0 -rate 1 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}/query/service
             -body 'select result,SUM(rating) from `{{.NthBucket 1}}` where result is not null and rating >= 115 and rating <= 125 group by result'"
 #- command: "-method POST -duration 0 -rate 1 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.Nodes | .Service `n1ql` | net 1}}:{{.QueryPort}}/query/service
