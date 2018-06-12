@@ -1,0 +1,72 @@
+---
+users:
+  -
+    name: CUSTOMER
+    password: password
+    roles: admin
+    auth_domain: local
+  -
+    name: DISTRICT
+    password: password
+    roles: admin
+    auth_domain: local
+  -
+    name: HISTORY
+    password: password
+    roles: admin
+    auth_domain: local
+
+servers: # each server tag represents a cluster
+  -
+      name: local
+      count: 10
+      ram: 95%
+      index_ram: 90%
+      index_storage: default
+      services:
+        index: 3
+        query: 2
+      rest_username: Administrator
+      rest_password: password
+      data_path: "/data"
+      index_path: "/data"
+      rest_port: 8091
+      query_port: 8093
+      init_nodes: 8
+      buckets: CUSTOMER,DISTRICT,HISTORY,ITEM,NEW_ORDER,ORDERS,ORDER_LINE,STOCK,WAREHOUSE
+      users: CUSTOMER,DISTRICT,HISTORY
+
+
+buckets:
+  -
+      name: ORDERS
+      ram: 10%
+  -
+      name: ORDER_LINE
+      ram: 10%
+  -
+      name: CUSTOMER
+      ram: 10%
+  -
+      name: STOCK
+      ram: 10%
+  -
+      name: NEW_ORDER
+      ram: 10%
+  -
+      name: WAREHOUSE
+      ram: 10%
+  -
+      name: DISTRICT
+      ram: 10%
+  -
+      name: HISTORY
+      ram: 5%
+  -
+      name: ITEM
+      ram: 5%
+
+
+
+
+

@@ -1,0 +1,136 @@
+- include: tests/templates/kv.yml, tests/templates/n1ql.yml, tests/templates/rebalance.yml
+
+# start tpcc indexing
+- image: sequoiatools/tpcc
+  requires:  "{{.Version | le 4.0 | eq .DoOnce}}"
+  command:  "./run.sh {{.NthQueryNode 1}}:{{.QueryPort}} util/cbcrindex.sql"
+  wait: true
+- image: sequoiatools/tpcc
+  requires:  "{{.Version | le 4.0}}"
+  command: "python tpcc.py --duration 259200 --client {{.Scale 10}} --warehouses 5 --no-execute n1ql
+                            --query-url {{.QueryNodePort}} --userid {{.RestUsername}} --password {{.RestPassword}}"
+- requires:  "{{.Version | le 4.0}}"
+  command: "python tpcc.py --duration 2259200 --client {{.Scale 10}}
+                             --warehouses 5 --no-load n1ql  --query-url {{.NthQueryNode 1}}:{{.QueryPort}}"
+
+
+###############  Rebalance-in single node ################
+- template: rebalance_in
+  args: "{{.InActiveNode}}, index"
+  wait: true
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "300"
+   wait: true
+
+###############  Rebalance-out single node ################
+- template: rebalance_out
+  args: "{{.ActiveIndexNode 0}}"
+  wait: true
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "300"
+   wait: true
+
+###############  Swap single index node ################
+- template: rebalance_swap
+  args: "{{.InActiveNode}}, {{.ActiveIndexNode 0}}, index"
+  wait: true
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "300"
+   wait: true
+
+###############  Rebalance-in two nodes ################
+- template: add_node
+  args: "{{.NthInActiveNode 0}}, index"
+- args: "{{.NthInActiveNode 1}}, index"
+- template: rebalance
+  wait: true
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "300"
+   wait: true
+
+###############  Rebalance-out two nodes ################
+- template: rebalance_out
+  args: "({{.ActiveIndexNode 0}},{{.ActiveIndexNode 2}})"
+  wait: true
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "300"
+   wait: true
+
+###############  Rebalance out data node ################
+- template: rebalance_out
+  args: "({{.NthDataNode 1}})"
+  wait: true
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "300"
+   wait: true
+
+###############  Add back data node ################
+- template: rebalance_in
+  args: "{{.InActiveNode}}"
+  wait: true
+
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "300"
+   wait: true
+
+###############  Failover and addback ################
+- template: failover_node_forced
+  args: "{{.NthIndexNode 2}}"
+- template: readd_node
+  args: "{{.NthIndexNode 2}}"
+- template: recover_node
+  args: "{{.NthIndexNode 2}}, full"
+- template: rebalance
+  wait: true
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "300"
+   wait: true
+
+###############  Failover and rebalance out ################
+- template: failover_node_forced
+  args: "{{.ActiveIndexNode 1}}"
+- template: rebalance
+  wait: true
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "300"
+   wait: true
+
+###############  Add back index nodes  ################
+- template: add_node
+  args: "{{.NthInActiveNode 0}}, index"
+
+- template: rebalance
+  wait: true
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "300"
+   wait: true
