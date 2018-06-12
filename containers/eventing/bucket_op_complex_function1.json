@@ -20,6 +20,7 @@
 		"dcp_stream_boundary": "from_now",
 		"deployment_status": false,
 		"log_level": "INFO",
-		"processing_status": false
+		"processing_status": false,
+		"execution_timeout": 60
 	}
 }
