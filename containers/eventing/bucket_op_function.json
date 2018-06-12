@@ -15,6 +15,7 @@
 		"deployment_status": false,
 		"log_level": "INFO",
 		"processing_status": false,
-		"execution_timeout": 60
+		"execution_timeout": 60,
+		"deadline_timeout": 62
 	}
 }
