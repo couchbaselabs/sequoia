@@ -5,16 +5,16 @@
 -
   image: sequoiatools/gideon
   requires:  "{{eq true .DoOnce}}"
-  command: "kv --ops {{.Scale 10}} --create 100  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+  command: "kv --ops {{.Scale 10}} --create 100  --expire 100 --ttl 2700  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
   duration: 60
 -
-  command: "kv --ops {{.Scale 10}} --create 100 --sizes 64 96   --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
+  command: "kv --ops {{.Scale 10}} --create 100 --sizes 64 96   --expire 100 --ttl 2700  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
   duration: 60
 -
-  command: "kv --ops {{.Scale 10}} -create 100 --sizes 64 96   --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}}"
+  command: "kv --ops {{.Scale 10}} -create 100 --sizes 64 96    --expire 100 --ttl 2700  --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}}"
   duration: 60
 -
-  command: "kv --ops {{.Scale 1}} --create 100 --sizes 512  --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}}"
+  command: "kv --ops {{.Scale 1}} --create 100 --sizes 512   --expire 100 --ttl 2700  --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}}"
   duration: 60
   wait: true
 
@@ -36,37 +36,21 @@
 ############### run mutations ################
 -
   image: sequoiatools/gideon
-  command: "kv --ops {{.Scale 100}} --create 60 --update 20 --delete 20 --expire 15 --ttl 600 --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+  command: "kv --ops {{.Scale 10}} --create 50 --get 30 --delete 20 --expire 100 --ttl 2700 --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
   alias: GideonContainer1
 -
-  command: "kv --ops {{.Scale 100}} --create 50 --update 30 --delete 20 --sizes 64 96   --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
+  command: "kv --ops {{.Scale 10}} --create 70 --get 10 --delete 20 --sizes 64 96 --expire 100 --ttl 2700  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
   alias: GideonContainer2
 -
-  command: "kv --ops {{.Scale 100}} --create 50 --update 30 --delete 20 --sizes 64 96   --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}}"
+  command: "kv --ops {{.Scale 10}} --create 40 --get 40 --delete 20 --sizes 64 96 --expire 100 --ttl 2700  --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}}"
   alias: GideonContainer3
 -
-  command: "kv --ops {{.Scale 50}} --create 60 --update 20 --delete 20 --sizes 512  --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}}"
+  command: "kv --ops {{.Scale 5}} --create 60 --get 20 --delete 20 --sizes 512 --expire 100 --ttl 2700  --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}}"
   alias: GideonContainer4
 
 
 ############### run queries ################
-- image: sequoiatools/cbdozer
-  command: "-method POST -duration 86400 -rate 3 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.ActiveAnalyticsNode 0}}:8095/query/service
-            -body 'SELECT name as id, result as bucketName, `type` as `Type`, array_length(profile.friends) as num_friends FROM  ds1 where result = \"SUCCESS\" and profile is not missing and array_length(profile.friends) > 5 limit 100'"
-  alias: query1
-
--
-  command: "-method POST -duration 86400 -rate 3 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.ActiveAnalyticsNode 0}}:8095/query/service
-            -body 'SELECT name as id, result as bucketName, `type` as `Type`, array_length(profile.friends) as num_friends FROM  ds2 where result = \"SUCCESS\" and profile is not missing and array_length(profile.friends) = 5'"
-  alias: query2
--
-  command: "-method POST -duration 86400 -rate 3 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.ActiveAnalyticsNode 1}}:8095/query/service
-            -body 'select sum(friends.num_friends) from (select array_length(profile.friends) as num_friends from ds3) as friends'"
-  alias: query3
--
-  command: "-method POST -duration 86400 -rate 3 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.ActiveAnalyticsNode 1}}:8095/query/service
-            -body 'SELECT name as id, result as Result, `type` as `Type`, array_length(profile.friends) as num_friends FROM  ds4 where result = \"SUCCESS\" and profile is not missing and array_length(profile.friends) > 5 UNION ALL SELECT name as id, result as Result, `type` as `Type`, array_length(profile.friends) as num_friends FROM  ds4 where result != \"SUCCESS\" and profile is not missing and array_length(profile.friends) = 5'"
-  alias: query4
+###### Add QueryApp container here ######
 
 # ###############  connect queries ################
 - template: cbq
@@ -175,24 +159,6 @@
   command:  "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 1}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
   wait: true
 
-#### Stop queries ###############
--
-  client:
-    op: rm
-    container: query1
--
-  client:
-    op: rm
-    container: query2
--
-  client:
-    op: rm
-    container: query3
--
-  client:
-    op: rm
-    container: query4
-
 
 # stop gideon data loading
 -
@@ -232,10 +198,8 @@
 
 ########### drop bucket , datasets and indexes #######
 - template: cbq
-  args: "drop index ds1.idx_city1;"
-- args: "drop index ds2.idx_city2;"
-- args: "drop index ds3.idx_city3;"
-- args: "drop index ds4.idx_city4;"
+  args: "drop index ds1.idx_result1;"
+- args: "drop index ds2.idx_result2;"
 - args: "drop dataset ds1;"
 - args: "drop dataset ds2;"
 - args: "drop dataset ds3;"
