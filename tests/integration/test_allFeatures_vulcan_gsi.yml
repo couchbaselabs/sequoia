@@ -175,6 +175,5 @@
 
 - template: add_node
   args: "{{.NthInActiveNode 0}}"
-- args: "{{.NthInActiveNode 1}}"
 - template: rebalance
   wait: true
