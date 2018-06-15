@@ -99,7 +99,7 @@
   wait: true
 
 
-###############  Rebalance-in eventing ################
+###############  Rebalance-in data ################
 - template: rebalance_in
   args: "{{.InActiveNode}}"
   wait: true
@@ -110,7 +110,7 @@
   command: "300"
   wait: true
 
-###############  Rebalance-out single node ################
+###############  Rebalance-out single data node ################
 - template: rebalance_out
   args: "{{.NthDataNode 1}}"
   wait: true
@@ -121,7 +121,7 @@
   command: "300"
   wait: true
 
-###############  Swap Rebalance ################
+###############  Swap data nodes ################
 - template: rebalance_swap
   args: "{{.InActiveNode}},{{.NthDataNode 1}}, data"
   wait: true
@@ -201,7 +201,7 @@
   wait: true
 
 - template: rebalance_out
-  args: "({{.NthDataNode 2}},{{.Nodes | .Service `eventing` | net 3}},{{.Nodes | .Service `eventing` | net 4}})"
+  args: "({{.NthDataNode 2}},{{.Nodes | .Service `eventing` | net 2}},{{.Nodes | .Service `eventing` | net 3}})"
   wait: true
 
 
