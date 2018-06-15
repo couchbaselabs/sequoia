@@ -31,13 +31,13 @@ servers: # each server tag represents a cluster
       name: local
       count: 19
       ram: 95%
-      index_ram: 95%
+      index_ram: 90%
       fts_ram: 85%
       eventing_ram: 90%
       index_storage: default
       services:
-        query: 2
         index: 3
+        query: 2
         fts: 2
         eventing: 2
       rest_username: Administrator
@@ -69,6 +69,7 @@ buckets:
       ram: 40%
       eviction: fullEviction
       ddocs: scale
+      compression: active
   -
       name: ORDERS
       ram: 5%

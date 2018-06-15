@@ -1,6 +1,6 @@
 ---
 -
-  include: tests/templates/rebalance.yml, tests/templates/vegeta.yml, tests/templates/kv.yml, tests/templates/fts.yml, tests/templates/n1ql.yml
+  include: tests/templates/rebalance.yml, tests/templates/vegeta.yml, tests/templates/kv.yml, tests/templates/fts.yml, tests/templates/n1ql.yml, tests/templates/multinode_failure.yml
 
 # continous kv loading
 - template: pillowfight
@@ -11,6 +11,9 @@
   args: "{{.NthDataNode 1}}:{{.RestPort}}"
   wait: true
 
+# creating eventing handlers and deploying them
+- test: tests/eventing/test_eventing_rebalance_integration.yml
+  section: create_and_deploy
 
 # replica index creation
 - test: tests/2i/test_idx_rebalance_replica_vulcan.yml
@@ -25,10 +28,6 @@
   duration: 1800
 - command: "kv --ops {{.Scale 500}} --create 10 --delete 8 --get 82 --sizes 64 96  --expire 100 --ttl 3600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}}"
   duration: 1800
-
-# creating eventing handlers and deploying them
-- test: tests/eventing/test_eventing_rebalance_integration.yml
-  section: create_and_deploy
 
 # query replica indexes
 - test: tests/2i/test_idx_rebalance_replica_vulcan.yml
@@ -45,6 +44,7 @@
   args: "0, 10, {{$.NthQueryNode 1}}:{{$.QueryPort}},
         delete from default where rating > 0 limit {{$.Scale 10}}"
 
+
 # more json docs on default bucket
 - image: sequoiatools/gideon
   command: "kv --ops {{.Scale 500}} --create 10 --delete 8 --get 92 --expire 100 --ttl 660  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes  512 128 1024 2048 16000"
@@ -53,6 +53,9 @@
 - command: "kv --ops {{.Scale 600}} --create 15 --get 80 --delete 5  --expire 100 --ttl 660 --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 128"
   duration: 7200
 
+# Change the topology (performs rebalance in/out/swap eventing nodes)
+- test: tests/eventing/test_eventing_rebalance_integration.yml
+  section: topology_change
 
 # run http attacks against view with various skip param
 - foreach: "{{range $i, $view := strlist `stats` `array` `padd`}}"
@@ -73,10 +76,6 @@
 # create fts index with nested type mappings and store results
 - template: create_index_with_child_field_nested_type_mapping
   args: "{{.FTSNodePort}}, social, default, gideon, description, profile, status, true"
-
-# Change the topology (performs rebalance in/out/swap eventing nodes)
-- test: tests/eventing/test_eventing_rebalance_integration.yml
-  section: topology_change
 
 # direct search on state key
 - template: query_fts
@@ -104,9 +103,6 @@
 	--enable-compression 1"
   wait: true
 
-# undeploy eventing handlers
-- test: tests/eventing/test_eventing_rebalance_integration.yml
-  section: undeploy
 
 # add some rbac users
 - test: tests/n1ql/test_n1qlRBAC.yml
@@ -116,14 +112,13 @@
 - test: tests/n1ql/test_n1qlRBAC.yml
   section: rbac_query
 
+# undeploy eventing handlers
+- test: tests/eventing/test_eventing_rebalance_integration.yml
+  section: undeploy
 
 # load 1M items
 - template: pillowfight_htp
   wait: true
-
-# redeploy eventing handlers
-- test: tests/eventing/test_eventing_rebalance_integration.yml
-  section: redeploy
 
 # recreate replica indexes
 - test: tests/2i/test_idx_rebalance_replica_vulcan.yml
@@ -132,6 +127,10 @@
 # change the topologies on the 2i test
 - test: tests/2i/test_idx_rebalance_replica_vulcan.yml
   section: change_indexer_topologies
+
+# redeploy eventing handlers
+- test: tests/eventing/test_eventing_rebalance_integration.yml
+  section: redeploy
 
 # start tpcc indexing
 - image: sequoiatools/tpcc
@@ -180,57 +179,9 @@
   wait: true
 
 # do multinode failover
-- template: enable_autofailover
-  args: "5,3"
+- template: autofailover3Nodes
+  args: "{{.NthDataNode 1}},{{.NthDataNode 2}},{{.NthDataNode 3}}"
   wait: true
-
--
-  image: sequoiatools/cbutil
-  command: "/cbinit.py {{.NthDataNode 0}} root couchbase stop"
-  wait: true
-
--
-  image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "10"
-  wait: true
-
--
-  image: sequoiatools/cbutil
-  command: "/cbinit.py {{.NthDataNode 1}} root couchbase stop"
-  wait: true
--
-  image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "10"
-  wait: true
-
--
-  image: sequoiatools/cbutil
-  command: "/cbinit.py {{.NthDataNode 2}} root couchbase stop"
-  wait: true
-
--
-  image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "10"
-  wait: true
-
--
-  template: rebalance
-  wait: true
-
-- template: add_node
-  args: "{{.NthInActiveNode 0}}"
-- args: "{{.NthInActiveNode 1}}"
-- args: "{{.NthInActiveNode 2}}"
-- template: rebalance
-  wait: true
-
-
-# undeploy eventing handlers
-- test: tests/eventing/test_eventing_rebalance_integration.yml
-  section: undeploy
 
 # quick update batch
 - template: pillowfight_htp
@@ -238,6 +189,9 @@
 
 - template: add_node
   args: "{{.NthInActiveNode 0}}"
-- args: "{{.NthInActiveNode 1}}"
 - template: rebalance
   wait: true
+
+# undeploy eventing handlers
+- test: tests/eventing/test_eventing_rebalance_integration.yml
+  section: undeploy
