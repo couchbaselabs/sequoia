@@ -286,6 +286,17 @@
 - template: rebalance
   wait: true
 
+###############  Rebalance-in eventing ################
+- template: rebalance_in
+  args: "{{.InActiveNode}}, eventing"
+  wait: true
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
 ############### undeploy functions ################
 -
   image: sequoiatools/eventing
