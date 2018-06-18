@@ -109,7 +109,7 @@
 
 ###############  Rebalance-out single node ################
 - template: rebalance_out
-  args: "{{.ActiveAnalyticsNode 2}}"
+  args: "{{.ActiveAnalyticsNode 1}}"
   wait: true
 
 # ###############  connect queries ################
@@ -144,7 +144,7 @@
 ############### Kill analytics ################
 -
   template: analytics_kill
-  args: "{{.Nodes | net 5}}"
+  args: "{{.ActiveAnalyticsNode 1}}"
 
 # ###############sleep for 180secs###############
 -
