@@ -7,11 +7,11 @@
   wait: true
 - image: sequoiatools/tpcc
   requires:  "{{.Version | le 4.0}}"
-  command: "python tpcc.py --duration 259200 --client {{.Scale 10}} --warehouses 5 --no-execute n1ql
+  command: "python tpcc.py --duration 259200 --client {{.Scale 10}} --warehouses 10 --no-execute n1ql
                             --query-url {{.QueryNodePort}} --userid {{.RestUsername}} --password {{.RestPassword}}"
 - requires:  "{{.Version | le 4.0}}"
   command: "python tpcc.py --duration 2259200 --client {{.Scale 10}}
-                             --warehouses 5 --no-load n1ql  --query-url {{.NthQueryNode 1}}:{{.QueryPort}}"
+                             --warehouses 10 --no-load n1ql  --query-url {{.NthQueryNode 1}}:{{.QueryPort}}"
 
 
 ###############  Rebalance-in single node ################
