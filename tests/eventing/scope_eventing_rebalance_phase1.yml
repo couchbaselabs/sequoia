@@ -79,10 +79,10 @@ buckets:
 servers: # each server tag represents a cluster
   -
       name: local
-      count: 10
+      count: 12
       ram: 95%
       eventing_ram: 90%
-      init_nodes: 7
+      init_nodes: 9
       services:
         eventing: 4
         eventing_start: 2
