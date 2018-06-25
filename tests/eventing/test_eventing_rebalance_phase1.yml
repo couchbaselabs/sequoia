@@ -1,18 +1,26 @@
 -
   include: tests/templates/kv.yml, tests/templates/vegeta.yml, tests/templates/rebalance.yml, tests/templates/n1ql.yml
 
+###### update Tombstone Purge Interval ######
+-
+  image: sequoiatools/couchbase-cli
+  requires:  "{{eq true .DoOnce }}"
+  command: "setting-compaction -c {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}} --metadata-purge-interval .04"
+  wait: true
+
+
 ####### runing constant ops #################
 -
   image: sequoiatools/gideon
-  command: "kv --ops {{.Scale 1000}} --create 100 --update 100 --delete 100 --expire 100 --ttl 120 --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 64 96"
+  command: "kv --ops {{.Scale 1000}} --create 100 --update 100 --delete 100 --expire 100 --ttl 120 --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 64 96 16000"
   alias: GideonContainer1
 -
   image: sequoiatools/gideon
-  command: "kv --ops {{.Scale 1000}} --create 100 --update 100 --delete 100 --expire 100 --ttl 120 --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}} --sizes 128"
+  command: "kv --ops {{.Scale 1000}} --create 100 --update 100 --delete 100 --expire 100 --ttl 120 --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}} --sizes 128 2048"
   alias: GideonContainer2
 -
   image: sequoiatools/gideon
-  command: "kv --ops {{.Scale 1000}} --create 100 --update 100 --delete 100 --expire 100 --ttl 120 --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}} --sizes  512 128 1024 2048 16000"
+  command: "kv --ops {{.Scale 1000}} --create 100 --update 100 --delete 100 --expire 100 --ttl 120 --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}} --sizes  512 128 1024"
   alias: GideonContainer3
 
 ############### create and deploy functions ################
