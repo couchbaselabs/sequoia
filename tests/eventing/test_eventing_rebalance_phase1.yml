@@ -5,7 +5,7 @@
 -
   image: sequoiatools/couchbase-cli
   requires:  "{{eq true .DoOnce }}"
-  command: "setting-compaction -c {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}} --metadata-purge-interval .04"
+  command: "setting-compaction -c {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}} --metadata-purge-interval .04 --compaction-db-percentage 30 --compaction-view-percentage 30"
   wait: true
 
 
