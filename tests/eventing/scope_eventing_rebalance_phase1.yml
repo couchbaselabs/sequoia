@@ -49,25 +49,25 @@ users:
 buckets:
   -
       name: bucket_op
-      ram: 13%
+      ram: 12%
   -
       name: bucket_op_complex
-      ram: 13%
+      ram: 12%
   -
       name: bucket_op_complex1
-      ram: 13%
+      ram: 12%
   -
       name: bucket_op_dst
-      ram: 13%
+      ram: 12%
   -
       name: bucket_op_dst1
-      ram: 13%
+      ram: 12%
   -
       name: bucket_op_complex_dst
-      ram: 13%
+      ram: 12%
   -
       name: bucket_op_complex_dst1
-      ram: 13%
+      ram: 12%
   -
       name: metadata
       ram: 2%
@@ -80,7 +80,7 @@ servers: # each server tag represents a cluster
   -
       name: local
       count: 12
-      ram: 95%
+      ram: 90%
       eventing_ram: 90%
       init_nodes: 9
       services:
