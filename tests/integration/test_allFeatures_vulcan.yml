@@ -195,3 +195,8 @@
 # undeploy eventing handlers
 - test: tests/eventing/test_eventing_rebalance_integration.yml
   section: undeploy
+
+# rebalance out a node
+- template: rebalance_out
+  args: "{{.NthDataNode 1}}:{{.RestPort}}"
+  wait: true
