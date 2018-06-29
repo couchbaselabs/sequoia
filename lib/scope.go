@@ -130,6 +130,7 @@ func (s *Scope) SetupServer() {
 	s.AddUsers()
 	s.AddNodes()
 	s.RebalanceClusters()
+	s.getClusteInfo()
 	s.CreateBuckets()
 	s.CreateViews()
 	//s.getClusteInfo()
@@ -996,6 +997,6 @@ func (s *Scope) getClusteInfo(){
     }
     fmt.Println("########## Cluster config ##################")
     for key, value := range serviceMap {
-    fmt.Println("###### ",key, "===== >", value," ###########")
+    fmt.Println("###### ",key,":",len(value), "===== >", value," ###########")
     }
 }
