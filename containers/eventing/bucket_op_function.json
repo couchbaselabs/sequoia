@@ -16,6 +16,8 @@
 		"log_level": "INFO",
 		"processing_status": false,
 		"execution_timeout": 60,
-		"deadline_timeout": 62
+		"deadline_timeout": 62,
+		"vb_ownership_giveup_routine_count":5,
+		"vb_ownership_takeover_routine_count":5
 	}
 }
