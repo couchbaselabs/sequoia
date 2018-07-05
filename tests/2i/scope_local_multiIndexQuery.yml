@@ -37,7 +37,7 @@ servers: # each server tag represents a cluster
       name: local
       count: 5
       ram: 80%
-      index_ram: 50%
+      index_ram: 80%
       #index_storage: plasma
       services:
         index: 1
@@ -46,6 +46,6 @@ servers: # each server tag represents a cluster
         query_start: 2
       rest_username: Administrator
       rest_password: password
-      init_nodes: 4
+      init_nodes: 5
       buckets: default,other
       users: default,other-1,other-2,other-3
