@@ -6,16 +6,16 @@
   image: sequoiatools/gideon
   requires:  "{{eq true .DoOnce}}"
   command: "kv --ops {{.Scale 10}} --create 100     --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
-  duration: 60
+  duration: 1800
 -
   command: "kv --ops {{.Scale 10}} --create 100 --sizes 64 96   --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
-  duration: 60
+  duration: 1800
 -
   command: "kv --ops {{.Scale 10}} --create 100 --sizes 64 96   --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}}"
-  duration: 60
+  duration: 1800
 -
   command: "kv --ops {{.Scale 1}} --create 100 --sizes 512  --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}}"
-  duration: 60
+  duration: 1800
   wait: true
 
 ###############  create indexes and keep them forever ################
@@ -180,15 +180,15 @@
 -
   image: sequoiatools/gideon
   command: "kv --ops {{.Scale 10}} --create 100     --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
-  duration: 30
+  duration: 300
 -
   command: "kv --ops {{.Scale 10}} --create 100  --sizes 64 96   --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
-  duration: 15
+  duration: 300
 -
   command: "kv --ops {{.Scale 10}} --create 100  --sizes 64 96   --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}}"
-  duration: 30
+  duration: 300
 -
   command: "kv --ops {{.Scale 1}} --create 100  --sizes 512  --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}}"
-  duration: 30
+  duration: 300
   wait: true
 
