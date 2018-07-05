@@ -21,16 +21,12 @@
 ###############  create indexes and keep them forever ################
 - template: cbq
 #- template: analytics_rest
-  args: "create bucket bucket1 with {\\\"name\\\":\\\"{{.Bucket}}\\\"};"
-- args: "create bucket bucket2 with {\\\"name\\\":\\\"{{.NthBucket 1}}\\\"};"
-- args: "create bucket bucket3 with {\\\"name\\\":\\\"{{.NthBucket 2}}\\\"};"
-- args: "create bucket bucket4 with {\\\"name\\\":\\\"{{.NthBucket 3}}\\\"};"
-- args: "create dataset ds1 on bucket1;"
-- args: "create dataset ds2 on bucket2;"
-- args: "create dataset ds3 on bucket3;"
-- args: "create dataset ds4 on bucket4;"
+  args: "create dataset ds1 on {{.Bucket}};"
+- args: "create dataset ds2 on {{.NthBucket 1}};"
+- args: "create dataset ds3 on {{.NthBucket 2}};"
+- args: "create dataset ds4 on {{.NthBucket 3}};"
 - args: "create index idx_result1 on ds1\\(result:string);"
-- args: "create index idx_result2 on ds2\\(result:string);"  
+- args: "create index idx_result2 on ds2\\(result:string);"
   wait: true
 
 ############### run mutations ################
@@ -54,10 +50,7 @@
 
 # ###############  connect queries ################
 - template: cbq
-  args: "connect bucket bucket1;"
-- args: "connect bucket bucket2;"
-- args: "connect bucket bucket3;"
-- args: "connect bucket bucket4;"
+  args: "connect link Local;"
   wait: true
 
 
@@ -70,10 +63,7 @@
 
 # ###############  disconnect queries ################
 - template: cbq
-  args: "disconnect bucket bucket1;"
-- args: "disconnect bucket bucket2;"
-- args: "disconnect bucket bucket3;"
-- args: "disconnect bucket bucket4;"
+  args: "disconnect link Local;"
   wait: true
 
 
@@ -85,10 +75,7 @@
 
 # ###############  connect queries ################
 - template: cbq
-  args: "connect bucket bucket1;"
-- args: "connect bucket bucket2;"
-- args: "connect bucket bucket3;"
-- args: "connect bucket bucket4;"
+  args: "connect link Local;"
   wait: true
 
 
@@ -101,10 +88,7 @@
 
 # ###############  disconnect queries ################
 - template: cbq
-  args: "disconnect bucket bucket1;"
-- args: "disconnect bucket bucket2;"
-- args: "disconnect bucket bucket3;"
-- args: "disconnect bucket bucket4;"
+  args: "disconnect link Local;"
   wait: true
 
 ###############  Rebalance-out single node ################
@@ -114,10 +98,7 @@
 
 # ###############  connect queries ################
 - template: cbq
-  args: "connect bucket bucket1;"
-- args: "connect bucket bucket2;"
-- args: "connect bucket bucket3;"
-- args: "connect bucket bucket4;"
+  args: "connect link Local;"
   wait: true
 
 
@@ -189,10 +170,7 @@
 
 # ###############  disconnect queries ################
 - template: cbq
-  args: "disconnect bucket bucket1;"
-- args: "disconnect bucket bucket2;"
-- args: "disconnect bucket bucket3;"
-- args: "disconnect bucket bucket4;"
+  args: "disconnect link Local;"
   wait: true
 
 
@@ -204,10 +182,6 @@
 - args: "drop dataset ds2;"
 - args: "drop dataset ds3;"
 - args: "drop dataset ds4;"
-- args: "drop bucket bucket1;"
-- args: "drop bucket bucket2;"
-- args: "drop bucket bucket3;"
-- args: "drop bucket bucket4;"
   wait: true
 
 ###############  Swap Rebalance ################
