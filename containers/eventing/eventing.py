@@ -292,7 +292,7 @@ class EventingOperations():
         headers = {'Content-type': 'application/json', 'Authorization': 'Basic %s' % authorization}
 
         url = "http://" + self.hostname + ":" + self.port + "/api/v1/functions/" + appname +"/settings"
-        body="{\"deployment_status\":true,\"processing_status\":true}"
+        body="{\"deployment_status\":true,\"processing_status\":true,\"dcp_stream_boundary\":\"from_now\"}"
         response, content = httplib2.Http(timeout=120).request(uri=url, method="POST", headers=headers,body=body)
         print content, response
 

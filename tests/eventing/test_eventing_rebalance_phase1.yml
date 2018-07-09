@@ -200,19 +200,6 @@
   command: "300"
   wait: true
 
-###############  Swap Rebalance ################
--
-  template: add_node
-  args: "{{.NthInActiveNode 0}}"
-- args: "{{.NthInActiveNode 1}},eventing"
-- args: "{{.NthInActiveNode 2}},eventing"
-  wait: true
-
-- template: rebalance_out
-  args: "({{.NthDataNode 2}},{{.Nodes | .Service `eventing` | net 2}},{{.Nodes | .Service `eventing` | net 3}})"
-  wait: true
-
-
 ############### undeploy functions ################
 -
   image: sequoiatools/eventing
@@ -294,9 +281,10 @@
 - template: rebalance
   wait: true
 
-###############  Rebalance-in eventing ################
+###############  Rebalance-in eventing,KV which were out due to failover ################
 - template: rebalance_in
-  args: "{{.InActiveNode}}, eventing"
+  args: "{{.NthInActiveNode 0}}"
+  args: "{{.NthInActiveNode 1}}, eventing"
   wait: true
 
 -
