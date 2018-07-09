@@ -299,6 +299,13 @@ func (t *TemplateResolver) EventingNodePort() string {
 	return fmt.Sprintf("%s:%s", t.NoPort(t.EventingNode()), t.EventingPort())
 }
 
+// Shortcut: .ClusterNodes | .Service `eventing` | active n
+func (t *TemplateResolver) ActiveEventingNode(eventing int) string {
+	nodes := t.ClusterNodes()
+	serviceNodes := t.Service("eventing", nodes)
+	return t.ActiveFilter(eventing, serviceNodes)
+}
+
 // Shortcut: .ClusterNodes | .Service `eventing` | net N
 func (t *TemplateResolver) NthEventingNode(n int) string {
 	nodes := t.ClusterNodes()

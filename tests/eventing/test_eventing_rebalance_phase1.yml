@@ -54,7 +54,7 @@
 
 ###############  Rebalance-out single node ################
 - template: rebalance_out
-  args: "{{.Nodes | .Service `eventing` | net 1}}"
+  args: "{{.ActiveEventingNode 1}}"
   wait: true
 
 -
@@ -65,7 +65,7 @@
 
 ###############  Swap Rebalance ################
 - template: rebalance_swap
-  args: "{{.InActiveNode}},{{.Nodes | .Service `eventing` | net 1}}, eventing"
+  args: "{{.InActiveNode}},{{.ActiveEventingNode 1}}, eventing"
   wait: true
 
 
@@ -191,7 +191,7 @@
 
 ###############  Rebalance-out single node ################
 - template: rebalance_out
-  args: "({{.NthDataNode 1}},{{.Nodes | .Service `eventing` | net 1}},{{.Nodes | .Service `eventing` | net 2}})"
+  args: "({{.NthDataNode 1}},{{.ActiveEventingNode 1}},{{.ActiveEventingNode 2}})"
   wait: true
 
 -
@@ -239,13 +239,13 @@
 #============ hard failover eventing node ============
 -
   template: failover_node_forced
-  args: "{{.Nodes | .Service `eventing` | net 1}}"
+  args: "{{.ActiveEventingNode 1}}"
   wait: true
 
 -
   # Full recovery and add back Node 1
   template: recover_node
-  args: "{{.Nodes | .Service `eventing` | net 1}}, full"
+  args: "{{.ActiveEventingNode 1}}, full"
 
 -
   template: rebalance
@@ -254,7 +254,7 @@
 
 ###############  Failover and rebalance out eventing ################
 - template: failover_node_forced
-  args: "{{.Nodes | .Service `eventing` | net 1}}"
+  args: "{{.ActiveEventingNode 1}}"
 - template: rebalance
   wait: true
 
