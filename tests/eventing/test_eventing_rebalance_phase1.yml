@@ -282,9 +282,15 @@
   wait: true
 
 ###############  Rebalance-in eventing,KV which were out due to failover ################
-- template: rebalance_in
+-
+  template: add_node
   args: "{{.NthInActiveNode 0}}"
-  args: "{{.NthInActiveNode 1}}, eventing"
+- args: "{{.NthInActiveNode 1}},eventing"
+  wait: true
+
+
+-
+  template: rebalance
   wait: true
 
 -
