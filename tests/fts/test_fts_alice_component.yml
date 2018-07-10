@@ -5,7 +5,7 @@
 # start json and binary data loading
 -
    template: pillowfight
-   args: "{{.Orchestrator}}, {{.Bucket}}, -B {{.Scale 100}} -I {{.Scale 100000}} -t 1, {{.AuthPassword}}"
+   args: "{{.Orchestrator}}, {{.Bucket}}, -B {{.Scale 100}} -I {{.Scale 10000000}} -t 1, {{.AuthPassword}}"
 -
    image: sequoiatools/gideon
    command: "kv --ops {{.Scale 1000}} --create 10 --get 90 --expire 20 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 16000"
@@ -13,30 +13,21 @@
    command: "kv --ops {{.Scale 1000}} --create 30 --get 70 --delete 10 --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
 -
    command: "kv --ops {{.Scale 1000}} --create 20 --get 80 --delete 10 --expire 10 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
--
-   command: "kv --ops {{.Scale 1000}} --create 60 --get 20 --delete 10 --expire 10 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}}"
 
-# create index on buckets
+# create upside-down and scorch index on buckets
 -
   template: create_index
-  args: "{{.FTSNodePort}}, default, st_index"
+  args: "{{.FTSNodePort}}, {{.NthBucket 1}}, st_index_upside_down, upside_down"
   wait: true
 
-# run field matching queries
--
-  template: query_fts
-  args: "{{.FTSNodePort}}, -1, 10, st_index, 5F"
--
-  template: query_fts
-  args: "{{.FTSNodePort}}, -1, 10, st_index, 0B"
--
-  template: query_fts
-  args: "{{.FTSNodePort}}, -1, 10, st_index, CF"
+  template: create_index
+  args: "{{.FTSNodePort}}, {{.NthBucket 1}}, st_index_scorch, scorch"
+  wait: true
 
 # scale cluster up
 -
   template: add_node
-  args: "{{.NthDataNode 1}}, data"
+  args: "{{.NthDataNode 1}}, (data,fts)"
 -
   template: add_node
   args: "{{.NthDataNode 2}}, (data,fts,index,query)"
@@ -45,24 +36,27 @@
   template: rebalance
   wait: true
 
-# make some more indexes across buckets
+# run field matching queries - 50 ops/sec per index
 -
-  template: create_index
-  args: "{{.FTSNodePort}}, {{.NthBucket 1}}, st_index02"
-  wait: true
+  template: query_fts
+  args: "{{.FTSNodePort}}, -1, 50, st_index_upside_down, 5F"
 -
-  template: create_index
-  args: "{{.FTSNodePort}}, {{.NthBucket 2}}, st_index03"
+  template: query_fts
+  args: "{{.FTSNodePort}}, -1, 50, st_index_scorch, 0B"
+
+# create fts index with custom child field using result key as type
+- template: create_index_with_child_field
+  args: "{{.FTSNodePort}}, good_state, default, SUCCESS, state, false, result"
   wait: true
--
-  template: create_index
-  args: "{{.FTSNodePort}}, default, st_index04"
-  wait: true
+
+# create fts index with nested type mappings and store results
+- template: create_index_with_child_field_nested_type_mapping
+  args: "{{.FTSNodePort}}, social, default, gideon, description, profile, status, true"
 
 # scale cluster up more
 -
   template: add_node
-  args: "{{.NthDataNode 3}}, data"
+  args: "{{.NthDataNode 3}}, fts"
 -
   template: add_node
   args: "{{.NthDataNode 4}}, (data,fts)"
@@ -74,20 +68,19 @@
   wait: true
 
 # start queries on new indexes
--
-  template: query_fts
-  args: "{{.FTSNodePort}}, -1, 10, st_index02, C5"
--
-  template: query_fts
-  args: "{{.FTSNodePort}}, -1, 10, st_index03, C5"
--
-  template: query_fts
-  args: "{{.FTSNodePort}}, -1, 10, st_index04, C5"
+
+# direct search on state key
+- template: query_fts
+  args: "{{.FTSNodePort}}, -1, {{.Scale 3}}, good_state, +state:9C, -size 10"
+
+# regex search on subfield profile.status with description exclusion
+- template: query_fts
+  args: "{{.FTSNodePort}}, -1, {{.Scale 3}}, social, +profile.status:4121*, -size 10"
 
 # scale back down
 -
   template: add_node
-  args: "{{.NthDataNode 1}}, (data,index)"
+  args: "{{.NthDataNode 1}}, (data, fts)"
 -
   template: rebalance_out
   args: "{{.NthDataNode 2}}"
