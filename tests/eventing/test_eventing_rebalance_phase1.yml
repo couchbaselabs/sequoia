@@ -262,13 +262,13 @@
 #============ hard failover KV node ============
 -
   template: failover_node_forced
-  args: "{{.NthDataNode 1}}"
+  args: "{{.ActiveDataNode 1}}"
   wait: true
 
 -
   # Full recovery and add back Node 1
   template: recover_node
-  args: "{{.NthDataNode 1}}, delta"
+  args: "{{.ActiveDataNode 1}}, delta"
 
 -
   template: rebalance
@@ -277,7 +277,7 @@
 
 ###############  Failover and rebalance out KV ################
 - template: failover_node_forced
-  args: "{{.NthDataNode 1}}"
+  args: "{{.ActiveDataNode 1}}"
 - template: rebalance
   wait: true
 
