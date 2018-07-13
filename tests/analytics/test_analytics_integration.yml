@@ -1,0 +1,142 @@
+-
+  include: tests/templates/kv.yml, tests/templates/vegeta.yml, tests/templates/analytics.yml,  tests/templates/rebalance.yml
+
+###############  create indexes and keep them forever ################
+- section_start: analytics_setup
+- template: cbq
+#- template: analytics_rest
+  args: "create dataset ds1 on `{{.Bucket}}`;"
+- args: "create dataset ds2 on `{{.NthBucket 1}}`;"
+- args: "create dataset ds3 on `{{.NthBucket 2}}`;"
+- args: "create dataset ds4 on `{{.NthBucket 3}}`;"
+- args: "create index idx_result1 on ds1\\(result:string);"
+- args: "create index idx_result2 on ds2\\(result:string);"
+  wait: true
+- section_end: analytics_setup
+
+
+############### run queries ################
+- section_start: analytics_query
+-
+  image: sequoiatools/queryapp
+  command: "-J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.5.6/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.ActiveAnalyticsNode 0}} --port {{.AnalyticsPort}} --duration 86400 --bucket {{.Bucket}} --querycount 240"
+
+
+# ###############  connect queries ################
+- template: cbq
+  args: "connect link Local;"
+  wait: true
+
+
+# ###############sleep for 30secs###############
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "30"
+  wait: true
+- section_end: analytics_query
+
+- section_start: analytics_topology_change
+# ###############  disconnect queries ################
+- template: cbq
+  args: "disconnect link Local;"
+  wait: true
+
+
+###############  Rebalance-in analytics ################
+- template: rebalance_in
+  args: "{{.InActiveNode}}, analytics"
+  wait: true
+
+
+# ###############  connect queries ################
+- template: cbq
+  args: "connect link Local;"
+  wait: true
+
+
+# ###############sleep for 30secs###############
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "30"
+  wait: true
+
+# ###############  disconnect queries ################
+- template: cbq
+  args: "disconnect link Local;"
+  wait: true
+
+###############  Rebalance-out single node ################
+- template: rebalance_out
+  args: "{{.ActiveAnalyticsNode 1}}"
+  wait: true
+
+# ###############  connect queries ################
+- template: cbq
+  args: "connect link Local;"
+  wait: true
+
+
+# ###############sleep for 30secs###############
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "30"
+  wait: true
+
+
+###############  Swap Rebalance ################
+- template: rebalance_swap
+  args: "{{.InActiveNode}},{{.ActiveAnalyticsNode 1}}, analytics"
+  wait: true
+
+# ###############sleep for 300secs###############
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+############### Kill analytics ################
+-
+  template: analytics_kill
+  args: "{{.ActiveAnalyticsNode 1}}"
+
+# ###############sleep for 180secs###############
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "180"
+  wait: true
+- section_end: analytics_topology_change
+
+- section_start: analytics_teardown
+# ###############  disconnect queries ################
+- template: cbq
+  args: "disconnect link Local;"
+  wait: true
+
+
+########### drop bucket , datasets and indexes #######
+- template: cbq
+  args: "drop index ds1.idx_result1;"
+- args: "drop index ds2.idx_result2;"
+- args: "drop dataset ds1;"
+- args: "drop dataset ds2;"
+- args: "drop dataset ds3;"
+- args: "drop dataset ds4;"
+  wait: true
+
+###############  Swap Rebalance ################
+- template: rebalance_swap
+  args: "{{.InActiveNode}},{{.ActiveAnalyticsNode 1}}, analytics"
+  wait: true
+
+# ###############sleep for 300secs###############
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+- section_end: analytics_teardown
