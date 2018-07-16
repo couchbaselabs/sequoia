@@ -37,14 +37,13 @@ buckets:
 servers: # each server tag represents a cluster
   -
       name: local
-      count: 6
+      count: 9
       ram: 95%
       analytics_ram: 90%
       services:
-        analytics: 2
-        analytics_start: 2
+        analytics: 3
       rest_username: Administrator
       rest_password: password
-      init_nodes: 4
+      init_nodes: 7
       buckets: default,other
       users: default,other-1,other-2,other-3

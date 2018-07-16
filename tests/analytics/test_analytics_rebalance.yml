@@ -5,16 +5,16 @@
 -
   image: sequoiatools/gideon
   requires:  "{{eq true .DoOnce}}"
-  command: "kv --ops {{.Scale 10}} --create 100  --expire 100 --ttl 2700  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+  command: "kv --ops {{.Scale 1000}} --create 100  --expire 100 --ttl 2700  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
   duration: 60
 -
-  command: "kv --ops {{.Scale 10}} --create 100 --sizes 64 96   --expire 100 --ttl 2700  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
+  command: "kv --ops {{.Scale 1000}} --create 100 --sizes 64 96   --expire 100 --ttl 2700  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
   duration: 60
 -
-  command: "kv --ops {{.Scale 10}} -create 100 --sizes 64 96    --expire 100 --ttl 2700  --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}}"
+  command: "kv --ops {{.Scale 1000}} -create 100 --sizes 64 96    --expire 100 --ttl 2700  --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}}"
   duration: 60
 -
-  command: "kv --ops {{.Scale 1}} --create 100 --sizes 512   --expire 100 --ttl 2700  --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}}"
+  command: "kv --ops {{.Scale 1000}} --create 100 --sizes 512   --expire 100 --ttl 2700  --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}}"
   duration: 60
   wait: true
 
@@ -32,16 +32,16 @@
 ############### run mutations ################
 -
   image: sequoiatools/gideon
-  command: "kv --ops {{.Scale 10}} --create 50 --get 30 --delete 20 --expire 100 --ttl 2700 --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+  command: "kv --ops {{.Scale 1000}} --create 50 --get 30 --delete 20 --expire 100 --ttl 2700 --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
   alias: GideonContainer1
 -
-  command: "kv --ops {{.Scale 10}} --create 70 --get 10 --delete 20 --sizes 64 96 --expire 100 --ttl 2700  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
+  command: "kv --ops {{.Scale 1000}} --create 70 --get 10 --delete 20 --sizes 64 96 --expire 100 --ttl 2700  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
   alias: GideonContainer2
 -
-  command: "kv --ops {{.Scale 10}} --create 40 --get 40 --delete 20 --sizes 64 96 --expire 100 --ttl 2700  --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}}"
+  command: "kv --ops {{.Scale 1000}} --create 40 --get 40 --delete 20 --sizes 64 96 --expire 100 --ttl 2700  --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}}"
   alias: GideonContainer3
 -
-  command: "kv --ops {{.Scale 5}} --create 60 --get 20 --delete 20 --sizes 512 --expire 100 --ttl 2700  --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}}"
+  command: "kv --ops {{.Scale 500}} --create 60 --get 20 --delete 20 --sizes 512 --expire 100 --ttl 2700  --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}}"
   alias: GideonContainer4
 
 
