@@ -1,0 +1,40 @@
+---
+users:
+  -
+      name: default
+      password: password
+      roles: admin
+      auth_domain: local
+buckets:
+  -
+      name: default
+      ram: 35%
+      eviction: fullEviction
+  -
+      name: other
+      count: 1
+      ram: 35%
+
+
+servers:
+  -
+      name: local
+      count: 10
+      ram: 60%
+      index_ram: 3%
+      fts_ram: 20%
+      index_storage: memory_optimized
+      services:
+        fts: 1
+        fts_start: 1
+        index: 0
+        index_start: 0
+        query: 0
+        query_start: 0
+      rest_username: Administrator
+      rest_password: password
+      data_path: "/data"
+      index_path: "/data"
+      init_nodes: 1   # ONLY INIT 4 NODES
+      buckets: default,other
+      users: default

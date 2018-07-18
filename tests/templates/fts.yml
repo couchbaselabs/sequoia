@@ -2,6 +2,7 @@
 # $0 = host
 # $1 = bucket
 # $2 = name of the index
+# $3 = type of index - scorch or upside_down
 -
   name: create_index
   actions:
@@ -10,7 +11,12 @@
       args: "$0, $2, ({
                     'type': 'fulltext-index',
                     'sourceType': 'couchbase',
-                    'sourceName': '$1'
+                    'sourceName': '$1',
+		    'params': {
+		     'store': {
+			'indexType': '$3'
+		     }
+		    }
                  })"
 
 # template to create an index with child field mapping
@@ -21,6 +27,7 @@
 # $4 = top-level field
 # $5 = store docs
 # $6 = optional type mapping
+# $7 = type of index - scorch or upside_down
 -
   name: create_index_with_child_field
   actions:
@@ -49,7 +56,7 @@
                              }
                            }
                      }),
-                     $6"
+                     $6, $7"
 
 
 # template to create an index with child field mapping
@@ -63,6 +70,7 @@
 # $6 = child field
 # $7 = store docs
 # $8 = optional type field
+# $9 = type of index - scorch or upside_down
 -
   name: create_index_with_child_field_nested_type_mapping
   actions:
@@ -112,7 +120,7 @@
                              }
                            }
                      }),
-                     $8"
+                     $8, $9"
 
 # helper template to create an index with custom type mappings
 # $0 = host
@@ -121,6 +129,7 @@
 # $3 = type
 # $4 = type mappings
 # $5 = optional type field
+# $6 = index type - scorch or upside_down
 -
   name: _put_index_with_type_mapping
   actions:
@@ -148,7 +157,8 @@
                              'types': $4
                            },
                            'store': {
-                             'kvStoreName': 'mossStore'
+                             'kvStoreName': 'mossStore',
+			     'indexType': '$6'
                            }
                          },
                          'sourceParams': {}
