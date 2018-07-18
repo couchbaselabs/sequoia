@@ -275,9 +275,10 @@
   wait: true
 
 
-###############  Failover and rebalance out KV ################
+###############  Failover and rebalance out 2 KV ################
 - template: failover_node_forced
   args: "{{.ActiveDataNode 1}}"
+- args: "{{.ActiveDataNode 2}}"
 - template: rebalance
   wait: true
 
@@ -285,7 +286,8 @@
 -
   template: add_node
   args: "{{.NthInActiveNode 0}}"
-- args: "{{.NthInActiveNode 1}},eventing"
+- args: "{{.NthInActiveNode 1}}"
+- args: "{{.NthInActiveNode 2}},eventing"
   wait: true
 
 
@@ -298,6 +300,7 @@
   entrypoint: sleep
   command: "300"
   wait: true
+
 
 ############### undeploy functions ################
 -
