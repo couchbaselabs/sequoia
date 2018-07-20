@@ -115,7 +115,7 @@
   -
     image: sequoiatools/cmd
     entrypoint: sleep
-    command: "120"
+    command: "300"
     wait: true
 
   - template: add_node
