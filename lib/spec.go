@@ -49,6 +49,7 @@ type ServerSpec struct {
 	InitNodes    uint8  `yaml:"init_nodes"`
 	DataPath     string `yaml:"data_path"`
 	IndexPath    string `yaml:"index_path"`
+	AnalyticsPath string `yaml:"analytics_path"`
 	IndexStorage string `yaml:"index_storage"`
 	Buckets      string
 	BucketSpecs  []BucketSpec

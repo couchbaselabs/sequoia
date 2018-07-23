@@ -360,6 +360,12 @@ func (s *Scope) InitNodes() {
 			"--node-init-index-path",
 			server.IndexPath)
 
+		server.AnalyticsPath = s.GetPath(server.AnalyticsPath, name)
+		command = append(
+            command,
+            "--node-init-analytics-path",
+            server.AnalyticsPath)
+
 		desc := "init node " + ip
 		task := ContainerTask{
 			Describe: desc,
