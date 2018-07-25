@@ -34,7 +34,12 @@
 -
   template: add_node
   args: "{{.NthDataNode 2}}, (data,fts)"
-
+-
+  template: add_node
+  args: "{{.NthDataNode 3}}, fts"
+-
+  template: add_node
+  args: "{{.NthDataNode 4}}, (data,fts)"
 -
   template: rebalance
   wait: true
@@ -59,19 +64,24 @@
 # scale cluster up more
 -
   template: add_node
-  args: "{{.NthDataNode 3}}, fts"
+  args: "{{.NthDataNode 5}}, fts"
 -
   template: add_node
-  args: "{{.NthDataNode 2}}, (data,fts)"
+  args: "{{.NthDataNode 6}}, (data,fts)"
+-
+  template: add_node
+  args: "{{.NthDataNode 7}}, data"
 -
   template: rebalance_out
-  args: "{{.NthDataNode 1}}"
+  args: "{{.NthDataNode 2}}"
+-
+  template: rebalance_out
+  args: "{{.NthDataNode 3}}"
 -
   template: wait_for_rebalance
   wait: true
 
 # start queries on new indexes
-
 # direct search on state key
 -
   template: query_fts
@@ -82,21 +92,27 @@
   template: query_fts
   args: "{{.FTSNodePort}}, -1, {{.Scale 3}}, social, +profile.status:4121*, -size 10"
 
-# scale back down
--
-  template: add_node
-  args: "{{.NthDataNode 1}}, (data, fts)"
+# swap rebalance
+
+- template: add_node
+  args: "{{.NthDataNode 2}}, (data, fts)"
+
+- template: add_node
+  args: "{{.NthDataNode 3}},  fts"
 -
   template: rebalance_out
-  args: "{{.NthDataNode 2}}"
--
+  args: "{{.NthDataNode 4}}"
+
+- template: rebalance_out
+  args: "{{.NthDataNode 5}}"
+
   template: wait_for_rebalance
   wait: true
 
 # failover an fts node
 -
   template: failover_node_forced
-  args: "{{.Nodes | .Service `fts` | net 0}}"
+  args: "{{.NthDataNode 3}}"
   wait: true
 -
   template: rebalance
@@ -124,15 +140,25 @@
   template: rebalance_stop
 -
   template: failover_and_recover
-  args: "{{.Nodes | .Service `fts` | net 0}}, delta"
+  args: "{{.NthDataNode 3}}, delta"
   wait: true
 -
   template: wait_for_rebalance
   wait: true
+
 # rebalance out more nodes
 -
   template: rebalance_out
   args: "{{.NthDataNode 3}}"
 -
+  template: rebalance_out
+  args: "{{.NthDataNode 6}}"
+-
+  template: rebalance_out
+  args: "{{.NthDataNode 7}}"
+-
+  template: rebalance_out
+  args: "{{.NthDataNode 2}}"
+
   template: wait_for_rebalance
   wait: true
