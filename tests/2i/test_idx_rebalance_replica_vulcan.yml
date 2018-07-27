@@ -156,7 +156,7 @@
 
 ###############  Rebalance out data node ################
 - template: rebalance_out
-  args: "({{.NthDataNode 1}})"
+  args: "({{.ActiveDataNode 1}})"
   wait: true
 # Sleep for some more time after rebalance completes
 -
@@ -179,11 +179,11 @@
 
 ###############  Failover and addback ################
 - template: failover_node_forced
-  args: "{{.NthIndexNode 2}}"
+  args: "{{.ActiveIndexNode 2}}"
 - template: readd_node
-  args: "{{.NthIndexNode 2}}"
+  args: "{{.ActiveIndexNode 2}}"
 - template: recover_node
-  args: "{{.NthIndexNode 2}}, full"
+  args: "{{.ActiveIndexNode 2}}, full"
 - template: rebalance
   wait: true
 # Sleep for some more time after rebalance completes
