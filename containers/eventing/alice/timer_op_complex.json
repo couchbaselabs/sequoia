@@ -1,0 +1,31 @@
+  {
+    "appcode": "function OnUpdate(doc, meta) {\n    var expiry = new Date();\n    expiry.setSeconds(expiry.getSeconds() + 30);\n\n    var context = {docID : meta.id};\n    createTimer(timerCallback,  expiry, meta.id, context);\n}\nfunction OnDelete(meta) {\n    var expiry = new Date();\n    expiry.setSeconds(expiry.getSeconds() + 30);\n\n    var context = {docID : meta.id};\n    createTimer(NDtimerCallback,  expiry, meta.id, context);\n}\nfunction NDtimerCallback(context) {\n    delete dst_bucket[context.docID + \"_complex\"];\n    delete dst_bucket1[context.docID + \"_complex\"];\n}\nfunction timerCallback(context) {\n    dst_bucket[context.docID + \"_complex\"] = 'from timerCallback';\n    dst_bucket1[context.docID + \"_complex\"] = 'from timerCallback';\n}",
+    "depcfg": {
+      "buckets": [
+        {
+          "alias": "dst_bucket",
+          "bucket_name": "timer_op_dst"
+        },
+        {
+          "alias": "dst_bucket1",
+          "bucket_name": "timer_op_dst1"
+        }
+      ],
+      "metadata_bucket": "metadata",
+      "source_bucket": "timer_op"
+    },
+    "version": "evt-6.0.0-1419-ee",
+    "appname": "timer_op_complex",
+    "settings": {
+      "cleanup_timers": false,
+      "dcp_stream_boundary": "from_now",
+      "deadline_timeout": 62,
+      "deployment_status": false,
+      "description": "",
+      "execution_timeout": 60,
+      "log_level": "INFO",
+      "processing_status": false,
+      "user_prefix": "eventing",
+      "worker_count": 3
+    }
+  }

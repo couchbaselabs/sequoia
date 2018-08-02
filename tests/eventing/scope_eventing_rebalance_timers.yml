@@ -1,0 +1,85 @@
+---
+users:
+  -
+      name: bucket_op
+      password: password
+      roles: admin
+      auth_domain: local
+  -
+      name: timer_op
+      password: password
+      roles: admin
+      auth_domain: local
+  -
+      name: bucket_op_dst
+      password: password
+      roles: admin
+      auth_domain: local
+  -
+      name: bucket_op_dst1
+      password: password
+      roles: admin
+      auth_domain: local
+  -
+      name: timer_op_dst
+      password: password
+      roles: admin
+      auth_domain: local
+  -
+      name: timer_op_dst1
+      password: password
+      roles: admin
+      auth_domain: local
+  -
+      name: metadata
+      password: password
+      roles: admin
+      auth_domain: local
+  -
+      name: test_diagnostics
+      password: password
+      roles: admin
+      auth_domain: local
+
+buckets:
+  -
+      name: bucket_op
+      ram: 16%
+  -
+      name: timer_op
+      ram: 16%
+  -
+      name: bucket_op_dst
+      ram: 16%
+  -
+      name: bucket_op_dst1
+      ram: 16%
+  -
+      name: timer_op_dst
+      ram: 16%
+  -
+      name: timer_op_dst1
+      ram: 16%
+  -
+      name: metadata
+      ram: 2%
+  -
+      name: test_diagnostics
+      ram: 2%
+
+
+servers: # each server tag represents a cluster
+  -
+      name: local
+      count: 10
+      ram: 90%
+      eventing_ram: 90%
+      init_nodes: 7
+      services:
+        eventing: 3
+      rest_port: 8091
+      data_path: "/data"
+      rest_username: Administrator
+      rest_password: password
+      buckets: bucket_op,timer_op,bucket_op_dst,bucket_op_dst1,timer_op_dst,timer_op_dst1,metadata,test_diagnostics
+      users: bucket_op,timer_op,bucket_op_dst,bucket_op_dst1,timer_op_dst,timer_op_dst1,metadata,test_diagnostics

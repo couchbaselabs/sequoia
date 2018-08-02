@@ -1,0 +1,333 @@
+-
+  include: tests/templates/kv.yml, tests/templates/vegeta.yml, tests/templates/rebalance.yml, tests/templates/n1ql.yml
+
+###### update Tombstone Purge Interval ######
+-
+  image: sequoiatools/couchbase-cli
+  requires:  "{{eq true .DoOnce }}"
+  command: "setting-compaction -c {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}} --metadata-purge-interval .04 --compaction-db-percentage 30 --compaction-view-percentage 30"
+  wait: true
+
+
+####### runing constant ops #################
+-
+  image: sequoiatools/gideon
+  command: "kv --ops {{.Scale 1000}} --create 100 --update 100 --delete 100 --expire 100 --ttl 120 --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 64 96 128 16000"
+  alias: GideonContainer1
+-
+  image: sequoiatools/gideon
+  command: "kv --ops {{.Scale 1000}} --create 100 --update 100 --delete 100 --expire 100 --ttl 120 --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}} --sizes 128 512 2048 1024"
+  alias: GideonContainer2
+
+############### create and deploy functions ################
+-
+  image: sequoiatools/eventing
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} alice/bucket_op_function.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} alice/timer_op.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} alice/bucket_op_complex_function.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} alice/timer_op_complex.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
+  wait: true
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+###############  Rebalance-in eventing ################
+- template: rebalance_in
+  args: "{{.InActiveNode}}, eventing"
+  wait: true
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+###############  Rebalance-out single node ################
+- template: rebalance_out
+  args: "{{.ActiveEventingNode 1}}"
+  wait: true
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+###############  Swap Rebalance ################
+- template: rebalance_swap
+  args: "{{.InActiveNode}},{{.ActiveEventingNode 1}}, eventing"
+  wait: true
+
+
+############### undeploy functions ################
+-
+  image: sequoiatools/eventing
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/bucket_op_function.json {{.RestUsername}} {{.RestPassword}} undeploy true"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/timer_op.json {{.RestUsername}} {{.RestPassword}} undeploy true"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/bucket_op_complex_function.json {{.RestUsername}} {{.RestPassword}} undeploy true"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/timer_op_complex.json {{.RestUsername}} {{.RestPassword}} undeploy true"
+  wait: true
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+
+############### redeploy functions ################
+-
+  image: sequoiatools/eventing
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/bucket_op_function.json {{.RestUsername}} {{.RestPassword}} deploy"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/timer_op.json {{.RestUsername}} {{.RestPassword}} deploy"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/bucket_op_complex_function.json {{.RestUsername}} {{.RestPassword}} deploy"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/timer_op_complex.json {{.RestUsername}} {{.RestPassword}} deploy"
+  wait: true
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+
+###############  Rebalance-in data ################
+- template: rebalance_in
+  args: "{{.InActiveNode}}"
+  wait: true
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+###############  Rebalance-out single data node ################
+- template: rebalance_out
+  args: "{{.NthDataNode 1}}"
+  wait: true
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+###############  Swap data nodes ################
+- template: rebalance_swap
+  args: "{{.InActiveNode}},{{.NthDataNode 1}}, data"
+  wait: true
+
+############### undeploy functions ################
+-
+  image: sequoiatools/eventing
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/bucket_op_function.json {{.RestUsername}} {{.RestPassword}} undeploy true"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/timer_op.json {{.RestUsername}} {{.RestPassword}} undeploy true"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/bucket_op_complex_function.json {{.RestUsername}} {{.RestPassword}} undeploy true"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/timer_op_complex.json {{.RestUsername}} {{.RestPassword}} undeploy true"
+  wait: true
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+
+############### redeploy functions ################
+-
+  image: sequoiatools/eventing
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/bucket_op_function.json {{.RestUsername}} {{.RestPassword}} deploy"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/timer_op.json {{.RestUsername}} {{.RestPassword}} deploy"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/bucket_op_complex_function.json {{.RestUsername}} {{.RestPassword}} deploy"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/timer_op_complex.json {{.RestUsername}} {{.RestPassword}} deploy"
+  wait: true
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+###############  Rebalance-in eventing ################
+-
+  template: add_node
+  args: "{{.NthInActiveNode 0}}"
+- args: "{{.NthInActiveNode 1}},eventing"
+- args: "{{.NthInActiveNode 2}},eventing"
+  wait: true
+
+-
+  template: rebalance
+  wait: true
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+###############  Rebalance-out single node ################
+- template: rebalance_out
+  args: "({{.NthDataNode 1}},{{.ActiveEventingNode 1}},{{.ActiveEventingNode 2}})"
+  wait: true
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+############### undeploy functions ################
+-
+  image: sequoiatools/eventing
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/bucket_op_function.json {{.RestUsername}} {{.RestPassword}} undeploy true"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/timer_op.json {{.RestUsername}} {{.RestPassword}} undeploy true"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/bucket_op_complex_function.json {{.RestUsername}} {{.RestPassword}} undeploy true"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/timer_op_complex.json {{.RestUsername}} {{.RestPassword}} undeploy true"
+  wait: true
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+############### redeploy functions ################
+-
+  image: sequoiatools/eventing
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/bucket_op_function.json {{.RestUsername}} {{.RestPassword}} deploy"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/timer_op.json {{.RestUsername}} {{.RestPassword}} deploy"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/bucket_op_complex_function.json {{.RestUsername}} {{.RestPassword}} deploy"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/timer_op_complex.json {{.RestUsername}} {{.RestPassword}} deploy"
+  wait: true
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+#============ hard failover eventing node ============
+-
+  template: failover_node_forced
+  args: "{{.ActiveEventingNode 1}}"
+  wait: true
+
+-
+  # Full recovery and add back Node 1
+  template: recover_node
+  args: "{{.ActiveEventingNode 1}}, full"
+
+-
+  template: rebalance
+  wait: true
+
+
+###############  Failover and rebalance out eventing ################
+- template: failover_node_forced
+  args: "{{.ActiveEventingNode 1}}"
+- template: rebalance
+  wait: true
+
+
+#============ hard failover KV node ============
+-
+  template: failover_node_forced
+  args: "{{.ActiveDataNode 1}}"
+  wait: true
+
+-
+  # Full recovery and add back Node 1
+  template: recover_node
+  args: "{{.ActiveDataNode 1}}, delta"
+
+-
+  template: rebalance
+  wait: true
+
+
+###############  Failover and rebalance out 2 KV ################
+- template: failover_node_forced
+  args: "{{.ActiveDataNode 1}}"
+- args: "{{.ActiveDataNode 2}}"
+- template: rebalance
+  wait: true
+
+###############  Rebalance-in eventing,KV which were out due to failover ################
+-
+  template: add_node
+  args: "{{.NthInActiveNode 0}}"
+- args: "{{.NthInActiveNode 1}}"
+- args: "{{.NthInActiveNode 2}},eventing"
+  wait: true
+
+
+-
+  template: rebalance
+  wait: true
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+
+############### undeploy functions ################
+-
+  image: sequoiatools/eventing
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/bucket_op_function.json {{.RestUsername}} {{.RestPassword}} undeploy true"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/timer_op.json {{.RestUsername}} {{.RestPassword}} undeploy true"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/bucket_op_complex_function.json {{.RestUsername}} {{.RestPassword}} undeploy true"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/timer_op_complex.json {{.RestUsername}} {{.RestPassword}} undeploy true"
+  wait: true
+
+
+############### delete functions ################
+-
+  image: sequoiatools/eventing
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} alice/bucket_op_function.json {{.RestUsername}} {{.RestPassword}} delete"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} alice/timer_op.json {{.RestUsername}} {{.RestPassword}} delete"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} alice/bucket_op_complex_function.json {{.RestUsername}} {{.RestPassword}} delete"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} alice/timer_op_complex.json {{.RestUsername}} {{.RestPassword}} delete"
+  wait: true
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+
+
