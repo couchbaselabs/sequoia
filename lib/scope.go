@@ -361,10 +361,13 @@ func (s *Scope) InitNodes() {
 			server.IndexPath)
 
 		server.AnalyticsPath = s.GetPath(server.AnalyticsPath, name)
+		partition := strings.Split(server.AnalyticsPath, ",")
+		for _, path := range partition{
 		command = append(
             command,
             "--node-init-analytics-path",
-            server.AnalyticsPath)
+            path)
+        }
 
 		desc := "init node " + ip
 		task := ContainerTask{

@@ -45,8 +45,8 @@ servers: # each server tag represents a cluster
       rest_username: Administrator
       rest_password: password
       init_nodes: 9
-      data_path: "/data"
-      index_path: "/data"
-      analytics_path: "/data"
+      data_path: "/data/kv"
+      index_path: "/data/idx"
+      analytics_path: "/data/d1,/data/d2"
       buckets: default,other
       users: default,other-1,other-2,other-3
