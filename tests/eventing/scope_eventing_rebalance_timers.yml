@@ -44,25 +44,25 @@ users:
 buckets:
   -
       name: bucket_op
-      ram: 16%
+      ram: 14%
   -
       name: timer_op
-      ram: 16%
+      ram: 14%
   -
       name: bucket_op_dst
-      ram: 16%
+      ram: 14%
   -
       name: bucket_op_dst1
-      ram: 16%
+      ram: 14%
   -
       name: timer_op_dst
-      ram: 16%
+      ram: 14%
   -
       name: timer_op_dst1
-      ram: 16%
+      ram: 14%
   -
       name: metadata
-      ram: 2%
+      ram: 14%
   -
       name: test_diagnostics
       ram: 2%
