@@ -54,7 +54,7 @@
 -
   image: sequoiatools/cmd
   entrypoint: sleep
-  command: "30"
+  command: "600"
   wait: true
 
 ############### run queries ################
@@ -85,7 +85,7 @@
 -
   image: sequoiatools/cmd
   entrypoint: sleep
-  command: "30"
+  command: "600"
   wait: true
 
 # ###############  disconnect queries ################
@@ -108,7 +108,7 @@
 -
   image: sequoiatools/cmd
   entrypoint: sleep
-  command: "30"
+  command: "600"
   wait: true
 
 
