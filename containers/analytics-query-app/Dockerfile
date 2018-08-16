@@ -16,5 +16,6 @@ RUN curl -L "http://search.maven.org/remotecontent?filepath=org/python/jython-in
 RUN git clone https://github.com/couchbaselabs/AnalyticsQueryApp.git
 
 WORKDIR /AnalyticsQueryApp/Query
+RUN git pull
 RUN chmod 777 load_queries.py
 ENTRYPOINT ["jython"]
