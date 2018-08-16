@@ -254,14 +254,14 @@ class EventingOperations():
             print status, result, headers
             raise Exception("Failed to get deployed apps")
         count = 0
-        while appname not in result and count < 40:
+        while appname not in result:
             time.sleep(30)
             count += 1
             response, content = httplib2.Http(timeout=120).request(uri=url, method=method, headers=headers)
             result = json.loads(content)
-        if count == 20:
-            raise Exception(
-                'Eventing took lot of time to come out of bootstrap state or did not successfully bootstrap')
+        # if count == 20:
+        #     raise Exception(
+        #         'Eventing took lot of time to come out of bootstrap state or did not successfully bootstrap')
 
     def check_undeployment_status(self,appname):
         authorization = base64.encodestring('%s:%s' % (self.username, self.password))
@@ -277,14 +277,14 @@ class EventingOperations():
             print status, result, headers
             raise Exception("Failed to get deployed apps")
         count = 0
-        while appname in result and count < 40:
+        while appname in result:
             time.sleep(30)
             count += 1
             response, content = httplib2.Http(timeout=120).request(uri=url, method=method, headers=headers)
             result = json.loads(content)
-        if count == 20:
-            raise Exception(
-                'Eventing took lot of time to undeploy')
+        # if count == 20:
+        #     raise Exception(
+        #         'Eventing took lot of time to undeploy')
 
     def deploy(self,appname):
         authorization = base64.encodestring('%s:%s' % (self.username, self.password))
