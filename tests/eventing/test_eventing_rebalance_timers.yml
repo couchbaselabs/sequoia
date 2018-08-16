@@ -23,10 +23,13 @@
 -
   image: sequoiatools/eventing
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} alice/bucket_op_function.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
+  wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} alice/timer_op.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
+  wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} alice/bucket_op_complex_function.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
+  wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} alice/timer_op_complex.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
   wait: true
@@ -69,10 +72,13 @@
 -
   image: sequoiatools/eventing
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/bucket_op_function.json {{.RestUsername}} {{.RestPassword}} undeploy true"
+  wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/timer_op.json {{.RestUsername}} {{.RestPassword}} undeploy true"
+  wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/bucket_op_complex_function.json {{.RestUsername}} {{.RestPassword}} undeploy true"
+  wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/timer_op_complex.json {{.RestUsername}} {{.RestPassword}} undeploy true"
   wait: true
@@ -88,10 +94,13 @@
 -
   image: sequoiatools/eventing
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/bucket_op_function.json {{.RestUsername}} {{.RestPassword}} deploy"
+  wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/timer_op.json {{.RestUsername}} {{.RestPassword}} deploy"
+  wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/bucket_op_complex_function.json {{.RestUsername}} {{.RestPassword}} deploy"
+  wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/timer_op_complex.json {{.RestUsername}} {{.RestPassword}} deploy"
   wait: true
@@ -134,10 +143,13 @@
 -
   image: sequoiatools/eventing
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/bucket_op_function.json {{.RestUsername}} {{.RestPassword}} undeploy true"
+  wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/timer_op.json {{.RestUsername}} {{.RestPassword}} undeploy true"
+  wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/bucket_op_complex_function.json {{.RestUsername}} {{.RestPassword}} undeploy true"
+  wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/timer_op_complex.json {{.RestUsername}} {{.RestPassword}} undeploy true"
   wait: true
@@ -153,10 +165,13 @@
 -
   image: sequoiatools/eventing
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/bucket_op_function.json {{.RestUsername}} {{.RestPassword}} deploy"
+  wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/timer_op.json {{.RestUsername}} {{.RestPassword}} deploy"
+  wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/bucket_op_complex_function.json {{.RestUsername}} {{.RestPassword}} deploy"
+  wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/timer_op_complex.json {{.RestUsername}} {{.RestPassword}} deploy"
   wait: true
@@ -200,10 +215,13 @@
 -
   image: sequoiatools/eventing
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/bucket_op_function.json {{.RestUsername}} {{.RestPassword}} undeploy true"
+  wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/timer_op.json {{.RestUsername}} {{.RestPassword}} undeploy true"
+  wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/bucket_op_complex_function.json {{.RestUsername}} {{.RestPassword}} undeploy true"
+  wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/timer_op_complex.json {{.RestUsername}} {{.RestPassword}} undeploy true"
   wait: true
@@ -218,10 +236,13 @@
 -
   image: sequoiatools/eventing
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/bucket_op_function.json {{.RestUsername}} {{.RestPassword}} deploy"
+  wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/timer_op.json {{.RestUsername}} {{.RestPassword}} deploy"
+  wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/bucket_op_complex_function.json {{.RestUsername}} {{.RestPassword}} deploy"
+  wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/timer_op_complex.json {{.RestUsername}} {{.RestPassword}} deploy"
   wait: true
@@ -302,10 +323,13 @@
 -
   image: sequoiatools/eventing
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/bucket_op_function.json {{.RestUsername}} {{.RestPassword}} undeploy true"
+  wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/timer_op.json {{.RestUsername}} {{.RestPassword}} undeploy true"
+  wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/bucket_op_complex_function.json {{.RestUsername}} {{.RestPassword}} undeploy true"
+  wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/timer_op_complex.json {{.RestUsername}} {{.RestPassword}} undeploy true"
   wait: true
@@ -315,10 +339,13 @@
 -
   image: sequoiatools/eventing
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} alice/bucket_op_function.json {{.RestUsername}} {{.RestPassword}} delete"
+  wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} alice/timer_op.json {{.RestUsername}} {{.RestPassword}} delete"
+  wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} alice/bucket_op_complex_function.json {{.RestUsername}} {{.RestPassword}} delete"
+  wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} alice/timer_op_complex.json {{.RestUsername}} {{.RestPassword}} delete"
   wait: true
