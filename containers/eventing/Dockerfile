@@ -1,4 +1,4 @@
-FROM ubuntu:16.04
+FROM ubuntu:14.04
 RUN apt-key adv --recv-keys --keyserver keyserver.ubuntu.com 16126D3A3E5C1192
 RUN apt-get autoclean
 RUN apt-get clean all
@@ -7,8 +7,8 @@ RUN rm -rf /var/lib/apt/lists/*
 RUN apt-get clean
 RUN apt-get update
 RUN apt-get upgrade -s
-RUN apt-get install -y git python-pip curl tar
-RUN apt-get install -y build-essential libssl-dev libffi-dev python-dev
+RUN apt-get install -y git python-pip curl tar --force-yes
+RUN apt-get install -y build-essential libssl-dev libffi-dev python-dev --force-yes
 
 
 RUN pip install httplib2

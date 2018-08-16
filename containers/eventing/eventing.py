@@ -136,17 +136,7 @@ class EventingOperations():
             eventing_endpoint = "deleteAppTempStore"
             method = "DELETE"
 
-            status, content, header = self._http_request(appname, method,
-                                                         eventing_endpoint,
-                                                         app_definition)
-            if not status:
-                print status, content, header
-                raise Exception("Failed to delete application from temp store")
-
-            eventing_endpoint = "deleteApplication"
-            status, content, header = self._http_request(appname, method,
-                                                         eventing_endpoint,
-                                                         app_definition)
+            status, content, header = self.delete(appname)
             if not status:
                 print status, content, header
                 raise Exception("Failed to delete application")
