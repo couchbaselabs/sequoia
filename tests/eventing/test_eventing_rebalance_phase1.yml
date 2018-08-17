@@ -318,13 +318,13 @@
 ############### delete functions ################
 -
   image: sequoiatools/eventing
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_function.json {{.RestUsername}} {{.RestPassword}} delete"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} bucket_op_function.json {{.RestUsername}} {{.RestPassword}} delete"
 -
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_function1.json {{.RestUsername}} {{.RestPassword}} delete"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} bucket_op_function1.json {{.RestUsername}} {{.RestPassword}} delete"
 -
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_complex_function.json {{.RestUsername}} {{.RestPassword}} delete"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} bucket_op_complex_function.json {{.RestUsername}} {{.RestPassword}} delete"
 -
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_complex_function1.json {{.RestUsername}} {{.RestPassword}} delete"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} bucket_op_complex_function1.json {{.RestUsername}} {{.RestPassword}} delete"
   wait: true
 
 -

@@ -220,6 +220,10 @@
   args: "{{.ActiveDataNode 1}}:{{.RestPort}}"
   wait: true
 
+# delete eventing handlers
+- test: tests/eventing/test_eventing_rebalance_integration.yml
+  section: delete_functions
+
 # analytics drop bucket , datasets and indexes
 - test: tests/analytics/test_analytics_integration.yml
   section: analytics_teardown
