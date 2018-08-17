@@ -1,0 +1,27 @@
+ {
+    "appcode": "function OnUpdate(doc, meta) {\n    var expiry = new Date();\n    expiry.setSeconds(expiry.getSeconds() + 30);\n\n    var context = {docID : meta.id, random_text : 'e6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0'};\n    createTimer(timerCallback,  expiry, meta.id, context);\n}\nfunction OnDelete(meta) {\n    var expiry = new Date();\n    expiry.setSeconds(expiry.getSeconds() + 30);\n\n    var context = {docID : meta.id};\n    createTimer(NDtimerCallback,  expiry, meta.id, context);\n}\nfunction NDtimerCallback(context) {\n    delete dst_bucket[context.docID];\n}\nfunction timerCallback(context) {\n    dst_bucket[context.docID] = 'from timerCallback';\n}",
+    "depcfg": {
+      "buckets": [
+        {
+          "alias": "dst_bucket",
+          "bucket_name": "WAREHOUSE"
+        }
+      ],
+      "metadata_bucket": "NEW_ORDER",
+      "source_bucket": "default"
+    },
+    "version": "evt-6.0.0-1419-ee",
+    "appname": "timer_op",
+    "settings": {
+      "cleanup_timers": false,
+      "dcp_stream_boundary": "from_now",
+      "deadline_timeout": 62,
+      "deployment_status": false,
+      "description": "",
+      "execution_timeout": 60,
+      "log_level": "INFO",
+      "processing_status": false,
+      "user_prefix": "eventing",
+      "worker_count": 3
+    }
+  }

@@ -1,0 +1,229 @@
+---
+-
+  include: tests/templates/rebalance.yml, tests/templates/vegeta.yml, tests/templates/kv.yml, tests/templates/fts.yml, tests/templates/n1ql.yml, tests/templates/multinode_failure.yml
+
+###### update Tombstone Purge Interval ######
+-
+  image: sequoiatools/couchbase-cli
+  requires:  "{{eq true .DoOnce }}"
+  command: "setting-compaction -c {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}} --metadata-purge-interval .04 --compaction-db-percentage 30 --compaction-view-percentage 30"
+  wait: true
+
+# continous kv loading
+- template: pillowfight
+  args: "{{.Orchestrator}}, {{.Bucket}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 2000}}, {{.AuthPassword}}"
+
+# rebalance out a node
+- template: rebalance_out
+  args: "{{.ActiveDataNode 1}}:{{.RestPort}}"
+  wait: true
+
+# creating eventing handlers and deploying them
+- test: tests/eventing/test_eventing_rebalance_integration_timers.yml
+  section: create_and_deploy
+
+# creating datasets and indexes
+- test: tests/analytics/test_analytics_integration.yml
+  section: analytics_setup
+
+# replica index creation
+- test: tests/2i/test_idx_rebalance_replica_vulcan.yml
+  section: create_replica_indexes
+
+# replica data loading for 30 minutes with docs that will expire after 1 hour
+- image: sequoiatools/gideon
+  duration: 1800
+  command: "kv --ops {{.Scale 500}} --create 10 --delete 8 --get 82 --sizes 64 96  --expire 100 --ttl 3600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
+  duration: 1800
+- command: "kv --ops {{.Scale 500}} --create 10 --delete 8 --get 82 --sizes 64 96  --expire 100 --ttl 3600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}}"
+  duration: 1800
+- command: "kv --ops {{.Scale 500}} --create 10 --delete 8 --get 82 --sizes 64 96  --expire 100 --ttl 3600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}}"
+  duration: 1800
+
+# query replica indexes
+- test: tests/2i/test_idx_rebalance_replica_vulcan.yml
+  section: query_replica_indexes
+
+# swap rebalance
+- template: rebalance_swap
+  args: "{{.InActiveNode}}, {{.ActiveDataNode 2}}"
+  wait: true
+
+
+# run queries and then connect to bucket
+- test: tests/analytics/test_analytics_integration.yml
+  section: analytics_query
+
+# run http attacks against n1ql with various skip param
+- template: attack_query
+  args: "0, 10, {{$.NthQueryNode 1}}:{{$.QueryPort}},
+        delete from default where rating > 0 limit {{$.Scale 10}}"
+
+
+# more json docs on default bucket
+- image: sequoiatools/gideon
+  command: "kv --ops {{.Scale 500}} --create 10 --delete 8 --get 92 --expire 100 --ttl 660  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes  512 128 1024 2048 16000"
+- command: "kv --ops {{.Scale 500}} --create 100  --expire 100 --ttl 660 --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 64"
+  duration: 600
+- command: "kv --ops {{.Scale 600}} --create 15 --get 80 --delete 5  --expire 100 --ttl 660 --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 128"
+  duration: 7200
+
+# Change the topology (performs rebalance in/out/swap eventing nodes)
+- test: tests/eventing/test_eventing_rebalance_integration_timers.yml
+  section: topology_change
+
+# Change the topology (performs rebalance in/out/swap analytics nodes)
+- test: tests/analytics/test_analytics_integration.yml
+  section: analytics_topology_change
+
+# run http attacks against view with various skip param
+- foreach: "{{range $i, $view := strlist `stats` `array` `padd`}}"
+  template: attack_view
+  args: "0, 10, {{$.NthDataNode $i}},
+         {{$.Bucket}},
+         scale,
+         {{$view}},
+         limit={{$.Scale 10}}&stale=update_after&connection_timeout=60000"
+
+
+# create fts index with custom child field using result key as type
+- template: create_index_with_child_field
+  args: "{{.FTSNodePort}}, good_state, default, SUCCESS, state, false, result, upside_down"
+  wait: true
+
+
+# create fts index with nested type mappings and store results
+- template: create_index_with_child_field_nested_type_mapping
+  args: "{{.FTSNodePort}}, social, default, gideon, description, profile, status, , true"
+
+# direct search on state key
+- template: query_fts
+  args: "{{.FTSNodePort}}, -1, {{.Scale 3}}, good_state, +state:9C, -size 10"
+
+
+# regex search on subfield profile.status with description exclusion
+- template: query_fts
+  args: "{{.FTSNodePort}}, -1, {{.Scale 3}}, social, +profile.status:4121*, -size 10"
+
+
+# start xdcr replications
+- image: sequoiatools/couchbase-cli
+  requires:  "{{eq true .DoOnce }}"
+  command:  "xdcr-setup -c {{.Orchestrator}}:{{.RestPort}} --create --xdcr-cluster-name remote
+        --xdcr-hostname {{.Nodes | .Cluster 1 | net 0}}
+        --xdcr-username {{.Nodes | .Cluster 1 | .Attr `rest_username`}}
+        --xdcr-password {{.Nodes | .Cluster 1 | .Attr `rest_password`}}"
+  wait: true
+- command: "xdcr-replicate -c {{.Orchestrator}}:{{.RestPort}}
+        --create
+        --xdcr-cluster-name remote
+        --xdcr-from-bucket {{.Bucket}}
+        --xdcr-to-bucket {{.Nodes | .Cluster 1 | bucket 0}}
+	--enable-compression 1"
+  wait: true
+
+
+# add some rbac users
+- test: tests/n1ql/test_n1qlRBAC.yml
+  section: add_users
+
+# start rbac queries
+- test: tests/n1ql/test_n1qlRBAC.yml
+  section: rbac_query
+
+# undeploy eventing handlers
+- test: tests/eventing/test_eventing_rebalance_integration_timers.yml
+  section: undeploy
+
+# load 1M items
+- template: pillowfight_htp
+  wait: true
+
+# recreate replica indexes
+- test: tests/2i/test_idx_rebalance_replica_vulcan.yml
+  section: recreate_replica_indexes
+
+# change the topologies on the 2i test
+- test: tests/2i/test_idx_rebalance_replica_vulcan.yml
+  section: change_indexer_topologies
+
+# redeploy eventing handlers
+- test: tests/eventing/test_eventing_rebalance_integration_timers.yml
+  section: redeploy
+
+# start tpcc indexing
+- image: sequoiatools/tpcc
+  requires:  "{{.Version | le 4.0 | eq .DoOnce}}"
+  command:  "./run.sh {{.NthQueryNode 1}}:{{.QueryPort}} util/cbcrindex.sql"
+  wait: true
+- image: sequoiatools/tpcc
+  requires:  "{{.Version | le 4.0}}"
+  command: "python tpcc.py --duration 259200 --client {{.Scale 1}} --warehouses 5 --no-execute n1ql
+                            --query-url {{.QueryNodePort}} --userid {{.RestUsername}} --password {{.RestPassword}}"
+- requires:  "{{.Version | le 4.0}}"
+  command: "python tpcc.py --duration 2259200 --client {{.Scale 1}}
+                             --warehouses 5 --no-load n1ql  --query-url {{.NthQueryNode 1}}:{{.QueryPort}}"
+
+# quick update batch
+- template: pillowfight_htp
+  wait: true
+
+
+# swap failover
+- template: add_node
+  args: "{{.InActiveNode}}"
+- template: failover_node_forced
+  args: "{{.ActiveDataNode 1}}"
+- template: rebalance
+  wait: true
+
+# load some new docs
+- image: sequoiatools/gideon
+  command: "kv --ops {{.Scale 500}} --create 100  --expire 100 --ttl 660 --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 64"
+  duration: 1800
+
+# quick update batch
+- template: pillowfight_htp
+  wait: true
+
+
+# swap hard failover
+- template: add_node
+  args: "{{.InActiveNode}}"
+- template: failover_node
+  args: "{{.ActiveDataNode 2}}"
+- template: failover_node_forced
+  args: "{{.ActiveDataNode 3}}"
+- template: rebalance
+  wait: true
+
+# do multinode failover
+- template: autofailover3Nodes
+  args: "{{.ActiveDataNode 1}},{{.ActiveDataNode 2}},{{.ActiveDataNode 3}}"
+  wait: true
+
+# quick update batch
+- template: pillowfight_htp
+  wait: true
+
+- template: add_node
+  args: "{{.NthInActiveNode 0}}"
+- template: rebalance
+  wait: true
+
+# undeploy eventing handlers
+- test: tests/eventing/test_eventing_rebalance_integration_timers.yml
+  section: undeploy
+
+# rebalance out a KV node
+- template: rebalance_out
+  args: "{{.ActiveDataNode 1}}:{{.RestPort}}"
+  wait: true
+
+# delete eventing handlers
+- test: tests/eventing/test_eventing_rebalance_integration_timers.yml
+  section: delete_functions
+
+# analytics drop bucket , datasets and indexes
+- test: tests/analytics/test_analytics_integration.yml
+  section: analytics_teardown
