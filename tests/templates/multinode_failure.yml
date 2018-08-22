@@ -108,6 +108,12 @@
     wait: true
 
   -
+    image: sequoiatools/cmd
+    entrypoint: sleep
+    command: "180"
+    wait: true
+
+  -
     image: sequoiatools/cbutil
     command: "/cbinit.py $0,$1,$2 root couchbase start"
     wait: true
