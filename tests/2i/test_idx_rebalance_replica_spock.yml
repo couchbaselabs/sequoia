@@ -2,10 +2,10 @@
 
 ############### data loading ################
 - image: sequoiatools/gideon
-  command: "kv --ops {{.Scale 1000}} --create 30 --get 70 --delete 10  --expire 100 --ttl 600   --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
-- command: "kv --ops {{.Scale 500}} --create 60 --get 40 --sizes 64 96 --expire 100 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
-- command: "kv --ops {{.Scale 500}} --create 60 --get 40 --sizes 64 96 --delete 20 --expire 100 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}}"
-- command: "kv --ops {{.Scale 200}} --create 100 --sizes 1024 --expire 100 --ttl 600 --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}}"
+  command: "kv --ops {{.Scale 500}} --create 30 --get 70 --delete 10  --expire 100 --ttl 600   --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+- command: "kv --ops {{.Scale 250}} --create 60 --get 40 --sizes 64 96 --expire 100 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
+- command: "kv --ops {{.Scale 250}} --create 60 --get 40 --sizes 64 96 --delete 20 --expire 100 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}}"
+- command: "kv --ops {{.Scale 100}} --create 100 --sizes 1024 --expire 100 --ttl 600 --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}}"
 
 
 ###############  create indexes ################
@@ -72,13 +72,13 @@
 
 ############### run creates ################
 - image: sequoiatools/gideon
-  command: "kv --ops {{.Scale 1000}} --create 30 --get 70 --delete 10  --expire 100 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+  command: "kv --ops {{.Scale 500}} --create 30 --get 70 --delete 10  --expire 100 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
   duration: 600
-- command: "kv --ops {{.Scale 1000}} --create 50 --get 50 --delete 10  --sizes 64 96 --expire 100 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
+- command: "kv --ops {{.Scale 500}} --create 50 --get 50 --delete 10  --sizes 64 96 --expire 100 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
   duration: 600
-- command: "kv --ops {{.Scale 1000}} --create 80 --get 20 --delete 40  --sizes 64 96  --expire 100 --ttl 600 --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}}"
+- command: "kv --ops {{.Scale 500}} --create 80 --get 20 --delete 40  --sizes 64 96  --expire 100 --ttl 600 --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}}"
   duration: 600
-- command: "kv --ops {{.Scale 1000}} --create 30 --get 70 --delete 10  --sizes 512 --expire 100 --ttl 600 --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}}"
+- command: "kv --ops {{.Scale 500}} --create 30 --get 70 --delete 10  --sizes 512 --expire 100 --ttl 600 --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}}"
   duration: 600
 
 - section_start: change_indexer_topologies
