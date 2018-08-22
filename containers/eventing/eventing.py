@@ -257,7 +257,7 @@ class EventingOperations():
         authorization = base64.encodestring('%s:%s' % (self.username, self.password))
 
         headers = {'Content-type': 'application/json', 'Authorization': 'Basic %s' % authorization}
-        url = "http://" + self.hostname + ":8091" + "/_p/event/getDeployedApps"
+        url = "http://" + self.hostname + ":8091" + "/_p/event/getRunningApps"
         method="GET"
 
         response, content = httplib2.Http(timeout=120).request(uri=url, method=method, headers=headers)
