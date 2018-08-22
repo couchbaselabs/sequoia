@@ -34,30 +34,36 @@ users:
 buckets:
   -
       name: bucket_op
-      ram: 19%
+      ram: 18%
       replica: 0
       eviction: fullEviction
+      compression: active
   -
       name: bucket_op_dst
-      ram: 19%
+      ram: 18%
       replica: 0
       eviction: fullEviction
+      compression: active
   -
       name: bucket_op_dst_1
-      ram: 19%
+      ram: 18%
       replica: 0
+      compression: active
   -
       name: bucket_op_complex_1
-      ram: 19%
+      ram: 18%
       replica: 0
+      compression: active
   -
       name: bucket_op_complex_2
-      ram: 19%
+      ram: 18%
       replica: 0
+      compression: active
   -
       name: metadata
-      ram: 2%
+      ram: 8%
       replica: 0
+      compression: active
 
 servers: # each server tag represents a cluster
   -
