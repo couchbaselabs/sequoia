@@ -70,7 +70,7 @@
 
 ############### undeploy functions ################
 -
-  image: sequoiatools/eventing
+  image: sequoiatools/eventing:6.0
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/bucket_op_function.json {{.RestUsername}} {{.RestPassword}} undeploy true"
   wait: true
 -
@@ -141,7 +141,7 @@
 
 ############### undeploy functions ################
 -
-  image: sequoiatools/eventing
+  image: sequoiatools/eventing:6.0
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/bucket_op_function.json {{.RestUsername}} {{.RestPassword}} undeploy true"
   wait: true
 -
@@ -213,7 +213,7 @@
 
 ############### undeploy functions ################
 -
-  image: sequoiatools/eventing
+  image: sequoiatools/eventing:6.0
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/bucket_op_function.json {{.RestUsername}} {{.RestPassword}} undeploy true"
   wait: true
 -
@@ -321,7 +321,7 @@
 
 ############### undeploy functions ################
 -
-  image: sequoiatools/eventing
+  image: sequoiatools/eventing:6.0
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/bucket_op_function.json {{.RestUsername}} {{.RestPassword}} undeploy true"
   wait: true
 -
