@@ -530,6 +530,14 @@ func (cm *ContainerManager) pullImage(client *docker.Client, repo string, ch cha
 		Repository: repo,
 		Tag:        "latest",
 	}
+
+	if strings.ContainsAny(repo, ":"){
+	    imgOpts = docker.PullImageOptions{
+		Repository: repo,
+		Tag:        strings.Split(repo, ":")[1],
+	    }
+	}
+
 	err := client.PullImage(imgOpts, docker.AuthConfiguration{})
 	ch <- err
 
