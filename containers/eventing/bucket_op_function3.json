@@ -1,5 +1,5 @@
 {
-	"appname": "bucket_op_function_2",
+	"appname": "bot1",
 	"id": 0,
 	"depcfg": {
 		"buckets": [{
@@ -9,7 +9,7 @@
 		"metadata_bucket": "metadata",
 		"source_bucket": "bucket_op"
 	},
-    "appcode": "function OnUpdate(doc, meta) {\n    var expiry = new Date();\n    expiry.setSeconds(expiry.getSeconds() + 3);\n\n    var context = {docID : meta.id, random_text : 'e6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0'};\n    createTimer(timerCallback,  expiry, meta.id, context);\n}\nfunction OnDelete(meta) {\n    var expiry = new Date();\n    expiry.setSeconds(expiry.getSeconds() + 30);\n\n    var context = {docID : meta.id};\n    createTimer(NDtimerCallback,  expiry, meta.id, context);\n}\nfunction NDtimerCallback(context) {\n    delete dst[context.docID];\n}\nfunction timerCallback(context) {\n    dst[context.docID] = 'from timerCallback';\n}",
+    "appcode": "function OnUpdate(doc, meta) {\n    var expiry = new Date();\n    expiry.setSeconds(expiry.getSeconds() + 3);\n\n    var context = {docID : meta.id, random_text : 'e6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGumoe6cZZGumoe6cZZG'};\n    createTimer(timerCallback,  expiry, meta.id, context);\n}\nfunction OnDelete(meta) {\n    var expiry = new Date();\n    expiry.setSeconds(expiry.getSeconds() + 30);\n\n    var context = {docID : meta.id};\n    createTimer(NDtimerCallback,  expiry, meta.id, context);\n}\nfunction NDtimerCallback(context) {\n    delete dst[context.docID];\n}\nfunction timerCallback(context) {\n    dst[context.docID] = 'from timerCallback';\n}",
 	"settings": {
 		"dcp_stream_boundary": "everything",
 		"deadline_timeout": 62,

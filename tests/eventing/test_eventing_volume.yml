@@ -74,7 +74,7 @@
   image: sequoiatools/gideon
   requires:  "{{eq true .DoOnce}}"
   command: "kv --ops {{.Scale 1000000}} --create 40 --get 60 --sizes 64  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
-  duration: 300
+  duration: 180
 
 #################################################
 ##### Multiple kv rebalance #####################
@@ -117,7 +117,7 @@
   image: sequoiatools/gideon
   requires:  "{{eq true .DoOnce}}"
   command: "kv --ops {{.Scale 1000000}} --create 40 --get 60 --sizes 64   --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
-  duration: 300
+  duration: 180
 
 ###############  Rebalance-out multiple kv nodes ################
 - template: rebalance_out
@@ -150,7 +150,7 @@
   image: sequoiatools/gideon
   requires:  "{{eq true .DoOnce}}"
   command: "kv --ops {{.Scale 1000000}} --create 40 --get 60 --sizes 64  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
-  duration: 300
+  duration: 180
 
 ###############  Swap Rebalance kv ################
 - template: rebalance_swap
@@ -187,7 +187,7 @@
   image: sequoiatools/gideon
   requires:  "{{eq true .DoOnce}}"
   command: "kv --ops {{.Scale 1000000}} --create 40 --get 60 --sizes 64   --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
-  duration: 300
+  duration: 180
 
 #################################################
 ##### Multiple eventing rebalance ###############
@@ -227,7 +227,7 @@
   image: sequoiatools/gideon
   requires:  "{{eq true .DoOnce}}"
   command: "kv --ops {{.Scale 1000000}} --create 40 --get 60 --sizes 64   --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
-  duration: 300
+  duration: 180
 
 ###############  Rebalance-out multiple eventing nodes ################
 - template: rebalance_out
@@ -260,7 +260,7 @@
   image: sequoiatools/gideon
   requires:  "{{eq true .DoOnce}}"
   command: "kv --ops {{.Scale 1000000}} --create 40 --get 60 --sizes 64   --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
-  duration: 300
+  duration: 180
 
 ###############  Swap Rebalance ################
 - template: rebalance_swap
@@ -297,7 +297,7 @@
   image: sequoiatools/gideon
   requires:  "{{eq true .DoOnce}}"
   command: "kv --ops {{.Scale 1000000}} --create 40 --get 60 --sizes 64   --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
-  duration: 300
+  duration: 180
 
 #################################################
 ##### Multiple kv+eventing rebalance ############
@@ -338,7 +338,7 @@
   image: sequoiatools/gideon
   requires:  "{{eq true .DoOnce}}"
   command: "kv --ops {{.Scale 1000000}} --create 40 --get 60 --sizes 64   --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
-  duration: 300
+  duration: 180
 
 ###############  Rebalance-out  kv+eventing nodes ################
 - template: rebalance_out
@@ -371,7 +371,7 @@
   image: sequoiatools/gideon
   requires:  "{{eq true .DoOnce}}"
   command: "kv --ops {{.Scale 1000000}} --create 40 --get 60 --sizes 64  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
-  duration: 300
+  duration: 180
 
 ###############  Swap Rebalance kv+eventing nodes ################
 - template: rebalance_swap
