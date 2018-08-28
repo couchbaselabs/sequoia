@@ -41,13 +41,13 @@
 ############### create and deploy functions ################
 -
   image: sequoiatools/eventing
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_function2.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
--
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_function3.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
 -
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_function4.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
--
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_function5.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_function2.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_function4.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
   wait: true
 
 -
@@ -61,13 +61,13 @@
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 1}} 1200 60 True"
   wait: true
 -
-  command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 2}} 1200 60 True"
+  command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 2}} 2400 60 True"
   wait: true
 -
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 3}} 1200 60 True"
   wait: true
 -
-  command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 4}} 1200 60 True"
+  command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 4}} 2400 60 True"
   wait: true
 ############### data loading ################
 -
@@ -103,13 +103,13 @@
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 1}} 600 60 True"
   wait: true
 -
-  command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 2}} 600 60 True"
+  command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 2}} 1200 60 True"
   wait: true
 -
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 3}} 600 60 True"
   wait: true
 -
-  command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 4}} 600 60 True"
+  command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 4}} 1200 60 True"
   wait: true
 
 ############### data loading ################
@@ -136,13 +136,13 @@
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 1}} 600 60 True"
   wait: true
 -
-  command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 2}} 600 60 True"
+  command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 2}} 1200 60 True"
   wait: true
 -
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 3}} 600 60 True"
   wait: true
 -
-  command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 4}} 600 60 True"
+  command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 4}} 1200 60 True"
   wait: true
 
 ############### data loading ################
@@ -173,13 +173,13 @@
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 1}} 600 60 True"
   wait: true
 -
-  command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 2}} 600 60 True"
+  command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 2}} 1200 60 True"
   wait: true
 -
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 3}} 600 60 True"
   wait: true
 -
-  command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 4}} 600 60 True"
+  command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 4}} 1200 60 True"
   wait: true
 
 ############### data loading ################
@@ -213,13 +213,13 @@
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 1}} 600 60 True"
   wait: true
 -
-  command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 2}} 600 60 True"
+  command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 2}} 1200 60 True"
   wait: true
 -
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 3}} 600 60 True"
   wait: true
 -
-  command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 4}} 600 60 True"
+  command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 4}} 1200 60 True"
   wait: true
 
 ############### data loading ################
@@ -246,13 +246,13 @@
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 1}} 600 60 True"
   wait: true
 -
-  command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 2}} 600 60 True"
+  command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 2}} 1200 60 True"
   wait: true
 -
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 3}} 600 60 True"
   wait: true
 -
-  command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 4}} 600 60 True"
+  command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 4}} 1200 60 True"
   wait: true
 
 ############### data loading ################
@@ -283,13 +283,13 @@
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 1}} 600 60 True"
   wait: true
 -
-  command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 2}} 600 60 True"
+  command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 2}} 1200 60 True"
   wait: true
 -
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 3}} 600 60 True"
   wait: true
 -
-  command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 4}} 600 60 True"
+  command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 4}} 1200 60 True"
   wait: true
 
 ############### data loading ################
@@ -324,13 +324,13 @@
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 1}} 600 60 True"
   wait: true
 -
-  command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 2}} 600 60 True"
+  command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 2}} 1200 60 True"
   wait: true
 -
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 3}} 600 60 True"
   wait: true
 -
-  command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 4}} 600 60 True"
+  command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 4}} 1200 60 True"
   wait: true
 
 ############### data loading ################
@@ -357,13 +357,13 @@
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 1}} 600 60 True"
   wait: true
 -
-  command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 2}} 600 60 True"
+  command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 2}} 1200 60 True"
   wait: true
 -
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 3}} 600 60 True"
   wait: true
 -
-  command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 4}} 600 60 True"
+  command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 4}} 1200 60 True"
   wait: true
 
 ############### data loading ################
@@ -394,13 +394,13 @@
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 1}} 600 60 True"
   wait: true
 -
-  command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 2}} 600 60 True"
+  command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 2}} 1200 60 True"
   wait: true
 -
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 3}} 600 60 True"
   wait: true
 -
-  command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 4}} 600 60 True"
+  command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 4}} 1200 60 True"
   wait: true
 
 ############### delete functions ################
