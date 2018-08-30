@@ -46,7 +46,7 @@ buckets:
       compression: active
   -
       name: bucket_op_dst_1
-      ram: 10%
+      ram: 8%
       replica: 0
       compression: active
   -
@@ -56,12 +56,12 @@ buckets:
       compression: active
   -
       name: bucket_op_complex_2
-      ram: 10%
+      ram: 8%
       replica: 0
       compression: active
   -
       name: metadata
-      ram: 12%
+      ram: 16%
       replica: 0
       compression: active
 
