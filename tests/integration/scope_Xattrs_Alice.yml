@@ -72,44 +72,34 @@ buckets:
       ram: 40%
       eviction: fullEviction
       ddocs: scale
-      replica: 2
       compression: active
   -
       name: ORDERS
-      replica: 2
       ram: 5%
   -
       name: ORDER_LINE
-      replica: 2
       ram: 5%
       ddocs: all
   -
       name: CUSTOMER
-      replica: 2
       ram: 5%
   -
       name: STOCK
-      replica: 2
       ram: 5%
   -
       name: NEW_ORDER
-      replica: 2
       ram: 5%
   -
       name: WAREHOUSE
-      replica: 2
       ram: 10%
   -
       name: DISTRICT
-      replica: 2
       ram: 10%
   -
       name: HISTORY
-      replica: 2
       ram: 2%
   -
       name: ITEM
-      replica: 2
       ram: 2%
   -
       name: remote
