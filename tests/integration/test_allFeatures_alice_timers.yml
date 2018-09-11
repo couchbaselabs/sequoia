@@ -197,9 +197,9 @@
 - template: rebalance
   wait: true
 
-# do multinode failover
-- template: autofailover2Nodes
-  args: "{{.ActiveDataNode 1}},{{.ActiveDataNode 2}}"
+# do multinode failover , failing only one node as we have 1 replica
+- template: autofailover1Node
+  args: "{{.ActiveDataNode 1}}"
   wait: true
 
 # quick update batch
