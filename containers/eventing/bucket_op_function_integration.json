@@ -4,7 +4,7 @@
 	"depcfg": {
 		"buckets": [{
 			"alias": "dst",
-			"bucket_name": "DISTRICT"
+			"bucket_name": "ITEM"
 		}],
 		"metadata_bucket": "NEW_ORDER",
 		"source_bucket": "default"

@@ -29,7 +29,7 @@ users:
 servers: # each server tag represents a cluster
   -
       name: local
-      count: 24
+      count: 26
       ram: 95%
       index_ram: 90%
       fts_ram: 85%
@@ -49,7 +49,7 @@ servers: # each server tag represents a cluster
       analytics_path: "/data"
       rest_port: 8091
       query_port: 8093
-      init_nodes: 22
+      init_nodes: 24
       buckets: default,CUSTOMER,DISTRICT,HISTORY,ITEM,NEW_ORDER,ORDERS,ORDER_LINE,STOCK,WAREHOUSE
       users: default,CUSTOMER,DISTRICT,HISTORY
   -
@@ -69,7 +69,7 @@ buckets:
   -
       name: default
       sasl: password
-      ram: 40%
+      ram: 35%
       eviction: fullEviction
       ddocs: scale
       compression: active
@@ -94,13 +94,13 @@ buckets:
       ram: 10%
   -
       name: DISTRICT
-      ram: 10%
+      ram: 5%
   -
       name: HISTORY
       ram: 2%
   -
       name: ITEM
-      ram: 2%
+      ram: 13%
   -
       name: remote
       ram: 80%
