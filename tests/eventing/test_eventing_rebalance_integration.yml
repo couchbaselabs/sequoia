@@ -46,7 +46,7 @@
 - section_start: undeploy
 ############### undeploy functions ################
 -
-  image: sequoiatools/eventing
+  image: sequoiatools/eventing:5.5
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} bucket_op_function_integration.json {{.RestUsername}} {{.RestPassword}} undeploy true"
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} bucket_op_complex_function_integration.json {{.RestUsername}} {{.RestPassword}} undeploy true"
