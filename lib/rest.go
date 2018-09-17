@@ -25,6 +25,7 @@ type NodeSelf struct {
 	Services          []string
 	Version           string
 	Hostname          string
+	ClusterMembership string
 }
 
 type NodeStatuses map[string]NodeStatus
@@ -230,6 +231,18 @@ func (r *RestClient) GetClusterInfo() ClusterInfo {
 	var s ClusterInfo
 	r.JsonRequest(auth, reqUrl, &s)
 	return s
+}
+
+func (r *RestClient) IsNodeActive(host string) bool{
+        cluster :=r.GetClusterInfo()
+        for i:=0 ; i < len(cluster.Nodes); i++ {
+        ip:= host+":8091"
+        if cluster.Nodes[i].Hostname == ip && cluster.Nodes[i].ClusterMembership == "active" {
+            return true
+            }
+        }
+        return false
+
 }
 
 //

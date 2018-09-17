@@ -426,9 +426,9 @@ func (t *TemplateResolver) NodesByAvailability(servers []ServerSpec, isActive bo
 	ips := []string{}
 	for _, spec := range servers {
 		for _, name := range spec.Names {
-			active := !t.Scope.Rest.NodeIsSingle(name)
+		    ip := t.Scope.Provider.GetHostAddress(name)
+			active := t.Scope.Rest.IsNodeActive(ip)
 			if active == isActive {
-				ip := t.Scope.Provider.GetHostAddress(name)
 				ips = append(ips, ip)
 			}
 		}
