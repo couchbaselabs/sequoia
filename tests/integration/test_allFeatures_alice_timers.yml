@@ -215,11 +215,6 @@
 - test: tests/eventing/test_eventing_rebalance_integration_timers.yml
   section: undeploy
 
-# rebalance out a KV node
-- template: rebalance_out
-  args: "{{.ActiveDataNode 1}}:{{.RestPort}}"
-  wait: true
-
 # delete eventing handlers
 - test: tests/eventing/test_eventing_rebalance_integration_timers.yml
   section: delete_functions
