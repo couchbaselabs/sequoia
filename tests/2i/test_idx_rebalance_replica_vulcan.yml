@@ -184,6 +184,7 @@
   args: "{{.ActiveIndexNode 2}}"
 - template: recover_node
   args: "{{.ActiveIndexNode 2}}, full"
+  wait: true
 - template: rebalance
   wait: true
 # Sleep for some more time after rebalance completes
