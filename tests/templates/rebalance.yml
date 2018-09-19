@@ -182,6 +182,23 @@
     -
       template: rebalance
 
+# failover node and recover then rebalance
+# $0 = node to failover
+# $1 = recovery type, delta or full
+-
+  name: failover_force_and_recover
+  actions:
+    -
+      template: failover_node_forced
+      args: "$0"
+      wait: true
+    -
+      template: recover_node
+      args: "$0, $1"
+      wait: true
+    -
+      template: rebalance
+
 -
   name: rebalance_stop
   actions:

@@ -255,17 +255,8 @@
 
 #============ hard failover eventing node ============
 -
-  template: failover_node_forced
-  args: "{{.ActiveEventingNode 1}}"
-  wait: true
-
--
-  # Full recovery and add back Node 1
-  template: recover_node
-  args: "{{.ActiveEventingNode 1}}, full"
-
--
-  template: rebalance
+  template: failover_force_and_recover
+  args: "{{.ActiveEventingNode 1}},full"
   wait: true
 
 
@@ -278,19 +269,9 @@
 
 #============ hard failover KV node ============
 -
-  template: failover_node_forced
-  args: "{{.ActiveDataNode 1}}"
+  template: failover_force_and_recover
+  args: "{{.ActiveDataNode 1}},delta"
   wait: true
-
--
-  # Full recovery and add back Node 1
-  template: recover_node
-  args: "{{.ActiveDataNode 1}}, delta"
-
--
-  template: rebalance
-  wait: true
-
 
 ###############  Failover and rebalance out 2 KV ################
 - template: failover_node_forced
