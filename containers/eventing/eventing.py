@@ -46,22 +46,7 @@ class EventingOperations():
         appname = app_definition['appname']
 
         if self.operation == "create_and_deploy":
-            eventing_endpoint = "saveAppTempStore"
-            method = "POST"
-            app_definition['settings']['processing_status'] = True
-            app_definition['settings']['deployment_status'] = True
-            status, content, header = self._http_request(appname, method,
-                                                         eventing_endpoint,
-                                                         app_definition)
-            if not status:
-                print status, content, header
-                raise Exception("Failed to save application")
-
-            eventing_endpoint = "setApplication"
-            method = "POST"
-            status, content, header = self._http_request(appname, method,
-                                                         eventing_endpoint,
-                                                         app_definition)
+            status, content, header=self.create_deploy(app_definition)
             if not status:
                 print status, content, header
                 raise Exception("Failed to deploy application")
@@ -284,6 +269,24 @@ class EventingOperations():
         url = "http://" + self.hostname + ":" + self.port + "/api/v1/functions/" + appname +"/settings"
         body="{\"deployment_status\":true,\"processing_status\":true,\"dcp_stream_boundary\":\"from_now\"}"
         response, content = httplib2.Http(timeout=120).request(uri=url, method="POST", headers=headers,body=body)
+        print content, response
+
+        if response['status'] in ['200', '201', '202']:
+            return True, content, response
+        else:
+            return False, content, response
+
+    def create_deploy(self,app_definition):
+        app_definition['settings']['processing_status'] = True
+        app_definition['settings']['deployment_status'] = True
+        authorization = base64.encodestring('%s:%s' % (self.username, self.password))
+
+        headers = {'Content-type': 'application/json', 'Authorization': 'Basic %s' % authorization}
+        url = "http://" + self.hostname + ":8096" + "/api/v1/functions/"
+        func=[]
+        func.append(app_definition)
+        body=json.dumps(func).encode("ascii","ignore")
+        response, content = httplib2.Http(timeout=120).request(uri=url, method="POST", headers=headers, body=body)
         print content, response
 
         if response['status'] in ['200', '201', '202']:
