@@ -178,15 +178,10 @@
    wait: true
 
 ###############  Failover and addback ################
-- template: failover_node_forced
-  args: "{{.NthIndexNode 2}}"
-- template: readd_node
-  args: "{{.NthIndexNode 2}}"
-- template: recover_node
+- template: failover_force_and_recover
   args: "{{.NthIndexNode 2}}, full"
   wait: true
-- template: rebalance
-  wait: true
+
 # Sleep for some more time after rebalance completes
 -
    image: sequoiatools/cmd

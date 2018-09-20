@@ -178,14 +178,8 @@
    wait: true
 
 ###############  Failover and addback ################
-- template: failover_node_forced
-  args: "{{.ActiveIndexNode 2}}"
-- template: readd_node
-  args: "{{.ActiveIndexNode 2}}"
-- template: recover_node
-  args: "{{.ActiveIndexNode 2}}, full"
-  wait: true
-- template: rebalance
+- template: failover_force_and_recover
+  args: "{{.NthIndexNode 2}}, full"
   wait: true
 # Sleep for some more time after rebalance completes
 -
