@@ -241,3 +241,6 @@
     args: "$0"
   - template: rebalance
     wait: true
+
+  - template: disable_autofailover
+    wait: true
