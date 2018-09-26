@@ -179,7 +179,7 @@
 
 ###############  Failover and addback ################
 - template: failover_force_and_recover
-  args: "{{.NthIndexNode 2}}, full"
+  args: "{{.ActiveIndexNode 2}}, full"
   wait: true
 # Sleep for some more time after rebalance completes
 -
