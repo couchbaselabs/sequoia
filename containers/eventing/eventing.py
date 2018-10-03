@@ -284,7 +284,7 @@ class EventingOperations():
         headers = {'Content-type': 'application/json', 'Authorization': 'Basic %s' % authorization}
         url = "http://" + self.hostname + ":8096" + "/api/v1/functions/"
         func=[]
-        func.append(app_definition)
+        func[0]=app_definition
         body=json.dumps(func).encode("ascii","ignore")
         response, content = httplib2.Http(timeout=120).request(uri=url, method="POST", headers=headers, body=body)
         print content, response
