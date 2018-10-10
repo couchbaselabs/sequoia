@@ -121,7 +121,7 @@
 
 ###############  Rebalance-out multiple kv nodes ################
 - template: rebalance_out
-  args: "({{.NthDataNode 1}},{{.NthDataNode 2}})"
+  args: "({{.ActiveDataNode 1}},{{.ActiveDataNode 2}})"
   wait: true
 
 -
@@ -154,11 +154,11 @@
 
 ###############  Swap Rebalance kv ################
 - template: rebalance_swap
-  args: "{{.NthInActiveNode 0}},{{.NthDataNode 2}}, data"
+  args: "{{.NthInActiveNode 0}},{{.ActiveDataNode 2}}, data"
   wait: true
 
 - template: rebalance_swap
-  args: "{{.NthInActiveNode 0}},{{.NthDataNode 2}}, data"
+  args: "{{.NthInActiveNode 0}},{{.ActiveDataNode 2}}, data"
   wait: true
 
 -
@@ -231,7 +231,7 @@
 
 ###############  Rebalance-out multiple eventing nodes ################
 - template: rebalance_out
-  args: "({{.Nodes | .Service `eventing` | net 1}}, {{.Nodes | .Service `eventing` | net 2}})"
+  args: "({{.ActiveEventingNode 1}}, {{.ActiveEventingNode 2}})"
   wait: true
 
 -
@@ -264,11 +264,11 @@
 
 ###############  Swap Rebalance ################
 - template: rebalance_swap
-  args: "{{.NthInActiveNode 0}},{{.Nodes | .Service `eventing` | net 1}}, eventing"
+  args: "{{.NthInActiveNode 0}},{{.ActiveEventingNode 1}}, eventing"
   wait: true
 
 - template: rebalance_swap
-  args: "{{.NthInActiveNode 0}},{{.Nodes | .Service `eventing` | net 1}}, eventing"
+  args: "{{.NthInActiveNode 0}},{{.ActiveEventingNode 1}}, eventing"
   wait: true
 
 -
@@ -342,7 +342,7 @@
 
 ###############  Rebalance-out  kv+eventing nodes ################
 - template: rebalance_out
-  args: "({{.NthDataNode 1}}, {{.Nodes | .Service `eventing` | net 1}})"
+  args: "({{.ActiveDataNode 1}}, {{.ActiveEventingNode 1}})"
   wait: true
 
 -
@@ -375,11 +375,11 @@
 
 ###############  Swap Rebalance kv+eventing nodes ################
 - template: rebalance_swap
-  args: "{{.NthInActiveNode 0}},{{.NthDataNode 1}}, data"
+  args: "{{.NthInActiveNode 0}},{{.ActiveDataNode 1}}, data"
   wait: true
 
 - template: rebalance_swap
-  args: "{{.NthInActiveNode 0}},{{.Nodes | .Service `eventing` | net 1}}, eventing"
+  args: "{{.NthInActiveNode 0}},{{.ActiveEventingNode 1}}, eventing"
   wait: true
 
 -
@@ -403,20 +403,6 @@
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 4}} 2400 60 True"
   wait: true
 
-############### delete functions ################
--
-  image: sequoiatools/eventing
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_function2.json {{.RestUsername}} {{.RestPassword}} delete"
-  wait: true
--
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_function3.json {{.RestUsername}} {{.RestPassword}} delete"
-  wait: true
--
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_function4.json {{.RestUsername}} {{.RestPassword}} delete"
-  wait: true
--
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_function5.json {{.RestUsername}} {{.RestPassword}} delete"
-  wait: true
 
 -
   image: sequoiatools/cmd
