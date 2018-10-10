@@ -73,7 +73,7 @@
 -
   image: sequoiatools/gideon
   requires:  "{{eq true .DoOnce}}"
-  command: "kv --ops {{.Scale 1000000}} --create 40 --get 60 --sizes 64  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+  command: "kv --ops {{.Scale 1000000}} --create 100 --sizes 64  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
   duration: 180
 
 #################################################
@@ -116,7 +116,7 @@
 -
   image: sequoiatools/gideon
   requires:  "{{eq true .DoOnce}}"
-  command: "kv --ops {{.Scale 1000000}} --create 40 --get 60 --sizes 64   --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+  command: "kv --ops {{.Scale 1000000}} --create 100  --sizes 64   --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
   duration: 180
 
 ###############  Rebalance-out multiple kv nodes ################
@@ -149,7 +149,7 @@
 -
   image: sequoiatools/gideon
   requires:  "{{eq true .DoOnce}}"
-  command: "kv --ops {{.Scale 1000000}} --create 40 --get 60 --sizes 64  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+  command: "kv --ops {{.Scale 1000000}} --create 100  --sizes 64  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
   duration: 180
 
 ###############  Swap Rebalance kv ################
@@ -186,7 +186,7 @@
 -
   image: sequoiatools/gideon
   requires:  "{{eq true .DoOnce}}"
-  command: "kv --ops {{.Scale 1000000}} --create 40 --get 60 --sizes 64   --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+  command: "kv --ops {{.Scale 1000000}} --create 100  --sizes 64   --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
   duration: 180
 
 #################################################
@@ -226,7 +226,7 @@
 -
   image: sequoiatools/gideon
   requires:  "{{eq true .DoOnce}}"
-  command: "kv --ops {{.Scale 1000000}} --create 40 --get 60 --sizes 64   --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+  command: "kv --ops {{.Scale 1000000}} --create 100  --sizes 64   --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
   duration: 180
 
 ###############  Rebalance-out multiple eventing nodes ################
@@ -259,7 +259,7 @@
 -
   image: sequoiatools/gideon
   requires:  "{{eq true .DoOnce}}"
-  command: "kv --ops {{.Scale 1000000}} --create 40 --get 60 --sizes 64   --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+  command: "kv --ops {{.Scale 1000000}} --create 100  --sizes 64   --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
   duration: 180
 
 ###############  Swap Rebalance ################
@@ -296,7 +296,7 @@
 -
   image: sequoiatools/gideon
   requires:  "{{eq true .DoOnce}}"
-  command: "kv --ops {{.Scale 1000000}} --create 40 --get 60 --sizes 64   --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+  command: "kv --ops {{.Scale 1000000}} --create 100  --sizes 64   --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
   duration: 180
 
 #################################################
@@ -337,7 +337,7 @@
 -
   image: sequoiatools/gideon
   requires:  "{{eq true .DoOnce}}"
-  command: "kv --ops {{.Scale 1000000}} --create 40 --get 60 --sizes 64   --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+  command: "kv --ops {{.Scale 1000000}} --create 100  --sizes 64   --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
   duration: 180
 
 ###############  Rebalance-out  kv+eventing nodes ################
@@ -370,7 +370,7 @@
 -
   image: sequoiatools/gideon
   requires:  "{{eq true .DoOnce}}"
-  command: "kv --ops {{.Scale 1000000}} --create 40 --get 60 --sizes 64  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+  command: "kv --ops {{.Scale 1000000}} --create 100  --sizes 64  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
   duration: 180
 
 ###############  Swap Rebalance kv+eventing nodes ################
