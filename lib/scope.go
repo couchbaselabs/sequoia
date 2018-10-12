@@ -687,6 +687,9 @@ func (s *Scope) CreateBuckets() {
 				if bucket.Compression != "" {
 				    command = append(command,"--compression-mode", bucket.Compression)
 				}
+				if bucket.TTL != "" {
+				    command = append(command,"--max-ttl", bucket.TTL)
+				}
 
 				desc := "bucket create " + bucketName
 				task := ContainerTask{

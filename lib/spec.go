@@ -24,6 +24,7 @@ type BucketSpec struct {
 	DDocs     string
 	DDocSpecs []DDocSpec
 	Compression string
+	TTL        string
 }
 
 type ServerSpec struct {
