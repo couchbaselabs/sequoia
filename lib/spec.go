@@ -59,6 +59,7 @@ type ServerSpec struct {
 	NodeServices map[string][]string
 	Users        string
 	RbacSpecs    []RbacSpec
+	NumberOfBuckets string
 }
 
 type SyncGatewaySpec struct {

@@ -270,6 +270,31 @@ func (r *RestClient) JsonRequest(auth, restUrl string, v interface{}) {
 	}
 }
 
+//
+func (r *RestClient) JsonPostRequest(auth, restUrl, data string, v interface{}) {
+	// run curl container to make rest request
+	cmd := []string{"-u", auth, "-s", restUrl,"-d",data}
+	id, svcId := r.Cm.RunRestContainer(cmd)
+	//fmt.Println(MakeTaskMsg("appropriate/curl", id, cmd, false))
+	// convert logs to json
+	resp := r.Cm.GetLogs(id, "all")
+	parseErr := StringToJson(resp, &v)
+	// reset cache if we got a bad response
+	// as this indicates unstable cluster
+	if parseErr != nil {
+		r.resetCache()
+	}
+
+	// remove container
+	if r.Cm.ProviderType == "swarm" {
+		err := r.Cm.RemoveService(svcId)
+		logerr(err)
+	} else {
+		err := r.Cm.RemoveContainer(id)
+		logerr(err)
+	}
+}
+
 func (r *RestClient) cacheGet(ctx, key string) (interface{}, bool) {
 	cacheKey := fmt.Sprintf("%s/%s", ctx, key)
 	return r.nodeCache.Get(cacheKey)
@@ -278,4 +303,14 @@ func (r *RestClient) cacheGet(ctx, key string) (interface{}, bool) {
 func (r *RestClient) cacheSet(ctx, key string, val interface{}) {
 	cacheKey := fmt.Sprintf("%s/%s", ctx, key)
 	r.nodeCache.Set(cacheKey, val)
+}
+
+func (r *RestClient) updateNumberOfBucktes(numberOfBuckets string) {
+    host := r.GetOrchestrator()
+	url := r.Provider.GetRestUrl(host)
+	auth := r.GetAuth(host)
+	reqUrl := fmt.Sprintf("%s/internalSettings", url)
+	var s []string
+	data:="maxBucketCount="+numberOfBuckets
+	r.JsonPostRequest(auth, reqUrl, data, &s)
 }

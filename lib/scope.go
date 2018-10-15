@@ -650,6 +650,9 @@ func (s *Scope) CreateBuckets() {
 
 	var image = "sequoiatools/couchbase-cli"
 
+    if s.Spec.Servers[0].NumberOfBuckets !="" {
+        s.Rest.updateNumberOfBucktes(s.Spec.Servers[0].NumberOfBuckets)
+    }
 	// configure rebalance operation
 	operation := func(name string, server *ServerSpec) {
 
