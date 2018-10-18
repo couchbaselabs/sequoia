@@ -7,7 +7,7 @@ RUN git clone git://github.com/couchbase/libcouchbase.git && \
     mkdir libcouchbase/build
 
 WORKDIR libcouchbase/build
-RUN ../cmake/configure --prefix=/usr && \
+RUN ../cmake/configure -disable-couchbasemock --prefix=/usr && \
       make && \
       make install
 
