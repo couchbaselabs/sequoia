@@ -1,0 +1,171 @@
+---
+-
+  include: tests/templates/kv.yml, tests/templates/rebalance.yml, tests/templates/n1ql.yml
+
+######## runing constant ops #################
+-
+  image: sequoiatools/gideon
+  command: "kv --ops {{.Scale 100}} --create 100 --expire 80 --ttl 360  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 64 96 "
+- command: "kv --ops {{.Scale 100}} --create 100 --expire 80 --ttl 360  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}} --sizes 64 96 "
+- command: "kv --ops {{.Scale 100}} --create 100 --expire 80 --ttl 360  --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}} --sizes 64 96 "
+- command: "kv --ops {{.Scale 100}} --create 100 --expire 80 --ttl 360  --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}} --sizes 64 96 "
+- command: "kv --ops {{.Scale 100}} --create 100 --expire 80 --ttl 360  --hosts {{.Orchestrator}} --bucket {{.NthBucket 4}} --sizes 64 96 "
+- command: "kv --ops {{.Scale 100}} --create 100 --expire 80 --ttl 360  --hosts {{.Orchestrator}} --bucket {{.NthBucket 5}} --sizes 64 96 "
+- command: "kv --ops {{.Scale 100}} --create 100 --expire 80 --ttl 360  --hosts {{.Orchestrator}} --bucket {{.NthBucket 6}} --sizes 64 96 "
+- command: "kv --ops {{.Scale 100}} --create 100 --expire 80 --ttl 360  --hosts {{.Orchestrator}} --bucket {{.NthBucket 7}} --sizes 64 96 "
+- command: "kv --ops {{.Scale 100}} --create 100 --expire 80 --ttl 360  --hosts {{.Orchestrator}} --bucket {{.NthBucket 8}} --sizes 64 96 "
+- command: "kv --ops {{.Scale 100}} --create 100 --expire 80 --ttl 360  --hosts {{.Orchestrator}} --bucket {{.NthBucket 9}} --sizes 64 96 "
+- command: "kv --ops {{.Scale 100}} --create 100 --expire 80 --ttl 360  --hosts {{.Orchestrator}} --bucket {{.NthBucket 10}} --sizes 64 96 "
+- command: "kv --ops {{.Scale 100}} --create 100 --expire 80 --ttl 360  --hosts {{.Orchestrator}} --bucket {{.NthBucket 11}} --sizes 64 96 "
+- command: "kv --ops {{.Scale 100}} --create 100 --expire 80 --ttl 360  --hosts {{.Orchestrator}} --bucket {{.NthBucket 12}} --sizes 64 96 "
+- command: "kv --ops {{.Scale 100}} --create 100 --expire 80 --ttl 360  --hosts {{.Orchestrator}} --bucket {{.NthBucket 13}} --sizes 64 96 "
+- command: "kv --ops {{.Scale 100}} --create 100 --expire 80 --ttl 360  --hosts {{.Orchestrator}} --bucket {{.NthBucket 14}} --sizes 64 96 "
+- command: "kv --ops {{.Scale 100}} --create 100 --expire 80 --ttl 360  --hosts {{.Orchestrator}} --bucket {{.NthBucket 15}} --sizes 64 96 "
+- command: "kv --ops {{.Scale 100}} --create 100 --expire 80 --ttl 360  --hosts {{.Orchestrator}} --bucket {{.NthBucket 16}} --sizes 64 96 "
+- command: "kv --ops {{.Scale 100}} --create 100 --expire 80 --ttl 360  --hosts {{.Orchestrator}} --bucket {{.NthBucket 17}} --sizes 64 96 "
+- command: "kv --ops {{.Scale 100}} --create 100 --expire 80 --ttl 360  --hosts {{.Orchestrator}} --bucket {{.NthBucket 18}} --sizes 64 96 "
+- command: "kv --ops {{.Scale 100}} --create 100 --expire 80 --ttl 360  --hosts {{.Orchestrator}} --bucket {{.NthBucket 19}} --sizes 64 96 "
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "60"
+  wait: true
+
+
+################ create partition index on all buckets ##################
+- image: sequoiatools/cbq
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o2_result_rating on `{{.Bucket}}`(rating,result) partition by hash(rating) using GSI with {\"num_partition\":2}'"
+  wait: true
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o2_result_rating on `{{.NthBucket 1}}`(rating,result) partition by hash(rating) using GSI with {\"num_partition\":2}'"
+  wait: true
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o2_result_rating on `{{.NthBucket 2}}`(rating,result) partition by hash(rating) using GSI with {\"num_partition\":2}'"
+  wait: true
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o2_result_rating on `{{.NthBucket 3}}`(rating,result) partition by hash(rating) using GSI with {\"num_partition\":2}'"
+  wait: true
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o2_result_rating on `{{.NthBucket 4}}`(rating,result) partition by hash(rating) using GSI with {\"num_partition\":2}'"
+  wait: true
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o2_result_rating on `{{.NthBucket 5}}`(rating,result) partition by hash(rating) using GSI with {\"num_partition\":2}'"
+  wait: true
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o2_result_rating on `{{.NthBucket 6}}`(rating,result) partition by hash(rating) using GSI with {\"num_partition\":2}'"
+  wait: true
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o2_result_rating on `{{.NthBucket 7}}`(rating,result) partition by hash(rating) using GSI with {\"num_partition\":2}'"
+  wait: true
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o2_result_rating on `{{.NthBucket 8}}`(rating,result) partition by hash(rating) using GSI with {\"num_partition\":2}'"
+  wait: true
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o2_result_rating on `{{.NthBucket 9}}`(rating,result) partition by hash(rating) using GSI with {\"num_partition\":2}'"
+  wait: true
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o2_result_rating on `{{.NthBucket 10}}`(rating,result) partition by hash(rating) using GSI with {\"num_partition\":2}'"
+  wait: true
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o2_result_rating on `{{.NthBucket 11}}`(rating,result) partition by hash(rating) using GSI with {\"num_partition\":2}'"
+  wait: true
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o2_result_rating on `{{.NthBucket 12}}`(rating,result) partition by hash(rating) using GSI with {\"num_partition\":2}'"
+  wait: true
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o2_result_rating on `{{.NthBucket 13}}`(rating,result) partition by hash(rating) using GSI with {\"num_partition\":2}'"
+  wait: true
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o2_result_rating on `{{.NthBucket 14}}`(rating,result) partition by hash(rating) using GSI with {\"num_partition\":2}'"
+  wait: true
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o2_result_rating on `{{.NthBucket 15}}`(rating,result) partition by hash(rating) using GSI with {\"num_partition\":2}'"
+  wait: true
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o2_result_rating on `{{.NthBucket 16}}`(rating,result) partition by hash(rating) using GSI with {\"num_partition\":2}'"
+  wait: true
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o2_result_rating on `{{.NthBucket 17}}`(rating,result) partition by hash(rating) using GSI with {\"num_partition\":2}'"
+  wait: true
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o2_result_rating on `{{.NthBucket 18}}`(rating,result) partition by hash(rating) using GSI with {\"num_partition\":2}'"
+  wait: true
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index o2_result_rating on `{{.NthBucket 19}}`(rating,result) partition by hash(rating) using GSI with {\"num_partition\":2}'"
+  wait: true
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "60"
+  wait: true
+
+################## run 1 query/sec on all th buckets ######################
+- template: attack_query
+  args: "0, 1, {{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}, 'select rating,result from `{{.Bucket}}` where result is not null LIMIT 500'"
+- args: "0, 1, {{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}, 'select rating,result from `{{.NthBucket 1}}` where result is not null LIMIT 500'"
+- args: "0, 1, {{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}, 'select rating,result from `{{.NthBucket 2}}` where result is not null LIMIT 500'"
+- args: "0, 1, {{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}, 'select rating,result from `{{.NthBucket 3}}` where result is not null LIMIT 500'"
+- args: "0, 1, {{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}, 'select rating,result from `{{.NthBucket 4}}` where result is not null LIMIT 500'"
+- args: "0, 1, {{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}, 'select rating,result from `{{.NthBucket 5}}` where result is not null LIMIT 500'"
+- args: "0, 1, {{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}, 'select rating,result from `{{.NthBucket 6}}` where result is not null LIMIT 500'"
+- args: "0, 1, {{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}, 'select rating,result from `{{.NthBucket 7}}` where result is not null LIMIT 500'"
+- args: "0, 1, {{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}, 'select rating,result from `{{.NthBucket 8}}` where result is not null LIMIT 500'"
+- args: "0, 1, {{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}, 'select rating,result from `{{.NthBucket 9}}` where result is not null LIMIT 500'"
+- args: "0, 1, {{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}, 'select rating,result from `{{.NthBucket 10}}` where result is not null LIMIT 500'"
+- args: "0, 1, {{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}, 'select rating,result from `{{.NthBucket 11}}` where result is not null LIMIT 500'"
+- args: "0, 1, {{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}, 'select rating,result from `{{.NthBucket 12}}` where result is not null LIMIT 500'"
+- args: "0, 1, {{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}, 'select rating,result from `{{.NthBucket 13}}` where result is not null LIMIT 500'"
+- args: "0, 1, {{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}, 'select rating,result from `{{.NthBucket 14}}` where result is not null LIMIT 500'"
+- args: "0, 1, {{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}, 'select rating,result from `{{.NthBucket 15}}` where result is not null LIMIT 500'"
+- args: "0, 1, {{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}, 'select rating,result from `{{.NthBucket 16}}` where result is not null LIMIT 500'"
+- args: "0, 1, {{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}, 'select rating,result from `{{.NthBucket 17}}` where result is not null LIMIT 500'"
+- args: "0, 1, {{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}, 'select rating,result from `{{.NthBucket 18}}` where result is not null LIMIT 500'"
+- args: "0, 1, {{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}, 'select rating,result from `{{.NthBucket 19}}` where result is not null LIMIT 500'"
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+################  Rebalance-in single data node ################
+- template: add_node
+  args: "{{.InActiveNode}}"
+- template: rebalance
+  wait: true
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+
+################  Rebalance-out single data node ################
+- template: rebalance_out
+  args: "{{.ActiveDataNode 1}}"
+  wait: true
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+###############  Swap Rebalance ################
+- template: rebalance_swap
+  args: "{{.InActiveNode}},{{.ActiveDataNode 1}}"
+  wait: true
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+######### drop all the indexes ################
+- template: cbq
+  args: "'drop index `{{.Bucket}}`.o2_result_rating'"
+- args: "'drop index `{{.NthBucket 1}}`.o2_result_rating'"
+- args: "'drop index `{{.NthBucket 2}}`.o2_result_rating'"
+- args: "'drop index `{{.NthBucket 3}}`.o2_result_rating'"
+- args: "'drop index `{{.NthBucket 4}}`.o2_result_rating'"
+- args: "'drop index `{{.NthBucket 5}}`.o2_result_rating'"
+- args: "'drop index `{{.NthBucket 6}}`.o2_result_rating'"
+- args: "'drop index `{{.NthBucket 7}}`.o2_result_rating'"
+- args: "'drop index `{{.NthBucket 8}}`.o2_result_rating'"
+- args: "'drop index `{{.NthBucket 9}}`.o2_result_rating'"
+- args: "'drop index `{{.NthBucket 10}}`.o2_result_rating'"
+- args: "'drop index `{{.NthBucket 11}}`.o2_result_rating'"
+- args: "'drop index `{{.NthBucket 12}}`.o2_result_rating'"
+- args: "'drop index `{{.NthBucket 13}}`.o2_result_rating'"
+- args: "'drop index `{{.NthBucket 14}}`.o2_result_rating'"
+- args: "'drop index `{{.NthBucket 15}}`.o2_result_rating'"
+- args: "'drop index `{{.NthBucket 16}}`.o2_result_rating'"
+- args: "'drop index `{{.NthBucket 17}}`.o2_result_rating'"
+- args: "'drop index `{{.NthBucket 18}}`.o2_result_rating'"
+- args: "'drop index `{{.NthBucket 19}}`.o2_result_rating'"
+  wait: true

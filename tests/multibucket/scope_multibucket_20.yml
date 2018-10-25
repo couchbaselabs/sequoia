@@ -1,0 +1,127 @@
+---
+users:
+  -
+      name: bucket_op-1
+      password: password
+      roles: admin
+      auth_domain: local
+  -
+      name: bucket_op-2
+      password: password
+      roles: admin
+      auth_domain: local
+  -
+      name: bucket_op-3
+      password: password
+      roles: admin
+      auth_domain: local
+  -
+      name: bucket_op-4
+      password: password
+      roles: admin
+      auth_domain: local
+  -
+      name: bucket_op-5
+      password: password
+      roles: admin
+      auth_domain: local
+  -
+      name: bucket_op-6
+      password: password
+      roles: admin
+      auth_domain: local
+  -
+      name: bucket_op-7
+      password: password
+      roles: admin
+      auth_domain: local
+  -
+      name: bucket_op-8
+      password: password
+      roles: admin
+      auth_domain: local
+  -
+      name: bucket_op-9
+      password: password
+      roles: admin
+      auth_domain: local
+  -
+      name: bucket_op-10
+      password: password
+      roles: admin
+      auth_domain: local
+  -
+      name: bucket_op-11
+      password: password
+      roles: admin
+      auth_domain: local
+  -
+      name: bucket_op-12
+      password: password
+      roles: admin
+      auth_domain: local
+  -
+      name: bucket_op-13
+      password: password
+      roles: admin
+      auth_domain: local
+  -
+      name: bucket_op-14
+      password: password
+      roles: admin
+      auth_domain: local
+  -
+      name: bucket_op-15
+      password: password
+      roles: admin
+      auth_domain: local
+  -
+      name: bucket_op-16
+      password: password
+      roles: admin
+      auth_domain: local
+  -
+      name: bucket_op-17
+      password: password
+      roles: admin
+      auth_domain: local
+  -
+      name: bucket_op-18
+      password: password
+      roles: admin
+      auth_domain: local
+  -
+      name: bucket_op-19
+      password: password
+      roles: admin
+      auth_domain: local
+  -
+      name: bucket_op-20
+      password: password
+      roles: admin
+      auth_domain: local
+
+buckets:
+  -
+      name: bucket_op
+      ram: 4%
+      compression: off
+      count: 20
+
+servers: # each server tag represents a cluster
+  -
+      name: local
+      count: 13
+      ram: 95%
+      init_nodes: 12
+      data_path: "/data"
+      index_pata: "/data"
+      services:
+        index: 2
+        query: 2
+      rest_port: 8091
+      rest_username: Administrator
+      rest_password: password
+      buckets: bucket_op
+      users: bucket_op-1,bucket_op-2,bucket_op-3,bucket_op-4,bucket_op-5,bucket_op-6,bucket_op-7,bucket_op-8,bucket_op-9,bucket_op-10,bucket_op-11,bucket_op-12,bucket_op-13,bucket_op-14,bucket_op-15,bucket_op-16,bucket_op-17,bucket_op-18,bucket_op-19,bucket_op-20
+      numberofbuckets: 20
