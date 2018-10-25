@@ -1,8 +1,6 @@
----
--
-  include: tests/templates/kv.yml, tests/templates/rebalance.yml, tests/templates/n1ql.yml
+- include: tests/templates/kv.yml,tests/templates/n1ql.yml, tests/templates/rebalance.yml
 
-######## runing constant ops #################
+####### runing constant ops #################
 -
   image: sequoiatools/gideon
   command: "kv --ops {{.Scale 100}} --create 100 --expire 80 --ttl 360  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 64 96 "
@@ -29,7 +27,7 @@
 -
   image: sequoiatools/cmd
   entrypoint: sleep
-  command: "60"
+  command: "300"
   wait: true
 
 
@@ -79,36 +77,56 @@
 -
   image: sequoiatools/cmd
   entrypoint: sleep
-  command: "60"
+  command: "180"
   wait: true
 
 ################## run 1 query/sec on all th buckets ######################
-- template: attack_query
-  args: "0, 1, {{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}, 'select rating,result from `{{.Bucket}}` where result is not null LIMIT 500'"
-- args: "0, 1, {{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}, 'select rating,result from `{{.NthBucket 1}}` where result is not null LIMIT 500'"
-- args: "0, 1, {{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}, 'select rating,result from `{{.NthBucket 2}}` where result is not null LIMIT 500'"
-- args: "0, 1, {{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}, 'select rating,result from `{{.NthBucket 3}}` where result is not null LIMIT 500'"
-- args: "0, 1, {{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}, 'select rating,result from `{{.NthBucket 4}}` where result is not null LIMIT 500'"
-- args: "0, 1, {{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}, 'select rating,result from `{{.NthBucket 5}}` where result is not null LIMIT 500'"
-- args: "0, 1, {{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}, 'select rating,result from `{{.NthBucket 6}}` where result is not null LIMIT 500'"
-- args: "0, 1, {{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}, 'select rating,result from `{{.NthBucket 7}}` where result is not null LIMIT 500'"
-- args: "0, 1, {{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}, 'select rating,result from `{{.NthBucket 8}}` where result is not null LIMIT 500'"
-- args: "0, 1, {{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}, 'select rating,result from `{{.NthBucket 9}}` where result is not null LIMIT 500'"
-- args: "0, 1, {{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}, 'select rating,result from `{{.NthBucket 10}}` where result is not null LIMIT 500'"
-- args: "0, 1, {{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}, 'select rating,result from `{{.NthBucket 11}}` where result is not null LIMIT 500'"
-- args: "0, 1, {{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}, 'select rating,result from `{{.NthBucket 12}}` where result is not null LIMIT 500'"
-- args: "0, 1, {{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}, 'select rating,result from `{{.NthBucket 13}}` where result is not null LIMIT 500'"
-- args: "0, 1, {{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}, 'select rating,result from `{{.NthBucket 14}}` where result is not null LIMIT 500'"
-- args: "0, 1, {{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}, 'select rating,result from `{{.NthBucket 15}}` where result is not null LIMIT 500'"
-- args: "0, 1, {{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}, 'select rating,result from `{{.NthBucket 16}}` where result is not null LIMIT 500'"
-- args: "0, 1, {{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}, 'select rating,result from `{{.NthBucket 17}}` where result is not null LIMIT 500'"
-- args: "0, 1, {{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}, 'select rating,result from `{{.NthBucket 18}}` where result is not null LIMIT 500'"
-- args: "0, 1, {{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}, 'select rating,result from `{{.NthBucket 19}}` where result is not null LIMIT 500'"
+- image: sequoiatools/cbdozer
+  command: "-method POST -duration 0 -rate 1 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.NthQueryNode 0}}:{{.QueryPort}}/query/service
+    -body 'select rating,result from `{{.Bucket}}` where result is not null and rating between 500 and 520 limit 10'"
+- command: "-method POST -duration 0 -rate 1 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.NthQueryNode 0}}:{{.QueryPort}}/query/service
+        -body 'select rating,result from `{{.NthBucket 1}}` where result is not null and rating between 500 and 520 limit 10'"
+- command: "-method POST -duration 0 -rate 1 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.NthQueryNode 0}}:{{.QueryPort}}/query/service
+        -body 'select rating,result from `{{.NthBucket 2}}` where result is not null and rating between 500 and 520 limit 10'"
+- command: "-method POST -duration 0 -rate 1 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.NthQueryNode 0}}:{{.QueryPort}}/query/service
+        -body 'select rating,result from `{{.NthBucket 3}}` where result is not null and rating between 500 and 520 limit 10'"
+- command: "-method POST -duration 0 -rate 1 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.NthQueryNode 0}}:{{.QueryPort}}/query/service
+        -body 'select rating,result from `{{.NthBucket 4}}` where result is not null and rating between 500 and 520 limit 10'"
+- command: "-method POST -duration 0 -rate 1 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.NthQueryNode 0}}:{{.QueryPort}}/query/service
+        -body 'select rating,result from `{{.NthBucket 5}}` where result is not null and rating between 500 and 520 limit 10'"
+- command: "-method POST -duration 0 -rate 1 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.NthQueryNode 0}}:{{.QueryPort}}/query/service
+        -body 'select rating,result from `{{.NthBucket 6}}` where result is not null and rating between 500 and 520 limit 10'"
+- command: "-method POST -duration 0 -rate 1 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.NthQueryNode 0}}:{{.QueryPort}}/query/service
+        -body 'select rating,result from `{{.NthBucket 7}}` where result is not null and rating between 500 and 520 limit 10'"
+- command: "-method POST -duration 0 -rate 1 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.NthQueryNode 0}}:{{.QueryPort}}/query/service
+        -body 'select rating,result from `{{.NthBucket 8}}` where result is not null and rating between 500 and 520 limit 10'"
+- command: "-method POST -duration 0 -rate 1 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.NthQueryNode 0}}:{{.QueryPort}}/query/service
+        -body 'select rating,result from `{{.NthBucket 9}}` where result is not null and rating between 500 and 520 limit 10'"
+- command: "-method POST -duration 0 -rate 1 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.NthQueryNode 1}}:{{.QueryPort}}/query/service
+        -body 'select rating,result from `{{.NthBucket 10}}` where result is not null and rating between 500 and 520 limit 10'"
+- command: "-method POST -duration 0 -rate 1 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.NthQueryNode 1}}:{{.QueryPort}}/query/service
+        -body 'select rating,result from `{{.NthBucket 11}}` where result is not null and rating between 500 and 520 limit 10'"
+- command: "-method POST -duration 0 -rate 1 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.NthQueryNode 1}}:{{.QueryPort}}/query/service
+        -body 'select rating,result from `{{.NthBucket 12}}` where result is not null and rating between 500 and 520 limit 10'"
+- command: "-method POST -duration 0 -rate 1 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.NthQueryNode 1}}:{{.QueryPort}}/query/service
+        -body 'select rating,result from `{{.NthBucket 13}}` where result is not null and rating between 500 and 520 limit 10'"
+- command: "-method POST -duration 0 -rate 1 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.NthQueryNode 1}}:{{.QueryPort}}/query/service
+        -body 'select rating,result from `{{.NthBucket 14}}` where result is not null and rating between 500 and 520 limit 10'"
+- command: "-method POST -duration 0 -rate 1 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.NthQueryNode 1}}:{{.QueryPort}}/query/service
+        -body 'select rating,result from `{{.NthBucket 15}}` where result is not null and rating between 500 and 520 limit 10'"
+- command: "-method POST -duration 0 -rate 1 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.NthQueryNode 1}}:{{.QueryPort}}/query/service
+        -body 'select rating,result from `{{.NthBucket 16}}` where result is not null and rating between 500 and 520 limit 10'"
+- command: "-method POST -duration 0 -rate 1 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.NthQueryNode 1}}:{{.QueryPort}}/query/service
+        -body 'select rating,result from `{{.NthBucket 17}}` where result is not null and rating between 500 and 520 limit 10'"
+- command: "-method POST -duration 0 -rate 1 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.NthQueryNode 1}}:{{.QueryPort}}/query/service
+        -body 'select rating,result from `{{.NthBucket 18}}` where result is not null and rating between 500 and 520 limit 10'"
+- command: "-method POST -duration 0 -rate 1 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.NthQueryNode 1}}:{{.QueryPort}}/query/service
+        -body 'select rating,result from `{{.NthBucket 19}}` where result is not null and rating between 500 and 520 limit 10'"
 
 -
   image: sequoiatools/cmd
   entrypoint: sleep
-  command: "300"
+  command: "600"
   wait: true
 
 ################  Rebalance-in single data node ################
@@ -120,7 +138,7 @@
 -
   image: sequoiatools/cmd
   entrypoint: sleep
-  command: "300"
+  command: "600"
   wait: true
 
 
@@ -132,7 +150,7 @@
 -
   image: sequoiatools/cmd
   entrypoint: sleep
-  command: "300"
+  command: "600"
   wait: true
 
 ###############  Swap Rebalance ################
