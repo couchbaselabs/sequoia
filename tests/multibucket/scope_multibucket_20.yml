@@ -111,9 +111,9 @@ buckets:
 servers: # each server tag represents a cluster
   -
       name: local
-      count: 13
+      count: 15
       ram: 95%
-      init_nodes: 12
+      init_nodes: 14
       data_path: "/data"
       index_pata: "/data"
       services:
