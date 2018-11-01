@@ -115,7 +115,7 @@ servers: # each server tag represents a cluster
       ram: 95%
       init_nodes: 13
       data_path: "/data"
-      index_pata: "/data"
+      index_path: "/data"
       services:
         index: 2
         query: 2
