@@ -16,6 +16,9 @@ RUN git clone git://github.com/couchbase/testrunner.git
 WORKDIR testrunner
 ARG BRANCH=master
 RUN git checkout $BRANCH
+RUN git pull origin $BRANCH
+RUN git fetch
+RUN git reset --hard origin/$BRANCH
 
 # install python deps
 RUN pip2 install --upgrade packaging appdirs
