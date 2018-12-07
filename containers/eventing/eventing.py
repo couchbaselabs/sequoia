@@ -51,8 +51,8 @@ class EventingOperations():
                 print status, content, header
                 raise Exception("Failed to deploy application")
 
-            self.check_deployment_status(appname)
-
+            #self.check_deployment_status(appname)
+            self.check_handler_status(appname, "deployed")
 
         elif self.operation == "deploy":
             status, content, header = self.deploy(appname)
@@ -60,7 +60,7 @@ class EventingOperations():
                 print status, content, header
                 raise Exception("Failed to deploy application")
 
-            self.check_deployment_status(appname)
+            self.check_handler_status(appname, "deployed")
 
         elif self.operation == "undeploy":
 
@@ -73,58 +73,29 @@ class EventingOperations():
                 print status, content, header
                 raise Exception("Failed to undeploy application")
 
-            self.check_undeployment_status(appname)
+            self.check_handler_status(appname, "undeployed")
 
         elif self.operation == "pause":
-            eventing_endpoint = "saveAppTempStore"
-            method = "POST"
-            app_definition['settings']['processing_status'] = False
-            app_definition['settings']['deployment_status'] = True
-            status, content, header = self._http_request(appname, method,
-                                                         eventing_endpoint,
-                                                         app_definition)
+            status, content, header = self.pause(appname)
             if not status:
                 print status, content, header
-                raise Exception("Failed to save application")
-
-            eventing_endpoint = "setSettings"
-            status, content, header = self._http_request(appname, method,
-                                                         eventing_endpoint,
-                                                         app_definition[
-                                                             'settings'])
-            if not status:
-                print status, content, header
-                raise Exception("Failed to pause application")
+                raise Exception("Failed to deploy application")
+            self.check_handler_status(appname,"paused")
 
         elif self.operation == "resume":
-            eventing_endpoint = "saveAppTempStore"
-            method = "POST"
-            app_definition['settings']['processing_status'] = True
-            app_definition['settings']['deployment_status'] = True
-            status, content, header = self._http_request(appname, method,
-                                                         eventing_endpoint,
-                                                         app_definition)
+            status, content, header = self.resume(appname)
             if not status:
                 print status, content, header
-                raise Exception("Failed to save application")
+                raise Exception("Failed to deploy application")
 
-            eventing_endpoint = "setSettings"
-            status, content, header = self._http_request(appname, method,
-                                                         eventing_endpoint,
-                                                         app_definition[
-                                                             'settings'])
-            if not status:
-                print status, content, header
-                raise Exception("Failed to resume application")
+            self.check_handler_status(appname, "deployed")
 
         elif self.operation == "delete":
-            eventing_endpoint = "deleteAppTempStore"
-            method = "DELETE"
-
             status, content, header = self.delete(appname)
             if not status:
                 print status, content, header
                 raise Exception("Failed to delete application")
+            self.is_handler_present(appname)
 
         else:
             raise Exception("Invalid operation")
@@ -276,6 +247,77 @@ class EventingOperations():
         else:
             return False, content, response
 
+    def pause(self,appname):
+        authorization = base64.encodestring('%s:%s' % (self.username, self.password))
+
+        headers = {'Content-type': 'application/json', 'Authorization': 'Basic %s' % authorization}
+
+        url = "http://" + self.hostname + ":" + self.port + "/api/v1/functions/" + appname +"/settings"
+        body="{\"deployment_status\":true,\"processing_status\":false}"
+        response, content = httplib2.Http(timeout=120).request(uri=url, method="POST", headers=headers,body=body)
+        print content, response
+
+        if response['status'] in ['200', '201', '202']:
+            return True, content, response
+        else:
+            return False, content, response
+
+    def resume(self,appname):
+        authorization = base64.encodestring('%s:%s' % (self.username, self.password))
+
+        headers = {'Content-type': 'application/json', 'Authorization': 'Basic %s' % authorization}
+
+        url = "http://" + self.hostname + ":" + self.port + "/api/v1/functions/" + appname +"/settings"
+        body="{\"deployment_status\":true,\"processing_status\":true}"
+        response, content = httplib2.Http(timeout=120).request(uri=url, method="POST", headers=headers,body=body)
+        print content, response
+
+        if response['status'] in ['200', '201', '202']:
+            return True, content, response
+        else:
+            return False, content, response
+
+    def check_handler_status(self,appname,app_status):
+        authorization = base64.encodestring('%s:%s' % (self.username, self.password))
+
+        headers = {'Content-type': 'application/json', 'Authorization': 'Basic %s' % authorization}
+        url = "http://" + self.hostname + ":8091" + "/_p/event/api/v1/status"
+        method="GET"
+
+        response, content = httplib2.Http(timeout=120).request(uri=url, method=method, headers=headers)
+        result=json.loads(content)
+        status=response['status']
+        if not status:
+            print status, result, headers
+            raise Exception("Failed to get deployed apps")
+        composite_status = None
+        while composite_status != app_status:
+            time.sleep(10)
+            response, content = httplib2.Http(timeout=120).request(uri=url, method=method, headers=headers)
+            result = json.loads(content)
+            for i in range(len(result['apps'])):
+                if result['apps'][i]['name']== appname:
+                    composite_status = result['apps'][i]['composite_status']
+
+    def is_handler_present(self,appname):
+        authorization = base64.encodestring('%s:%s' % (self.username, self.password))
+
+        headers = {'Content-type': 'application/json', 'Authorization': 'Basic %s' % authorization}
+        url = "http://" + self.hostname + ":8091" + "/_p/event/api/v1/status"
+        method="GET"
+
+        response, content = httplib2.Http(timeout=120).request(uri=url, method=method, headers=headers)
+        result=json.loads(content)
+        status=response['status']
+        if not status:
+            print status, result, headers
+            raise Exception("Failed to get deployed apps")
+        while appname in result:
+            time.sleep(10)
+            response, content = httplib2.Http(timeout=120).request(uri=url, method=method, headers=headers)
+            result = json.loads(content)
+        return False
+
     def create_deploy(self,app_definition):
         app_definition['settings']['processing_status'] = True
         app_definition['settings']['deployment_status'] = True
@@ -284,7 +326,7 @@ class EventingOperations():
         headers = {'Content-type': 'application/json', 'Authorization': 'Basic %s' % authorization}
         url = "http://" + self.hostname + ":8096" + "/api/v1/functions/"
         func=[]
-        func[0]=app_definition
+        func.append(app_definition)
         body=json.dumps(func).encode("ascii","ignore")
         response, content = httplib2.Http(timeout=120).request(uri=url, method="POST", headers=headers, body=body)
         print content, response
