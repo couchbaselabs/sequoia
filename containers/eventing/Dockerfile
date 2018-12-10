@@ -31,5 +31,6 @@ COPY doc_timer_op.json /doc_timer_op.json
 COPY bucket_op_complex_function_integration.json /bucket_op_complex_function_integration.json
 COPY bucket_op_function_integration.json /bucket_op_function_integration.json
 COPY alice/* alice/
+COPY mad-hatter/* mad-hatter/
 
 ENTRYPOINT ["python"]

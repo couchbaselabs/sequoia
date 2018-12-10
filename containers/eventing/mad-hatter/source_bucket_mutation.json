@@ -1,0 +1,29 @@
+{
+    "appcode": "function OnUpdate(doc,meta) {\n   var src_doc= doc;\n   if(src_doc[\"update_field\"]==null){\n    src_doc[\"update_field\"]=1;\n   }\n   else{\n    src_doc[\"update_field\"]=src_doc[\"update_field\"]+1;\n   }    \n   src_doc[meta.id]=src_doc;\n}\n\nfunction OnDelete(meta){\n    src_doc[meta.id]=\"doc deleted\";\n    \n}", 
+    "appname": "sbm", 
+    "depcfg": {
+      "buckets": [
+        {
+          "alias": "src_doc",
+          "bucket_name": "source_op",
+          "access": "rw"
+        }
+      ], 
+      "metadata_bucket": "metadata",
+      "source_bucket": "source_op"
+    }, 
+    "function_id": 0, 
+    "function_instance_id": "", 
+    "id": 0, 
+    "settings": {
+      "dcp_stream_boundary": "from_now",
+      "deployment_status": false,
+      "log_level": "INFO",
+      "processing_status": false,
+      "execution_timeout": 60,
+      "deadline_timeout": 62,
+      "vb_ownership_giveup_routine_count": 5,
+      "vb_ownership_takeover_routine_count": 5
+    }
+}
+
