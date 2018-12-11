@@ -1,10 +1,10 @@
 {
-    "appcode": "function OnUpdate(doc,meta) {\n   var src_doc= doc;\n   if(src_doc[\"update_field\"]==null){\n    src_doc[\"update_field\"]=1;\n   }\n   else{\n    src_doc[\"update_field\"]=src_doc[\"update_field\"]+1;\n   }    \n   src_doc[meta.id]=src_doc;\n}\n\nfunction OnDelete(meta){\n    src_doc[meta.id]=\"doc deleted\";\n    \n}", 
+    "appcode": "function OnUpdate(doc,meta) {\n   var src_doc= doc;\n   if(src_doc[\"update_field\"]==null){\n    src_doc[\"update_field\"]=1;\n   }\n   else{\n    src_doc[\"update_field\"]=src_doc[\"update_field\"]+1;\n   }    \n   src_bucket[meta.id]=src_doc;\n}\n\nfunction OnDelete(meta){\n    src_bucket[meta.id]=\"doc deleted\";\n    \n}",
     "appname": "sbm", 
     "depcfg": {
       "buckets": [
         {
-          "alias": "src_doc",
+          "alias": "src_bucket",
           "bucket_name": "source_op",
           "access": "rw"
         }
