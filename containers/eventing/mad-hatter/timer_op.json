@@ -1,0 +1,27 @@
+ {
+    "appcode": "function OnUpdate(doc, meta) {\n    var expiry = new Date();\n    expiry.setSeconds(expiry.getSeconds() + 30);\n    if (meta.id.includes(\"_\")){\n        var res = meta.id.split(\"_\")[1];\n        if(parseInt(res)%5==0){\n            var context = {docID : meta.id, random_text : 'e6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0'};\n            createTimer(timerCallback,  expiry, meta.id, context);\n            }\n    }\n}\nfunction OnDelete(meta) {\n    var expiry = new Date();\n    expiry.setSeconds(expiry.getSeconds() + 30);\n    if (meta.id.includes(\"_\")){\n        var res = meta.id.split(\"_\")[1];\n        if(parseInt(res)%5==0){\n            var context = {docID : meta.id};\n            createTimer(NDtimerCallback,  expiry, meta.id, context);\n        }\n    }    \n}\nfunction NDtimerCallback(context) {\n    delete dst_bucket[context.docID];\n}\nfunction timerCallback(context) {\n    dst_bucket[context.docID] = 'from timerCallback';\n}",
+    "depcfg": {
+      "buckets": [
+        {
+          "alias": "dst_bucket",
+          "bucket_name": "timer_op_dst"
+        }
+      ],
+      "metadata_bucket": "metadata",
+      "source_bucket": "timer_op"
+    },
+    "version": "evt-6.0.0-1419-ee",
+    "appname": "timer_op",
+    "settings": {
+      "cleanup_timers": false,
+      "dcp_stream_boundary": "everything",
+      "deadline_timeout": 62,
+      "deployment_status": false,
+      "description": "",
+      "execution_timeout": 60,
+      "log_level": "INFO",
+      "processing_status": false,
+      "user_prefix": "eventing",
+      "worker_count": 3
+    }
+  }
