@@ -1,0 +1,160 @@
+-
+  include: tests/templates/kv.yml, tests/templates/vegeta.yml, tests/templates/analytics.yml
+
+############### data loading ################
+-
+  image: sequoiatools/gideon
+  requires:  "{{eq true .DoOnce}}"
+  command: "kv --ops {{.Scale 1000}} --create 100  --expire 100 --ttl 2700  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+  duration: 60
+-
+  command: "kv --ops {{.Scale 1000}} --create 100 --sizes 64 96   --expire 100 --ttl 2700  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
+  duration: 60
+-
+  command: "kv --ops {{.Scale 1000}} --create 100 --sizes 64 96    --expire 100 --ttl 2700  --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}}"
+  duration: 60
+-
+  command: "kv --ops {{.Scale 1000}} --create 100 --sizes 512   --expire 100 --ttl 2700  --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}}"
+  duration: 60
+  wait: true
+
+###############  create analytics dataset and indexes ################
+- template: cbq
+#- template: analytics_rest
+  args: "create dataset ds1 on `{{.Bucket}}`;"
+- args: "create dataset ds2 on `{{.NthBucket 1}}`;"
+- args: "create dataset ds3 on `{{.NthBucket 2}}`;"
+- args: "create dataset ds4 on `{{.NthBucket 3}}`;"
+- args: "create index idx_result1 on ds1\\(result:string);"
+- args: "create index idx_result2 on ds2\\(result:string);"
+  wait: true
+
+############### run mutations ################
+-
+  image: sequoiatools/gideon
+  command: "kv --ops {{.Scale 1000}} --create 50 --get 30 --delete 20 --expire 100 --ttl 2700 --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+  alias: GideonContainer1
+-
+  command: "kv --ops {{.Scale 1000}} --create 70 --get 10 --delete 20 --sizes 64 96 --expire 100 --ttl 2700  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
+  alias: GideonContainer2
+-
+  command: "kv --ops {{.Scale 1000}} --create 40 --get 40 --delete 20 --sizes 64 96 --expire 100 --ttl 2700  --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}}"
+  alias: GideonContainer3
+-
+  command: "kv --ops {{.Scale 500}} --create 60 --get 20 --delete 20 --sizes 512 --expire 100 --ttl 2700  --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}}"
+  alias: GideonContainer4
+
+# ###############  connect queries ################
+- template: cbq
+  args: "connect link Local;"
+  wait: true
+
+
+# ###############sleep for 10 mins ###############
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+############### run queries ################
+-
+  image: sequoiatools/queryapp
+  command: "-J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.5.6/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.ActiveAnalyticsNode 0}} --port {{.AnalyticsPort}} --duration 86400 --bucket {{.Bucket}} --querycount 240"
+
+# ###############  disconnect queries ################
+- template: cbq
+  args: "disconnect link Local;"
+  wait: true
+
+# ###############sleep for 10 mins ###############
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+
+# ###############  connect queries ################
+- template: cbq
+  args: "connect link Local;"
+  wait: true
+
+
+# ###############sleep for 10 mins ###############
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+
+# ###############sleep for 10 mins ###############
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# stop gideon data loading
+-
+  client:
+    op: rm
+    container: GideonContainer1
+-
+  client:
+    op: rm
+    container: GideonContainer2
+-
+  client:
+    op: rm
+    container: GideonContainer3
+-
+  client:
+    op: rm
+    container: GideonContainer4
+
+
+# ###############sleep for 3 mins ###############
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "180"
+  wait: true
+
+############### Flush Bucket #################
+-
+  image: sequoiatools/couchbase-cli
+  command:  "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 1}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+
+# ###############sleep for 3 mins ###############
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "180"
+  wait: true
+
+# ###############  disconnect queries ################
+- template: cbq
+  args: "disconnect link Local;"
+  wait: true
+
+
+########### drop bucket , datasets and indexes #######
+- template: cbq
+  args: "drop index ds1.idx_result1;"
+- args: "drop index ds2.idx_result2;"
+- args: "drop dataset ds1;"
+- args: "drop dataset ds2;"
+- args: "drop dataset ds3;"
+- args: "drop dataset ds4;"
+  wait: true
+
+
+# ###############sleep for 5 mins ###############
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
