@@ -92,15 +92,18 @@ buckets:
   -
       name: WAREHOUSE
       ram: 10%
+      ttl: 300
   -
       name: DISTRICT
       ram: 5%
   -
       name: HISTORY
       ram: 2%
+      ttl: 180
   -
       name: ITEM
       ram: 13%
+      ttl: 180
   -
       name: remote
       ram: 80%
