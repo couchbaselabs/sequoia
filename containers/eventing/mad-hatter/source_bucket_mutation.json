@@ -16,14 +16,12 @@
     "function_instance_id": "", 
     "id": 0, 
     "settings": {
-      "dcp_stream_boundary": "from_now",
+      "dcp_stream_boundary": "everything",
       "deployment_status": false,
       "log_level": "INFO",
       "processing_status": false,
       "execution_timeout": 60,
-      "deadline_timeout": 62,
-      "vb_ownership_giveup_routine_count": 5,
-      "vb_ownership_takeover_routine_count": 5
+      "deadline_timeout": 62
     }
 }
 

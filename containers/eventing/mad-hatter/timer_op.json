@@ -13,15 +13,11 @@
     "version": "evt-6.0.0-1419-ee",
     "appname": "timer_op",
     "settings": {
-      "cleanup_timers": false,
       "dcp_stream_boundary": "everything",
-      "deadline_timeout": 62,
       "deployment_status": false,
-      "description": "",
-      "execution_timeout": 60,
       "log_level": "INFO",
       "processing_status": false,
-      "user_prefix": "eventing",
-      "worker_count": 3
+      "execution_timeout": 60,
+      "deadline_timeout": 62
     }
   }
