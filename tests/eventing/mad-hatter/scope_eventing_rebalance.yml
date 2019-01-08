@@ -53,7 +53,7 @@ buckets:
       ram: 12%
   -
       name: bucket_op_complex_dst
-      ram: 12
+      ram: 12%
   -
       name: timer_op_dst
       ram: 12%
