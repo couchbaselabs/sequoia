@@ -27,4 +27,4 @@ servers: # each server tag represents a cluster
       index_path: "/data"
       init_nodes: 6
       buckets: default,other
-      users: default
+      users: default,other-1,other-2,other-3
