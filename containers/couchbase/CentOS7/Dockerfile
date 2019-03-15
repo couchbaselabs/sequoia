@@ -57,7 +57,7 @@ RUN echo $BUILD_URL && \
     wget -N $BUILD_URL
 
 # Install couchbase
-RUN rpm --install $BUILD_PKG 
+RUN yum install -y $BUILD_PKG
 
 #clean the cache
 RUN yum clean all
