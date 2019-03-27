@@ -1,0 +1,123 @@
+-
+  # include rebalance and group templates
+  include: tests/templates/rebalance.yml, tests/templates/groups.yml, tests/templates/kv.yml
+-
+  # data loading
+  template: pillowfight_per_rep
+  args: "{{.Orchestrator}}, {{.Bucket}}, -B {{.Scale 100}} -I {{.Scale 100000}} -t 1, {{.AuthPassword}}"
+- args: "{{.Orchestrator}}, {{.NthBucket 1}}, -B {{.Scale 100}} -I {{.Scale 100000}} -t 1, {{.AuthPassword}} persist-to 1 replicate-to 1"
+
+-
+  image: sequoiatools/gideon:persist_replicate
+- command: "kv --ops {{.Scale 1000}} --create 100  --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}}"
+- command: "kv --ops {{.Scale 1000}} --create 100  --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}} --replicate_to 1 --persist_to 1"
+
+-
+  # create group and add 2 nodes to it
+  template: group_create
+  args: "kvgroup1"
+-
+  template: failover_node_forced
+  args: "{{.NthDataNode 1}}"
+  wait: true
+-
+  template: failover_node_forced
+  args: "{{.NthDataNode 2}}"
+  wait: true
+-
+  # Full recovery and add back Node 1
+  template: recover_node
+  args: "{{.NthDataNode 1}}, full"
+-
+  # Full recovery and add back Node 2
+  template: recover_node
+  args: "{{.NthDataNode 2}}, full"
+-
+  template: rebalance
+  wait: true
+-
+  template: group_move_servers
+  args: "'Group 1', kvgroup1, ({{.NthDataNode 1}}, {{.NthDataNode 2}})"
+-
+  template: rebalance
+  wait: true
+-
+   image: sequoiatools/couchbase-cli
+   command: "failover -c {{.Orchestrator}}:{{.RestPort}}
+       --server-failover {{.NthDataNode 1}}:{{.RestPort}} --force
+       -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   wait: true
+-
+   command: "server-readd -c {{.Orchestrator}}:{{.RestPort}}
+            --server-add {{.NthDataNode 1}}:{{.RestPort}}
+            -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   wait: true
+-
+   command: "recovery -c {{.Orchestrator}}:{{.RestPort}}
+       --server-recovery {{.NthDataNode 1}}:{{.RestPort}}
+       --recovery-type delta
+       -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   wait: true
+
+-
+   command:  "rebalance -c {{.Orchestrator}}:{{.RestPort}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   wait: true
+-
+  template: rebalance_out
+  args: "{{.NthDataNode 1}}"
+  wait: true
+-
+  # sync
+  wait: true
+  duration: 60
+-
+  #  swap rebalance 2 nodes
+  template: rebalance_swap
+  args: "{{.NthDataNode 1}}, {{.NthDataNode 2}}"
+  wait: true
+-
+  # sync
+  wait: true
+  duration: 60
+-
+  # add back to group
+  template: group_move_servers
+  args: "'Group 1', kvgroup1, {{.NthDataNode 1}}"
+  wait: true
+-
+  template: rebalance
+  wait: true
+-
+  # create another group
+  requires:  "{{eq true .DoOnce }}"
+  template: group_create
+  args: "kvgroup2"
+-
+  # move to group2 without rebalance
+  template: group_move_servers
+  args: "kvgroup1, kvgroup2, {{.NthDataNode 1}}"
+-
+  # remove empty group 1
+  template: group_delete
+  args: "kvgroup1"
+-
+  # rebalance into group 2
+  template: rebalance
+  wait: true
+-
+  # failover and full recover a node
+  template: failover_and_recover
+  args: "{{.NthDataNode 1}}, full"
+  wait: true
+-
+  # enable autofailover settings
+  template: autofailover
+  args: "{{.NthDataNode 1 | noport}}, 5, full"
+-
+  # back to default group
+  template: group_move_servers
+  args: "kvgroup2, 'Group 1', {{.NthDataNode 1}}"
+-
+  # remove empty group 2
+  template: group_delete
+  args: "kvgroup2"

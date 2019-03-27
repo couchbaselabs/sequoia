@@ -5,6 +5,15 @@
       image: sequoiatools/pillowfight
       command: "-U  couchbase://$0/$1{{if le 5.0 $.Version}}?select_bucket=true{{end}} $2{{if le 5.0 $.Version}} -P $3{{end}}"
 
+
+# persist_replicate
+-
+  name: pillowfight_per_rep
+  actions:
+    -
+      image: sequoiatools/pillowfight:persist_replicate
+      command: "-U  couchbase://$0/$1{{if le 5.0 $.Version}}?select_bucket=true{{end}} $2{{if le 5.0 $.Version}} -P $3{{end}}"
+
 -
   name: pillowfight_small
   actions:
