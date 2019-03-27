@@ -5,7 +5,7 @@
   # data loading
   template: pillowfight_per_rep
   args: "{{.Orchestrator}}, {{.Bucket}}, -B {{.Scale 100}} -I {{.Scale 100000}} -t 1, {{.AuthPassword}}"
-- args: "{{.Orchestrator}}, {{.NthBucket 1}}, -B {{.Scale 100}} -I {{.Scale 100000}} -t 1, {{.AuthPassword}} persist-to 1 replicate-to 1"
+- args: "{{.Orchestrator}}, {{.NthBucket 1}}, -B {{.Scale 100}} -I {{.Scale 100000}} -t 1, {{.AuthPassword}} --persist-to 1 --replicate-to 1"
 
 -
   image: sequoiatools/gideon:persist_replicate
