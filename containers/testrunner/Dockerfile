@@ -28,7 +28,9 @@ RUN pip install paramiko &&\
     pip install boto &&\
     pip install httplib2 &&\
     pip install pyyaml &&\
-    pip install couchbase
+    pip install couchbase &&\
+    pip install Geohash &&\
+    pip install pytz
 
 COPY local.ini local.ini
 COPY upgrade_local.ini upgrade_local.ini
