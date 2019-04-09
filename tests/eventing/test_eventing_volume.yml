@@ -47,7 +47,7 @@
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_function2.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
 -
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_function4.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} mad-hatter/bucket_op_curl.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
   wait: true
 
 -
