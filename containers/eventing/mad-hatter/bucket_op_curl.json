@@ -5,13 +5,13 @@
       "buckets": [
         {
           "alias": "dst_bucket",
-          "bucket_name": "bucket_op_complex_1",
+          "bucket_name": "curl_op_dst",
           "access": "rw"
         }
       ],
       "curl": [
         {
-          "hostname": "https://postman-echo.com/headers",
+          "hostname": "https://postman-echo.com/",
           "value": "server",
           "auth_type": "no-auth",
           "username": "",

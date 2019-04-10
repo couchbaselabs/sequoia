@@ -1,0 +1,27 @@
+{
+	"appname": "bucket_op",
+	"id": 0,
+	"depcfg": {
+		"buckets": [{
+			"alias": "dst",
+			"bucket_name": "bucket_op_dst",
+			"access": "rw"
+		},
+		{
+			"alias": "dst1",
+			"bucket_name": "sbm_dst",
+			"access": "rw"
+		}],
+		"metadata_bucket": "metadata",
+		"source_bucket": "bucket_op"
+	},
+	"appcode": "function OnUpdate(doc, meta) {\n  try{\n    dst[meta.id] = doc;\n  dst1[meta.id] = doc;\n}\n  catch(e){\n        log(e);\n  }\n}\nfunction OnDelete(meta) {\n    try{\n        delete dst[meta.id];\n   delete dst1[meta.id];\n }\n    catch(e){\n        log(e);\n    }\n}",
+	"settings": {
+		"dcp_stream_boundary": "everything",
+		"deadline_timeout": 62,
+		"deployment_status": false,
+		"execution_timeout": 60,
+		"log_level": "INFO",
+		"processing_status": false
+	}
+}

@@ -11,17 +11,17 @@ users:
       roles: admin
       auth_domain: local
   -
-      name: bucket_op_dst_1
+      name: timer_op_dst
       password: password
       roles: admin
       auth_domain: local
   -
-      name: bucket_op_complex_1
+      name: curl_op_dst
       password: password
       roles: admin
       auth_domain: local
   -
-      name: bucket_op_complex_2
+      name: sbm_dst
       password: password
       roles: admin
       auth_domain: local
@@ -45,18 +45,18 @@ buckets:
       eviction: fullEviction
       compression: active
   -
-      name: bucket_op_dst_1
+      name: timer_op_dst
       ram: 8%
       replica: 0
       compression: active
   -
-      name: bucket_op_complex_1
-      ram: 22%
+      name: curl_op_dst
+      ram: 16%
       replica: 0
       compression: active
   -
-      name: bucket_op_complex_2
-      ram: 8%
+      name: sbm_dst
+      ram: 16%
       replica: 0
       compression: active
   -
@@ -85,6 +85,6 @@ servers: # each server tag represents a cluster
       query_port: 8093
       rest_username: Administrator
       rest_password: password
-      buckets: bucket_op,bucket_op_dst,bucket_op_dst_1,bucket_op_complex_1,bucket_op_complex_2,metadata
-      users: bucket_op,bucket_op_dst,bucket_op_dst_1,bucket_op_complex_1,bucket_op_complex_2,metadata
+      buckets: bucket_op,bucket_op_dst,timer_op_dst,curl_op_dst,sbm_dst,metadata
+      users: bucket_op,bucket_op_dst,timer_op_dst,curl_op_dst,sbm_dst,metadata
 
