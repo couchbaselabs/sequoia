@@ -5,12 +5,12 @@
   # data loading
   template: pillowfight_per_rep
   args: "{{.Orchestrator}}, {{.Bucket}}, -B {{.Scale 100}} -I {{.Scale 100000}} -t 1, {{.AuthPassword}}"
-- args: "{{.Orchestrator}}, {{.NthBucket 1}}, -B {{.Scale 100}} -I {{.Scale 100000}} -t 1, {{.AuthPassword}} --persist-to 1 --replicate-to 1"
+- args: "{{.Orchestrator}}, {{.NthBucket 1}}, -B {{.Scale 100}} -I {{.Scale 100000}} -t 1, {{.AuthPassword}} --persist-to 1"
 
 -
   image: sequoiatools/gideon:persist_replicate
 - command: "kv --ops {{.Scale 1000}} --create 100  --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}}"
-- command: "kv --ops {{.Scale 1000}} --create 100  --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}} --replicate_to 1 --persist_to 1"
+- command: "kv --ops {{.Scale 1000}} --create 100  --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}} --persist_to 1"
 
 -
   # create group and add 2 nodes to it
