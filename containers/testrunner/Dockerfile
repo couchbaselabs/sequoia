@@ -1,15 +1,13 @@
 FROM ubuntu:14.04
 RUN apt-get update
-RUN apt-get install -y gcc g++ make cmake git-core libevent-dev libev-dev libssl-dev libffi-dev psmisc iptables zip unzip python-dev python-pip vim curl
+RUN apt-get install -y wget lsb-release gcc g++ make cmake git-core libevent-dev libev-dev libssl-dev libffi-dev psmisc iptables zip unzip python-dev python-pip vim curl
 
-# build libcouchbase
-RUN git clone git://github.com/couchbase/libcouchbase.git && \
-    mkdir libcouchbase/build
+# Install libcouchbase binary
+RUN wget http://packages.couchbase.com/releases/couchbase-release/couchbase-release-1.0-6-amd64.deb
+RUN dpkg -i couchbase-release-1.0-6-amd64.deb
+RUN apt-get update
+RUN apt-get install -y --allow-unauthenticated libcouchbase-dev libcouchbase2-bin build-essential
 
-WORKDIR libcouchbase/build
-RUN ../cmake/configure -disable-couchbasemock --prefix=/usr && \
-      make && \
-      make install
 
 WORKDIR /
 RUN git clone git://github.com/couchbase/testrunner.git
