@@ -558,8 +558,16 @@ func (s *Scope) AddUsers() {
 
 func (s *Scope) AddNodes() {
 
-	var image = "sequoiatools/couchbase-cli"
+    // make sure proper couchbase-cli is used for node init
+	var version string
+	if s.Flags.Version != nil && (*s.Flags.Version != "") {
+		version = *s.Flags.Version
+	} else {
+		version = s.Rest.GetServerVersion()
+	}
 
+	s.Version = version[:3]
+	var image = "sequoiatools/couchbase-cli:"+s.Version
 	addNodesOp := func(name string, server *ServerSpec) {
 
 		if server.InitNodes <= server.NodesActive {
