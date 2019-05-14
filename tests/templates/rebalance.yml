@@ -60,7 +60,7 @@
       image: sequoiatools/couchbase-cli:6.5
       command: "server-add
            -c {{if gt (len `$2`) 2}}$2{{else}}{{.Orchestrator}}{{end}}:{{.RestPort}}
-           --server-add $0:{{.RestPort}}
+           --server-add https://$0
            -u {{.RestUsername}} -p {{.RestPassword}}
            --server-add-username {{.RestUsername}} --server-add-password {{.RestPassword}}
            {{if ge .Version 4.0}}--services {{if gt (len `$1`) 2}}$1{{else}}data{{end}}{{end}}"
