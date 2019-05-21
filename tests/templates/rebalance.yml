@@ -192,6 +192,10 @@
       template: failover_node_forced
       args: "$0"
       wait: true
+    - image: sequoiatools/cmd
+      entrypoint: sleep
+      wait: true
+      duration: 60
     -
       template: recover_node
       args: "$0, $1"

@@ -5,6 +5,23 @@ users:
       password: password
       roles: admin
       auth_domain: local
+  -
+      name: other-1
+      password: password
+      roles: admin
+      auth_domain: local
+
+  -
+      name: other-2
+      password: password
+      roles: admin
+      auth_domain: local
+  -
+      name: other-3
+      password: password
+      roles: admin
+      auth_domain: local
+
 buckets:
   -
       name: default

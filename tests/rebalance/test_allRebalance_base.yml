@@ -1,0 +1,81 @@
+-
+  # include rebalance and group templates
+  include: tests/templates/rebalance.yml, tests/templates/groups.yml, tests/templates/kv.yml
+-
+  # data loading
+  template: pillowfight
+  description: load data
+  args: "{{.Orchestrator}}, {{.Bucket}}, -B {{.Scale 100}} -I {{.Scale 100000}} -t 1, {{.AuthPassword}}"
+- args: "{{.Orchestrator}}, {{.NthBucket 1}}, -B {{.Scale 100}} -I {{.Scale 100000}} -t 1, {{.AuthPassword}}"
+- args: "{{.Orchestrator}}, {{.NthBucket 2}}, -B {{.Scale 100}} -I {{.Scale 100000}} -t 1, {{.AuthPassword}}"
+- args: "{{.Orchestrator}}, {{.NthBucket 3}}, -B {{.Scale 100}} -I {{.Scale 100000}} -t 1, {{.AuthPassword}}"
+
+###############  Rebalance-in data ################
+- template: rebalance_in
+  args: "{{.InActiveNode}}"
+  wait: true
+
+###############  Rebalance-out single data node ################
+- template: rebalance_out
+  args: "{{.NthDataNode 1}}"
+  wait: true
+
+###############  Swap data nodes ################
+- template: rebalance_swap
+  args: "{{.InActiveNode}},{{.ActiveDataNode 1}}, data"
+  wait: true
+
+#============ hard failover KV node ============
+-
+  template: failover_force_and_recover
+  args: "{{.ActiveDataNode 1}},delta"
+  wait: true
+
+###############  Rebalance-in 2 kv ################
+-
+  template: add_node
+  args: "{{.NthInActiveNode 0}}"
+- args: "{{.NthInActiveNode 1}}"
+  wait: true
+
+-
+  template: rebalance
+  wait: true
+
+###############  Rebalance-out 2-kv ################
+- template: rebalance_out
+  args: "({{.ActiveDataNode 1}},{{.ActiveDataNode 2}})"
+  wait: true
+
+#============ hard failover KV node ============
+-
+  template: failover_force_and_recover
+  args: "{{.ActiveDataNode 1}},delta"
+  wait: true
+
+#============ hard failover KV node ============
+-
+  template: failover_force_and_recover
+  args: "{{.ActiveDataNode 1}},full"
+  wait: true
+
+###############  Failover and rebalance out 2 KV ################
+- template: failover_node_forced
+  args: "{{.ActiveDataNode 1}}"
+- args: "{{.ActiveDataNode 2}}"
+- template: rebalance
+  wait: true
+
+###############  Rebalance-in 2 kv ################
+-
+  template: add_node
+  args: "{{.NthInActiveNode 0}}"
+- args: "{{.NthInActiveNode 1}}"
+  wait: true
+
+###############  Failover and recover 2 KV ################
+- template: failover_force_and_recover
+  args: "{{.ActiveDataNode 1}},delta"
+- args: "{{.ActiveDataNode 2}},full"
+- template: rebalance
+  wait: true
