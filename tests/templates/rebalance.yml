@@ -192,10 +192,6 @@
       template: failover_node_forced
       args: "$0"
       wait: true
-    - image: sequoiatools/cmd
-      entrypoint: sleep
-      wait: true
-      duration: 60
     -
       template: recover_node
       args: "$0, $1"
@@ -325,3 +321,102 @@
     -
       template: disable_autofailover
       wait: true
+
+
+# failover node and recover then rebalance
+# $0 = node to failover
+# $1 = recovery type, delta or full
+-
+  name: failover_and_recover_delay
+  actions:
+    -
+      template: failover_node
+      args: "$0"
+      wait: true
+    -
+      image: sequoiatools/cmd
+      entrypoint: sleep
+      wait: true
+      duration: 180
+    -
+      template: recover_node
+      args: "$0, $1"
+      wait: true
+    -
+      template: rebalance
+
+# failover node and recover then rebalance
+# $0 = node to failover
+# $1 = recovery type, delta or full
+-
+  name: failover_force_and_recover_delay
+  actions:
+    -
+      template: failover_node_forced
+      args: "$0"
+      wait: true
+    -
+      image: sequoiatools/cmd
+      entrypoint: sleep
+      wait: true
+      duration: 180
+    -
+      template: recover_node
+      args: "$0, $1"
+      wait: true
+    -
+      template: rebalance
+
+# rebalance out a single node
+# $0 = server to remove
+-
+  name: rebalance_out_delay
+  actions:
+    -
+      image: sequoiatools/couchbase-cli
+      command: "rebalance -c  {{.Orchestrator}}:{{.RestPort}} --server-remove $0  -u  {{.RestUsername}} -p  {{.RestPassword}}"
+      condwait: "{{if eq `windows` .Platform }}
+                    false
+                 {{end}}"
+    -
+      image: sequoiatools/cmd
+      entrypoint: sleep
+      wait: true
+      duration: 180
+    -
+      # windows requires special status watching
+      requires: "{{ eq `windows` .Platform}}"
+      template: wait_for_rebalance
+
+    - template: wait_after_rebalance
+
+# rebalance in a single node
+# $0 = server to add
+# $1 = optional services (default data)
+-
+  name: rebalance_in_delay
+  actions:
+    -
+      template: add_node
+      args: "$0, ($1)"
+    -
+      image: sequoiatools/cmd
+      entrypoint: sleep
+      wait: true
+      duration: 180
+    -
+      template: rebalance
+
+# swap rebalance 1x1 node
+# $0 server to add
+# $1 server to remove
+# $2 optional services (default data)
+-
+  name: rebalance_swap_delay
+  actions:
+    -
+      template: add_node
+      args: "$0, ($2)"
+    -
+      template: rebalance_out_delay
+      args: "$1"

@@ -11,23 +11,23 @@
 - args: "{{.Orchestrator}}, {{.NthBucket 3}}, -B {{.Scale 100}} -I {{.Scale 100000}} -t 1, {{.AuthPassword}}"
 
 ###############  Rebalance-in data ################
-- template: rebalance_in
+- template: rebalance_in_delay
   args: "{{.InActiveNode}}"
   wait: true
 
 ###############  Rebalance-out single data node ################
-- template: rebalance_out
+- template: rebalance_out_delay
   args: "{{.NthDataNode 1}}"
   wait: true
 
 ###############  Swap data nodes ################
-- template: rebalance_swap
+- template: rebalance_swap_delay
   args: "{{.InActiveNode}},{{.ActiveDataNode 1}}, data"
   wait: true
 
 #============ hard failover KV node ============
 -
-  template: failover_force_and_recover
+  template: failover_and_recover_delay
   args: "{{.ActiveDataNode 1}},delta"
   wait: true
 
@@ -36,6 +36,12 @@
   template: add_node
   args: "{{.NthInActiveNode 0}}"
 - args: "{{.NthInActiveNode 1}}"
+  wait: true
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  duration: 180
   wait: true
 
 -
@@ -43,19 +49,19 @@
   wait: true
 
 ###############  Rebalance-out 2-kv ################
-- template: rebalance_out
+- template: rebalance_out_delay
   args: "({{.ActiveDataNode 1}},{{.ActiveDataNode 2}})"
   wait: true
 
 #============ hard failover KV node ============
 -
-  template: failover_force_and_recover
+  template: failover_and_recover_delay
   args: "{{.ActiveDataNode 1}},delta"
   wait: true
 
 #============ hard failover KV node ============
 -
-  template: failover_force_and_recover
+  template: failover_force_and_recover_delay
   args: "{{.ActiveDataNode 1}},full"
   wait: true
 
@@ -63,18 +69,26 @@
 - template: failover_node_forced
   args: "{{.ActiveDataNode 1}}"
 - args: "{{.ActiveDataNode 2}}"
+  wait: true
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  duration: 180
+  wait: true
+
 - template: rebalance
   wait: true
 
 ###############  Rebalance-in 2 kv ################
 -
-  template: add_node
+  template: add_node_delay
   args: "{{.NthInActiveNode 0}}"
 - args: "{{.NthInActiveNode 1}}"
   wait: true
 
 ###############  Failover and recover 2 KV ################
-- template: failover_force_and_recover
+- template: failover_and_recover_delay
   args: "{{.ActiveDataNode 1}},delta"
 - args: "{{.ActiveDataNode 2}},full"
 - template: rebalance
