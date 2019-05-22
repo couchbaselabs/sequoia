@@ -336,8 +336,8 @@
     -
       image: sequoiatools/cmd
       entrypoint: sleep
+      command: "180"
       wait: true
-      duration: 180
     -
       template: recover_node
       args: "$0, $1"
@@ -358,8 +358,8 @@
     -
       image: sequoiatools/cmd
       entrypoint: sleep
+      command: "180"
       wait: true
-      duration: 180
     -
       template: recover_node
       args: "$0, $1"
@@ -381,8 +381,8 @@
     -
       image: sequoiatools/cmd
       entrypoint: sleep
+      command: "180"
       wait: true
-      duration: 180
     -
       # windows requires special status watching
       requires: "{{ eq `windows` .Platform}}"
@@ -402,8 +402,8 @@
     -
       image: sequoiatools/cmd
       entrypoint: sleep
+      command: "180"
       wait: true
-      duration: 180
     -
       template: rebalance
 

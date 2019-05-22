@@ -17,7 +17,7 @@
 
 ###############  Rebalance-out single data node ################
 - template: rebalance_out_delay
-  args: "{{.NthDataNode 1}}"
+  args: "{{.ActiveDataNode 1}}"
   wait: true
 
 ###############  Swap data nodes ################
@@ -82,9 +82,19 @@
 
 ###############  Rebalance-in 2 kv ################
 -
-  template: add_node_delay
+  template: add_node
   args: "{{.NthInActiveNode 0}}"
 - args: "{{.NthInActiveNode 1}}"
+  wait: true
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  duration: 180
+  wait: true
+
+-
+  template: rebalance
   wait: true
 
 ###############  Failover and recover 2 KV ################
