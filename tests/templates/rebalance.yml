@@ -343,6 +343,11 @@
       args: "$0, $1"
       wait: true
     -
+      image: sequoiatools/cmd
+      entrypoint: sleep
+      command: "180"
+      wait: true
+    -
       template: rebalance
 
 # failover node and recover then rebalance
@@ -365,6 +370,11 @@
       args: "$0, $1"
       wait: true
     -
+      image: sequoiatools/cmd
+      entrypoint: sleep
+      command: "180"
+      wait: true
+    -
       template: rebalance
 
 # rebalance out a single node
@@ -378,11 +388,6 @@
       condwait: "{{if eq `windows` .Platform }}
                     false
                  {{end}}"
-    -
-      image: sequoiatools/cmd
-      entrypoint: sleep
-      command: "180"
-      wait: true
     -
       # windows requires special status watching
       requires: "{{ eq `windows` .Platform}}"
@@ -417,6 +422,11 @@
     -
       template: add_node
       args: "$0, ($2)"
+    -
+      image: sequoiatools/cmd
+      entrypoint: sleep
+      command: "180"
+      wait: true
     -
       template: rebalance_out_delay
       args: "$1"
