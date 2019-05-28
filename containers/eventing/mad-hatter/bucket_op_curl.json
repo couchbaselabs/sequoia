@@ -1,5 +1,4 @@
-[
-  {
+{
     "appcode": "function OnUpdate(doc, meta) {\n    var request = {\n\tpath : 'headers',\n\theaders: {\n    \"sample-header\": \"test\"\n    }\n    };\n    try {\n    \tvar response = curl(\"GET\", server, request);\n    \tlog('response body received from server:', response.body);\n    \tlog('response headers received from server:', response.headers);\n    \tlog('response status received from server:', response.status);\n    \tvar res= new Uint8Array(response.body);\n    \tif(response.status == 200){\n    \t    dst_bucket[meta.id]=response.body;\n    \t}\n    }\n    catch (e) {\n    \tlog('error:', e);\n        }\n}\n\n\n\nfunction OnDelete(meta) {\n    var request = {\n\tpath : 'headers',\n\theaders: {\n    \"sample-header\": \"test\"\n    }\n    };\n    try {\n    \tvar response = curl(\"GET\", server, request);\n    \tlog('response body received from server:', response.body);\n    \tlog('response headers received from server:', response.headers);\n    \tlog('response status received from server:', response.status);\n    \tvar res= new Uint8Array(response.body);\n    \tif(response.status == 200){\n    \t    delete dst_bucket[meta.id];\n    \t}\n    }\n    catch (e) {\n    \tlog('error:', e);\n        }\n}",
     "depcfg": {
       "buckets": [
@@ -23,8 +22,6 @@
       "metadata_bucket": "metadata",
       "source_bucket": "bucket_op"
     },
-    "version": "",
-    "function_instance_id": "",
     "appname": "bucket_op_curl",
     "settings": {
       "dcp_stream_boundary": "everything",
@@ -34,5 +31,4 @@
       "execution_timeout": 60,
       "deadline_timeout": 62
     }
-  }
-]
+}
