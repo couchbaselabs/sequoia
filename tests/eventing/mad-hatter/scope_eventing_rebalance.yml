@@ -16,7 +16,7 @@ users:
       roles: admin
       auth_domain: local
   -
-      name: bucket_op_complex_dst
+      name: curl_op_dst
       password: password
       roles: admin
       auth_domain: local
@@ -52,7 +52,7 @@ buckets:
       name: bucket_op_dst
       ram: 12%
   -
-      name: bucket_op_complex_dst
+      name: curl_op_dst
       ram: 12%
   -
       name: timer_op_dst
@@ -82,5 +82,5 @@ servers: # each server tag represents a cluster
       index_path: "/data"
       rest_username: Administrator
       rest_password: password
-      buckets: bucket_op,source_op,timer_op,bucket_op_dst,bucket_op_complex_dst,timer_op_dst,metadata,test_diagnostics
-      users: bucket_op,source_op,timer_op,bucket_op_dst,bucket_op_complex_dst,timer_op_dst,metadata,test_diagnostics
+      buckets: bucket_op,source_op,timer_op,bucket_op_dst,curl_op_dst,timer_op_dst,metadata,test_diagnostics
+      users: bucket_op,source_op,timer_op,bucket_op_dst,curl_op_dst,timer_op_dst,metadata,test_diagnostics

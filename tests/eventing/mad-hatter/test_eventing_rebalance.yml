@@ -27,7 +27,7 @@
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} mad-hatter/bucket_op_function.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
   wait: true
 -
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} mad-hatter/bucket_op_complex_function.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} mad-hatter/bucket_op_curl.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
   wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} mad-hatter/timer_op.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
@@ -76,7 +76,7 @@
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_function.json {{.RestUsername}} {{.RestPassword}} pause true"
   wait: true
 -
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_complex_function.json {{.RestUsername}} {{.RestPassword}} pause true"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_curl.json {{.RestUsername}} {{.RestPassword}} pause true"
   wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/timer_op.json {{.RestUsername}} {{.RestPassword}} pause true"
@@ -127,7 +127,7 @@
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_function.json {{.RestUsername}} {{.RestPassword}} resume true"
   wait: true
 -
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_complex_function.json {{.RestUsername}} {{.RestPassword}} resume true"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_curl.json {{.RestUsername}} {{.RestPassword}} resume true"
   wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/timer_op.json {{.RestUsername}} {{.RestPassword}} resume true"
@@ -176,7 +176,7 @@
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_function.json {{.RestUsername}} {{.RestPassword}} pause true"
   wait: true
 -
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_complex_function.json {{.RestUsername}} {{.RestPassword}} pause true"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_curl.json {{.RestUsername}} {{.RestPassword}} pause true"
   wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/timer_op.json {{.RestUsername}} {{.RestPassword}} pause true"
@@ -226,7 +226,7 @@
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_function.json {{.RestUsername}} {{.RestPassword}} resume true"
   wait: true
 -
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_complex_function.json {{.RestUsername}} {{.RestPassword}} resume true"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_curl.json {{.RestUsername}} {{.RestPassword}} resume true"
   wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/timer_op.json {{.RestUsername}} {{.RestPassword}} resume true"
@@ -248,7 +248,7 @@
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_function.json {{.RestUsername}} {{.RestPassword}} pause true"
   wait: true
 -
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_complex_function.json {{.RestUsername}} {{.RestPassword}} pause true"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_curl.json {{.RestUsername}} {{.RestPassword}} pause true"
   wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/timer_op.json {{.RestUsername}} {{.RestPassword}} pause true"
@@ -269,7 +269,7 @@
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_function.json {{.RestUsername}} {{.RestPassword}} resume true"
   wait: true
 -
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_complex_function.json {{.RestUsername}} {{.RestPassword}} resume true"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_curl.json {{.RestUsername}} {{.RestPassword}} resume true"
   wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/timer_op.json {{.RestUsername}} {{.RestPassword}} resume true"
@@ -337,7 +337,7 @@
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_function.json {{.RestUsername}} {{.RestPassword}} pause true"
   wait: true
 -
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_complex_function.json {{.RestUsername}} {{.RestPassword}} pause true"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_curl.json {{.RestUsername}} {{.RestPassword}} pause true"
   wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/timer_op.json {{.RestUsername}} {{.RestPassword}} pause true"
@@ -358,7 +358,7 @@
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_function.json {{.RestUsername}} {{.RestPassword}} undeploy true"
   wait: true
 -
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_complex_function.json {{.RestUsername}} {{.RestPassword}} undeploy true"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_curl.json {{.RestUsername}} {{.RestPassword}} undeploy true"
   wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/timer_op.json {{.RestUsername}} {{.RestPassword}} undeploy true"
@@ -373,7 +373,7 @@
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_function.json {{.RestUsername}} {{.RestPassword}} delete"
   wait: true
 -
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_complex_function.json {{.RestUsername}} {{.RestPassword}} delete"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_curl.json {{.RestUsername}} {{.RestPassword}} delete"
   wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/timer_op.json {{.RestUsername}} {{.RestPassword}} delete"
