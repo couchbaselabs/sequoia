@@ -30,18 +30,18 @@
 -
    image: sequoiatools/couchbase-cli
    command: "server-add -c  {{.Orchestrator}}:{{.RestPort}}
-       --server-add {{.NthDataNode 5}}:{{.RestPort}}
+       --server-add http://{{.NthDataNode 5}}:{{.RestPort}}
        -u  {{.RestUsername}} -p  {{.RestPassword}}
        --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
    wait: true
 -
    command: "failover -c {{.Orchestrator}}:{{.RestPort}}
-       --server-failover {{.NthDataNode 1}}:{{.RestPort}}
+       --server-failover http://{{.NthDataNode 1}}:{{.RestPort}}
        -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
    wait: true
 -
    command: "failover -c {{.Orchestrator}}:{{.RestPort}}
-       --server-failover {{.NthDataNode 2}}:{{.RestPort}}
+       --server-failover http://{{.NthDataNode 2}}:{{.RestPort}}
        -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
    wait: true
 -
@@ -73,20 +73,20 @@
 -
    image: sequoiatools/couchbase-cli
    command: "server-add -c  {{.Orchestrator}}:{{.RestPort}}
-       --server-add {{.NthDataNode 1}}:{{.RestPort}}
+       --server-add http://{{.NthDataNode 1}}:{{.RestPort}}
        -u  {{.RestUsername}} -p  {{.RestPassword}}
        --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
    wait: true
 
 -
    command: "server-add -c  {{.Orchestrator}}:{{.RestPort}}
-       --server-add {{.NthDataNode 2}}:{{.RestPort}}
+       --server-add http://{{.NthDataNode 2}}:{{.RestPort}}
        -u  {{.RestUsername}} -p  {{.RestPassword}}
        --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
    wait: true
 -
    command: "failover -c {{.Orchestrator}}:{{.RestPort}}
-       --server-failover {{.NthDataNode 5}}:{{.RestPort}}
+       --server-failover http://{{.NthDataNode 5}}:{{.RestPort}}
        -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
    wait: true
 -
@@ -98,7 +98,7 @@
 -
    image: sequoiatools/couchbase-cli
    command: "server-add -c  {{.Nodes | .Cluster 1 | net 0}}:{{.RestPort}}
-       --server-add {{.Nodes | .Cluster 1 | net 3}}:{{.RestPort}}
+       --server-add http://{{.Nodes | .Cluster 1 | net 3}}:{{.RestPort}}
        -u  {{.RestUsername}} -p  {{.RestPassword}}
        --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
    wait: true
@@ -158,7 +158,7 @@
   before: "{{.Status `RemoteRebalance` | eq `exited`}}"
   image: sequoiatools/couchbase-cli
   command: "failover -c {{.Nodes | .Cluster 1 | net 0}}:{{.RestPort}}
-       --server-failover {{.Nodes | .Cluster 1 | net 3}}:{{.RestPort}}
+       --server-failover http://{{.Nodes | .Cluster 1 | net 3}}:{{.RestPort}}
        -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
   wait: true
 -
