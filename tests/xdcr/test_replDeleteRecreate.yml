@@ -71,10 +71,15 @@
 
 #============ apply filter to xdcr replications ============
 -
-   image: sequoiatools/couchbase-cli
-   command: "xdcr-replicate -c {{.Orchestrator}}:{{.RestPort}} --settings --filter-expression REGEXP_CONTAINS(META().id, '0$')
-                            -u {{.RestUsername}} -p {{.RestPassword}}
-                            --xdcr-replicator={{(index (.AllLogs `ReplId` | json) 0).uuid }}/default/{{.Bucket}}"
+   image: appropriate/curl
+   command: "-u {{.RestUsername}}:{{.RestPassword}} -X POST http://{{.Orchestrator}}:{{.RestPort}}/settings/replications/{{(index (.AllLogs `ReplId` | json) 0).uuid }}/default/{{.Bucket}} -d filterExpression=rating>500 -d filterSkipRestream=0"
+   wait: true
+-
+   command: "-u {{.RestUsername}}:{{.RestPassword}} -X POST http://{{.Orchestrator}}:{{.RestPort}}/settings/replications/{{(index (.AllLogs `ReplId` | json) 0).uuid }}/default/{{.Bucket}} -d filterExpression=REGEXP_CONTAINS(META().id,0$) -d filterSkipRestream=0"
+   wait: true
+-
+   command: "-u {{.RestUsername}}:{{.RestPassword}} -X POST http://{{.Orchestrator}}:{{.RestPort}}/settings/replications/{{(index (.AllLogs `ReplId` | json) 0).uuid }}/default/{{.Bucket}} -d filterExpiration=true -d filterBypassExpiry=true -d filterDeletion=false -d filterExpression=result<>SUCCESS -d filterSkipRestream=1"
+   wait: true
 
 #============ swap add back ============
 -
@@ -147,10 +152,9 @@
 
 #============ clear filter from xdcr replications ============
 -
-   image: sequoiatools/couchbase-cli
-   command: "xdcr-replicate -c {{.Orchestrator}}:{{.RestPort}} --settings --filter-expression ''
-                            -u {{.RestUsername}} -p {{.RestPassword}}
-                            --xdcr-replicator={{(index (.AllLogs `ReplId` | json) 0).uuid }}/default/{{.Bucket}}"
+   image: appropriate/curl
+   command: "-u {{.RestUsername}}:{{.RestPassword}} -X POST http://{{.Orchestrator}}:{{.RestPort}}/settings/replications/{{(index (.AllLogs `ReplId` | json) 0).uuid }}/default/{{.Bucket}} -d filterExpiration=false -d filterBypassExpiry=false -d filterDeletion=true -d filterExpression= -d filterSkipRestream=1"
+   wait: true
 
 #============ delete xdcr replications ============
 -
