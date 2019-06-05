@@ -1,0 +1,64 @@
+-
+  include: tests/templates/kv.yml, tests/templates/vegeta.yml, tests/templates/rebalance.yml, tests/templates/n1ql.yml
+
+####### create index for different buckets for validation #####
+- template: cbq
+  requires:  "{{eq true .DoOnce }}"
+  args: "'create PRIMARY INDEX on default'"
+  wait: true
+
+############### data loading ################
+-
+  image: sequoiatools/gideon
+  requires:  "{{eq true .DoOnce}}"
+  command: "kv --ops {{.Scale 1000000}} --create 100 --sizes 64 128 --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+  duration: 180
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "1200"
+  wait: true
+
+
+############### create and deploy functions ################
+-
+  image: sequoiatools/eventing
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} alice/n1ql_op.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} alice/n1ql_op2.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} alice/n1ql_op_timer.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} alice/n1ql_op_timer2.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
+  wait: true
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "1800"
+  wait: true
+
+############### validate eventing results ################
+-
+  image: sequoiatools/eventing
+  command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 1}} 4800 60 True"
+  wait: true
+-
+  command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 2}} 4800 60 True"
+  wait: true
+-
+  command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 3}} 4800 60 True"
+  wait: true
+-
+  command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 4}} 4800 60 True"
+  wait: true
+
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+

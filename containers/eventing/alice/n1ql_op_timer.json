@@ -1,0 +1,17 @@
+{
+      "appcode": "function OnUpdate(doc, meta) {\n    var expiry = new Date();\n    expiry.setSeconds(expiry.getSeconds() + 300);\n    sleep(10);\n    var context = {docID : meta.id, random_text : \"e6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh07Aumoe6cZZGHuh07Aumoe6cZZGHuh07Aumoe6\"};\n    createTimer(timerCallback,  expiry, meta.id, context);\n}\nfunction OnDelete(meta) {\n    var expiry = new Date();\n    expiry.setSeconds(expiry.getSeconds() + 300);\n    sleep(10);\n    var context = {docID : meta.id};\n    createTimer(NDtimerCallback,  expiry, meta.id, context);\n}\nfunction NDtimerCallback(context) {\n    var docID = context.docID;\n    sleep(10);\n    while (true) {\n    try {\n        var query = select result,AVG(rating),MIN(rating),MAX(rating) from `default` where result is not missing and rating >= 400 and rating <= 1000 group by result;\n        for( var row of query){ \n            var query = DELETE FROM `n1ql_op_timer_dst1` where meta().id = $docID;\n        }\n        break;\n    } catch (e) {\n        log(e);\n        }\n    }\n}\n\nfunction timerCallback(context) {\n    var docID = context.docID;\n    sleep(10);\n      while(true){    \n    try {\n        var query = select result,AVG(rating),MIN(rating),MAX(rating) from `default` where result is not missing and rating >= 400 and rating <= 1000 group by result;\n        for( var row of query){ \n            var value=row;\n           Insert INTO `n1ql_op_timer_dst1` ( KEY, VALUE ) VALUES ( $docID , $value);\n        }\n        break;\n        }\n     catch (e) {\n        log(e);\n    }\n    }\n\n}\n\nfunction sleep(seconds) {\n  var start = new Date().getTime();\n  while(new Date().getTime() < start + seconds*1000){\n  }\n}",
+      "depcfg": {
+          "buckets": [],
+          "metadata_bucket": "metadata",
+          "source_bucket": "default"
+      },
+      "appname": "n1ql_op_timer",
+      "settings": {
+          "dcp_stream_boundary": "everything",
+          "deadline_timeout": 77,
+          "execution_timeout": 75,
+          "log_level": "INFO",
+          "processing_status": false,
+          "deployment_status": false
+      }
+}
