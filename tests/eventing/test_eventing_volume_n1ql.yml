@@ -25,10 +25,13 @@
 -
   image: sequoiatools/eventing
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} alice/n1ql_op.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
+  wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} alice/n1ql_op2.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
+  wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} alice/n1ql_op_timer.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
+  wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} alice/n1ql_op_timer2.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
   wait: true
