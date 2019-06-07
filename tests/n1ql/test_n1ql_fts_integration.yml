@@ -45,12 +45,13 @@
   wait: true
 
 # run field matching queries - 50 ops/sec per index
--
-  template: attack_query
-  args: "-1, 50, {{.QueryNodePort}}, 'select meta().id from `{{.NthBucket 1}}` where SEARCH\\(`{{.NthBucket 1}}`, \\"5F\\")'"
--
-  template: attack_query
-  args: "-1, 50, {{.QueryNodePort}}, 'select meta().id from `{{.NthBucket 1}}` where SEARCH\\(`{{.NthBucket 1}}`, \\"0B\\")'"
+- image: sequoiatools/cbdozer
+  command: "-method POST -duration 0 -rate 50 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}/query/service
+            -body 'select meta().id from `{{.NthBucket 1}}` where SEARCH(`{{.NthBucket 1}}`, \\'5F\\')'"
+
+- command: "-method POST -duration 0 -rate 50 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}/query/service
+              -body 'select meta().id from `{{.NthBucket 1}}` where SEARCH(`{{.NthBucket 1}}`, \\'0B\\')'"
+
 
 # create fts index with custom child field using result key as type
 - template: create_index_with_child_field
@@ -83,14 +84,13 @@
 
 # start queries on new indexes
 # direct search on state key
--
-  template: attack_query
-  args: "-1, {{.Scale 3}}, {{.QueryNodePort}}, 'select meta().id from `{{.NthBucket 1}}` where SEARCH\\(`{{.NthBucket 1}}`, {\\"query\\":{\\"field\\": \\"state\\", \\"match\\":\\"9C\\"}, \\"size\\":\\"10\\"})'"
+- image: sequoiatools/cbdozer
+  command: "-method POST -duration 0 -rate 50 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}/query/service
+            -body 'select meta().id from `{{.NthBucket 1}}` where SEARCH(`{{.NthBucket 1}}`, {\\'query\\':{\\'field\\': \\'state\\', \\'match\\':\\'9C\\'}, \\'size\\':\\'10\\'})'"
 
-# regex search on subfield profile.status with description exclusion
--
-  template: attack_query
-  args: "-1, {{.Scale 3}}, {{.QueryNodePort}}, 'select meta().id from `{{.NthBucket 1}}` where SEARCH\\(`{{.NthBucket 1}}`, {\\"query\\": \\"profile.status:4121*\\", \\"size\\": 10})'"
+- image: sequoiatools/cbdozer
+  command: "-method POST -duration 0 -rate 50 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}/query/service
+              -body 'select meta().id from `{{.NthBucket 1}}` where SEARCH(`{{.NthBucket 1}}`, {\\'query\\':\\'profile.status:4121*\\', \\'size\\':\\'10\\'})'"
 
 # swap rebalance
 
