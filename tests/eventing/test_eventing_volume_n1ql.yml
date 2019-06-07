@@ -4,7 +4,7 @@
 ####### create index for different buckets for validation #####
 - template: cbq
   requires:  "{{eq true .DoOnce }}"
-  args: "'CREATE INDEX `default_rating` ON `default`(`rating`) using GSI'"
+  args: "'CREATE INDEX `default_rating` ON `default`(rating) partition by hash(rating) using GSI'"
   wait: true
 
 ############### data loading ################
