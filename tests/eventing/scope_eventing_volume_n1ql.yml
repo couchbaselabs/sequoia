@@ -70,7 +70,7 @@ servers: # each server tag represents a cluster
       name: local
       count: 12
       ram: 95%
-      eventing_ram: 95%
+      eventing_ram: 85%
       index_ram: 90%
       init_nodes: 11
       services:

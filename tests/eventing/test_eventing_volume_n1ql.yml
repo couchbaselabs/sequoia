@@ -3,7 +3,7 @@
 
 ####### create index for different buckets for validation #####
 - image: sequoiatools/cbq
-  command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_rating on `{{.Bucket}}`(rating) using GSI with {\"num_replica\":1}'"
+  command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_rating on `{{.Bucket}}`(rating) using GSI with {\"num_replica\":2}'"
   wait: true
 
 ############### data loading ################
@@ -47,7 +47,7 @@
 -
   image: sequoiatools/cmd
   entrypoint: sleep
-  command: "300"
+  command: "10"
   wait: true
 
 ###############  Rebalance-out multiple eventing nodes ################
@@ -58,18 +58,12 @@
 -
   image: sequoiatools/cmd
   entrypoint: sleep
-  command: "300"
+  command: "10"
   wait: true
 
 ###############  Swap Rebalance ################
 - template: rebalance_swap
   args: "{{.NthInActiveNode 0}},{{.ActiveEventingNode 1}}, eventing"
-  wait: true
-
--
-  image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "300"
   wait: true
 
 -
@@ -91,13 +85,6 @@
   wait: true
 -
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 4}} 4800 60 True"
-  wait: true
-
-
--
-  image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "300"
   wait: true
 
 
