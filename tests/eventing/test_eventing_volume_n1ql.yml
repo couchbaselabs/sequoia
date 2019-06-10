@@ -2,9 +2,8 @@
   include: tests/templates/kv.yml, tests/templates/vegeta.yml, tests/templates/rebalance.yml, tests/templates/n1ql.yml
 
 ####### create index for different buckets for validation #####
-- template: cbq
-  requires:  "{{eq true .DoOnce }}"
-  args: "'CREATE INDEX `default_rating` ON `default`(rating) partition by hash(rating) using GSI'"
+- image: sequoiatools/cbq
+  command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_rating on `{{.Bucket}}`(rating) using GSI with {\"num_replica\":1}'"
   wait: true
 
 ############### data loading ################
@@ -17,7 +16,7 @@
 -
   image: sequoiatools/cmd
   entrypoint: sleep
-  command: "1200"
+  command: "600"
   wait: true
 
 
@@ -34,6 +33,43 @@
   wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} alice/n1ql_op_timer2.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
+  wait: true
+
+###############  Rebalance-in multiple eventing nodes################
+- template: add_node
+  args: "{{.NthInActiveNode 0}}, eventing"
+  wait: true
+
+-
+  template: rebalance
+  wait: true
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+###############  Rebalance-out multiple eventing nodes ################
+- template: rebalance_out
+  args: "{{.ActiveEventingNode 1}}"
+  wait: true
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+###############  Swap Rebalance ################
+- template: rebalance_swap
+  args: "{{.NthInActiveNode 0}},{{.ActiveEventingNode 1}}, eventing"
+  wait: true
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
   wait: true
 
 -

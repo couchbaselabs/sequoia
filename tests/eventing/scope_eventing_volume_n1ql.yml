@@ -71,12 +71,12 @@ servers: # each server tag represents a cluster
       count: 12
       ram: 95%
       eventing_ram: 95%
-      index_ram: 85%
-      init_nodes: 12
+      index_ram: 90%
+      init_nodes: 11
       services:
         eventing: 3
         query: 2
-        index: 2
+        index: 3
       data_path: "/data"
       index_path: "/data"
       rest_port: 8091
