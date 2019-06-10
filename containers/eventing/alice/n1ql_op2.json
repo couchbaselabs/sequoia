@@ -1,15 +1,20 @@
 {
-    "appcode": "function OnUpdate(doc, meta) {\n   while(true){    \n   try {\n        var query = select result,AVG(rating),MIN(rating),MAX(rating) from `default` where result is not missing and rating >= 400 and rating <= 1000 group by result;\n        var id=meta.id;\n        for( var row of query){ \n            var query1=select round(min(rating),2) as min_rating,round(max(rating),2) as max_rating,round(avg(rating),2) as avg_rating from `default` where result is not null and rating between 500 and 520;\n            for(var row1 of query1){ \n            var value=row1;\n           UPSERT INTO `n1ql_op_dst2` ( KEY, VALUE ) VALUES ( $id , $value);\n         }\n        }\n        break;\n    } catch (e) {\n        log(e);\n    }\n    }\n}\n\nfunction OnDelete(meta) {\n    var docID = meta.id;\n    sleep(10);\n    while (true) {\n    try {\n        var query = select result,AVG(rating),MIN(rating),MAX(rating) from `default` where result is not missing and rating >= 400 and rating <= 1000 group by result;\n        for( var row of query){ \n            var query1=select round(min(rating),2) as min_rating,round(max(rating),2) as max_rating,round(avg(rating),2) as avg_rating from `default` where result is not null and rating between 500 and 520;\n            for(var row1 of query1){ \n            var query = DELETE FROM `n1ql_op_dst2` where meta().id = $docID;\n            }\n        }\n        break;\n    } catch (e) {\n        log(e);\n        }\n    }\n}\n\n",
-    "depcfg": {
-        "buckets": [],
-        "metadata_bucket": "metadata",
-        "source_bucket": "default"
-    },
-    "appname": "n1ql_op2",
-    "settings": {
+        "appcode": "function OnUpdate(doc, meta) {\n    while(true) {\n        try {\n        var query = select AVG(rating),MIN(rating),MAX(rating) from `default` where rating >= 400 and rating <= 600;\n        var id=meta.id;\n        for( var row of query){ \n            dst_bucket[meta.id]=row;\n        }\n        break;\n        }\n   catch (e) {\n        log(e);\n        }\n    }\n}\n\nfunction OnDelete(meta) {\n    var docID = meta.id;\n    while (true) {\n    try {\n        var query = select AVG(rating),MIN(rating),MAX(rating) from `default` where rating >= 400 and rating <= 600;\n        for( var row of query){ \n            delete dst_bucket[meta.id];\n        }\n        break;\n    } catch (e) {\n        log(e);\n        }\n    }\n}",
+        "depcfg": {
+            "buckets": [
+                {
+                    "alias": "dst_bucket",
+                    "bucket_name": "n1ql_op_dst2"
+                }
+            ],
+            "metadata_bucket": "metadata",
+            "source_bucket": "default"
+        },
+        "appname": "n1ql_op2",
+        "settings": {
           "dcp_stream_boundary": "everything",
-          "deadline_timeout": 77,
-          "execution_timeout": 75,
+          "deadline_timeout": 62,
+          "execution_timeout": 60,
           "log_level": "INFO",
           "processing_status": false,
           "deployment_status": false
