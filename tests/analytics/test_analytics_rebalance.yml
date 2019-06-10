@@ -23,11 +23,20 @@
   image: sequoiatools/cbq
   command: "-e=http://{{.ActiveAnalyticsNode 0}}:8095  -u={{.RestUsername}} -p={{.RestPassword}} -script='create dataset ds1 on `{{.Bucket}}`;'"
   wait: true
+-
   command: "-e=http://{{.ActiveAnalyticsNode 0}}:8095  -u={{.RestUsername}} -p={{.RestPassword}} -script='create dataset ds2 with {\"storage-block-compression\": {\"scheme\": \"snappy\"}} on `{{.NthBucket 1}}`;'"
   wait: true
+-
   command: "-e=http://{{.ActiveAnalyticsNode 0}}:8095  -u={{.RestUsername}} -p={{.RestPassword}} -script='create dataset ds3 on `{{.NthBucket 2}}`;'"
   wait: true
+-
   command: "-e=http://{{.ActiveAnalyticsNode 0}}:8095  -u={{.RestUsername}} -p={{.RestPassword}} -script='create dataset ds4 with {\"storage-block-compression\": {\"scheme\": \"snappy\"}} on `{{.NthBucket 3}}`;'"
+  wait: true
+-
+  command: "create index idx_result1 on ds1\\(result:string);"
+  wait: true
+-
+  command: "create index idx_result2 on ds2\\(result:string);"
   wait: true
 
 ############### run mutations ################
