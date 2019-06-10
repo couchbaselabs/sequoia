@@ -11,7 +11,7 @@
   image: sequoiatools/gideon
   requires:  "{{eq true .DoOnce}}"
   command: "kv --ops {{.Scale 1000000}} --create 100 --sizes 64 128 --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
-  duration: 180
+  duration: 360
 
 -
   image: sequoiatools/cmd
