@@ -1,6 +1,6 @@
 ---
 -
-  include: tests/templates/rebalance.yml, tests/templates/n1ql.yml, tests/templates/kv.yml
+  include: tests/templates/rebalance.yml, tests/templates/n1ql.yml, tests/templates/kv.yml, tests/templates/fts.yml
 
 # start json and binary data loading
 -
@@ -20,11 +20,11 @@
 # create upside-down and scorch index on buckets
 -
   template: create_index
-  args: "{{.FTSNodePort}}, {{.NthBucket 1}}, st_index_upside_down, upside_down"
+  args: "{{.FTSNodePort}}, {{.NthBucket 1}}, st_index_scorch1, scorch"
   wait: true
 -
   template: create_index
-  args: "{{.FTSNodePort}}, {{.NthBucket 1}}, st_index_scorch, scorch"
+  args: "{{.FTSNodePort}}, {{.NthBucket 1}}, st_index_scorch2, scorch"
   wait: true
 
 # scale cluster up (add 3 more nodes)
