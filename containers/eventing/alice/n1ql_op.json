@@ -1,0 +1,22 @@
+{
+        "appcode": "function OnUpdate(doc, meta) {\n    while(true) {\n        try {\n        var query = select AVG(rating),MIN(rating),MAX(rating) from `default` where rating >= 400 and rating <= 600;\n        var id=meta.id;\n        for( var row of query){ \n            dst_bucket[meta.id]=row;\n        }\n        break;\n        }\n   catch (e) {\n        log(e);\n        }\n    }\n}\n\nfunction OnDelete(meta) {\n    var docID = meta.id;\n    while (true) {\n    try {\n        var query = select AVG(rating),MIN(rating),MAX(rating) from `default` where rating >= 400 and rating <= 600;\n        for( var row of query){ \n            delete dst_bucket[meta.id];\n        }\n        break;\n    } catch (e) {\n        log(e);\n        }\n    }\n}",
+        "depcfg": {
+            "buckets": [
+                {
+                    "alias": "dst_bucket",
+                    "bucket_name": "n1ql_op_dst1"
+                }
+            ],
+            "metadata_bucket": "metadata",
+            "source_bucket": "default"
+        },
+        "appname": "n1ql_op",
+        "settings": {
+          "dcp_stream_boundary": "everything",
+          "deadline_timeout": 62,
+          "execution_timeout": 60,
+          "log_level": "INFO",
+          "processing_status": false,
+          "deployment_status": false
+      }
+}
