@@ -32,7 +32,6 @@
 
 # replica data loading for 30 minutes with docs that will expire after 1 hour
 - image: sequoiatools/gideon
-  duration: 1800
   command: "kv --ops {{.Scale 500}} --create 10 --delete 8 --get 82 --sizes 64 96  --expire 100 --ttl 3600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
   duration: 1800
 - command: "kv --ops {{.Scale 500}} --create 10 --delete 8 --get 82 --sizes 64 96  --expire 100 --ttl 3600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}}"
