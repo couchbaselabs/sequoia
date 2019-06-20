@@ -30,10 +30,10 @@ servers: # each server tag represents a cluster
   -
       name: local
       count: 21
-      ram: 95%
-      index_ram: 90%
+      ram: 85%
+      index_ram: 85%
       fts_ram: 85%
-      eventing_ram: 90%
+      eventing_ram: 85%
       index_storage: default
       services:
         index: 5
