@@ -1,6 +1,6 @@
 ---
 -
-  include: tests/templates/rebalance.yml, tests/templates/n1ql.yml, tests/templates/kv.yml, tests/templates/fts.yml
+  include: tests/templates/rebalance.yml, tests/templates/fts.yml, tests/templates/kv.yml
 
 # start json and binary data loading
 -
@@ -20,11 +20,11 @@
 # create upside-down and scorch index on buckets
 -
   template: create_index
-  args: "{{.FTSNodePort}}, {{.NthBucket 1}}, st_index_scorch1, scorch"
+  args: "{{.FTSNodePort}}, {{.NthBucket 1}}, st_index_scorch2, scorch"
   wait: true
 -
   template: create_index
-  args: "{{.FTSNodePort}}, {{.NthBucket 1}}, st_index_scorch2, scorch"
+  args: "{{.FTSNodePort}}, {{.NthBucket 1}}, st_index_scorch, scorch"
   wait: true
 
 # scale cluster up (add 3 more nodes)
@@ -33,25 +33,24 @@
   args: "{{.NthDataNode 1}}, data"
 -
   template: add_node
-  args: "{{.NthDataNode 2}}, (data,fts,query)"
+  args: "{{.NthDataNode 2}}, (data,fts)"
 -
   template: add_node
-  args: "{{.NthDataNode 3}}, (fts,query)"
+  args: "{{.NthDataNode 3}}, fts"
 -
   template: add_node
-  args: "{{.NthDataNode 4}}, (data,fts,query)"
+  args: "{{.NthDataNode 4}}, (data,fts)"
 -
   template: rebalance
   wait: true
 
 # run field matching queries - 50 ops/sec per index
-- image: sequoiatools/cbdozer
-  command: "-method POST -duration 0 -rate 50 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}/query/service
-            -body 'select meta().id from `{{.NthBucket 1}}` where SEARCH(`{{.NthBucket 1}}`, \\'5F\\')'"
-
-- command: "-method POST -duration 0 -rate 50 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}/query/service
-              -body 'select meta().id from `{{.NthBucket 1}}` where SEARCH(`{{.NthBucket 1}}`, \\'0B\\')'"
-
+-
+  template: query_fts
+  args: "{{.FTSNodePort}}, -1, 50, st_index_scorch2, 5F"
+-
+  template: query_fts
+  args: "{{.FTSNodePort}}, -1, 50, st_index_scorch, 0B"
 
 # create fts index with custom child field using result key as type
 - template: create_index_with_child_field
@@ -65,10 +64,10 @@
 # scale cluster up more
 -
   template: add_node
-  args: "{{.NthDataNode 5}}, (fts,query)"
+  args: "{{.NthDataNode 5}}, fts"
 -
   template: add_node
-  args: "{{.NthDataNode 6}}, (data,fts,query)"
+  args: "{{.NthDataNode 6}}, (data,fts)"
 -
   template: add_node
   args: "{{.NthDataNode 7}}, data"
@@ -84,21 +83,22 @@
 
 # start queries on new indexes
 # direct search on state key
-- image: sequoiatools/cbdozer
-  command: "-method POST -duration 0 -rate 50 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}/query/service
-            -body 'select meta().id from `{{.NthBucket 1}}` where SEARCH(`{{.NthBucket 1}}`, {\\'query\\':{\\'field\\': \\'state\\', \\'match\\':\\'9C\\'}, \\'size\\':\\'10\\'})'"
+-
+  template: query_fts
+  args: "{{.FTSNodePort}}, -1, {{.Scale 3}}, good_state, +state:9C, -size 10"
 
-- image: sequoiatools/cbdozer
-  command: "-method POST -duration 0 -rate 50 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}/query/service
-              -body 'select meta().id from `{{.NthBucket 1}}` where SEARCH(`{{.NthBucket 1}}`, {\\'query\\':\\'profile.status:4121*\\', \\'size\\':\\'10\\'})'"
+# regex search on subfield profile.status with description exclusion
+-
+  template: query_fts
+  args: "{{.FTSNodePort}}, -1, {{.Scale 3}}, social, +profile.status:4121*, -size 10"
 
 # swap rebalance
 
 - template: add_node
-  args: "{{.NthDataNode 2}}, (data, fts, query)"
+  args: "{{.NthDataNode 2}}, (data, fts)"
 
 - template: add_node
-  args: "{{.NthDataNode 3}},  (fts, query)"
+  args: "{{.NthDataNode 3}},  fts"
 -
   template: rebalance_out
   args: "{{.NthDataNode 4}}"
@@ -124,7 +124,7 @@
   # if we have any more inactive nodes then another
   requires: "{{ gt (len (.Nodes | .InActiveNodes)) 0}}"
   template: add_node
-  args: "{{.InActiveNode}}, (data,fts, query)"
+  args: "{{.InActiveNode}}, (data,fts)"
 -
   template: rebalance
   wait: true

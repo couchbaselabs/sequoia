@@ -87,7 +87,7 @@
 
 # create fts index with custom child field using result key as type
 - template: create_index_with_child_field
-  args: "{{.FTSNodePort}}, good_state, default, SUCCESS, state, false, result, upside_down"
+  args: "{{.FTSNodePort}}, good_state, default, SUCCESS, state, false, result, scorch"
   wait: true
 
 
