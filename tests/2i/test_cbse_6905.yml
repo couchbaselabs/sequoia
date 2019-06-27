@@ -39,8 +39,8 @@
 # ###############  run queries ################
 - section_start: query_replica_indexes
 - template: attack_query
-  args: "0, 1, {{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}, 'select result from default where result is not null LIMIT 50000'"
-- args: "0, 1, {{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}, 'select claim from `{{Bucket}}` where claim is not null limit 100'"
+  args: "0, 1, {{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}, 'select result from `{{.Bucket}}` where result is not null LIMIT 50000'"
+- args: "0, 1, {{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}, 'select claim from `{{.Bucket}}` where claim is not null limit 100'"
 
 - image: sequoiatools/cbdozer
 - command: "-method POST -duration 43200 -rate 1 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}/query/service
