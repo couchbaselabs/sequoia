@@ -1,0 +1,34 @@
+---
+users:
+  -
+      name: default
+      password: password
+      roles: admin
+      auth_domain: local
+
+buckets:
+  -
+      name: default
+      ram: 100%
+      eviction: fullEviction
+
+
+servers: # each server tag represents a cluster
+  -
+      name: local
+      count: 10
+      ram: 85%
+      index_ram: 85%
+      index_storage: default
+      services:
+        index: 1
+        index_start: 2
+        query: 1
+        query_start: 3
+      rest_username: Administrator
+      rest_password: password
+      data_path: "/data"
+      index_path: "/data"
+      init_nodes: 4
+      buckets: default
+      users: default
