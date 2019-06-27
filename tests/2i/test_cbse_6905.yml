@@ -2,7 +2,7 @@
 
 ############### data loading ################
 - image: sequoiatools/gideon
-  command: "kv --ops {{.Scale 400}} --create 30 --get 70 --delete 10  --expire 100 --ttl 600   --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+  command: "kv --ops {{.Scale 400}} --create 100 --delete 10  --expire 100 --ttl 600   --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
 
 # Sleep for some time to allow some docs to be loaded
 -
@@ -43,10 +43,18 @@
 - args: "0, 1, {{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}, 'select claim from `{{.Bucket}}` where claim is not null limit 100'"
 
 - image: sequoiatools/cbdozer
-- command: "-method POST -duration 43200 -rate 1 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}/query/service
+- command: "-method POST -duration 0 -rate 1 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}/query/service
             -body 'select result,SUM(rating) from `{{.Bucket}}` where result is not null and rating >= 410 and rating <= 420 and claims is not null group by result'"
-- command: "-method POST -duration 43200 -rate 1 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}/query/service
+- command: "-method POST -duration 0 -rate 1 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}/query/service
             -body 'select round(min(rating),2) as min_rating,round(max(rating),2) as max_rating,round(avg(rating),2) as avg_rating from `{{.Bucket}}` where result is not null and rating between 500 and 520'"
+
+  # Wait for 12 hrs
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "43200"
+  wait: true
+
+
 - section_end: query_replica_indexes
 
 
