@@ -38,6 +38,7 @@
   entrypoint: sleep
   command: "1200"
   wait: true
+
 ############### create and deploy functions ################
 -
   image: sequoiatools/eventing:6.5
@@ -50,11 +51,50 @@
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}}  mad-hatter/bucket_op_sbm.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
   wait: true
 
+
+############### pause functions ################
+-
+  image: sequoiatools/eventing:6.5
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op.json {{.RestUsername}} {{.RestPassword}} pause true"
+  wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_timer.json {{.RestUsername}} {{.RestPassword}} pause true"
+  wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_curl.json {{.RestUsername}} {{.RestPassword}} pause true"
+  wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_sbm.json {{.RestUsername}} {{.RestPassword}} pause true"
+  wait: true
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+############### resume functions ################
+-
+  image: sequoiatools/eventing:6.5
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op.json {{.RestUsername}} {{.RestPassword}} resume true"
+  wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_timer.json {{.RestUsername}} {{.RestPassword}} resume true"
+  wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_curl.json {{.RestUsername}} {{.RestPassword}} resume true"
+  wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_sbm.json {{.RestUsername}} {{.RestPassword}} resume true"
+  wait: true
+
+
 -
   image: sequoiatools/cmd
   entrypoint: sleep
   command: "1800"
   wait: true
+
 ############### validate eventing results ################
 -
   image: sequoiatools/eventing:6.5
@@ -69,6 +109,8 @@
 -
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.NthBucket 1}} {{.NthBucket 4}} 2400 60 True"
   wait: true
+
+
 ############### data loading ################
 -
   image: sequoiatools/gideon
@@ -91,6 +133,42 @@
   template: rebalance
   wait: true
 
+############### pause functions ################
+-
+  image: sequoiatools/eventing:6.5
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op.json {{.RestUsername}} {{.RestPassword}} pause true"
+  wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_timer.json {{.RestUsername}} {{.RestPassword}} pause true"
+  wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_curl.json {{.RestUsername}} {{.RestPassword}} pause true"
+  wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_sbm.json {{.RestUsername}} {{.RestPassword}} pause true"
+  wait: true
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+############### resume functions ################
+-
+  image: sequoiatools/eventing:6.5
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op.json {{.RestUsername}} {{.RestPassword}} resume true"
+  wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_timer.json {{.RestUsername}} {{.RestPassword}} resume true"
+  wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_curl.json {{.RestUsername}} {{.RestPassword}} resume true"
+  wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_sbm.json {{.RestUsername}} {{.RestPassword}} resume true"
+  wait: true
+
 -
   image: sequoiatools/cmd
   entrypoint: sleep
@@ -119,9 +197,46 @@
   command: "kv --ops {{.Scale 1000000}} --create 40 --get 60 --sizes 64   --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
   duration: 180
 
+############### pause functions ################
+-
+  image: sequoiatools/eventing:6.5
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op.json {{.RestUsername}} {{.RestPassword}} pause true"
+  wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_timer.json {{.RestUsername}} {{.RestPassword}} pause true"
+  wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_curl.json {{.RestUsername}} {{.RestPassword}} pause true"
+  wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_sbm.json {{.RestUsername}} {{.RestPassword}} pause true"
+  wait: true
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+
 ###############  Rebalance-out multiple kv nodes ################
 - template: rebalance_out
   args: "({{.ActiveDataNode 1}},{{.ActiveDataNode 2}})"
+  wait: true
+
+############### resume functions ################
+-
+  image: sequoiatools/eventing:6.5
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op.json {{.RestUsername}} {{.RestPassword}} resume true"
+  wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_timer.json {{.RestUsername}} {{.RestPassword}} resume true"
+  wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_curl.json {{.RestUsername}} {{.RestPassword}} resume true"
+  wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_sbm.json {{.RestUsername}} {{.RestPassword}} resume true"
   wait: true
 
 -
@@ -144,6 +259,28 @@
 -
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.NthBucket 1}} {{.NthBucket 4}} 1200 60 True"
   wait: true
+
+############### pause functions ################
+-
+  image: sequoiatools/eventing:6.5
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op.json {{.RestUsername}} {{.RestPassword}} pause true"
+  wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_timer.json {{.RestUsername}} {{.RestPassword}} pause true"
+  wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_curl.json {{.RestUsername}} {{.RestPassword}} pause true"
+  wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_sbm.json {{.RestUsername}} {{.RestPassword}} pause true"
+  wait: true
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
 
 ############### data loading ################
 -
@@ -161,6 +298,21 @@
   args: "{{.NthInActiveNode 0}},{{.ActiveDataNode 2}}, data"
   wait: true
 
+############### resume functions ################
+-
+  image: sequoiatools/eventing:6.5
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op.json {{.RestUsername}} {{.RestPassword}} resume true"
+  wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_timer.json {{.RestUsername}} {{.RestPassword}} resume true"
+  wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_curl.json {{.RestUsername}} {{.RestPassword}} resume true"
+  wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_sbm.json {{.RestUsername}} {{.RestPassword}} resume true"
+  wait: true
+
 -
   image: sequoiatools/cmd
   entrypoint: sleep
@@ -188,6 +340,21 @@
   requires:  "{{eq true .DoOnce}}"
   command: "kv --ops {{.Scale 1000000}} --create 40 --get 60 --sizes 64   --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
   duration: 180
+
+############### pause functions ################
+-
+  image: sequoiatools/eventing:6.5
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op.json {{.RestUsername}} {{.RestPassword}} pause true"
+  wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_timer.json {{.RestUsername}} {{.RestPassword}} pause true"
+  wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_curl.json {{.RestUsername}} {{.RestPassword}} pause true"
+  wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_sbm.json {{.RestUsername}} {{.RestPassword}} pause true"
+  wait: true
 
 #################################################
 ##### Multiple eventing rebalance ###############
@@ -201,6 +368,23 @@
 -
   template: rebalance
   wait: true
+
+
+############### resume functions ################
+-
+  image: sequoiatools/eventing:6.5
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op.json {{.RestUsername}} {{.RestPassword}} resume true"
+  wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_timer.json {{.RestUsername}} {{.RestPassword}} resume true"
+  wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_curl.json {{.RestUsername}} {{.RestPassword}} resume true"
+  wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_sbm.json {{.RestUsername}} {{.RestPassword}} resume true"
+  wait: true
+
 -
   image: sequoiatools/cmd
   entrypoint: sleep
@@ -229,9 +413,41 @@
   command: "kv --ops {{.Scale 1000000}} --create 40 --get 60 --sizes 64   --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
   duration: 180
 
+############### pause functions ################
+-
+  image: sequoiatools/eventing:6.5
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op.json {{.RestUsername}} {{.RestPassword}} pause true"
+  wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_timer.json {{.RestUsername}} {{.RestPassword}} pause true"
+  wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_curl.json {{.RestUsername}} {{.RestPassword}} pause true"
+  wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_sbm.json {{.RestUsername}} {{.RestPassword}} pause true"
+  wait: true
+
+
 ###############  Rebalance-out multiple eventing nodes ################
 - template: rebalance_out
   args: "({{.ActiveEventingNode 1}}, {{.ActiveEventingNode 2}})"
+  wait: true
+
+
+############### resume functions ################
+-
+  image: sequoiatools/eventing:6.5
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op.json {{.RestUsername}} {{.RestPassword}} resume true"
+  wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_timer.json {{.RestUsername}} {{.RestPassword}} resume true"
+  wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_curl.json {{.RestUsername}} {{.RestPassword}} resume true"
+  wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_sbm.json {{.RestUsername}} {{.RestPassword}} resume true"
   wait: true
 
 -
@@ -299,6 +515,7 @@
   command: "kv --ops {{.Scale 1000000}} --create 40 --get 60 --sizes 64   --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
   duration: 180
 
+
 #################################################
 ##### Multiple kv+eventing rebalance ############
 #################################################
@@ -308,8 +525,39 @@
 - args: "{{.NthInActiveNode 1}}, eventing"
   wait: true
 
+############### pause functions ################
+-
+  image: sequoiatools/eventing:6.5
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op.json {{.RestUsername}} {{.RestPassword}} pause true"
+  wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_timer.json {{.RestUsername}} {{.RestPassword}} pause true"
+  wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_curl.json {{.RestUsername}} {{.RestPassword}} pause true"
+  wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_sbm.json {{.RestUsername}} {{.RestPassword}} pause true"
+  wait: true
+
 -
   template: rebalance
+  wait: true
+
+
+############### resume functions ################
+-
+  image: sequoiatools/eventing:6.5
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op.json {{.RestUsername}} {{.RestPassword}} resume true"
+  wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_timer.json {{.RestUsername}} {{.RestPassword}} resume true"
+  wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_curl.json {{.RestUsername}} {{.RestPassword}} resume true"
+  wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_sbm.json {{.RestUsername}} {{.RestPassword}} resume true"
   wait: true
 
 -
@@ -340,9 +588,41 @@
   command: "kv --ops {{.Scale 1000000}} --create 40 --get 60 --sizes 64   --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
   duration: 180
 
+############### pause functions ################
+-
+  image: sequoiatools/eventing:6.5
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op.json {{.RestUsername}} {{.RestPassword}} pause true"
+  wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_timer.json {{.RestUsername}} {{.RestPassword}} pause true"
+  wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_curl.json {{.RestUsername}} {{.RestPassword}} pause true"
+  wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_sbm.json {{.RestUsername}} {{.RestPassword}} pause true"
+  wait: true
+
+
 ###############  Rebalance-out  kv+eventing nodes ################
 - template: rebalance_out
   args: "({{.ActiveDataNode 1}}, {{.ActiveEventingNode 1}})"
+  wait: true
+
+
+############### resume functions ################
+-
+  image: sequoiatools/eventing:6.5
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op.json {{.RestUsername}} {{.RestPassword}} resume true"
+  wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_timer.json {{.RestUsername}} {{.RestPassword}} resume true"
+  wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_curl.json {{.RestUsername}} {{.RestPassword}} resume true"
+  wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_sbm.json {{.RestUsername}} {{.RestPassword}} resume true"
   wait: true
 
 -
@@ -366,12 +646,44 @@
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.NthBucket 1}} {{.NthBucket 4}} 1200 60 True"
   wait: true
 
+############### pause functions ################
+-
+  image: sequoiatools/eventing:6.5
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op.json {{.RestUsername}} {{.RestPassword}} pause true"
+  wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_timer.json {{.RestUsername}} {{.RestPassword}} pause true"
+  wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_curl.json {{.RestUsername}} {{.RestPassword}} pause true"
+  wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_sbm.json {{.RestUsername}} {{.RestPassword}} pause true"
+  wait: true
+
+
 ############### data loading ################
 -
   image: sequoiatools/gideon
   requires:  "{{eq true .DoOnce}}"
   command: "kv --ops {{.Scale 1000000}} --create 40 --get 60 --sizes 64  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
   duration: 180
+
+
+############### resume functions ################
+-
+  image: sequoiatools/eventing:6.5
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op.json {{.RestUsername}} {{.RestPassword}} resume true"
+  wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_timer.json {{.RestUsername}} {{.RestPassword}} resume true"
+  wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_curl.json {{.RestUsername}} {{.RestPassword}} resume true"
+  wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_sbm.json {{.RestUsername}} {{.RestPassword}} resume true"
+  wait: true
 
 ###############  Swap Rebalance kv+eventing nodes ################
 - template: rebalance_swap
