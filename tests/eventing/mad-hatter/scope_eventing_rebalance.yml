@@ -79,12 +79,14 @@ buckets:
 servers: # each server tag represents a cluster
   -
       name: local
-      count: 10
+      count: 12
       ram: 90%
       eventing_ram: 90%
-      init_nodes: 7
+      init_nodes: 9
       services:
         eventing: 3
+        index: 1
+        query: 1
       rest_port: 8091
       data_path: "/data"
       index_path: "/data"
