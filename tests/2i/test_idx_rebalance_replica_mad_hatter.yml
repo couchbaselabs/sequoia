@@ -47,8 +47,13 @@
    command: "300"
    wait: true
 
-- section_end: create_replica_indexes
+# Wait till all indexes are completely built
+-
+   image: sequoiatools/wait_for_idx_build_complete
+   command: "{{.ActiveIndexNode 0}} {{.RestUsername}} {{.RestPassword}}"
+   wait: true
 
+- section_end: create_replica_indexes
 
 # ###############  run queries ################
 - section_start: query_replica_indexes
@@ -94,6 +99,18 @@
    command: "300"
    wait: true
 
+############### Kill projector ################
+-
+  template: kill_process
+  args: "{{.NthDataNode 1}}, projector"
+
+# Sleep for some more time after projector-kill completes (10 minutes)
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "600"
+   wait: true
+
 
 ###############  Rebalance-out single node ################
 - template: rebalance_out
@@ -111,7 +128,7 @@
   template: kill_process
   args: "{{.ActiveIndexNode 0}}, indexer"
 
-# Sleep for some more time after indexer-kill completes (3 minutes)
+# Sleep for some more time after indexer-kill completes (10 minutes)
 -
    image: sequoiatools/cmd
    entrypoint: sleep
@@ -129,6 +146,18 @@
    command: "300"
    wait: true
 
+############### Kill memcached ################
+-
+  template: kill_process
+  args: "{{.NthDataNode 2}}, memcached"
+
+# Sleep for some more time after memcached-kill completes (10 minutes)
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "600"
+   wait: true
+
 ###############  Rebalance-in two nodes ################
 - template: add_node
   args: "{{.NthInActiveNode 0}}, index"
@@ -140,6 +169,18 @@
    image: sequoiatools/cmd
    entrypoint: sleep
    command: "300"
+   wait: true
+
+############### Kill indexer ################
+-
+  template: kill_process
+  args: "{{.ActiveIndexNode 1}}, indexer"
+
+# Sleep for some more time after indexer-kill completes (10 minutes)
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "600"
    wait: true
 
 ###############  Increase number of replicas for an index ################
@@ -156,6 +197,30 @@
    image: sequoiatools/cmd
    entrypoint: sleep
    command: "300"
+   wait: true
+
+############### Kill projector ################
+-
+  template: kill_process
+  args: "{{.NthDataNode 0}}, projector"
+
+# Sleep for some more time after projector-kill completes (10 minutes)
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "600"
+   wait: true
+
+############### Kill query ################
+-
+  template: kill_process
+  args: "{{.Nodes | .Service `n1ql` | net 1}}, cbq-engine"
+
+# Sleep for some more time after query-kill completes (10 minutes)
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "600"
    wait: true
 
 ###############  Swap Rebalance two nodes ################
@@ -183,6 +248,18 @@
    command: "300"
    wait: true
 
+############### Kill memcached ################
+-
+  template: kill_process
+  args: "{{.NthDataNode 2}}, memcached"
+
+# Sleep for some more time after memcached-kill completes (10 minutes)
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "600"
+   wait: true
+
 ###############  Add back data node ################
 - template: rebalance_in
   args: "{{.InActiveNode}}"
@@ -195,6 +272,18 @@
    command: "300"
    wait: true
 
+############### Kill indexer ################
+-
+  template: kill_process
+  args: "{{.ActiveIndexNode 1}}, indexer"
+
+# Sleep for some more time after indexer-kill completes (10 minutes)
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "600"
+   wait: true
+
 ###############  Failover and addback ################
 - template: failover_force_and_recover
   args: "{{.ActiveIndexNode 2}}, full"
@@ -205,6 +294,18 @@
    image: sequoiatools/cmd
    entrypoint: sleep
    command: "300"
+   wait: true
+
+############### Kill query ################
+-
+  template: kill_process
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, cbq-engine"
+
+# Sleep for some more time after query-kill completes (10 minutes)
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "600"
    wait: true
 
 ############### Kill indexer ################
@@ -261,6 +362,18 @@
    wait: true
 - section_end: change_indexer_topologies
 
+############### Kill indexer ################
+-
+  template: kill_process
+  args: "{{.ActiveIndexNode 1}}, indexer"
+
+# Sleep for some more time after indexer-kill completes (10 minutes)
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "600"
+   wait: true
+
 ###############  Drop some Indexes ################
 - section_start: recreate_replica_indexes
 - template: cbq
@@ -279,7 +392,7 @@
   template: kill_process
   args: "{{.ActiveIndexNode 0}}, indexer"
 
-# Sleep for some more time after indexer-kill completes (3 minutes)
+# Sleep for some more time after indexer-kill completes (10 minutes)
 -
    image: sequoiatools/cmd
    entrypoint: sleep
