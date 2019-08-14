@@ -3,14 +3,18 @@
   include: tests/templates/rebalance.yml, tests/templates/groups.yml, tests/templates/kv.yml
 -
   # data loading
-  template: pillowfight_per_rep
-  args: "{{.Orchestrator}}, {{.Bucket}}, -B {{.Scale 100}} -I {{.Scale 100000}} -t 1, {{.AuthPassword}}"
-- args: "{{.Orchestrator}}, {{.NthBucket 1}}, -B {{.Scale 100}} -I {{.Scale 100000}} -t 1, {{.AuthPassword}} --persist-to 1"
+  template: pillowfight_durability
+  args: "{{.Orchestrator}}, {{.Bucket}}, -B {{.Scale 1000}} -I {{.Scale 100000}} -t 1, {{.AuthPassword}}"
+- args: "{{.Orchestrator}}, {{.NthBucket 1}}, -B {{.Scale 1000}} -I {{.Scale 50000}} -t 1, {{.AuthPassword}}  -d majority"
+- args: "{{.Orchestrator}}, {{.NthBucket 2}}, -B {{.Scale 1000}} -I {{.Scale 100000}} -t 1, {{.AuthPassword}}"
+- args: "{{.Orchestrator}}, {{.NthBucket 3}}, -B {{.Scale 1000}} -I {{.Scale 50000}} -t 1, {{.AuthPassword}}  -d majority"
 
--
-  image: sequoiatools/gideon:persist_replicate
-- command: "kv --ops {{.Scale 1000}} --create 100  --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}}"
-- command: "kv --ops {{.Scale 1000}} --create 100  --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}} --persist_to 1"
+#-
+#  image: sequoiatools/gideon:3.0.0a4
+#- command: "kv --ops {{.Scale 1000}} --create 100  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+#- command: "kv --ops {{.Scale 1000}} --create 100  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}} --persist_to 1"
+#- command: "kv --ops {{.Scale 1000}} --create 100  --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}}"
+#- command: "kv --ops {{.Scale 1000}} --create 100  --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}} --replicate_to 1"
 
 -
   # create group and add 2 nodes to it
