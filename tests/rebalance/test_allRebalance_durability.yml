@@ -4,8 +4,8 @@
 -
   # data loading
   template: pillowfight_durability
-  args: "{{.Orchestrator}}, {{.Bucket}}, -B {{.Scale 1000}} -I {{.Scale 100000}} -t 1, {{.AuthPassword}}"
-- args: "{{.Orchestrator}}, {{.NthBucket 1}}, -B {{.Scale 1000}} -I {{.Scale 50000}} -t 1, {{.AuthPassword}}  -d majority"
+  args: "{{.Orchestrator}}, {{.Bucket}}, -B {{.Scale 1000}} -I {{.Scale 100000}} -t 1, {{.AuthPassword}} -J"
+- args: "{{.Orchestrator}}, {{.NthBucket 1}}, -B {{.Scale 1000}} -I {{.Scale 50000}} -t 1, {{.AuthPassword}}  -d majority -J"
 - args: "{{.Orchestrator}}, {{.NthBucket 2}}, -B {{.Scale 1000}} -I {{.Scale 100000}} -t 1, {{.AuthPassword}}"
 - args: "{{.Orchestrator}}, {{.NthBucket 3}}, -B {{.Scale 1000}} -I {{.Scale 50000}} -t 1, {{.AuthPassword}}  -d majority"
 
