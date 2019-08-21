@@ -1,127 +1,178 @@
 -
   # include rebalance and group templates
-  include: tests/templates/rebalance.yml, tests/templates/groups.yml, tests/templates/kv.yml
--
-  # data loading
-  template: pillowfight_durability
-  args: "{{.Orchestrator}}, {{.Bucket}}, -B {{.Scale 1000}} -I {{.Scale 100000}} -t 1, {{.AuthPassword}} -J"
-- args: "{{.Orchestrator}}, {{.NthBucket 1}}, -B {{.Scale 1000}} -I {{.Scale 50000}} -t 1, {{.AuthPassword}}  -d majority -J"
-- args: "{{.Orchestrator}}, {{.NthBucket 2}}, -B {{.Scale 1000}} -I {{.Scale 100000}} -t 1, {{.AuthPassword}}"
-- args: "{{.Orchestrator}}, {{.NthBucket 3}}, -B {{.Scale 1000}} -I {{.Scale 50000}} -t 1, {{.AuthPassword}}  -d majority"
-
-#-
-#  image: sequoiatools/gideon:3.0.0a4
-#- command: "kv --ops {{.Scale 1000}} --create 100  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
-#- command: "kv --ops {{.Scale 1000}} --create 100  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}} --persist_to 1"
-#- command: "kv --ops {{.Scale 1000}} --create 100  --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}}"
-#- command: "kv --ops {{.Scale 1000}} --create 100  --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}} --replicate_to 1"
+  include: tests/templates/rebalance.yml, tests/templates/groups.yml, tests/templates/kv.yml, tests/templates/bucket.yml
 
 -
-  # create group and add 2 nodes to it
-  template: group_create
-  args: "kvgroup1"
--
-  template: failover_node_forced
-  args: "{{.NthDataNode 1}}"
+  image: sequoiatools/gideon:3.0.0a4
+- command: "kv --ops {{.Scale 1000}} --create 50 --get 10 --delete 40  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+- command: "kv --ops {{.Scale 1000}} --create 50 --get 10 --delete 40  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}} --durability majority"
+- command: "kv --ops {{.Scale 1000}} --create 50 --get 10 --delete 40  --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}} --durability majority"
+
+###############  Rebalance-in ################
+- template: rebalance_in
+  args: "{{.InActiveNode}}"
   wait: true
--
-  template: failover_node_forced
-  args: "{{.NthDataNode 2}}"
-  wait: true
--
-  # Full recovery and add back Node 1
-  template: recover_node
-  args: "{{.NthDataNode 1}}, full"
--
-  # Full recovery and add back Node 2
-  template: recover_node
-  args: "{{.NthDataNode 2}}, full"
--
-  template: rebalance
-  wait: true
--
-  template: group_move_servers
-  args: "'Group 1', kvgroup1, ({{.NthDataNode 1}}, {{.NthDataNode 2}})"
--
-  template: rebalance
-  wait: true
--
-   image: sequoiatools/couchbase-cli
-   command: "failover -c {{.Orchestrator}}:{{.RestPort}}
-       --server-failover {{.NthDataNode 1}}:{{.RestPort}} --force
-       -u  {{.RestUsername}} -p  {{.RestPassword}}"
-   wait: true
--
-   command: "server-readd -c {{.Orchestrator}}:{{.RestPort}}
-            --server-add {{.NthDataNode 1}}:{{.RestPort}}
-            -u  {{.RestUsername}} -p  {{.RestPassword}}"
-   wait: true
--
-   command: "recovery -c {{.Orchestrator}}:{{.RestPort}}
-       --server-recovery {{.NthDataNode 1}}:{{.RestPort}}
-       --recovery-type delta
-       -u  {{.RestUsername}} -p  {{.RestPassword}}"
-   wait: true
 
 -
-   command:  "rebalance -c {{.Orchestrator}}:{{.RestPort}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
-   wait: true
--
-  template: rebalance_out
-  args: "{{.NthDataNode 1}}"
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
   wait: true
--
-  # sync
+
+###############  Rebalance-out single node ################
+- template: rebalance_out
+  args: "{{.ActiveDataNode 1}}"
   wait: true
-  duration: 60
+
 -
-  #  swap rebalance 2 nodes
-  template: rebalance_swap
-  args: "{{.NthDataNode 1}}, {{.NthDataNode 2}}"
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
   wait: true
--
-  # sync
+
+###############  Swap Rebalance ################
+- template: rebalance_swap
+  args: "{{.InActiveNode}},{{.ActiveDataNode 1}}"
   wait: true
-  duration: 60
--
-  # add back to group
-  template: group_move_servers
-  args: "'Group 1', kvgroup1, {{.NthDataNode 1}}"
+
+###############  update bucket replica ################
+- template: enable-replica
+  args: "{{.NthBucket 1}},2"
+- args: "{{.NthBucket 2}},2"
   wait: true
+
 -
   template: rebalance
   wait: true
+
+
+######## Graceful failover kv node #######
 -
-  # create another group
-  requires:  "{{eq true .DoOnce }}"
-  template: group_create
-  args: "kvgroup2"
--
-  # move to group2 without rebalance
-  template: group_move_servers
-  args: "kvgroup1, kvgroup2, {{.NthDataNode 1}}"
--
-  # remove empty group 1
-  template: group_delete
-  args: "kvgroup1"
--
-  # rebalance into group 2
-  template: rebalance
-  wait: true
--
-  # failover and full recover a node
   template: failover_and_recover
-  args: "{{.NthDataNode 1}}, full"
+  args: "{{.ActiveDataNode 1}},full"
   wait: true
+
+######## Graceful failover kv node #######
 -
-  # enable autofailover settings
-  template: autofailover
-  args: "{{.NthDataNode 1 | noport}}, 5, full"
+  template: failover_and_recover
+  args: "{{.ActiveDataNode 1}},delta"
+  wait: true
+
+
+############### Graceful Failover and rebalance out 1 KV ################
+ -
+  template: failover_node
+  args: "{{.ActiveDataNode 1}}"
+
 -
-  # back to default group
-  template: group_move_servers
-  args: "kvgroup2, 'Group 1', {{.NthDataNode 1}}"
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+- template: rebalance
+  wait: true
+
+###############  Rebalance-in KV which were out due to failover ################
 -
-  # remove empty group 2
-  template: group_delete
-  args: "kvgroup2"
+  template: add_node
+  args: "{{.NthInActiveNode 0}}"
+  wait: true
+
+
+-
+  template: rebalance
+  wait: true
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+###############  reset bucket replica ################
+- template: enable-replica
+  args: "{{.NthBucket 1}},1"
+- args: "{{.NthBucket 2}},2"
+  wait: true
+
+-
+  template: rebalance
+  wait: true
+
+
+###############  Rebalance-in 2 kv ################
+-
+  template: add_node
+  args: "{{.NthInActiveNode 0}}"
+- args: "{{.NthInActiveNode 1}}"
+  wait: true
+
+-
+  template: rebalance
+  wait: true
+
+
+###############  Rebalance-out 2 kv ################
+- template: rebalance_out
+  args: "({{.ActiveDataNode 1}},{{.ActiveDataNode 2}})"
+  wait: true
+
+
+###############  Swap rebalance 2 kv ################
+-
+  template: add_node
+  args: "{{.NthInActiveNode 0}}"
+- args: "{{.NthInActiveNode 1}}"
+  wait: true
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+- template: rebalance_out
+  args: "({{.ActiveDataNode 1}},{{.ActiveDataNode 2}})"
+  wait: true
+
+
+###############  Rebalance in  1 kv and out 2 kv  ################
+-
+  template: add_node
+  args: "{{.NthInActiveNode 0}}"
+  wait: true
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+- template: rebalance_out
+  args: "({{.ActiveDataNode 1}},{{.ActiveDataNode 2}})"
+  wait: true
+
+
+############ kill memcached ##################
+-
+  template: memcached_kill
+  args: "{{.ActiveDataNode 1}}"
+  wait: true
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "10"
+  wait: true
+
+-
+  template: start_memcached
+  args: "{{.ActiveDataNode 1}}"
+  wait: true
+
+
+######## Add back all the nodes for cluster reset #######
+- template: rebalance_in
+  args: "{{.InActiveNode}}"
+  wait: true
