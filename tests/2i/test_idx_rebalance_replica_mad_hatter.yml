@@ -57,22 +57,25 @@
 
 # ###############  run queries ################
 - section_start: query_replica_indexes
-- template: attack_query
-  args: "0, 1, {{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}, 'select result from default where result is not null LIMIT 50000'"
-#- args: "0, 1, {{.Nodes | .Service `n1ql` | net 1}}:{{.QueryPort}}, 'select * from `{{.NthBucket 1}}` limit 25 offset 1000'"
-- args: "0, 1, {{.Nodes | .Service `n1ql` | net 1}}:{{.QueryPort}}, 'select claim from `{{.NthBucket 3}}` where claim is not null limit 100'"
+- image: sequoiatools/queryapp
+  command: "-J-cp '../Couchbase-Java-Client-2.5.6/*' load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 0 --print_duration=3600 --bucket {{.Bucket}} --querycount 10 --threads 10 --n1ql True --query_file queries.txt --query_timeout=600 --scan_consistency REQUEST_PLUS --bucket_names [default,{{.Bucket}},{{.NthBucket 1}},{{.NthBucket 2}},{{.NthBucket 3}}]"
 
-- image: sequoiatools/cbdozer
-  command: "-method POST -duration 0 -rate 1 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.Nodes | .Service `n1ql` | net 1}}:{{.QueryPort}}/query/service
-            -body 'select result,AVG(rating),MIN(rating),MAX(rating) from `{{.Bucket}}` where result is not missing and rating >= 400 and rating <= 1000 group by result'"
-- command: "-method POST -duration 0 -rate 1 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}/query/service
-            -body 'select result,SUM(rating) from `{{.NthBucket 1}}` where result is not null and rating >= 115 and rating <= 125 group by result'"
+#- template: attack_query
+#  args: "0, 1, {{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}, 'select result from default where result is not null LIMIT 50000'"
+##- args: "0, 1, {{.Nodes | .Service `n1ql` | net 1}}:{{.QueryPort}}, 'select * from `{{.NthBucket 1}}` limit 25 offset 1000'"
+#- args: "0, 1, {{.Nodes | .Service `n1ql` | net 1}}:{{.QueryPort}}, 'select claim from `{{.NthBucket 3}}` where claim is not null limit 100'"
+#
+#- image: sequoiatools/cbdozer
+#  command: "-method POST -duration 0 -rate 1 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.Nodes | .Service `n1ql` | net 1}}:{{.QueryPort}}/query/service
+#            -body 'select result,AVG(rating),MIN(rating),MAX(rating) from `{{.Bucket}}` where result is not missing and rating >= 400 and rating <= 1000 group by result'"
+#- command: "-method POST -duration 0 -rate 1 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}/query/service
+#            -body 'select result,SUM(rating) from `{{.NthBucket 1}}` where result is not null and rating >= 115 and rating <= 125 group by result'"
+##- command: "-method POST -duration 0 -rate 1 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.Nodes | .Service `n1ql` | net 1}}:{{.QueryPort}}/query/service
+##            -body 'select result,AVG(rating),MIN(rating),MAX(rating) from `{{.NthBucket 2}}` where result is not missing and rating >= 800 and rating <= 810 group by result'"
+#- command: "-method POST -duration 0 -rate 1 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}/query/service
+#            -body 'select result,SUM(rating) from `{{.NthBucket 3}}` where result is not null and rating >= 410 and rating <= 420 group by result'"
 #- command: "-method POST -duration 0 -rate 1 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.Nodes | .Service `n1ql` | net 1}}:{{.QueryPort}}/query/service
-#            -body 'select result,AVG(rating),MIN(rating),MAX(rating) from `{{.NthBucket 2}}` where result is not missing and rating >= 800 and rating <= 810 group by result'"
-- command: "-method POST -duration 0 -rate 1 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}/query/service
-            -body 'select result,SUM(rating) from `{{.NthBucket 3}}` where result is not null and rating >= 410 and rating <= 420 group by result'"
-- command: "-method POST -duration 0 -rate 1 -url http://{{$.RestUsername}}:{{$.RestPassword}}@{{.Nodes | .Service `n1ql` | net 1}}:{{.QueryPort}}/query/service
-            -body 'select round(min(rating),2) as min_rating,round(max(rating),2) as max_rating,round(avg(rating),2) as avg_rating from `{{.NthBucket 2}}` where result is not null and rating between 500 and 520'"
+#            -body 'select round(min(rating),2) as min_rating,round(max(rating),2) as max_rating,round(avg(rating),2) as avg_rating from `{{.NthBucket 2}}` where result is not null and rating between 500 and 520'"
 - section_end: query_replica_indexes
 
 ############### run creates ################
