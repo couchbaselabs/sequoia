@@ -4,7 +4,7 @@
 
 -
   image: sequoiatools/gideon:3.0.0a4
-- command: "kv --ops {{.Scale 1000}} --create 50 --get 10 --delete 40  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+  command: "kv --ops {{.Scale 1000}} --create 50 --get 10 --delete 40  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
 - command: "kv --ops {{.Scale 1000}} --create 50 --get 10 --delete 40  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}} --durability majority"
 - command: "kv --ops {{.Scale 1000}} --create 50 --get 10 --delete 40  --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}} --durability majority"
 
@@ -60,7 +60,7 @@
 
 
 ############### Graceful Failover and rebalance out 1 KV ################
- -
+-
   template: failover_node
   args: "{{.ActiveDataNode 1}}"
 
