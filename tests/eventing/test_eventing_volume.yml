@@ -27,6 +27,11 @@
   args: "'create PRIMARY INDEX on sbm_dst'"
   wait: true
 
+- template: cbq
+  requires:  "{{eq true .DoOnce }}"
+  args: "'create PRIMARY INDEX on n1ql_op_dst'"
+  wait: true
+
 ############### data loading ################
 -
   image: sequoiatools/populate_data
@@ -45,6 +50,8 @@
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}}  mad-hatter/bucket_op.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}}  mad-hatter/bucket_op_timer.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}}  mad-hatter/n1ql_op.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}}  mad-hatter/bucket_op_curl.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
 -
@@ -65,6 +72,9 @@
   wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_sbm.json {{.RestUsername}} {{.RestPassword}} pause true"
+  wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/n1ql_op.json {{.RestUsername}} {{.RestPassword}} pause true"
   wait: true
 
 -
@@ -87,6 +97,9 @@
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_sbm.json {{.RestUsername}} {{.RestPassword}} resume true"
   wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/n1ql_op.json {{.RestUsername}} {{.RestPassword}} resume true"
+  wait: true
 
 
 -
@@ -108,6 +121,9 @@
   wait: true
 -
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.NthBucket 1}} {{.NthBucket 4}} 2400 60 True"
+  wait: true
+-
+  command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 5}} 2400 60 True"
   wait: true
 
 
@@ -147,6 +163,9 @@
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_sbm.json {{.RestUsername}} {{.RestPassword}} pause true"
   wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/n1ql_op.json {{.RestUsername}} {{.RestPassword}} pause true"
+  wait: true
 
 -
   image: sequoiatools/cmd
@@ -167,6 +186,9 @@
   wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_sbm.json {{.RestUsername}} {{.RestPassword}} resume true"
+  wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/n1ql_op.json {{.RestUsername}} {{.RestPassword}} resume true"
   wait: true
 
 -
@@ -189,6 +211,9 @@
 -
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.NthBucket 1}} {{.NthBucket 4}} 1200 60 True"
   wait: true
+-
+  command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 5}} 1200 60 True"
+  wait: true
 
 ############### data loading ################
 -
@@ -210,6 +235,9 @@
   wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_sbm.json {{.RestUsername}} {{.RestPassword}} pause true"
+  wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/n1ql_op.json {{.RestUsername}} {{.RestPassword}} pause true"
   wait: true
 
 -
@@ -238,6 +266,9 @@
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_sbm.json {{.RestUsername}} {{.RestPassword}} resume true"
   wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/n1ql_op.json {{.RestUsername}} {{.RestPassword}} resume true"
+  wait: true
 
 -
   image: sequoiatools/cmd
@@ -259,6 +290,9 @@
 -
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.NthBucket 1}} {{.NthBucket 4}} 1200 60 True"
   wait: true
+-
+  command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 5}} 1200 60 True"
+  wait: true
 
 ############### pause functions ################
 -
@@ -273,6 +307,9 @@
   wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_sbm.json {{.RestUsername}} {{.RestPassword}} pause true"
+  wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/n1ql_op.json {{.RestUsername}} {{.RestPassword}} pause true"
   wait: true
 
 -
@@ -312,6 +349,9 @@
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_sbm.json {{.RestUsername}} {{.RestPassword}} resume true"
   wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/n1ql_op.json {{.RestUsername}} {{.RestPassword}} resume true"
+  wait: true
 
 -
   image: sequoiatools/cmd
@@ -332,6 +372,9 @@
   wait: true
 -
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.NthBucket 1}} {{.NthBucket 4}} 1200 60 True"
+  wait: true
+-
+  command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 5}} 1200 60 True"
   wait: true
 
 ############### data loading ################
@@ -354,6 +397,9 @@
   wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_sbm.json {{.RestUsername}} {{.RestPassword}} pause true"
+  wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/n1ql_op.json {{.RestUsername}} {{.RestPassword}} pause true"
   wait: true
 
 #################################################
@@ -384,6 +430,9 @@
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_sbm.json {{.RestUsername}} {{.RestPassword}} resume true"
   wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/n1ql_op.json {{.RestUsername}} {{.RestPassword}} resume true"
+  wait: true
 
 -
   image: sequoiatools/cmd
@@ -404,6 +453,9 @@
   wait: true
 -
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.NthBucket 1}} {{.NthBucket 4}} 1200 60 True"
+  wait: true
+-
+  command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 5}} 1200 60 True"
   wait: true
 
 ############### data loading ################
@@ -427,6 +479,9 @@
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_sbm.json {{.RestUsername}} {{.RestPassword}} pause true"
   wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/n1ql_op.json {{.RestUsername}} {{.RestPassword}} pause true"
+  wait: true
 
 
 ###############  Rebalance-out multiple eventing nodes ################
@@ -449,6 +504,9 @@
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_sbm.json {{.RestUsername}} {{.RestPassword}} resume true"
   wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/n1ql_op.json {{.RestUsername}} {{.RestPassword}} resume true"
+  wait: true
 
 -
   image: sequoiatools/cmd
@@ -469,6 +527,9 @@
   wait: true
 -
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.NthBucket 1}} {{.NthBucket 4}} 1200 60 True"
+  wait: true
+-
+  command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 5}} 1200 60 True"
   wait: true
 
 ############### data loading ################
@@ -507,6 +568,9 @@
 -
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.NthBucket 1}} {{.NthBucket 4}} 1200 60 True"
   wait: true
+-
+  command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 5}} 1200 60 True"
+  wait: true
 
 ############### data loading ################
 -
@@ -539,6 +603,9 @@
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_sbm.json {{.RestUsername}} {{.RestPassword}} pause true"
   wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/n1ql_op.json {{.RestUsername}} {{.RestPassword}} pause true"
+  wait: true
 
 -
   template: rebalance
@@ -558,6 +625,9 @@
   wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_sbm.json {{.RestUsername}} {{.RestPassword}} resume true"
+  wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/n1ql_op.json {{.RestUsername}} {{.RestPassword}} resume true"
   wait: true
 
 -
@@ -579,6 +649,9 @@
   wait: true
 -
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.NthBucket 1}} {{.NthBucket 4}} 1200 60 True"
+  wait: true
+-
+  command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 5}} 1200 60 True"
   wait: true
 
 ############### data loading ################
@@ -602,6 +675,9 @@
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_sbm.json {{.RestUsername}} {{.RestPassword}} pause true"
   wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/n1ql_op.json {{.RestUsername}} {{.RestPassword}} pause true"
+  wait: true
 
 
 ###############  Rebalance-out  kv+eventing nodes ################
@@ -624,6 +700,9 @@
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_sbm.json {{.RestUsername}} {{.RestPassword}} resume true"
   wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/n1ql_op.json {{.RestUsername}} {{.RestPassword}} resume true"
+  wait: true
 
 -
   image: sequoiatools/cmd
@@ -645,6 +724,9 @@
 -
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.NthBucket 1}} {{.NthBucket 4}} 1200 60 True"
   wait: true
+-
+  command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 5}} 1200 60 True"
+  wait: true
 
 ############### pause functions ################
 -
@@ -659,6 +741,9 @@
   wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_sbm.json {{.RestUsername}} {{.RestPassword}} pause true"
+  wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/n1ql_op.json {{.RestUsername}} {{.RestPassword}} pause true"
   wait: true
 
 
@@ -683,6 +768,9 @@
   wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_sbm.json {{.RestUsername}} {{.RestPassword}} resume true"
+  wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/n1ql_op.json {{.RestUsername}} {{.RestPassword}} resume true"
   wait: true
 
 ###############  Swap Rebalance kv+eventing nodes ################
@@ -714,7 +802,9 @@
 -
   command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.NthBucket 1}} {{.NthBucket 4}} 2400 60 True"
   wait: true
-
+-
+  command: "/eventing_validator.py {{.Orchestrator}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} {{.NthBucket 5}} 1200 60 True"
+  wait: true
 
 -
   image: sequoiatools/cmd
