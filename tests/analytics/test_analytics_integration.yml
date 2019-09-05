@@ -1,15 +1,26 @@
 -
   include: tests/templates/kv.yml, tests/templates/vegeta.yml, tests/templates/analytics.yml,  tests/templates/rebalance.yml
 
-###############  create indexes and keep them forever ################
+###############  create datasets & indexes ################
 - section_start: analytics_setup
+###############  create analytics datasets  ################
+-
+  image: sequoiatools/cbq
+  command: "-e=http://{{.ActiveAnalyticsNode 0}}:8095  -u={{.RestUsername}} -p={{.RestPassword}} -script='create dataset ds1 on `{{.Bucket}}`;'"
+  wait: true
+-
+  command: "-e=http://{{.ActiveAnalyticsNode 0}}:8095  -u={{.RestUsername}} -p={{.RestPassword}} -script='create dataset ds2 with {\"storage-block-compression\": {\"scheme\": \"snappy\"}} on `{{.NthBucket 1}}`;'"
+  wait: true
+-
+  command: "-e=http://{{.ActiveAnalyticsNode 0}}:8095  -u={{.RestUsername}} -p={{.RestPassword}} -script='create dataset ds3 on `{{.NthBucket 2}}`;'"
+  wait: true
+-
+  command: "-e=http://{{.ActiveAnalyticsNode 0}}:8095  -u={{.RestUsername}} -p={{.RestPassword}} -script='create dataset ds4 with {\"storage-block-compression\": {\"scheme\": \"snappy\"}} on `{{.NthBucket 3}}`;'"
+  wait: true
+
+###############  create analytics secondary indexes  ################
 - template: cbq
-#- template: analytics_rest
-  args: "create dataset ds1 on `{{.Bucket}}`;"
-- args: "create dataset ds2 on `{{.NthBucket 1}}`;"
-- args: "create dataset ds3 on `{{.NthBucket 2}}`;"
-- args: "create dataset ds4 on `{{.NthBucket 3}}`;"
-- args: "create index idx_result1 on ds1\\(result:string);"
+  args: "create index idx_result1 on ds1\\(result:string);"
 - args: "create index idx_result2 on ds2\\(result:string);"
   wait: true
 - section_end: analytics_setup
@@ -37,23 +48,11 @@
 - section_end: analytics_query
 
 - section_start: analytics_topology_change
-# ###############  disconnect queries ################
-- template: cbq
-  args: "disconnect link Local;"
-  wait: true
-
 
 ###############  Rebalance-in analytics ################
 - template: rebalance_in
   args: "{{.InActiveNode}}, analytics"
   wait: true
-
-
-# ###############  connect queries ################
-- template: cbq
-  args: "connect link Local;"
-  wait: true
-
 
 # ###############sleep for 30secs###############
 -
@@ -62,19 +61,9 @@
   command: "30"
   wait: true
 
-# ###############  disconnect queries ################
-- template: cbq
-  args: "disconnect link Local;"
-  wait: true
-
 ###############  Rebalance-out single node ################
 - template: rebalance_out
   args: "{{.ActiveAnalyticsNode 1}}"
-  wait: true
-
-# ###############  connect queries ################
-- template: cbq
-  args: "connect link Local;"
   wait: true
 
 
