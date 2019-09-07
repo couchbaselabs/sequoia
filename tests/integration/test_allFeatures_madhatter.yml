@@ -121,6 +121,13 @@
 	--enable-compression 1"
   wait: true
 
+# get replication id
+-
+  image:  appropriate/curl
+  command: "-s http://{{.RestUsername}}:{{.RestPassword}}@{{.Orchestrator | noport}}:{{.ClusterNodes | .Attr `rest_port`}}/pools/default/remoteClusters"
+  alias: ReplId
+  wait: true
+
 # apply adv filtering to xdcr replications
 - image: appropriate/curl
   requires:  "{{eq true .DoOnce }}"
