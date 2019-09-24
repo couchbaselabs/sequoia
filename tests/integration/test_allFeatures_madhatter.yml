@@ -27,7 +27,7 @@
   section: analytics_setup
 
 # replica index creation
-- test: tests/2i/test_idx_rebalance_replica_mad_hatter.yml
+- test: tests/2i/test_idx_mad_hatter_integration.yml
   section: create_replica_indexes
 
 # replica data loading for 30 minutes with docs that will expire after 1 hour
@@ -40,7 +40,7 @@
   duration: 1800
 
 # query replica indexes
-- test: tests/2i/test_idx_rebalance_replica_mad_hatter.yml
+- test: tests/2i/test_idx_mad_hatter_integration.yml
   section: query_replica_indexes
 
 # swap rebalance
@@ -155,11 +155,11 @@
   wait: true
 
 # recreate replica indexes
-- test: tests/2i/test_idx_rebalance_replica_mad_hatter.yml
+- test: tests/2i/test_idx_mad_hatter_integration.yml
   section: recreate_replica_indexes
 
 # change the topologies on the 2i test
-- test: tests/2i/test_idx_rebalance_replica_mad_hatter.yml
+- test: tests/2i/test_idx_mad_hatter_integration.yml
   section: change_indexer_topologies
 
 # redeploy eventing handlers

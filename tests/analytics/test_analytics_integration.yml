@@ -87,17 +87,6 @@
   command: "300"
   wait: true
 
-############### Kill analytics ################
--
-  template: analytics_kill
-  args: "{{.ActiveAnalyticsNode 1}}"
-
-# ###############sleep for 180secs###############
--
-  image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "180"
-  wait: true
 - section_end: analytics_topology_change
 
 - section_start: analytics_teardown
