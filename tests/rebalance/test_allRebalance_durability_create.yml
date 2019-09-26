@@ -4,7 +4,7 @@
 
 -
   image: sequoiatools/gideon:3.0.0a4
-  command: "kv --ops {{.Scale 1000}} --create 100  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+  command: "kv --ops {{.Scale 1000}} --create 100  --expire 100 --ttl 3600 --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
 - command: "kv --ops {{.Scale 1000}} --create 100  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}} --durability majority"
 - command: "kv --ops {{.Scale 1000}} --create 100  --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}} --durability majority"
 
