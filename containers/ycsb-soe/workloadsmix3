@@ -1,0 +1,41 @@
+recordcount=1000
+operationcount=1000
+requestdistribution=uniform
+readallfields=true
+readproportion=0
+updateproportion=0
+scanproportion=0
+insertproportion=0
+
+
+workload=com.yahoo.ycsb.workloads.soe.SoeWorkload
+
+
+# Workload settings for soe
+
+soe_insert=0.3
+soe_update=0.2
+soe_read=0
+soe_scan=0
+soe_page=0
+soe_search=0
+soe_nestscan=0.2
+soe_arrayscan=0.2
+soe_arraydeepscan=0.1
+soe_report=0
+soe_report2=0
+soe_page2=0
+soe_search2=0
+
+
+# zipfian, uniform
+soe_request_distribution=zipfian
+
+soe_storage_host=localhost
+soe_storage_port=8000
+
+soe_querylimit_min = 1
+soe_querylimit_max = 50
+
+soe_offset_min = 1
+soe_offset_max = 10000

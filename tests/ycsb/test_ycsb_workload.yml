@@ -1,0 +1,72 @@
+### YCSB TEST 
+#
+#  Runs load phase of workloade followed by run phase
+#
+#  By default the test runs with 4 threads and a recordcount of 250K
+#  Set a scale value of 40 to amplify this to 160 threads and 10M items by starting
+#  test with params:
+#     ./sequoia ... -scale=40
+#
+######################
+
+-
+  # include backup restroe template
+  include: tests/templates/backuprestore.yml
+
+# INIT Phase
+-
+  image: sequoiatools/cbq
+  command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX idx1 ON `bucket-1`(address.prev_address.zip) WITH {\"num_replica\": 1}'"
+  wait: true
+-
+  command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX idx2 ON `bucket-1`(DISTINCT devices) WITH {\"num_replica\": 1}'"
+  wait: true
+
+-
+  command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX idx3 ON `bucket-1`(DISTINCT ARRAY (DISTINCT ARRAY (v.country || \".\" || c) FOR c IN v.cities END) FOR v IN visited_places END) WITH {\"num_replica\": 1}'"
+  wait: true
+
+-
+  command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX idx4 ON `bucket-1`(address.zip, order_list) WITH {\"num_replica\": 1}'"
+  wait: true
+
+-
+  command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX idx5 ON `bucket-1`(address.zip, month, order_list, sale_price) WITH {\"num_replica\": 1}'"
+  wait: true
+
+-
+  command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX idx6 ON `bucket-1`(address.geo_region) WITH {\"num_replica\": 1}'"
+  wait: true
+
+-
+  command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX idx7 ON `bucket-1`(address.geo_region, age_group, DATE_PART_STR(dob,\"year\")) WITH {\"num_replica\": 1}'"
+  wait: true
+
+-
+  template: restore_backup
+  args: "{{.QueryNode}}, {{.QueryNode}}, /backup"
+  wait: true
+
+# LOAD Phase
+
+-
+  image: sequoiatools/ycsb-soe
+  command: "{{.Scale 250000}} {{.Scale 4}} {{.QueryNode}} {{.Bucket}}"
+  alias: YCSBContainer
+  wait: true
+
+# SAVE Logs
+
+-
+  client:
+    op: cp
+    container: "YCSBContainer"
+    frompath: "ycsb_load.log"
+    topath: "logs/ycsb_load.log"
+
+-
+  client:
+    op: cp
+    container: "YCSBContainer"
+    frompath: "ycsb_run.log"
+    topath: "logs/ycsb_run.log"
