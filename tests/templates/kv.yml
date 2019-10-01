@@ -2,7 +2,7 @@
   name: pillowfight
   actions:
     -
-      image: sequoiatools/pillowfight
+      image: sequoiatools/pillowfight:6.5
       command: "-U  couchbase://$0/$1{{if le 5.0 $.Version}}?select_bucket=true{{end}} $2{{if le 5.0 $.Version}} -P $3{{end}}"
 
 
@@ -36,6 +36,14 @@
     -
       template: pillowfight
       args: "{{.Orchestrator}}, {{.Bucket}},-I {{.Scale 1000}} -B {{.Scale 100}} -t 4 -c 100, {{.AuthPassword}}"
+
+-
+  # high throughput pillowfight with durability
+  name: pillowfight_htp_majority
+  actions:
+    -
+      template: pillowfight
+      args: "{{.Orchestrator}}, {{.Bucket}},-I {{.Scale 1000}} -B {{.Scale 100}} -t 4 -c 100, {{.AuthPassword}} --durability majority"
 
 # runs the pillowfight template followed by wait
 # $0 = node
