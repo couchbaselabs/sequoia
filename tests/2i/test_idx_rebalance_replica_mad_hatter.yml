@@ -191,6 +191,19 @@
   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='ALTER INDEX `{{.Bucket}}`.default_claims WITH {\"action\":\"replica_count\",\"num_replica\": 3}'"
   wait: true
 
+# Sleep for some time to allow DDL to complete if running in background.
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "300"
+   wait: true
+
+# Wait till all indexes are completely built
+-
+   image: sequoiatools/wait_for_idx_build_complete
+   command: "{{.ActiveIndexNode 0}} {{.RestUsername}} {{.RestPassword}}"
+   wait: true
+
 ###############  Rebalance-out two nodes ################
 - template: rebalance_out
   args: "({{.ActiveIndexNode 0}},{{.ActiveIndexNode 2}})"
@@ -340,6 +353,19 @@
   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='ALTER INDEX `{{.Bucket}}`.default_claims WITH {\"action\":\"replica_count\",\"num_replica\": 2}'"
   wait: true
 
+# Sleep for some time to allow DDL to complete if running in background.
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "300"
+   wait: true
+
+# Wait till all indexes are completely built
+-
+   image: sequoiatools/wait_for_idx_build_complete
+   command: "{{.ActiveIndexNode 0}} {{.RestUsername}} {{.RestPassword}}"
+   wait: true
+
 ###############  Rebalance-out single node ################
 #- template: rebalance_out
 #  args: "{{.ActiveIndexNode 1}}"
@@ -407,11 +433,18 @@
   args: "'create index default_rating on `{{.Bucket}}`\\(rating) using GSI'"
 - args: "'create primary index on `{{.Bucket}}` using GSI'"
 - args: "'create index o1_claims on `{{.NthBucket 1}}`\\(claim) using GSI'"
-# Sleep for some time to allow DDL to complete in the background
+
+# Sleep for some time to allow DDL to complete if running in background.
 -
    image: sequoiatools/cmd
    entrypoint: sleep
-   command: "600"
+   command: "300"
+   wait: true
+
+# Wait till all indexes are completely built
+-
+   image: sequoiatools/wait_for_idx_build_complete
+   command: "{{.ActiveIndexNode 0}} {{.RestUsername}} {{.RestPassword}}"
    wait: true
 - section_end: recreate_replica_indexes
 
