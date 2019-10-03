@@ -84,7 +84,7 @@ servers: # each server tag represents a cluster
       init_nodes: 10
       services:
         eventing: 5
-        eventing_start: 5
+        eventing_start: 4
         query: 1
         query_start: 9
         index: 1
