@@ -44,14 +44,14 @@
 
 -
   template: restore_backup
-  args: "{{.QueryNode}}, {{.QueryNode}}, /backup"
+  args: "{{.Orchestrator}}, {{.Orchestrator}}, /backup-ycsb"
   wait: true
 
 # LOAD Phase
 
 -
   image: sequoiatools/ycsb-soe
-  command: "{{.Scale 250000}} {{.Scale 4}} {{.QueryNode}} {{.Bucket}}"
+  command: "{{.Scale 250000}} {{.Scale 4}} {{.Orchestrator}} {{.Bucket}}"
   alias: YCSBContainer
   wait: true
 

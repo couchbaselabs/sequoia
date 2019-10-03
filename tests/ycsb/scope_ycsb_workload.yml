@@ -1,4 +1,11 @@
 ---
+users:
+  -
+    name: bucket-1
+    password: password
+    roles: admin
+    auth_domain: local
+
 buckets: # define single default bucket
   -
     name: bucket-1
@@ -25,4 +32,5 @@ servers: # define 7 servers
      index_path: "/data"
      init_nodes: 7
      index_storage: default
-     buckets: default,bucket-1
+     buckets: bucket-1
+     users: bucket-1
