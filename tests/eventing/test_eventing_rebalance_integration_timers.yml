@@ -5,8 +5,8 @@
 ############### create and deploy functions ################
 - section_start: create_and_deploy
 -
-  image: sequoiatools/eventing
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_function_integration.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
+  image: sequoiatools/eventing:6.5
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} mad-hatter/bucket_op_n1ql.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} alice/timer_op_integration.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
   wait: true
@@ -46,8 +46,8 @@
 - section_start: undeploy
 ############### undeploy functions ################
 -
-  image: sequoiatools/eventing
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} bucket_op_function_integration.json {{.RestUsername}} {{.RestPassword}} undeploy true"
+  image: sequoiatools/eventing:6.5
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_n1ql.json {{.RestUsername}} {{.RestPassword}} undeploy true"
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/timer_op_integration.json {{.RestUsername}} {{.RestPassword}} undeploy true"
   wait: true
@@ -57,8 +57,9 @@
 - section_start: redeploy
 ############### redeploy functions ################
 -
-  image: sequoiatools/eventing
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} bucket_op_function_integration.json {{.RestUsername}} {{.RestPassword}} deploy"
+  image: sequoiatools/eventing:6.5
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_n1ql.json {{.RestUsername}} {{.RestPassword}} deploy"
+  wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/timer_op_integration.json {{.RestUsername}} {{.RestPassword}} deploy"
   wait: true
@@ -68,11 +69,33 @@
 - section_start: delete_functions
 ############### delete functions ################
 -
-  image: sequoiatools/eventing
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} bucket_op_function_integration.json {{.RestUsername}} {{.RestPassword}} delete"
+  image: sequoiatools/eventing:6.5
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_n1ql.json {{.RestUsername}} {{.RestPassword}} delete"
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/timer_op_integration.json {{.RestUsername}} {{.RestPassword}} delete"
   wait: true
 - section_end: delete_functions
 
 
+- section_start: pause
+############### pause functions ################
+-
+  image: sequoiatools/eventing:6.5
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_n1ql.json {{.RestUsername}} {{.RestPassword}} pause true"
+  wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/timer_op_integration.json {{.RestUsername}} {{.RestPassword}} pause true"
+  wait: true
+- section_end: pause
+
+
+- section_start: resume
+############### resume functions ################
+-
+  image: sequoiatools/eventing:6.5
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_n1ql.json {{.RestUsername}} {{.RestPassword}} resume true"
+  wait: true
+-
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/timer_op_integration.json {{.RestUsername}} {{.RestPassword}} resume true"
+  wait: true
+- section_end: resume

@@ -146,9 +146,9 @@
 - test: tests/n1ql/test_n1qlRBAC.yml
   section: rbac_query
 
-# undeploy eventing handlers
+# pause eventing handlers
 - test: tests/eventing/test_eventing_rebalance_integration_timers.yml
-  section: undeploy
+  section: pause
 
 # load 1M items
 - template: pillowfight_htp
@@ -162,9 +162,9 @@
 - test: tests/2i/test_idx_mad_hatter_integration.yml
   section: change_indexer_topologies
 
-# redeploy eventing handlers
+# resume eventing handlers
 - test: tests/eventing/test_eventing_rebalance_integration_timers.yml
-  section: redeploy
+  section: resume
 
 # start tpcc indexing
 - image: sequoiatools/tpcc

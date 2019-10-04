@@ -1,0 +1,24 @@
+{
+    "appcode": "function OnUpdate(doc, meta) {\n  try{\n    var query=select * from default where result is not missing limit 1;\n    for(var q of query){\n        dst[meta.id] = doc;\n    }\n  }\n  catch(e){\n        log(e);\n  }\n}\nfunction OnDelete(meta) {\n    try{\n    var query=select * from default where result is not missing limit 1;\n    for(var q of query){\n        delete dst[meta.id];\n        }   \n    }\n    catch(e){\n        log(e);\n    }\n}",
+    "depcfg": {
+      "buckets": [
+        {
+          "alias": "dst",
+          "bucket_name": "ITEM",
+          "access": "rw"
+        }
+      ],
+      "curl": [],
+      "metadata_bucket": "NEW_ORDER",
+      "source_bucket": "default"
+    },
+    "appname": "bucket_op_n1ql",
+    "settings": {
+      "dcp_stream_boundary": "from_now",
+      "deadline_timeout": 62,
+      "deployment_status": false,
+      "execution_timeout": 60,
+      "log_level": "INFO",
+      "processing_status": false
+	}
+}
