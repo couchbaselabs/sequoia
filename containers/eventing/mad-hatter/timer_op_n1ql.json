@@ -1,0 +1,26 @@
+{
+    "appcode": "function OnUpdate(doc, meta) {\n    var expiry = new Date();\n    expiry.setSeconds(expiry.getSeconds() + 30);\n    if (meta.id.includes(\"_\")){\n        var id = meta.id.split(\"_\")[1];\n        if(parseInt(id)%5==0){\n            var context = {docID : meta.id, random_text : 'e6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0'};\n            createTimer(timerCallback,  expiry, meta.id, context);\n        }\n    }\n}\nfunction OnDelete(meta) {\n    var expiry = new Date();\n    expiry.setSeconds(expiry.getSeconds() + 30);\n    if (meta.id.includes(\"_\")){\n        var id = meta.id.split(\"_\")[1];\n        if(parseInt(id)%5==0){\n            var context = {docID : meta.id};\n            createTimer(NDtimerCallback,  expiry, meta.id, context);\n        }\n    }\n}\nfunction NDtimerCallback(context) {\n    var select_query = SELECT * FROM default USE KEYS[$context.docID];\n    for (var r of select_query) {\n    }\n    log(\"deleting: \",context.docID);\n    delete dst_bucket[context.docID];\n}\nfunction timerCallback(context) {\n    var select_query = SELECT * FROM default USE KEYS[$context.docID];\n    for (var r of select_query) {\n        log(\"creating: \",context.docID);\n        dst_bucket[context.docID] = 'from timerCallback';\n    }\n}\n",
+    "depcfg": {
+        "buckets": [
+            {
+                "alias": "dst_bucket",
+                "bucket_name": "WAREHOUSE",
+                "access": "rw"
+            }
+        ],
+        "curl": [],
+        "metadata_bucket": "NEW_ORDER",
+        "source_bucket": "default"
+    },
+    "appname": "timer_op",
+    "settings": {
+      "dcp_stream_boundary": "from_now",
+      "deadline_timeout": 62,
+      "deployment_status": false,
+      "execution_timeout": 60,
+      "log_level": "INFO",
+      "processing_status": false
+	},
+    "using_timer": true,
+    "src_mutation": false
+}

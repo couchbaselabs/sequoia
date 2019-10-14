@@ -6,9 +6,9 @@
 - section_start: create_and_deploy
 -
   image: sequoiatools/eventing:6.5
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} bucket_op_function_integration.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} mad-hatter/bucket_op_curl_integration.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
 -
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} alice/timer_op_integration.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} mad-hatter/timer_op_n1ql.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
   wait: true
 - section_end: create_and_deploy
 
@@ -47,9 +47,9 @@
 ############### undeploy functions ################
 -
   image: sequoiatools/eventing:6.5
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} bucket_op_function_integration.json {{.RestUsername}} {{.RestPassword}} undeploy true"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_curl_integration.json {{.RestUsername}} {{.RestPassword}} undeploy true"
 -
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/timer_op_integration.json {{.RestUsername}} {{.RestPassword}} undeploy true"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/timer_op_n1ql.json {{.RestUsername}} {{.RestPassword}} undeploy true"
   wait: true
 - section_end: undeploy
 
@@ -58,10 +58,10 @@
 ############### redeploy functions ################
 -
   image: sequoiatools/eventing:6.5
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} bucket_op_function_integration.json {{.RestUsername}} {{.RestPassword}} deploy"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_curl_integration.json {{.RestUsername}} {{.RestPassword}} deploy"
   wait: true
 -
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/timer_op_integration.json {{.RestUsername}} {{.RestPassword}} deploy"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/timer_op_n1ql.json {{.RestUsername}} {{.RestPassword}} deploy"
   wait: true
 - section_end: redeploy
 
@@ -70,9 +70,9 @@
 ############### delete functions ################
 -
   image: sequoiatools/eventing:6.5
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} bucket_op_function_integration.json {{.RestUsername}} {{.RestPassword}} delete"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_curl_integration.json {{.RestUsername}} {{.RestPassword}} delete"
 -
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/timer_op_integration.json {{.RestUsername}} {{.RestPassword}} delete"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/timer_op_n1ql.json {{.RestUsername}} {{.RestPassword}} delete"
   wait: true
 - section_end: delete_functions
 
@@ -81,10 +81,10 @@
 ############### pause functions ################
 -
   image: sequoiatools/eventing:6.5
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} bucket_op_function_integration.json {{.RestUsername}} {{.RestPassword}} pause true"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_curl_integration.json {{.RestUsername}} {{.RestPassword}} pause true"
   wait: true
 -
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/timer_op_integration.json {{.RestUsername}} {{.RestPassword}} pause true"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/timer_op_n1ql.json {{.RestUsername}} {{.RestPassword}} pause true"
   wait: true
 - section_end: pause
 
@@ -93,9 +93,9 @@
 ############### resume functions ################
 -
   image: sequoiatools/eventing:6.5
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} bucket_op_function_integration.json {{.RestUsername}} {{.RestPassword}} resume true"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_curl_integration.json {{.RestUsername}} {{.RestPassword}} resume true"
   wait: true
 -
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} alice/timer_op_integration.json {{.RestUsername}} {{.RestPassword}} resume true"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/timer_op_n1ql.json {{.RestUsername}} {{.RestPassword}} resume true"
   wait: true
 - section_end: resume
