@@ -27,22 +27,6 @@
   wait: true
 
 -
-  command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX idx4 ON `bucket-1`(address.zip, order_list) WITH {\"num_replica\": 1}'"
-  wait: true
-
--
-  command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX idx5 ON `bucket-1`(address.zip, month, order_list, sale_price) WITH {\"num_replica\": 1}'"
-  wait: true
-
--
-  command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX idx6 ON `bucket-1`(address.geo_region) WITH {\"num_replica\": 1}'"
-  wait: true
-
--
-  command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX idx7 ON `bucket-1`(address.geo_region, age_group, DATE_PART_STR(dob,\"year\")) WITH {\"num_replica\": 1}'"
-  wait: true
-
--
   template: restore_backup
   args: "{{.Orchestrator}}, {{.Orchestrator}}, /backup-ycsb"
   wait: true
@@ -51,7 +35,7 @@
 
 -
   image: sequoiatools/ycsb-soe
-  command: "{{.Scale 250000}} {{.Scale 4}} {{.Orchestrator}} {{.Bucket}}"
+  command: "{{.Scale 250000}} {{.Scale 100}} {{.Orchestrator}} {{.Bucket}}"
   alias: YCSBContainer
   wait: true
 

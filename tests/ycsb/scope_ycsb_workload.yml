@@ -12,7 +12,7 @@ buckets: # define single default bucket
     ram: 75%
     replica: 0
     type: couchbase
-    ttl: 180
+    ttl: 600
 
 servers: # define 7 servers
   -

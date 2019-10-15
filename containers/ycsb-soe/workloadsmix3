@@ -13,8 +13,8 @@ workload=com.yahoo.ycsb.workloads.soe.SoeWorkload
 
 # Workload settings for soe
 
-soe_insert=0.3
-soe_update=0.2
+soe_insert=0.4
+soe_update=0.1
 soe_read=0
 soe_scan=0
 soe_page=0
