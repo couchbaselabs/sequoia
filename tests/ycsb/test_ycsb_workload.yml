@@ -18,6 +18,7 @@
   image: sequoiatools/cbq
   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX idx1 ON `bucket-1`(address.prev_address.zip) WITH {\"num_replica\": 1}'"
   wait: true
+  requires:  "{{eq true .DoOnce }}"
 -
   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX idx2 ON `bucket-1`(DISTINCT devices) WITH {\"num_replica\": 1}'"
   wait: true
@@ -30,6 +31,7 @@
   template: restore_backup
   args: "{{.Orchestrator}}, {{.Orchestrator}}, /backup-ycsb"
   wait: true
+  requires:  "{{eq true .DoOnce }}"
 
 # LOAD Phase
 
@@ -38,19 +40,4 @@
   command: "{{.Scale 250000}} {{.Scale 100}} {{.Orchestrator}} {{.Bucket}}"
   alias: YCSBContainer
   wait: true
-
-# SAVE Logs
-
--
-  client:
-    op: cp
-    container: "YCSBContainer"
-    frompath: "ycsb_load.log"
-    topath: "logs/ycsb_load.log"
-
--
-  client:
-    op: cp
-    container: "YCSBContainer"
-    frompath: "ycsb_run.log"
-    topath: "logs/ycsb_run.log"
+  duration: 3600
