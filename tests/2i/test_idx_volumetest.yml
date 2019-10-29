@@ -1,0 +1,240 @@
+- include: tests/templates/kv.yml, tests/templates/n1ql.yml, tests/templates/rebalance.yml
+
+############### data loading ################
+- image: sequoiatools/fakeit
+  command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.Bucket}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 5000000 links_big.yaml"
+- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.Bucket}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 5000000 links_big.yaml"
+- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.Bucket}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 5000000 links_big.yaml"
+- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.Bucket}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 5000000 links_big.yaml"
+- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.Bucket}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 5000000 links_big.yaml"
+- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.NthBucket 1}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 5000000 links_big.yaml"
+- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.NthBucket 1}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 5000000 links_big.yaml"
+- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.NthBucket 1}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 5000000 links_big.yaml"
+- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.NthBucket 1}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 5000000 links_big.yaml"
+- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.NthBucket 1}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 5000000 links_big.yaml"
+  wait: true
+
+
+###############  create indexes ################
+- section_start: create_replica_indexes
+- image: sequoiatools/cbq
+  command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_leads_idx` ON `{{.Bucket}}`((distinct (array (`l`.`id`) for `l` in `leads` end)), `owner`) WHERE (`type` = \"links\") WITH {  \"defer_build\":true, \"num_replica\":5 }'"
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_cid_idx` ON `{{.Bucket}}`(`cid`, `owner`) partition by hash(`cid`) WITH {  \"defer_build\":true, \"num_partition\": 4}'"
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_all_country_phone_idx` ON `{{.Bucket}}`((all (array (`phone`.`Country`) for `phone` in ((`idents`.`cont`).`Phones`) end)), `owner`) WHERE (`type` = \"links\") WITH {  \"defer_build\":true, \"num_replica\":4 }'"
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_all_fullname_idx` ON `{{.Bucket}}`((all (array [(`n`.`first`), (`n`.`last`)] for `n` in ((`idents`.`name`).`names`) end)), `owner`) WHERE (`type` = \"links\") WITH {  \"defer_build\":true, \"num_replica\":3}'"
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_all_email_idx` ON `{{.Bucket}}`((all (array `email` for `email` in ((`idents`.`cont`).`Emails`) end)), `owner`) WHERE (`type` = \"links\") WITH {  \"defer_build\":true, \"num_replica\":4 }'"
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_profids_cov` ON `{{.Bucket}}`((distinct (array (`p`.`id`) for `p` in ((`idents`.`accts`).`profids`) end)), ((`idents`.`accts`).`profids`), `owner`) WHERE (`type` = \"links\") WITH {  \"defer_build\":true, \"num_replica\":4 }'"
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX def_type ON `{{.Bucket}}`(type) partition by hash(type)  WITH {  \"defer_build\":true, \"num_replica\":4 }'"
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_mems_cov_AA` ON `{{.Bucket}}`((distinct (array (`m`.`memid`) for `m` in ((`idents`.`accts`).`mems`) end)), `owner`) WHERE (`type` = \"links\") AND (`owner` = \"AA\") WITH {  \"defer_build\":true, \"num_replica\":4 }'"
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_all_phone_idx_AA` ON `{{.Bucket}}`((all (array (`phone`.`Number`) for `phone` in ((`idents`.`cont`).`Phones`) end)), `owner`) WHERE (`type` = \"links\") AND (`owner` = \"AA\") WITH {  \"defer_build\":true, \"num_replica\":4 }'"
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_all_lastname_idx_AA` ON `{{.Bucket}}`((all (array (`n`.`last`) for `n` in ((`idents`.`name`).`names`) end)), `owner`) WHERE (`type` = \"links\") AND (`owner` = \"AA\") WITH {  \"defer_build\":true, \"num_replica\": 4}'"
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_all_firstname_idx_AA` ON `{{.Bucket}}`((all (array (`n`.`first`) for `n` in ((`idents`.`name`).`names`) end)), `owner`) WHERE (`type` = \"links\") AND (`owner` = \"AA\") WITH {  \"defer_build\":true, \"num_replica\":4 }'"
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_alies_idx_AA` ON `{{.Bucket}}`((distinct (array (distinct (array `a` for `a` in (`l`.`alies`) end)) for `l` in `leads` end)), `owner`) WHERE (`type` = \"links\") AND (`owner` = \"AA\")  WITH {  \"defer_build\":true, \"num_replica\":4 }'"
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_profids_cov_AA` ON `{{.Bucket}}`((distinct (array (`p`.`id`) for `p` in ((`idents`.`accts`).`profids`) end)), ((`idents`.`accts`).`profids`), `owner`) WHERE (`type` = \"links\") AND (`owner` = \"AA\") WITH {  \"defer_build\":true, \"num_replica\":4 }'"
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_mems_cov` ON `{{.NthBucket 1}}`((distinct (array (`m`.`memid`) for `m` in ((`idents`.`accts`).`mems`) end)), ((`idents`.`accts`).`mems`), `owner`) WHERE (`type` = \"links\") WITH {  \"defer_build\":true, \"num_replica\":4 }'"
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_all_phone_idx` ON `{{.NthBucket 1}}`((all (array (`phone`.`Number`) for `phone` in ((`idents`.`cont`).`Phones`) end)), `owner`) WHERE (`type` = \"links\") WITH {  \"defer_build\":true, \"num_replica\":4 }'"
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_all_lastname_idx` ON `{{.NthBucket 1}}`((all (array (`n`.`last`) for `n` in ((`idents`.`name`).`names`) end)), `owner`) WHERE (`type` = \"links\") WITH {  \"defer_build\":true, \"num_replica\": 4}'"
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_all_firstname_idx` ON `{{.NthBucket 1}}`((all (array (`n`.`first`) for `n` in ((`idents`.`name`).`names`) end)), `owner`) WHERE (`type` = \"links\") WITH {  \"defer_build\":true, \"num_replica\":4 }'"
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_alies_idx` ON `{{.NthBucket 1}}`((distinct (array (distinct (array `a` for `a` in (`l`.`alies`) end)) for `l` in `leads` end)), `owner`) WHERE (`type` = \"links\") WITH {  \"defer_build\":true, \"num_replica\":4 }'"
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX def_owner ON `{{.NthBucket 1}}`(owner)  WITH {  \"defer_build\":true, \"num_replica\":3 }'"
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_leads_idx_AA` ON `{{.NthBucket 1}}`((distinct (array (`l`.`id`) for `l` in `leads` end)), `owner`) WHERE (`type` = \"links\") AND (`owner` = \"AA\") WITH {  \"defer_build\":true, \"num_replica\":5 }'"
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_all_country_phone_idx_AA` ON `{{.NthBucket 1}}`((all (array (`phone`.`Country`) for `phone` in ((`idents`.`cont`).`Phones`) end)), `owner`) WHERE (`type` = \"links\") AND (`owner` = \"AA\") WITH {  \"defer_build\":true, \"num_replica\":4 }'"
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_all_fullname_idx_AA` ON `{{.NthBucket 1}}`((all (array [(`n`.`first`), (`n`.`last`)] for `n` in ((`idents`.`name`).`names`) end)), `owner`) WHERE (`type` = \"links\") AND (`owner` = \"AA\") WITH {  \"defer_build\":true, \"num_replica\":4 }'"
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_all_email_idx_AA` ON `{{.NthBucket 1}}`((all (array `email` for `email` in ((`idents`.`cont`).`Emails`) end)), `owner`) WHERE (`type` = \"links\") AND (`owner` = \"AA\") WITH {  \"defer_build\":true, \"num_replica\":4 }'"
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_progid_cov` ON `{{.NthBucket 1}}`((distinct (array (`m`.`progid`) for `m` in ((`idents`.`accts`).`mems`) end)),  `owner`) WHERE (`type` = \"links\") WITH {  \"defer_build\":true, \"num_replica\":4 }'"
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_progid_cov_AA` ON `{{.NthBucket 1}}`((distinct (array (`m`.`progid`) for `m` in ((`idents`.`accts`).`mems`) end)),  `owner`) WHERE (`type` = \"links\") AND (`owner` = \"AA\") WITH {  \"defer_build\":true, \"num_replica\":4 }'"
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX def_type_owner ON `{{.NthBucket 1}}`(type,owner) partition by hash(type)  WITH {  \"defer_build\":true, \"num_replica\":4 }'"
+  wait: true
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE PRIMARY INDEX ON `{{.Bucket}}`'"
+  wait: true
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE PRIMARY INDEX ON `{{.NthBucket 1}}`'"
+  wait: true
+- template: cbq
+  args: "'build index on `{{.Bucket}}`\\(`links_leads_idx`,`links_cid_idx`,`links_all_country_phone_idx`,`links_all_fullname_idx`,`links_all_email_idx`,`links_profids_cov`,def_type,`links_mems_cov_AA`,`links_all_phone_idx_AA`,`links_all_lastname_idx_AA`,`links_all_firstname_idx_AA`,`links_alies_idx_AA`,`links_profids_cov_AA`)'"
+  wait: true
+- args: "'build index on `{{.NthBucket 1}}`\\(`links_mems_cov`,`links_all_phone_idx`,`links_all_lastname_idx`,`links_all_firstname_idx`,`links_alies_idx`,def_owner,`links_leads_idx_AA`,`links_all_country_phone_idx_AA`,`links_all_fullname_idx_AA`,`links_all_email_idx_AA`,`links_progid_cov`,`links_progid_cov_AA`,def_type_owner)'"
+  wait: true
+
+# Sleep for some time to allow DDL to complete if running in background.
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "300"
+   wait: true
+
+# Wait till all indexes are completely built
+-
+   image: sequoiatools/wait_for_idx_build_complete
+   command: "{{.ActiveIndexNode 0}} {{.RestUsername}} {{.RestPassword}}"
+   wait: true
+
+- section_end: create_replica_indexes
+
+# ###############  run queries and validate ################
+- section_start: query_replica_indexes
+- image: sequoiatools/queryapp
+  command: "-J-cp '../Couchbase-Java-Client-2.5.6/*' load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 3600 --print_duration=600 --bucket {{.Bucket}} --querycount 10 --threads 10 --n1ql True --validate True --query_file volume_queries.txt --query_timeout=600 --bucket_names [`{{.Bucket}}`,`{{.NthBucket 1}}`]"
+  wait: true
+- section_end: query_replica_indexes
+
+###############  Rebalance-in single node ################
+- template: rebalance_in
+  args: "{{.InActiveNode}}, index"
+  wait: true
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "300"
+   wait: true
+
+############### Kill indexer ################
+-
+  template: kill_process
+  args: "{{.ActiveIndexNode 1}}, indexer"
+
+# Sleep for some more time after indexer-kill completes (20 minutes)
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "600"
+   wait: true
+
+# Wait till all indexes are completely built
+-
+   image: sequoiatools/wait_for_idx_build_complete
+   command: "{{.ActiveIndexNode 0}} {{.RestUsername}} {{.RestPassword}}"
+   wait: true
+
+# ###############  run queries w/validation after index-kill ################
+- section_start: query_after_index_kill_0
+- image: sequoiatools/queryapp
+  command: "-J-cp '../Couchbase-Java-Client-2.5.6/*' load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 1800 --print_duration=600 --bucket {{.Bucket}} --querycount 10 --threads 10 --n1ql True --validate True --query_file volume_queries.txt --query_timeout=600 --bucket_names [`{{.Bucket}}`,`{{.NthBucket 1}}`]"
+  wait: true
+- section_end: query_after_index_kill_0
+
+############### start loading more data ################
+- image: sequoiatools/fakeit
+  command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.Bucket}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 -S --count 5000000 links_big.yaml"
+- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.NthBucket 1}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 -S --count 5000000 links_big.yaml"
+
+# ###############  run queries w/o validation while data is being loaded ################
+- section_start: query_during_load
+- image: sequoiatools/queryapp
+  command: "-J-cp '../Couchbase-Java-Client-2.5.6/*' load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 3600 --print_duration=600 --bucket {{.Bucket}} --querycount 10 --threads 10 --n1ql True --query_file volume_queries.txt --query_timeout=600 --bucket_names [`{{.Bucket}}`,`{{.NthBucket 1}}`]"
+  wait: true
+- section_end: query_during_load
+
+# ###############  run queries w/validation after data is done loading ################
+- section_start: query_after_load
+- image: sequoiatools/queryapp
+  command: "-J-cp '../Couchbase-Java-Client-2.5.6/*' load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 1800 --print_duration=600 --bucket {{.Bucket}} --querycount 10 --threads 10 --n1ql True --validate True --query_file volume_queries.txt --query_timeout=600 --bucket_names [`{{.Bucket}}`,`{{.NthBucket 1}}`]"
+  wait: true
+- section_end: query_after_load
+
+###############  Rebalance-out single node ################
+- template: rebalance_out
+  args: "{{.ActiveIndexNode 0}}"
+  wait: true
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "300"
+   wait: true
+
+# ###############  run queries w/validation after rebalance out ################
+- section_start: query_after_rebalance
+- image: sequoiatools/queryapp
+  command: "-J-cp '../Couchbase-Java-Client-2.5.6/*' load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 1800 --print_duration=600 --bucket {{.Bucket}} --querycount 10 --threads 10 --n1ql True --validate True --query_file volume_queries.txt --query_timeout=600 --bucket_names [`{{.Bucket}}`,`{{.NthBucket 1}}`]"
+  wait: true
+- section_end: query_after_rebalance
+
+############### Kill indexer ################
+-
+  template: kill_process
+  args: "{{.ActiveIndexNode 4}}, indexer"
+
+# Sleep for some more time after indexer-kill completes (10 minutes)
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "600"
+   wait: true
+
+# Wait till all indexes are completely built
+-
+   image: sequoiatools/wait_for_idx_build_complete
+   command: "{{.ActiveIndexNode 0}} {{.RestUsername}} {{.RestPassword}}"
+   wait: true
+
+# ###############  run queries w/validation after index-kill ################
+- section_start: query_after_index_kill
+- image: sequoiatools/queryapp
+  command: "-J-cp '../Couchbase-Java-Client-2.5.6/*' load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 1800 --print_duration=600 --bucket {{.Bucket}} --querycount 10 --threads 10 --n1ql True --validate True --query_file volume_queries.txt --query_timeout=600 --bucket_names [`{{.Bucket}}`,`{{.NthBucket 1}}`]"
+  wait: true
+- section_end: query_after_index_kill
+
+###############  Swap single index node ################
+- template: rebalance_swap
+  args: "{{.InActiveNode}}, {{.ActiveIndexNode 0}}, index"
+  wait: true
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "300"
+   wait: true
+
+# ###############  run queries w/validation after swap-rebalance ################
+- section_start: query_after_swap
+- image: sequoiatools/queryapp
+  command: "-J-cp '../Couchbase-Java-Client-2.5.6/*' load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 1800 --print_duration=600 --bucket {{.Bucket}} --querycount 10 --threads 10 --n1ql True --validate True --query_file volume_queries.txt --query_timeout=600 --bucket_names [`{{.Bucket}}`,`{{.NthBucket 1}}`]"
+  wait: true
+- section_end: query_after_swap
+
+
+###############  Failover and addback ################
+- template: failover_force_and_recover
+  args: "{{.ActiveIndexNode 2}}, full"
+  wait: true
+
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "300"
+   wait: true
+
+# ###############  run queries w/validation after failover ################
+- section_start: query_after_failover
+- image: sequoiatools/queryapp
+  command: "-J-cp '../Couchbase-Java-Client-2.5.6/*' load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 1800 --print_duration=600 --bucket {{.Bucket}} --querycount 10 --threads 10 --n1ql True --validate True --query_file volume_queries.txt --query_timeout=600 --bucket_names [`{{.Bucket}}`,`{{.NthBucket 1}}`]"
+  wait: true
+- section_end: query_replica_indexes
+
+############### Kill indexer ################
+-
+  template: kill_process
+  args: "{{.ActiveIndexNode 0}}, indexer"
+
+# Sleep for some more time after indexer-kill completes (20 minutes)
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "600"
+   wait: true
+
+# Wait till all indexes are completely built
+-
+   image: sequoiatools/wait_for_idx_build_complete
+   command: "{{.ActiveIndexNode 0}} {{.RestUsername}} {{.RestPassword}}"
+   wait: true
+
+# ###############  run queries w/validation after index-kill ################
+- section_start: query_after_kill
+- image: sequoiatools/queryapp
+  command: "-J-cp '../Couchbase-Java-Client-2.5.6/*' load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 1800 --print_duration=600 --bucket {{.Bucket}} --querycount 10 --threads 10 --n1ql True --validate True --query_file volume_queries.txt --query_timeout=600 --bucket_names [`{{.Bucket}}`,`{{.NthBucket 1}}`]"
+  wait: true
+- section_end: query_after_kill
+
