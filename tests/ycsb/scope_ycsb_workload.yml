@@ -12,21 +12,21 @@ buckets: # define single default bucket
     ram: 75%
     replica: 0
     type: couchbase
-    ttl: 600
+    ttl: 6000
 
 servers: # define 7 servers
   -
      name: local.st.couchbase.com
      ram: 90%
-     index_ram: 90%
+     index_ram: 50%
      count: 7
      rest_username: Administrator
      rest_password: password
      rest_port: 8091
      query_port: 8093
      services:
-       query: 2
-       index: 3
+       query: 3
+       index: 2
        data: 2
      data_path: "/data"
      index_path: "/data"

@@ -37,7 +37,7 @@
 
 -
   image: sequoiatools/ycsb-soe
-  command: "{{.Scale 250000}} {{.Scale 100}} {{.Orchestrator}} {{.Bucket}}"
+  command: "{{.Scale 2500000}} {{.Scale 100}} {{.Orchestrator}} {{.Bucket}}"
   alias: YCSBContainer
   wait: true
   duration: 3600
