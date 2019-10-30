@@ -2,16 +2,16 @@
 
 ############### data loading ################
 - image: sequoiatools/fakeit
-  command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.Bucket}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 5000000 links_big.yaml"
-- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.Bucket}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 5000000 links_big.yaml"
-- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.Bucket}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 5000000 links_big.yaml"
-- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.Bucket}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 5000000 links_big.yaml"
-- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.Bucket}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 5000000 links_big.yaml"
-- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.NthBucket 1}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 5000000 links_big.yaml"
-- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.NthBucket 1}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 5000000 links_big.yaml"
-- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.NthBucket 1}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 5000000 links_big.yaml"
-- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.NthBucket 1}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 5000000 links_big.yaml"
-- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.NthBucket 1}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 5000000 links_big.yaml"
+  command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.Bucket}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 5000000 /fakeit/test/fixtures/models/links/models/links_big.yaml"
+- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.Bucket}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 5000000 /fakeit/test/fixtures/models/links/models/links_big.yaml"
+- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.Bucket}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 5000000 /fakeit/test/fixtures/models/links/models/links_big.yaml"
+- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.Bucket}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 5000000 /fakeit/test/fixtures/models/links/models/links_big.yaml"
+- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.Bucket}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 5000000 /fakeit/test/fixtures/models/links/models/links_big.yaml"
+- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.NthBucket 1}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 5000000 /fakeit/test/fixtures/models/links/models/links_big.yaml"
+- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.NthBucket 1}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 5000000 /fakeit/test/fixtures/models/links/models/links_big.yaml"
+- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.NthBucket 1}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 5000000 /fakeit/test/fixtures/models/links/models/links_big.yaml"
+- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.NthBucket 1}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 5000000 /fakeit/test/fixtures/models/links/models/links_big.yaml"
+- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.NthBucket 1}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 5000000 /fakeit/test/fixtures/models/links/models/links_big.yaml"
   wait: true
 
 
@@ -115,8 +115,8 @@
 
 ############### start loading more data ################
 - image: sequoiatools/fakeit
-  command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.Bucket}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 -S --count 5000000 links_big.yaml"
-- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.NthBucket 1}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 -S --count 5000000 links_big.yaml"
+  command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.Bucket}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 -S --count 5000000 /fakeit/test/fixtures/models/links/models/links_big.yaml"
+- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.NthBucket 1}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 -S --count 5000000 /fakeit/test/fixtures/models/links/models/links_big.yaml"
 
 # ###############  run queries w/o validation while data is being loaded ################
 - section_start: query_during_load
