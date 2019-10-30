@@ -1,0 +1,34 @@
+SELECT cid from `bucket0` WHERE cid is not null order by cid LIMIT 1000
+SELECT RAW meta().id FROM `bucket0` WHERE type="links" AND owner="CC" AND ANY v IN idents.name.names SATISFIES  ([v.`first`, v.`last`] = ["Fannie", "McDermott"]) END order by meta().id LIMIT 1000
+SELECT RAW meta().id FROM `bucket0` WHERE type="links" AND owner="AA" AND ANY v IN idents.name.names SATISFIES (v.`first`="Elizabeth") END order by meta().id LIMIT 1000
+SELECT RAW meta().id FROM `bucket0` WHERE type="links" AND owner="AA" AND ANY v IN idents.name.names SATISFIES (v.`last` ="Bernhard") END order by meta().id LIMIT 1000
+SELECT cid,owner from `bucket0` WHERE type = "links" AND ANY v in leads SATISFIES v.id like "CCC::XX::YYY:000::1%" END order by owner LIMIT 10000
+SELECT cid,meta().id,idents.cont.Phones from `bucket0` WHERE type = "links" AND ANY v in idents.cont.Phones SATISFIES v.Country < 500 END order by cid LIMIT 10000
+SELECT cid,owner,idents.cont.Emails from `bucket0` WHERE type = "links" AND owner = "BB" AND ANY v in idents.cont.Emails SATISFIES v.email = "Jody_Okuneva@hotmail.com" END order by owner LIMIT 10000
+SELECT meta().id,owner from `bucket0` where type = "links" order by owner limit 10000
+SELECT idents.accts.profids.id,owner from `bucket0` WHERE type = "links" AND owner = "AA" AND ANY v in idents.accts.profids SATISFIES v.id < "GG" END order by idents.accts.profids.id LIMIT 10000
+SELECT idents.accts.profids,owner from `bucket0` WHERE type = "links" AND ANY v in idents.accts.profids SATISFIES v.id > "GG" END order by owner LIMIT 10000
+SELECT idents.accts.mems.memid,owner from `bucket0` WHERE type = "links" AND owner = "AA" AND ANY v in idents.accts.mems SATISFIES v.memid between 100 and 300 END order by idents.accts.mems.memid limit 10000
+SELECT cid,meta().id,idents.cont.Phones from `bucket0` WHERE type = "links" AND owner = "AA" AND ANY v in idents.cont.Phones SATISFIES v.`Number` = "1-961-612-1069" END order by cid LIMIT 10000
+SELECT owner,leads.alies[0] FROM `bucket0` where type = "links" AND owner = "AA" AND ANY v in leads SATISFIES (ANY x in v.alies SATISFIES x like "BBB::XX::YYY::000:%" END) END order by leads.alies[0] limit 10000
+SELECT RAW meta().id FROM `bucket1` WHERE type="links" AND owner="AA" AND ANY v IN idents.name.names SATISFIES  ([v.`first`, v.`last`] = ["Adele", “McCullough"]) END order by meta().id LIMIT 1000
+SELECT RAW meta().id FROM `bucket1` WHERE type="links" AND owner="BB" AND ANY v IN idents.name.names SATISFIES (v.`first`="Columbus") END order by meta().id LIMIT 1000
+SELECT RAW meta().id FROM `bucket1` WHERE type="links" AND owner="CC" AND ANY v IN idents.name.names SATISFIES (v.`last` ="D'Amore") END order by meta().id LIMIT 1000
+SELECT cid,owner from `bucket1` WHERE type = "links" AND owner="AA" AND ANY v in leads SATISFIES v.id like "CCC::XX::YYY:000::%" END order by owner LIMIT 10000
+SELECT cid,meta().id,idents.cont.Phones from `bucket1` WHERE type = "links" AND owner="AA" AND ANY v in idents.cont.Phones SATISFIES v.Country > 600 END order by cid LIMIT 10000
+SELECT cid,owner,idents.cont.Emails from `bucket1` WHERE type = "links" AND owner = "AA" AND ANY v in idents.cont.Emails SATISFIES v.email = "Angeline.Moore@gmail.com" END order by owner LIMIT 10000
+SELECT meta().id from `bucket1` WHERE owner = "AB" order by meta().id limit 10000
+SELECT owner,cid from `bucket1` WHERE type = "links" and owner = "ZZ" order by owner limit 10000
+SELECT ARRAY_SORT(idents.accts.mems[*].memid) AS memids,owner from `bucket1` WHERE type = "links" AND ANY v in idents.accts.mems SATISFIES v.memid between 10 and 250 END order by owner,memids limit 10000
+SELECT cid,meta().id,idents.cont.Phones from `bucket1` WHERE type = "links" AND ANY v in idents.cont.Phones SATISFIES v.`Number` = "1-961-612-1069" END order by cid LIMIT 10000
+SELECT idents.accts.mems,owner from `bucket1` WHERE type = "links" AND owner = "AA" AND ANY v in idents.accts.mems SATISFIES v.progid between "BB" and "FF" END order by idents.accts.mems limit 10000
+SELECT idents.accts.mems,owner from `bucket1` WHERE type = "links" AND owner = "XY" AND ANY v in idents.accts.mems SATISFIES v.progid between "TT" and "ZZ" END order by idents.accts.mems limit 10000
+SELECT owner,leads.alies[0] FROM `bucket1` where type = "links" AND ANY v in leads SATISFIES (ANY x in v.alies SATISFIES x like "BBB::XX::YYY::000:%" END) END order by leads.alies[0] limit 10000
+
+
+
+
+
+
+
+

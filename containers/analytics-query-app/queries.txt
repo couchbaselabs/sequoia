@@ -1,0 +1,7 @@
+select result from `bucket0` where result is not null LIMIT 50000
+select claim from `bucket4` where claim is not null limit 100
+select result,AVG(rating),MIN(rating),MAX(rating) from `bucket1` where result is not missing and rating >= 400 and rating <= 1000 group by result
+select result,SUM(rating) from `bucket2` where result is not null and rating >= 115 and rating <= 125 group by result
+select result,SUM(rating) from `bucket4` where result is not null and rating >= 410 and rating <= 420 group by result
+select round(min(rating),2) as min_rating,round(max(rating),2) as max_rating,round(avg(rating),2) as avg_rating from `bucket3` where result is not null and rating between 500 and 520
+
