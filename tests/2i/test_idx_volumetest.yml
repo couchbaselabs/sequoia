@@ -33,14 +33,14 @@
   wait: true
 - command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE PRIMARY INDEX ON `{{.NthBucket 1}}`'"
   wait: true
-- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script=''build index on `{{.Bucket}}`(`links_leads_idx`,`links_cid_idx`,`links_all_country_phone_idx`,`links_all_fullname_idx`,`links_all_email_idx`,`links_profids_cov`,def_type,`links_mems_cov_AA`,`links_all_phone_idx_AA`,`links_all_lastname_idx_AA`,`links_all_firstname_idx_AA`,`links_alies_idx_AA`,`links_profids_cov_AA`)'"
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='build index on `{{.Bucket}}`(`links_leads_idx`,`links_cid_idx`,`links_all_country_phone_idx`,`links_all_fullname_idx`,`links_all_email_idx`,`links_profids_cov`,def_type,`links_mems_cov_AA`,`links_all_phone_idx_AA`,`links_all_lastname_idx_AA`,`links_all_firstname_idx_AA`,`links_alies_idx_AA`,`links_profids_cov_AA`)'"
   wait: true
 
 # Sleep for some time to allow DDL to complete if running in background.
 -
    image: sequoiatools/cmd
    entrypoint: sleep
-   command: "300"
+   command: "60"
    wait: true
 
 # Wait till all indexes are completely built
@@ -83,7 +83,7 @@
 -
    image: sequoiatools/cmd
    entrypoint: sleep
-   command: "300"
+   command: "60"
    wait: true
 
 # Wait till all indexes are completely built
@@ -96,16 +96,16 @@
 
 ############### data loading ################
 - image: sequoiatools/fakeit
-  command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.Bucket}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 5000000 /fakeit/test/fixtures/models/links/models/links_big.yaml"
-- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.Bucket}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 5000000 /fakeit/test/fixtures/models/links/models/links_big.yaml"
-- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.Bucket}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 5000000 /fakeit/test/fixtures/models/links/models/links_big.yaml"
-- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.Bucket}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 5000000 /fakeit/test/fixtures/models/links/models/links_big.yaml"
-- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.Bucket}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 5000000 /fakeit/test/fixtures/models/links/models/links_big.yaml"
-- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.NthBucket 1}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 5000000 /fakeit/test/fixtures/models/links/models/links_big.yaml"
-- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.NthBucket 1}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 5000000 /fakeit/test/fixtures/models/links/models/links_big.yaml"
-- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.NthBucket 1}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 5000000 /fakeit/test/fixtures/models/links/models/links_big.yaml"
-- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.NthBucket 1}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 5000000 /fakeit/test/fixtures/models/links/models/links_big.yaml"
-- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.NthBucket 1}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 5000000 /fakeit/test/fixtures/models/links/models/links_big.yaml"
+  command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.Bucket}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 2500000 /fakeit/test/fixtures/models/links/models/links_big.yaml"
+- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.Bucket}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 2500000 /fakeit/test/fixtures/models/links/models/links_big.yaml"
+- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.Bucket}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 2500000 /fakeit/test/fixtures/models/links/models/links_big.yaml"
+- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.Bucket}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 2500000 /fakeit/test/fixtures/models/links/models/links_big.yaml"
+- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.Bucket}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 2500000 /fakeit/test/fixtures/models/links/models/links_big.yaml"
+- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.NthBucket 1}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 2500000 /fakeit/test/fixtures/models/links/models/links_big.yaml"
+- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.NthBucket 1}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 2500000 /fakeit/test/fixtures/models/links/models/links_big.yaml"
+- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.NthBucket 1}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 2500000 /fakeit/test/fixtures/models/links/models/links_big.yaml"
+- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.NthBucket 1}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 2500000 /fakeit/test/fixtures/models/links/models/links_big.yaml"
+- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.NthBucket 1}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 2500000 /fakeit/test/fixtures/models/links/models/links_big.yaml"
   wait: true
 
 # ###############  run queries and validate ################

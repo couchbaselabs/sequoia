@@ -27,8 +27,8 @@ servers: # each server tag represents a cluster
   -
       name: local
       count: 25
-      ram: 90%
-      index_ram: 90%
+      ram: 80%
+      index_ram: 80%
       index_storage: default
       services:
         index: 12
