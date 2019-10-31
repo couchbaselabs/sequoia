@@ -1,33 +1,39 @@
 - include: tests/templates/kv.yml, tests/templates/n1ql.yml, tests/templates/rebalance.yml
 
+-
+  # change projector caching size
+  image:  appropriate/curl
+  command: "-X POST -u {{.RestUsername}}:{{.RestPassword}} -H Content-Type:application/json http://{{.ActiveIndexNode 0}}:9102/settings --data '{ \"projector.dcp.dataChanSize\": 1000,  \"projector.mutationChanSize\": 150}'"
+  wait: true
+
 ###############  create indexes ################
 - section_start: create_replica_indexes
 - image: sequoiatools/cbq
-  command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_leads_idx` ON `{{.Bucket}}`((distinct (array (`l`.`id`) for `l` in `leads` end)), `owner`) WHERE (`type` = \"links\") WITH {  \"defer_build\":true, \"num_replica\":5 }'"
+  command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_leads_idx` ON `{{.Bucket}}`((distinct (array (`l`.`id`) for `l` in `leads` end)), `owner`) WHERE (`type` = \"links\") WITH {  \"defer_build\":true, \"num_replica\":4 }'"
   wait: true
 - command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_cid_idx` ON `{{.Bucket}}`(`cid`, `owner`) partition by hash(`cid`) WITH {  \"defer_build\":true, \"num_partition\": 4}'"
   wait: true
-- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_all_country_phone_idx` ON `{{.Bucket}}`((all (array (`phone`.`Country`) for `phone` in ((`idents`.`cont`).`Phones`) end)), `owner`) WHERE (`type` = \"links\") WITH {  \"defer_build\":true, \"num_replica\":4 }'"
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_all_country_phone_idx` ON `{{.Bucket}}`((all (array (`phone`.`Country`) for `phone` in ((`idents`.`cont`).`Phones`) end)), `owner`) WHERE (`type` = \"links\") WITH {  \"defer_build\":true, \"num_replica\":3 }'"
   wait: true
-- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_all_fullname_idx` ON `{{.Bucket}}`((all (array [(`n`.`first`), (`n`.`last`)] for `n` in ((`idents`.`name`).`names`) end)), `owner`) WHERE (`type` = \"links\") WITH {  \"defer_build\":true, \"num_replica\":3}'"
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_all_fullname_idx` ON `{{.Bucket}}`((all (array [(`n`.`first`), (`n`.`last`)] for `n` in ((`idents`.`name`).`names`) end)), `owner`) WHERE (`type` = \"links\") WITH {  \"defer_build\":true, \"num_replica\":2}'"
   wait: true
-- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_all_email_idx` ON `{{.Bucket}}`((all (array `email` for `email` in ((`idents`.`cont`).`Emails`) end)), `owner`) WHERE (`type` = \"links\") WITH {  \"defer_build\":true, \"num_replica\":4 }'"
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_all_email_idx` ON `{{.Bucket}}`((all (array `email` for `email` in ((`idents`.`cont`).`Emails`) end)), `owner`) WHERE (`type` = \"links\") WITH {  \"defer_build\":true, \"num_replica\":2 }'"
   wait: true
-- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_profids_cov` ON `{{.Bucket}}`((distinct (array (`p`.`id`) for `p` in ((`idents`.`accts`).`profids`) end)), ((`idents`.`accts`).`profids`), `owner`) WHERE (`type` = \"links\") WITH {  \"defer_build\":true, \"num_replica\":4 }'"
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_profids_cov` ON `{{.Bucket}}`((distinct (array (`p`.`id`) for `p` in ((`idents`.`accts`).`profids`) end)), ((`idents`.`accts`).`profids`), `owner`) WHERE (`type` = \"links\") WITH {  \"defer_build\":true, \"num_replica\":3 }'"
   wait: true
-- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX def_type ON `{{.Bucket}}`(type) partition by hash(type)  WITH {  \"defer_build\":true, \"num_replica\":4 }'"
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX def_type ON `{{.Bucket}}`(type) partition by hash(type)  WITH {  \"defer_build\":true, \"num_replica\":3 }'"
   wait: true
-- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_mems_cov_AA` ON `{{.Bucket}}`((distinct (array (`m`.`memid`) for `m` in ((`idents`.`accts`).`mems`) end)), `owner`) WHERE (`type` = \"links\") AND (`owner` = \"AA\") WITH {  \"defer_build\":true, \"num_replica\":4 }'"
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_mems_cov_AA` ON `{{.Bucket}}`((distinct (array (`m`.`memid`) for `m` in ((`idents`.`accts`).`mems`) end)), `owner`) WHERE (`type` = \"links\") AND (`owner` = \"AA\") WITH {  \"defer_build\":true, \"num_replica\":3 }'"
   wait: true
-- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_all_phone_idx_AA` ON `{{.Bucket}}`((all (array (`phone`.`Number`) for `phone` in ((`idents`.`cont`).`Phones`) end)), `owner`) WHERE (`type` = \"links\") AND (`owner` = \"AA\") WITH {  \"defer_build\":true, \"num_replica\":4 }'"
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_all_phone_idx_AA` ON `{{.Bucket}}`((all (array (`phone`.`Number`) for `phone` in ((`idents`.`cont`).`Phones`) end)), `owner`) WHERE (`type` = \"links\") AND (`owner` = \"AA\") WITH {  \"defer_build\":true, \"num_replica\":3 }'"
   wait: true
-- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_all_lastname_idx_AA` ON `{{.Bucket}}`((all (array (`n`.`last`) for `n` in ((`idents`.`name`).`names`) end)), `owner`) WHERE (`type` = \"links\") AND (`owner` = \"AA\") WITH {  \"defer_build\":true, \"num_replica\": 4}'"
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_all_lastname_idx_AA` ON `{{.Bucket}}`((all (array (`n`.`last`) for `n` in ((`idents`.`name`).`names`) end)), `owner`) WHERE (`type` = \"links\") AND (`owner` = \"AA\") WITH {  \"defer_build\":true, \"num_replica\": 3}'"
   wait: true
-- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_all_firstname_idx_AA` ON `{{.Bucket}}`((all (array (`n`.`first`) for `n` in ((`idents`.`name`).`names`) end)), `owner`) WHERE (`type` = \"links\") AND (`owner` = \"AA\") WITH {  \"defer_build\":true, \"num_replica\":4 }'"
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_all_firstname_idx_AA` ON `{{.Bucket}}`((all (array (`n`.`first`) for `n` in ((`idents`.`name`).`names`) end)), `owner`) WHERE (`type` = \"links\") AND (`owner` = \"AA\") WITH {  \"defer_build\":true, \"num_replica\":3 }'"
   wait: true
-- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_alies_idx_AA` ON `{{.Bucket}}`((distinct (array (distinct (array `a` for `a` in (`l`.`alies`) end)) for `l` in `leads` end)), `owner`) WHERE (`type` = \"links\") AND (`owner` = \"AA\")  WITH {  \"defer_build\":true, \"num_replica\":4 }'"
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_alies_idx_AA` ON `{{.Bucket}}`((distinct (array (distinct (array `a` for `a` in (`l`.`alies`) end)) for `l` in `leads` end)), `owner`) WHERE (`type` = \"links\") AND (`owner` = \"AA\")  WITH {  \"defer_build\":true, \"num_replica\":3 }'"
   wait: true
-- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_profids_cov_AA` ON `{{.Bucket}}`((distinct (array (`p`.`id`) for `p` in ((`idents`.`accts`).`profids`) end)), ((`idents`.`accts`).`profids`), `owner`) WHERE (`type` = \"links\") AND (`owner` = \"AA\") WITH {  \"defer_build\":true, \"num_replica\":4 }'"
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_profids_cov_AA` ON `{{.Bucket}}`((distinct (array (`p`.`id`) for `p` in ((`idents`.`accts`).`profids`) end)), ((`idents`.`accts`).`profids`), `owner`) WHERE (`type` = \"links\") AND (`owner` = \"AA\") WITH {  \"defer_build\":true, \"num_replica\":3 }'"
   wait: true
 - command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE PRIMARY INDEX ON `{{.Bucket}}`'"
   wait: true
@@ -50,31 +56,31 @@
    wait: true
 
 - image: sequoiatools/cbq
-  command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_mems_cov` ON `{{.NthBucket 1}}`((distinct (array (`m`.`memid`) for `m` in ((`idents`.`accts`).`mems`) end)), ((`idents`.`accts`).`mems`), `owner`) WHERE (`type` = \"links\") WITH {  \"defer_build\":true, \"num_replica\":4 }'"
+  command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_mems_cov` ON `{{.NthBucket 1}}`((distinct (array (`m`.`memid`) for `m` in ((`idents`.`accts`).`mems`) end)), ((`idents`.`accts`).`mems`), `owner`) WHERE (`type` = \"links\") WITH {  \"defer_build\":true, \"num_replica\":3 }'"
   wait: true
-- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_all_phone_idx` ON `{{.NthBucket 1}}`((all (array (`phone`.`Number`) for `phone` in ((`idents`.`cont`).`Phones`) end)), `owner`) WHERE (`type` = \"links\") WITH {  \"defer_build\":true, \"num_replica\":4 }'"
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_all_phone_idx` ON `{{.NthBucket 1}}`((all (array (`phone`.`Number`) for `phone` in ((`idents`.`cont`).`Phones`) end)), `owner`) WHERE (`type` = \"links\") WITH {  \"defer_build\":true, \"num_replica\":3 }'"
   wait: true
-- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_all_lastname_idx` ON `{{.NthBucket 1}}`((all (array (`n`.`last`) for `n` in ((`idents`.`name`).`names`) end)), `owner`) WHERE (`type` = \"links\") WITH {  \"defer_build\":true, \"num_replica\": 4}'"
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_all_lastname_idx` ON `{{.NthBucket 1}}`((all (array (`n`.`last`) for `n` in ((`idents`.`name`).`names`) end)), `owner`) WHERE (`type` = \"links\") WITH {  \"defer_build\":true, \"num_replica\": 3}'"
   wait: true
-- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_all_firstname_idx` ON `{{.NthBucket 1}}`((all (array (`n`.`first`) for `n` in ((`idents`.`name`).`names`) end)), `owner`) WHERE (`type` = \"links\") WITH {  \"defer_build\":true, \"num_replica\":4 }'"
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_all_firstname_idx` ON `{{.NthBucket 1}}`((all (array (`n`.`first`) for `n` in ((`idents`.`name`).`names`) end)), `owner`) WHERE (`type` = \"links\") WITH {  \"defer_build\":true, \"num_replica\":3 }'"
   wait: true
-- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_alies_idx` ON `{{.NthBucket 1}}`((distinct (array (distinct (array `a` for `a` in (`l`.`alies`) end)) for `l` in `leads` end)), `owner`) WHERE (`type` = \"links\") WITH {  \"defer_build\":true, \"num_replica\":4 }'"
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_alies_idx` ON `{{.NthBucket 1}}`((distinct (array (distinct (array `a` for `a` in (`l`.`alies`) end)) for `l` in `leads` end)), `owner`) WHERE (`type` = \"links\") WITH {  \"defer_build\":true, \"num_replica\":3}'"
   wait: true
-- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX def_owner ON `{{.NthBucket 1}}`(owner)  WITH {  \"defer_build\":true, \"num_replica\":3 }'"
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX def_owner ON `{{.NthBucket 1}}`(owner)  WITH {  \"defer_build\":true, \"num_replica\":2 }'"
   wait: true
-- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_leads_idx_AA` ON `{{.NthBucket 1}}`((distinct (array (`l`.`id`) for `l` in `leads` end)), `owner`) WHERE (`type` = \"links\") AND (`owner` = \"AA\") WITH {  \"defer_build\":true, \"num_replica\":5 }'"
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_leads_idx_AA` ON `{{.NthBucket 1}}`((distinct (array (`l`.`id`) for `l` in `leads` end)), `owner`) WHERE (`type` = \"links\") AND (`owner` = \"AA\") WITH {  \"defer_build\":true, \"num_replica\":4 }'"
   wait: true
-- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_all_country_phone_idx_AA` ON `{{.NthBucket 1}}`((all (array (`phone`.`Country`) for `phone` in ((`idents`.`cont`).`Phones`) end)), `owner`) WHERE (`type` = \"links\") AND (`owner` = \"AA\") WITH {  \"defer_build\":true, \"num_replica\":4 }'"
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_all_country_phone_idx_AA` ON `{{.NthBucket 1}}`((all (array (`phone`.`Country`) for `phone` in ((`idents`.`cont`).`Phones`) end)), `owner`) WHERE (`type` = \"links\") AND (`owner` = \"AA\") WITH {  \"defer_build\":true, \"num_replica\":3 }'"
   wait: true
-- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_all_fullname_idx_AA` ON `{{.NthBucket 1}}`((all (array [(`n`.`first`), (`n`.`last`)] for `n` in ((`idents`.`name`).`names`) end)), `owner`) WHERE (`type` = \"links\") AND (`owner` = \"AA\") WITH {  \"defer_build\":true, \"num_replica\":4 }'"
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_all_fullname_idx_AA` ON `{{.NthBucket 1}}`((all (array [(`n`.`first`), (`n`.`last`)] for `n` in ((`idents`.`name`).`names`) end)), `owner`) WHERE (`type` = \"links\") AND (`owner` = \"AA\") WITH {  \"defer_build\":true, \"num_replica\":3 }'"
   wait: true
-- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_all_email_idx_AA` ON `{{.NthBucket 1}}`((all (array `email` for `email` in ((`idents`.`cont`).`Emails`) end)), `owner`) WHERE (`type` = \"links\") AND (`owner` = \"AA\") WITH {  \"defer_build\":true, \"num_replica\":4 }'"
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_all_email_idx_AA` ON `{{.NthBucket 1}}`((all (array `email` for `email` in ((`idents`.`cont`).`Emails`) end)), `owner`) WHERE (`type` = \"links\") AND (`owner` = \"AA\") WITH {  \"defer_build\":true, \"num_replica\":3 }'"
   wait: true
-- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_progid_cov` ON `{{.NthBucket 1}}`((distinct (array (`m`.`progid`) for `m` in ((`idents`.`accts`).`mems`) end)),  `owner`) WHERE (`type` = \"links\") WITH {  \"defer_build\":true, \"num_replica\":4 }'"
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_progid_cov` ON `{{.NthBucket 1}}`((distinct (array (`m`.`progid`) for `m` in ((`idents`.`accts`).`mems`) end)),  `owner`) WHERE (`type` = \"links\") WITH {  \"defer_build\":true, \"num_replica\":3 }'"
   wait: true
-- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_progid_cov_AA` ON `{{.NthBucket 1}}`((distinct (array (`m`.`progid`) for `m` in ((`idents`.`accts`).`mems`) end)),  `owner`) WHERE (`type` = \"links\") AND (`owner` = \"AA\") WITH {  \"defer_build\":true, \"num_replica\":4 }'"
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `links_progid_cov_AA` ON `{{.NthBucket 1}}`((distinct (array (`m`.`progid`) for `m` in ((`idents`.`accts`).`mems`) end)),  `owner`) WHERE (`type` = \"links\") AND (`owner` = \"AA\") WITH {  \"defer_build\":true, \"num_replica\":3 }'"
   wait: true
-- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX def_type_owner ON `{{.NthBucket 1}}`(type,owner) partition by hash(type)  WITH {  \"defer_build\":true, \"num_replica\":4 }'"
+- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX def_type_owner ON `{{.NthBucket 1}}`(type,owner) partition by hash(type)  WITH {  \"defer_build\":true, \"num_replica\":3 }'"
   wait: true
 - command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='build index on `{{.NthBucket 1}}`(`links_mems_cov`,`links_all_phone_idx`,`links_all_lastname_idx`,`links_all_firstname_idx`,`links_alies_idx`,def_owner,`links_leads_idx_AA`,`links_all_country_phone_idx_AA`,`links_all_fullname_idx_AA`,`links_all_email_idx_AA`,`links_progid_cov`,`links_progid_cov_AA`,def_type_owner)'"
   wait: true
@@ -99,10 +105,6 @@
   command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.Bucket}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 2500000 /fakeit/test/fixtures/models/links/models/links_big.yaml"
 - command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.Bucket}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 2500000 /fakeit/test/fixtures/models/links/models/links_big.yaml"
 - command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.Bucket}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 2500000 /fakeit/test/fixtures/models/links/models/links_big.yaml"
-- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.Bucket}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 2500000 /fakeit/test/fixtures/models/links/models/links_big.yaml"
-- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.Bucket}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 2500000 /fakeit/test/fixtures/models/links/models/links_big.yaml"
-- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.NthBucket 1}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 2500000 /fakeit/test/fixtures/models/links/models/links_big.yaml"
-- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.NthBucket 1}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 2500000 /fakeit/test/fixtures/models/links/models/links_big.yaml"
 - command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.NthBucket 1}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 2500000 /fakeit/test/fixtures/models/links/models/links_big.yaml"
 - command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.NthBucket 1}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 2500000 /fakeit/test/fixtures/models/links/models/links_big.yaml"
 - command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.NthBucket 1}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 2500000 /fakeit/test/fixtures/models/links/models/links_big.yaml"
@@ -235,33 +237,6 @@
    entrypoint: sleep
    command: "300"
    wait: true
-
-# ###############  run queries w/validation after swap-rebalance ################
-- section_start: query_after_swap
-- image: sequoiatools/queryapp
-  command: "-J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.5.6/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 1800 --print_duration=600 --bucket {{.Bucket}} --querycount 20 --threads 20 --n1ql True --validate True --query_file volume_queries.txt --query_timeout=1200 --bucket_names [{{.Bucket}},{{.NthBucket 1}}]"
-  wait: true
-- section_end: query_after_swap
-
-
-###############  Failover and addback ################
-- template: failover_force_and_recover
-  args: "{{.ActiveIndexNode 2}}, full"
-  wait: true
-
-# Sleep for some more time after rebalance completes
--
-   image: sequoiatools/cmd
-   entrypoint: sleep
-   command: "300"
-   wait: true
-
-# ###############  run queries w/validation after failover ################
-- section_start: query_after_failover
-- image: sequoiatools/queryapp
-  command: "-J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.5.6/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 1800 --print_duration=600 --bucket {{.Bucket}} --querycount 20 --threads 20 --n1ql True --validate True --query_file volume_queries.txt --query_timeout=1200 --bucket_names [{{.Bucket}},{{.NthBucket 1}}]"
-  wait: true
-- section_end: query_replica_indexes
 
 ############### Kill indexer ################
 -
