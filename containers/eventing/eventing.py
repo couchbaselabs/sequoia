@@ -51,8 +51,8 @@ class EventingOperations():
                 print status, content, header
                 raise Exception("Failed to deploy application")
 
-            #self.check_deployment_status(appname)
-            self.check_handler_status(appname, "deployed")
+            self.check_deployment_status(appname)
+            #self.check_handler_status(appname, "deployed")
 
         elif self.operation == "deploy":
             status, content, header = self.deploy(appname)
@@ -60,7 +60,8 @@ class EventingOperations():
                 print status, content, header
                 raise Exception("Failed to deploy application")
 
-            self.check_handler_status(appname, "deployed")
+            self.check_deployment_status(appname)
+            #self.check_handler_status(appname, "deployed")
 
         elif self.operation == "undeploy":
 
@@ -73,7 +74,8 @@ class EventingOperations():
                 print status, content, header
                 raise Exception("Failed to undeploy application")
 
-            self.check_handler_status(appname, "undeployed")
+            self.check_undeployment_status(appname)
+            #self.check_handler_status(appname, "undeployed")
 
         elif self.operation == "pause":
             status, content, header = self.pause(appname)
@@ -213,7 +215,7 @@ class EventingOperations():
         authorization = base64.encodestring('%s:%s' % (self.username, self.password))
 
         headers = {'Content-type': 'application/json', 'Authorization': 'Basic %s' % authorization}
-        url = "http://" + self.hostname + ":8091" + "/_p/event/getRunningApps"
+        url = "http://" + self.hostname + ":8091" + "/_p/event/getDeployedApps"
         method="GET"
 
         response, content = httplib2.Http(timeout=120).request(uri=url, method=method, headers=headers)
