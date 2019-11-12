@@ -131,6 +131,9 @@
   - template: rebalance
     wait: true
 
+  - template: disable_autofailover
+    wait: true
+
 
 - name: autofailover2Nodes
   actions:
