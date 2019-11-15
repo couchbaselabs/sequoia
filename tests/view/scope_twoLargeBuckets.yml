@@ -29,7 +29,9 @@ servers: # each server tag represents a cluster
       ram: 50% 
       rest_username: Administrator
       rest_password: password
-      data_path: "/data"
+      data_path: "/data/kv"
+      index_path: "/data/idx"
+      analytics_path: "/data/d1,/data/d2"
       init_nodes: 2
       buckets: remote
       users: remote
