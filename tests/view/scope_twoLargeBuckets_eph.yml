@@ -40,16 +40,19 @@ servers: # each server tag represents a cluster
 buckets:
   -
       name: default
+      type: ephemeral
       ram: 70% 
       eviction: fullEviction
       replica: 2
       ddocs: scale
   -
-      name: other 
+      name: other
+      type: ephemeral 
       eviction: fullEviction
       ram: 30% 
   -
       name: remote
+      type: ephemeral
       ram: 70% 
 
 ddocs:

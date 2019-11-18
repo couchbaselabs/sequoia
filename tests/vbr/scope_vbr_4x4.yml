@@ -19,6 +19,9 @@ servers: # each server tag represents a cluster
       rest_password: password
       rest_port: 8091
       init_nodes: 3
+      data_path: "/data/kv"
+      index_path: "/data/idx"
+      analytics_path: "/data/d1,/data/d2"
       buckets: AbRegNums,MsgsCalls,RevAB,UserInfo
       users: AbRegNums
   -
@@ -29,6 +32,9 @@ servers: # each server tag represents a cluster
       rest_password: password
       rest_port: 8091
       init_nodes: 3
+      data_path: "/data/kv"
+      index_path: "/data/idx"
+      analytics_path: "/data/d1,/data/d2"
       buckets: AbRegNums2,MsgsCalls2,RevAB2,UserInfo2
       users: AbRegNums2
 
