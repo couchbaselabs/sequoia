@@ -29,7 +29,7 @@ users:
 servers: # each server tag represents a cluster
   -
       name: local
-      count: 29
+      count: 30
       ram: 90%
       index_ram: 90%
       fts_ram: 85%
@@ -40,7 +40,7 @@ servers: # each server tag represents a cluster
         index: 6
         query: 2
         fts: 2
-        eventing: 2
+        eventing: 3
         analytics: 3
       rest_username: Administrator
       rest_password: password
@@ -49,7 +49,7 @@ servers: # each server tag represents a cluster
       analytics_path: "/data"
       rest_port: 8091
       query_port: 8093
-      init_nodes: 27
+      init_nodes: 28
       buckets: default,CUSTOMER,DISTRICT,HISTORY,ITEM,NEW_ORDER,ORDERS,ORDER_LINE,STOCK,WAREHOUSE
       users: default,CUSTOMER,DISTRICT,HISTORY
   -
