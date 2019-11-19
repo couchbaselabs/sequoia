@@ -110,16 +110,10 @@
 - command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.NthBucket 1}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 2500000 /fakeit/test/fixtures/models/links/models/links_big.yaml"
   wait: true
 
-# Wait till all indexes are completely ingested
--
-   image: sequoiatools/wait_for_idx_build_complete
-   command: "{{.ActiveIndexNode 0}} {{.RestUsername}} {{.RestPassword}} wait_for_index_ingestion 36000"
-   wait: true
-
 # ###############  run queries and validate ################
 - section_start: query_replica_indexes
 - image: sequoiatools/queryapp
-  command: "-J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.5.6/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 1800 --print_duration=600 --bucket {{.Bucket}} --querycount 20 --threads 20 --n1ql True --validate True --query_file volume_queries.txt --query_timeout=1200 --bucket_names [{{.Bucket}},{{.NthBucket 1}}]"
+  command: "-J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.5.6/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 1800 --print_duration=600 --bucket {{.Bucket}} --querycount 20 --threads 20 --n1ql True --query_file volume_queries.txt --query_timeout=1200 --bucket_names [{{.Bucket}},{{.NthBucket 1}}]"
   wait: true
 - section_end: query_replica_indexes
 
@@ -152,10 +146,10 @@
    command: "{{.ActiveIndexNode 0}} {{.RestUsername}} {{.RestPassword}}"
    wait: true
 
-# ###############  run queries w/validation after index-kill ################
+# ###############  run queries w/o validation after index-kill ################
 - section_start: query_after_index_kill_0
 - image: sequoiatools/queryapp
-  command: "-J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.5.6/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 1800 --print_duration=600 --bucket {{.Bucket}} --querycount 20 --threads 20 --n1ql True --validate True --query_file volume_queries.txt --query_timeout=1200 --bucket_names [{{.Bucket}},{{.NthBucket 1}}]"
+  command: "-J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.5.6/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 1800 --print_duration=600 --bucket {{.Bucket}} --querycount 20 --threads 20 --n1ql True --query_file volume_queries.txt --query_timeout=1200 --bucket_names [{{.Bucket}},{{.NthBucket 1}}]"
   wait: true
 - section_end: query_after_index_kill_0
 
@@ -171,19 +165,6 @@
   wait: true
 - section_end: query_during_load
 
-# Wait till all indexes are completely ingested
--
-   image: sequoiatools/wait_for_idx_build_complete
-   command: "{{.ActiveIndexNode 0}} {{.RestUsername}} {{.RestPassword}} wait_for_index_ingestion 36000"
-   wait: true
-
-# ###############  run queries w/validation after data is done loading ################
-- section_start: query_after_load
-- image: sequoiatools/queryapp
-  command: "-J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.5.6/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 1800 --print_duration=600 --bucket {{.Bucket}} --querycount 20 --threads 20 --n1ql True --validate True --query_file volume_queries.txt --query_timeout=1200 --bucket_names [{{.Bucket}},{{.NthBucket 1}}]"
-  wait: true
-- section_end: query_after_load
-
 ###############  Rebalance-out single node ################
 - template: rebalance_out
   args: "{{.ActiveIndexNode 0}}"
@@ -195,10 +176,10 @@
    command: "300"
    wait: true
 
-# ###############  run queries w/validation after rebalance out ################
+# ###############  run queries w/o validation after rebalance out ################
 - section_start: query_after_rebalance
 - image: sequoiatools/queryapp
-  command: "-J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.5.6/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 1800 --print_duration=600 --bucket {{.Bucket}} --querycount 20 --threads 20 --n1ql True --validate True --query_file volume_queries.txt --query_timeout=1200 --bucket_names [{{.Bucket}},{{.NthBucket 1}}]"
+  command: "-J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.5.6/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 1800 --print_duration=600 --bucket {{.Bucket}} --querycount 20 --threads 20 --n1ql True --query_file volume_queries.txt --query_timeout=1200 --bucket_names [{{.Bucket}},{{.NthBucket 1}}]"
   wait: true
 - section_end: query_after_rebalance
 
@@ -220,10 +201,10 @@
    command: "{{.ActiveIndexNode 0}} {{.RestUsername}} {{.RestPassword}}"
    wait: true
 
-# ###############  run queries w/validation after index-kill ################
+# ###############  run queries w/o validation after index-kill ################
 - section_start: query_after_index_kill
 - image: sequoiatools/queryapp
-  command: "-J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.5.6/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 1800 --print_duration=600 --bucket {{.Bucket}} --querycount 20 --threads 20 --n1ql True --validate True --query_file volume_queries.txt --query_timeout=1200 --bucket_names [{{.Bucket}},{{.NthBucket 1}}]"
+  command: "-J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.5.6/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 1800 --print_duration=600 --bucket {{.Bucket}} --querycount 20 --threads 20 --n1ql True --query_file volume_queries.txt --query_timeout=1200 --bucket_names [{{.Bucket}},{{.NthBucket 1}}]"
   wait: true
 - section_end: query_after_index_kill
 
@@ -256,10 +237,10 @@
    command: "{{.ActiveIndexNode 0}} {{.RestUsername}} {{.RestPassword}}"
    wait: true
 
-# ###############  run queries w/validation after index-kill ################
+# ###############  run queries w/o validation after index-kill ################
 - section_start: query_after_kill
 - image: sequoiatools/queryapp
-  command: "-J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.5.6/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 1800 --print_duration=600 --bucket {{.Bucket}} --querycount 20 --threads 20 --n1ql True --validate True --query_file volume_queries.txt --query_timeout=1200 --bucket_names [{{.Bucket}},{{.NthBucket 1}}]"
+  command: "-J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.5.6/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 1800 --print_duration=600 --bucket {{.Bucket}} --querycount 20 --threads 20 --n1ql True --query_file volume_queries.txt --query_timeout=1200 --bucket_names [{{.Bucket}},{{.NthBucket 1}}]"
   wait: true
 - section_end: query_after_kill
 
