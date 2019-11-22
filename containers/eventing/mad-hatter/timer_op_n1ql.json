@@ -19,7 +19,8 @@
       "deployment_status": false,
       "execution_timeout": 60,
       "log_level": "INFO",
-      "processing_status": false
+      "processing_status": false,
+      "language_compatibility" : "6.5.0"
 	},
     "using_timer": true,
     "src_mutation": false
