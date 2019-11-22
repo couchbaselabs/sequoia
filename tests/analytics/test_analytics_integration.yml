@@ -6,16 +6,16 @@
 ###############  create analytics datasets  ################
 -
   image: sequoiatools/cbq
-  command: "-e=http://{{.ActiveAnalyticsNode 0}}:8095  -u={{.RestUsername}} -p={{.RestPassword}} -script='create dataset ds1 on `{{.Bucket}}`;'"
+  command: "-e=http://{{.ActiveAnalyticsNode 0}}:8095  -u={{.RestUsername}} -p={{.RestPassword}} -t 2m -script='create dataset ds1 on `{{.Bucket}}`;'"
   wait: true
 -
-  command: "-e=http://{{.ActiveAnalyticsNode 0}}:8095  -u={{.RestUsername}} -p={{.RestPassword}} -script='create dataset ds2 with {\"storage-block-compression\": {\"scheme\": \"snappy\"}} on `{{.NthBucket 1}}`;'"
+  command: "-e=http://{{.ActiveAnalyticsNode 0}}:8095  -u={{.RestUsername}} -p={{.RestPassword}} -t 2m -script='create dataset ds2 with {\"storage-block-compression\": {\"scheme\": \"snappy\"}} on `{{.NthBucket 1}}`;'"
   wait: true
 -
-  command: "-e=http://{{.ActiveAnalyticsNode 0}}:8095  -u={{.RestUsername}} -p={{.RestPassword}} -script='create dataset ds3 on `{{.NthBucket 2}}`;'"
+  command: "-e=http://{{.ActiveAnalyticsNode 0}}:8095  -u={{.RestUsername}} -p={{.RestPassword}} -t 2m -script='create dataset ds3 on `{{.NthBucket 2}}`;'"
   wait: true
 -
-  command: "-e=http://{{.ActiveAnalyticsNode 0}}:8095  -u={{.RestUsername}} -p={{.RestPassword}} -script='create dataset ds4 with {\"storage-block-compression\": {\"scheme\": \"snappy\"}} on `{{.NthBucket 3}}`;'"
+  command: "-e=http://{{.ActiveAnalyticsNode 0}}:8095  -u={{.RestUsername}} -p={{.RestPassword}} -t 2m -script='create dataset ds4 with {\"storage-block-compression\": {\"scheme\": \"snappy\"}} on `{{.NthBucket 3}}`;'"
   wait: true
 
 ###############  create analytics secondary indexes  ################
