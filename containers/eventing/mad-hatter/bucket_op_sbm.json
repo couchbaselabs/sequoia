@@ -10,7 +10,7 @@
 		"metadata_bucket": "metadata",
 		"source_bucket": "sbm_dst"
 	},
-	"appcode": "function OnUpdate(doc, meta) {\n  try{\n    dst[meta.id+'_sbm'] = doc;\n  }\n  catch(e){\n        log(e);\n  }\n}\nfunction OnDelete(meta) {\n    try{\n        delete dst[meta.id+'_sbm'];\n    }\n    catch(e){\n        log(e);\n    }\n}",
+	"appcode": "function OnUpdate(doc, meta) {\n  try{\n    dst[meta.id+'_sbm'] = \"SBM\";\n  }\n  catch(e){\n        log(e);\n  }\n}\nfunction OnDelete(meta) {\n    try{\n        delete dst[meta.id+'_sbm'];\n    }\n    catch(e){\n        log(e);\n    }\n}",
 	"settings": {
 		"dcp_stream_boundary": "everything",
 		"deadline_timeout": 62,
