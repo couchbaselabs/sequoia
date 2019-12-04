@@ -21,7 +21,7 @@ class EventingDataValidator():
         dst_bucket_docs = self.get_bucket_count(bucket=self.dst_bucket)
         curr_count = 0
         expected_count = (self.timeout / self.step_sleep)
-        while dst_bucket_docs != src_bucket_docs and curr_count < expected_count:
+        while self.is_not_match(src_bucket_docs,dst_bucket_docs) and curr_count < expected_count:
             print(
                 "No of docs in source and destination : Source Bucket({0}) : {1}, Destination Bucket({2}) : {3}".format(
                     self.src_bucket, src_bucket_docs, self.dst_bucket, dst_bucket_docs))
@@ -41,6 +41,22 @@ class EventingDataValidator():
         if dst_bucket_docs == src_bucket_docs:
             print("No of docs in source and destination match: Source Bucket({0}) : {1}, Destination Bucket({2}) : {3}".
                   format(self.src_bucket, src_bucket_docs, self.dst_bucket, dst_bucket_docs))
+        if "sbm" in self.dst_bucket and dst_bucket_docs == 2*src_bucket_docs:
+            print(
+                "No of docs for source bucket mutation match: Source Bucket({0}) : {1}, Destination Bucket({2}) : {3}".format(
+                    self.src_bucket, src_bucket_docs, self.dst_bucket, dst_bucket_docs))
+
+    def is_not_match(self,src_bucket_docs,dst_bucket_docs):
+        if "sbm" in self.dst_bucket:
+            if dst_bucket_docs != 2*src_bucket_docs:
+                return True
+            else:
+                False
+        else:
+            if dst_bucket_docs != src_bucket_docs:
+                return True
+            else:
+                False
 
     def get_bucket_count(self, bucket='default'):
         stats = {}
