@@ -1001,10 +1001,13 @@ func versionFlavor(ver string) string {
 		return "spock"
 	case strings.Index(ver, "5.5") == 0:
         return "vulcan"
-    case strings.Index(ver, "6.0") == 0:
+	case strings.Index(ver, "6.0") == 0:
         return "alice"
-    case strings.Index(ver, "6.5") == 0:
+	case strings.Index(ver, "6.5") == 0:
         return "mad-hatter"
+    case strings.Index(ver, "7.0") == 0:
+        return "cheshire-cat"
+
 	}
 	return "spock"
 }
