@@ -13,7 +13,7 @@ RUN yum install -y tar \
       sysstat wget screen psmisc \
       zip unzip glibc glibc-devel \
       openssh-server libssl0.9.8 \
-      tcpdump iptables psmisc  initscripts
+      tcpdump iptables psmisc  initscripts openssh-server openssh-clients
 
 # Install python-httplib2
 RUN curl https://bootstrap.pypa.io/get-pip.py | python - ; pip install httplib2
