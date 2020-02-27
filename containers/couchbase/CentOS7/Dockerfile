@@ -50,7 +50,7 @@ ARG VERSION=5.0.0
 ARG BUILD_NO=2412
 ARG FLAVOR=spock
 ARG BUILD_PKG=couchbase-server-enterprise-$VERSION-$BUILD_NO-centos7.x86_64.rpm
-ARG BASE_URL=http://172.23.120.24/builds/latestbuilds/couchbase-server/$FLAVOR/$BUILD_NO
+ARG BASE_URL=http://latestbuilds.service.couchbase.com/builds/latestbuilds/couchbase-server/$FLAVOR/$BUILD_NO
 
 ARG BUILD_URL=$BASE_URL/$BUILD_PKG
 RUN echo $BUILD_URL && \
