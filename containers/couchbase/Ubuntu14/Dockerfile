@@ -13,7 +13,7 @@ ARG BUILD_PKG=couchbase-server-enterprise_$VERSION-$BUILD_NO-ubuntu14.04_amd64.d
 ENV NOTVISIBLE="in users profile" \
     PATH=$PATH:/opt/couchbase/bin:/opt/couchbase/bin/tools:/opt/couchbase/bin/install \
     LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/couchbase/lib \
-    BASE_URL=http://172.23.120.24/builds/latestbuilds/couchbase-server/$FLAVOR/$BUILD_NO
+    BASE_URL=http://latestbuilds.service.couchbase.com/builds/latestbuilds/couchbase-server/$FLAVOR/$BUILD_NO
 
 RUN mkdir /var/run/sshd
 RUN echo 'root:couchbase' | chpasswd
