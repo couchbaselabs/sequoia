@@ -1,15 +1,23 @@
-FROM ubuntu:14.04
-RUN apt-get update
-RUN apt-get install -y wget lsb-release gcc g++ make cmake git-core libevent-dev libev-dev libssl-dev libffi-dev psmisc iptables zip unzip python-dev python-pip vim curl
-
-# Install libcouchbase binary
-RUN wget http://packages.couchbase.com/releases/couchbase-release/couchbase-release-1.0-6-amd64.deb
-RUN dpkg -i couchbase-release-1.0-6-amd64.deb
-RUN apt-get update
-RUN apt-get install -y --allow-unauthenticated libcouchbase-dev libcouchbase2-bin build-essential
-
+FROM centos:7
+RUN yum update -y
+RUN yum install git wget make gcc bzip2 zlib-devel bzip2-devel openssl-devel ncurses-devel sqlite-devel readline-devel tk-devel gdbm-devel db4-devel libpcap-devel xz-devel readline-devel sqlite sqlite-devel libffi-devel gcc-c++ python-devel python-pip -y
 
 WORKDIR /
+RUN wget https://www.python.org/ftp/python/3.7.6/Python-3.7.6.tgz
+RUN tar -xvf Python-3.7.6.tgz
+WORKDIR Python-3.7.6
+RUN ./configure --enable-optimizations
+RUN make altinstall
+RUN alternatives --install /usr/local/bin/python3 python3 /usr/local/bin/python3.7 1
+RUN alternatives --install /usr/local/bin/pip3 pip3 /usr/local/bin/pip3.7 1
+
+# Install libcouchbase binary
+RUN wget http://packages.couchbase.com/releases/couchbase-release/couchbase-release-1.0-6-x86_64.rpm
+RUN rpm -iv couchbase-release-1.0-6-x86_64.rpm
+RUN yum install libcouchbase-devel libcouchbase2-bin gcc gcc-c++ libcouchbase2-libev libcouchbase2-libevent -y
+
+RUN pip3 install couchbase sgmllib3k paramiko httplib2 pyyaml beautifulsoup4 Geohash python-geohash deepdiff pyes pytz requests jsonpickle docker
+
 RUN git clone git://github.com/couchbase/testrunner.git
 WORKDIR testrunner
 ARG BRANCH=master
@@ -17,18 +25,6 @@ RUN git checkout $BRANCH
 RUN git pull origin $BRANCH
 RUN git fetch
 RUN git reset --hard origin/$BRANCH
-
-# install python deps
-RUN pip2 install --upgrade packaging appdirs
-RUN pip install -U pip setuptools
-RUN pip install paramiko &&\
-    pip install gevent &&\
-    pip install boto &&\
-    pip install httplib2 &&\
-    pip install pyyaml &&\
-    pip install couchbase &&\
-    pip install Geohash &&\
-    pip install pytz
 
 COPY local.ini local.ini
 COPY upgrade_local.ini upgrade_local.ini

@@ -7,4 +7,4 @@ if [ $1 == "wait" ]; then tail -f /dev/null; fi
 
 # translate hosts to ip
 ./host2ip.sh $(echo "$@" | sed -e 's/.*-i //' -e 's/ini.*/ini/')
-exec python testrunner.py "$@"
+exec python3 testrunner.py "$@"
