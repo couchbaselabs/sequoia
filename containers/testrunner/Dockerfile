@@ -10,7 +10,7 @@ RUN ./configure --enable-optimizations
 RUN make altinstall
 RUN alternatives --install /usr/local/bin/python3 python3 /usr/local/bin/python3.7 1
 RUN alternatives --install /usr/local/bin/pip3 pip3 /usr/local/bin/pip3.7 1
-
+WORKDIR /
 # Install libcouchbase binary
 RUN wget http://packages.couchbase.com/releases/couchbase-release/couchbase-release-1.0-6-x86_64.rpm
 RUN rpm -iv couchbase-release-1.0-6-x86_64.rpm
