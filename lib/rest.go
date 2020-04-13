@@ -2,8 +2,9 @@ package sequoia
 
 import (
 	"fmt"
-	"github.com/streamrail/concurrent-map"
 	"time"
+
+	cmap "github.com/streamrail/concurrent-map"
 )
 
 type RestClient struct {
@@ -41,10 +42,13 @@ type RebalanceStatus struct {
 	Status string
 }
 
-type ClusterInfo struct{
-    Name string
-    Nodes []NodeSelf
+type ClusterInfo struct {
+	Name  string
+	Nodes []NodeSelf
+}
 
+type CollectionId struct {
+	Uid string
 }
 
 func NewRestClient(clusters []ServerSpec, provider Provider, cm *ContainerManager) RestClient {
@@ -224,7 +228,7 @@ func (r *RestClient) GetRebalanceStatuses(auth, url string) RebalanceStatus {
 }
 
 func (r *RestClient) GetClusterInfo() ClusterInfo {
-    host := r.GetOrchestrator()
+	host := r.GetOrchestrator()
 	url := r.Provider.GetRestUrl(host)
 	auth := r.GetAuth(host)
 	reqUrl := fmt.Sprintf("%s/pools/default", url)
@@ -233,15 +237,15 @@ func (r *RestClient) GetClusterInfo() ClusterInfo {
 	return s
 }
 
-func (r *RestClient) IsNodeActive(host string) bool{
-        cluster :=r.GetClusterInfo()
-        for i:=0 ; i < len(cluster.Nodes); i++ {
-        ip:= host+":8091"
-        if cluster.Nodes[i].Hostname == ip && cluster.Nodes[i].ClusterMembership == "active" {
-            return true
-            }
-        }
-        return false
+func (r *RestClient) IsNodeActive(host string) bool {
+	cluster := r.GetClusterInfo()
+	for i := 0; i < len(cluster.Nodes); i++ {
+		ip := host + ":8091"
+		if cluster.Nodes[i].Hostname == ip && cluster.Nodes[i].ClusterMembership == "active" {
+			return true
+		}
+	}
+	return false
 
 }
 
@@ -273,11 +277,12 @@ func (r *RestClient) JsonRequest(auth, restUrl string, v interface{}) {
 //
 func (r *RestClient) JsonPostRequest(auth, restUrl, data string, v interface{}) {
 	// run curl container to make rest request
-	cmd := []string{"-u", auth, "-s", restUrl,"-d",data}
+	cmd := []string{"-u", auth, "-s", restUrl, "-d", data}
 	id, svcId := r.Cm.RunRestContainer(cmd)
-	//fmt.Println(MakeTaskMsg("appropriate/curl", id, cmd, false))
+	fmt.Println(MakeTaskMsg("appropriate/curl", id, cmd, false))
 	// convert logs to json
 	resp := r.Cm.GetLogs(id, "all")
+	//fmt.Println("response:", resp)
 	parseErr := StringToJson(resp, &v)
 	// reset cache if we got a bad response
 	// as this indicates unstable cluster
@@ -306,11 +311,33 @@ func (r *RestClient) cacheSet(ctx, key string, val interface{}) {
 }
 
 func (r *RestClient) updateNumberOfBucktes(numberOfBuckets string) {
-    host := r.GetOrchestrator()
+	host := r.GetOrchestrator()
 	url := r.Provider.GetRestUrl(host)
 	auth := r.GetAuth(host)
 	reqUrl := fmt.Sprintf("%s/internalSettings", url)
 	var s []string
-	data:="maxBucketCount="+numberOfBuckets
+	data := "maxBucketCount=" + numberOfBuckets
+	r.JsonPostRequest(auth, reqUrl, data, &s)
+}
+
+func (r *RestClient) createScope(bucketName, scopeName string) {
+	host := r.GetOrchestrator()
+	url := r.Provider.GetRestUrl(host)
+	auth := r.GetAuth(host)
+	reqUrl := fmt.Sprintf("%s/pools/default/buckets/%s/collections", url, bucketName)
+	//fmt.Printf("URL: %s", reqUrl)
+	var s CollectionId
+	data := "name=" + scopeName
+	r.JsonPostRequest(auth, reqUrl, data, &s)
+}
+
+func (r *RestClient) createCollections(bucketName, scopeName, collectionName string) {
+	host := r.GetOrchestrator()
+	url := r.Provider.GetRestUrl(host)
+	auth := r.GetAuth(host)
+	reqUrl := fmt.Sprintf("%s/pools/default/buckets/%s/collections/%s", url, bucketName, scopeName)
+	//fmt.Printf("URL: %s", reqUrl)
+	var s CollectionId
+	data := "name=" + collectionName
 	r.JsonPostRequest(auth, reqUrl, data, &s)
 }

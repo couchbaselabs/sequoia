@@ -230,6 +230,7 @@ func (t *Test) Run(scope Scope) {
 	if repeat == -1 {
 		// run forever
 		for {
+			fmt.Println("Test cycle started:", loops+1)
 			t.runRepeatableActions(scope, loops, t.Actions)
 			// kill test containers
 			t.DoContainerCleanup(scope)
@@ -239,6 +240,7 @@ func (t *Test) Run(scope Scope) {
 	} else {
 		repeat++
 		for loops = 0; loops < repeat; loops++ {
+			fmt.Println("Test cycle started:", loops+1)
 			t.runRepeatableActions(scope, loops, t.Actions)
 			// kill test containers
 			if *t.Flags.SkipCleanup == false {
@@ -277,9 +279,9 @@ func (t *Test) runRepeatableActions(scope Scope, loop int, actions []ActionSpec)
 	// restore the original test actions because runActions has the side-effect
 	// of modifying the Actions member for running nested templates, tests, and sections
 	t.Actions = actions
-    if *t.Flags.ShowTopology == true {
-	scope.getClusteInfo()
-    }
+	if *t.Flags.ShowTopology == true {
+		scope.getClusteInfo()
+	}
 }
 
 func (t *Test) runActions(scope Scope, loop int, actions []ActionSpec) {

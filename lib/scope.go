@@ -18,7 +18,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/streamrail/concurrent-map"
+	cmap "github.com/streamrail/concurrent-map"
 )
 
 type Scope struct {
@@ -33,8 +33,8 @@ type Scope struct {
 }
 
 type Services struct {
-    Hostname string
-    Services []string
+	Hostname string
+	Services []string
 }
 
 func NewScope(flags TestFlags, cm *ContainerManager) Scope {
@@ -43,7 +43,7 @@ func NewScope(flags TestFlags, cm *ContainerManager) Scope {
 	spec := NewScopeSpec(*flags.ScopeFile)
 
 	// apply overrides
-	if params := flags.Override; params != nil {
+	if params := flags.Override; *params != "" {
 		ApplyFlagOverrides(*params, &spec)
 		ConfigureSpec(&spec)
 	}
@@ -132,8 +132,8 @@ func (s *Scope) SetupServer() {
 	s.RebalanceClusters()
 	s.getClusteInfo()
 	s.CreateBuckets()
+	s.CreateScope()
 	s.CreateViews()
-	//s.getClusteInfo()
 }
 
 func (s *Scope) SetupMobile() {
@@ -204,7 +204,9 @@ func (s *Scope) InitCli() {
 	s.Version = version[:3]
 	// pull cli tag matching version..ie 3.5, 4.1, 4.5
 	// :latest is used if no match found
-	s.Cm.PullTaggedImage("sequoiatools/couchbase-cli", s.Version)
+	if !*s.Flags.SkipPull {
+		s.Cm.PullTaggedImage("sequoiatools/couchbase-cli", s.Version)
+	}
 
 }
 
@@ -217,10 +219,10 @@ func (s *Scope) WaitForServers() {
 
 		ip := s.Provider.GetHostAddress(name)
 		parts := strings.Split(ip, ",")
-                prefix := parts[0]
-                if prefix == "syncgateway" || prefix == "elasticsearch" {
-                        if len(parts) > 1 {
-                                ip = parts[1]
+		prefix := parts[0]
+		if prefix == "syncgateway" || prefix == "elasticsearch" {
+			if len(parts) > 1 {
+				ip = parts[1]
 			}
 		}
 		ipPort := strings.Split(ip, ":")
@@ -339,7 +341,7 @@ func (s *Scope) InitNodes() {
 		ip := s.Provider.GetHostAddress(name)
 		parts := strings.Split(ip, ",")
 		prefix := parts[0]
-                if prefix == "syncgateway" || prefix == "elasticsearch" {
+		if prefix == "syncgateway" || prefix == "elasticsearch" {
 			return
 		}
 		command := []string{"node-init",
@@ -362,12 +364,12 @@ func (s *Scope) InitNodes() {
 
 		server.AnalyticsPath = s.GetPath(server.AnalyticsPath, name)
 		partition := strings.Split(server.AnalyticsPath, ",")
-		for _, path := range partition{
-		command = append(
-            command,
-            "--node-init-analytics-path",
-            path)
-        }
+		for _, path := range partition {
+			command = append(
+				command,
+				"--node-init-analytics-path",
+				path)
+		}
 
 		desc := "init node " + ip
 		task := ContainerTask{
@@ -389,8 +391,16 @@ func (s *Scope) InitNodes() {
 }
 
 func (s *Scope) InitCluster() {
+	// make sure proper couchbase-cli is used
+	var version string
+	if s.Flags.Version != nil && (*s.Flags.Version != "") {
+		version = *s.Flags.Version
+	} else {
+		version = s.Rest.GetServerVersion()
+	}
+	s.Version = version[:3]
 
-	var image = "sequoiatools/couchbase-cli"
+	var image = "sequoiatools/couchbase-cli:" + s.Version
 
 	initClusterOp := func(name string, server *ServerSpec) {
 		orchestrator := server.Names[0]
@@ -558,7 +568,7 @@ func (s *Scope) AddUsers() {
 
 func (s *Scope) AddNodes() {
 
-    // make sure proper couchbase-cli is used for node init
+	// make sure proper couchbase-cli is used for node init
 	var version string
 	if s.Flags.Version != nil && (*s.Flags.Version != "") {
 		version = *s.Flags.Version
@@ -567,7 +577,7 @@ func (s *Scope) AddNodes() {
 	}
 
 	s.Version = version[:3]
-	var image = "sequoiatools/couchbase-cli:"+s.Version
+	var image = "sequoiatools/couchbase-cli:" + s.Version
 	addNodesOp := func(name string, server *ServerSpec) {
 
 		if server.InitNodes <= server.NodesActive {
@@ -578,10 +588,10 @@ func (s *Scope) AddNodes() {
 		ip := s.Provider.GetHostAddress(name)
 
 		parts := strings.Split(ip, ",")
-                prefix := parts[0]
-                if prefix == "syncgateway" || prefix == "elasticsearch" {
-                        return
-                }
+		prefix := parts[0]
+		if prefix == "syncgateway" || prefix == "elasticsearch" {
+			return
+		}
 
 		if name == orchestrator {
 			return // not adding self
@@ -655,12 +665,21 @@ func (s *Scope) RebalanceClusters() {
 }
 
 func (s *Scope) CreateBuckets() {
+	//fmt.Printf("%+v\n", s.Spec.Buckets)
+	// make sure proper couchbase-cli is used
+	var version string
+	if s.Flags.Version != nil && (*s.Flags.Version != "") {
+		version = *s.Flags.Version
+	} else {
+		version = s.Rest.GetServerVersion()
+	}
+	s.Version = version[:3]
 
-	var image = "sequoiatools/couchbase-cli"
+	var image = "sequoiatools/couchbase-cli:" + s.Version
 
-    if s.Spec.Servers[0].NumberOfBuckets !="" {
-        s.Rest.updateNumberOfBucktes(s.Spec.Servers[0].NumberOfBuckets)
-    }
+	if s.Spec.Servers[0].NumberOfBuckets != "" {
+		s.Rest.updateNumberOfBucktes(s.Spec.Servers[0].NumberOfBuckets)
+	}
 	// configure rebalance operation
 	operation := func(name string, server *ServerSpec) {
 
@@ -696,10 +715,10 @@ func (s *Scope) CreateBuckets() {
 					command = append(command, "--bucket-eviction-policy", bucket.Eviction)
 				}
 				if bucket.Compression != "" {
-				    command = append(command,"--compression-mode", bucket.Compression)
+					command = append(command, "--compression-mode", bucket.Compression)
 				}
 				if bucket.TTL != "" {
-				    command = append(command,"--max-ttl", bucket.TTL)
+					command = append(command, "--max-ttl", bucket.TTL)
 				}
 
 				desc := "bucket create " + bucketName
@@ -721,6 +740,21 @@ func (s *Scope) CreateBuckets() {
 	// apply only to orchestrator
 	s.Spec.ApplyToServers(operation, 0, 1)
 
+}
+
+func (s *Scope) CreateScope() {
+	for _, bucket := range s.Spec.Buckets {
+		//fmt.Print(bucket)
+		for _, scopes := range bucket.BucketScopeSpec {
+			//	fmt.Print(scopes)
+			s.Rest.createScope(bucket.Name, scopes.Name)
+			if scopes.Collections != "" {
+				for _, collName := range CommaStrToList(scopes.Collections) {
+					s.Rest.createCollections(bucket.Name, scopes.Name, collName)
+				}
+			}
+		}
+	}
 }
 
 func (s *Scope) GetPercOfMemTotal(name string, server *ServerSpec, quota string) string {
@@ -956,12 +990,12 @@ func (s *Scope) RemoveNodes() {
 		orchestrator := server.Names[0]
 		orchestratorIp := s.Provider.GetHostAddress(orchestrator)
 		ip := s.Provider.GetHostAddress(name)
-		
+
 		parts := strings.Split(ip, ",")
-                prefix := parts[0]
-                if prefix == "syncgateway" || prefix == "elasticsearch" {
-                        return
-                }
+		prefix := parts[0]
+		if prefix == "syncgateway" || prefix == "elasticsearch" {
+			return
+		}
 
 		if name == orchestrator {
 			return // not removing self
@@ -1010,16 +1044,16 @@ func (s *Scope) GetVarsKV(key string) (string, bool) {
 	}
 }
 
-func (s *Scope) getClusteInfo(){
-    cluster :=s.Rest.GetClusterInfo()
-    serviceMap := make(map[string][]string)
-    for i:=0 ; i < len(cluster.Nodes); i++ {
-    host:=cluster.Nodes[i].Hostname
-    service:=cluster.Nodes[i].Services[0]
-    serviceMap[service]= append(serviceMap[service],host)
-    }
-    fmt.Println("########## Cluster config ##################")
-    for key, value := range serviceMap {
-    fmt.Println("###### ",key,":",len(value), "===== >", value," ###########")
-    }
+func (s *Scope) getClusteInfo() {
+	cluster := s.Rest.GetClusterInfo()
+	serviceMap := make(map[string][]string)
+	for i := 0; i < len(cluster.Nodes); i++ {
+		host := cluster.Nodes[i].Hostname
+		service := cluster.Nodes[i].Services[0]
+		serviceMap[service] = append(serviceMap[service], host)
+	}
+	fmt.Println("########## Cluster config ##################")
+	for key, value := range serviceMap {
+		fmt.Println("###### ", key, ":", len(value), "===== >", value, " ###########")
+	}
 }

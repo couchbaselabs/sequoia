@@ -13,52 +13,59 @@ type RbacSpec struct {
 }
 
 type BucketSpec struct {
-	Name      string
-	Names     []string
-	Count     uint8
-	Ram       string
-	Replica   *uint8
-	Type      string
-	Sasl      string
-	Eviction  string
-	DDocs     string
-	DDocSpecs []DDocSpec
-	Compression string
-	TTL        string
+	Name            string
+	Names           []string
+	Count           uint8
+	Ram             string
+	Replica         *uint8
+	Type            string
+	Sasl            string
+	Eviction        string
+	DDocs           string
+	DDocSpecs       []DDocSpec
+	Compression     string
+	TTL             string
+	BucketScopes    string
+	BucketScopeSpec []BucketScopeSpec
+}
+
+type BucketScopeSpec struct {
+	Name        string
+	Collections string
 }
 
 type ServerSpec struct {
-	Name         string
-	Names        []string
-	Count        uint8
-	CountOffset  uint8
-	Ram          string
-	IndexRam     string `yaml:"index_ram"`
-	FtsRam       string `yaml:"fts_ram"`
-	AnalyticsRam string `yaml:"analytics_ram"`
-	EventingRam string `yaml:"eventing_ram"`
-	RestUsername string `yaml:"rest_username"`
-	RestPassword string `yaml:"rest_password"`
-	SSHUsername  string `yaml:"ssh_username"`
-	SSHPassword  string `yaml:"ssh_password"`
-	RestPort     string `yaml:"rest_port"`
-	ViewPort     string `yaml:"view_port"`
-	FTSPort      string `yaml:"fts_port"`
-	QueryPort    string `yaml:"query_port"`
-	EventingPort string `yaml:"eventing_port"`
-	AnalyticsPort   string  `yaml:"analytics_port"`
-	InitNodes    uint8  `yaml:"init_nodes"`
-	DataPath     string `yaml:"data_path"`
-	IndexPath    string `yaml:"index_path"`
-	AnalyticsPath string `yaml:"analytics_path"`
-	IndexStorage string `yaml:"index_storage"`
-	Buckets      string
-	BucketSpecs  []BucketSpec
-	NodesActive  uint8
-	Services     map[string]uint8
-	NodeServices map[string][]string
-	Users        string
-	RbacSpecs    []RbacSpec
+	Name            string
+	Names           []string
+	Count           uint8
+	CountOffset     uint8
+	Ram             string
+	IndexRam        string `yaml:"index_ram"`
+	FtsRam          string `yaml:"fts_ram"`
+	AnalyticsRam    string `yaml:"analytics_ram"`
+	EventingRam     string `yaml:"eventing_ram"`
+	RestUsername    string `yaml:"rest_username"`
+	RestPassword    string `yaml:"rest_password"`
+	SSHUsername     string `yaml:"ssh_username"`
+	SSHPassword     string `yaml:"ssh_password"`
+	RestPort        string `yaml:"rest_port"`
+	ViewPort        string `yaml:"view_port"`
+	FTSPort         string `yaml:"fts_port"`
+	QueryPort       string `yaml:"query_port"`
+	EventingPort    string `yaml:"eventing_port"`
+	AnalyticsPort   string `yaml:"analytics_port"`
+	InitNodes       uint8  `yaml:"init_nodes"`
+	DataPath        string `yaml:"data_path"`
+	IndexPath       string `yaml:"index_path"`
+	AnalyticsPath   string `yaml:"analytics_path"`
+	IndexStorage    string `yaml:"index_storage"`
+	Buckets         string
+	BucketSpecs     []BucketSpec
+	NodesActive     uint8
+	Services        map[string]uint8
+	NodeServices    map[string][]string
+	Users           string
+	RbacSpecs       []RbacSpec
 	NumberOfBuckets string
 }
 
@@ -101,6 +108,7 @@ type ScopeSpec struct {
 	Views        []ViewSpec
 	DDocs        []DDocSpec `yaml:"ddocs"`
 	Users        []RbacSpec
+	BucketScopes []BucketScopeSpec
 }
 
 func (s *ServerSpec) InitNodeServices() {
@@ -129,13 +137,12 @@ func (s *ServerSpec) InitNodeServices() {
 
 	analyticsStartPos := numNodes - numQueryNodes - numIndexNodes - numFtsNodes - numEventingNodes - numAnalyticsNodes
 	if customAnalyticsStart > 0 {
-	    // override
-	    analyticsStartPos = customAnalyticsStart - 1
+		// override
+		analyticsStartPos = customAnalyticsStart - 1
 	}
 	if customAnalyticsStart >= numNodes {
-	    analyticsStartPos = 0
+		analyticsStartPos = 0
 	}
-
 
 	eventingStartPos := numNodes - numQueryNodes - numIndexNodes - numFtsNodes - numEventingNodes
 	if customEventingStart > 0 {
@@ -318,7 +325,7 @@ func (s *ScopeSpec) ToAttr(attr string) string {
 	case "eventing_port":
 		return "EventingPort"
 	case "analytics_port":
-	    return "AnalyticsPort"
+		return "AnalyticsPort"
 	}
 
 	return ""
@@ -373,6 +380,12 @@ func ConfigureSpec(spec *ScopeSpec) {
 		ddocNameMap[ddoc.Name] = spec.DDocs[i]
 	}
 
+	// map scope to buckets
+	scopeNameMap := make(map[string]BucketScopeSpec)
+	for _, scopeName := range spec.BucketScopes {
+		scopeNameMap[scopeName.Name] = scopeName
+	}
+
 	// init bucket section of spec
 	bucketNameMap := make(map[string]BucketSpec)
 	for i, bucket := range spec.Buckets {
@@ -390,6 +403,16 @@ func ConfigureSpec(spec *ScopeSpec) {
 			}
 		}
 		bucketNameMap[bucket.Name] = spec.Buckets[i]
+
+		if bucket.BucketScopes != "" {
+			collectionScope := CommaStrToList(bucket.BucketScopes)
+			for _, collectionScopeName := range collectionScope {
+				if scope, ok := scopeNameMap[collectionScopeName]; ok {
+					spec.Buckets[i].BucketScopeSpec = append(spec.Buckets[i].BucketScopeSpec, scope)
+				}
+			}
+		}
+		//fmt.Printf("%+v\n", spec.Buckets)
 	}
 
 	// init server section of spec

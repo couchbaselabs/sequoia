@@ -16,8 +16,8 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types/swarm"
-	"github.com/fsouza/go-dockerclient"
-	"github.com/streamrail/concurrent-map"
+	docker "github.com/fsouza/go-dockerclient"
+	cmap "github.com/streamrail/concurrent-map"
 	"github.com/tahmmee/tap.go"
 )
 
@@ -531,11 +531,11 @@ func (cm *ContainerManager) pullImage(client *docker.Client, repo string, ch cha
 		Tag:        "latest",
 	}
 
-	if strings.ContainsAny(repo, ":"){
-	    imgOpts = docker.PullImageOptions{
-		Repository: repo,
-		Tag:        strings.Split(repo, ":")[1],
-	    }
+	if strings.ContainsAny(repo, ":") {
+		imgOpts = docker.PullImageOptions{
+			Repository: repo,
+			Tag:        strings.Split(repo, ":")[1],
+		}
 	}
 
 	err := client.PullImage(imgOpts, docker.AuthConfiguration{})
@@ -947,7 +947,7 @@ func (cm *ContainerManager) RunRestContainer(cmd []string) (string, string) {
 		options := cm.NewContainerOptions(image, cmd, volumes)
 		_, container := cm.RunContainer(options)
 		_, err := cm.Client.WaitContainer(container.ID)
-		logerr(err)
+		logerrstr(err.Error())
 		rest_container_id = container.ID
 
 	}
