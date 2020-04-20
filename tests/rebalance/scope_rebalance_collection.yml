@@ -1,0 +1,36 @@
+---
+users:
+  -
+      name: default
+      password: password
+      roles: admin
+      auth_domain: local
+buckets:
+  -
+      name: default
+      ram: 22%
+      eviction: fullEviction
+      bucketscopes: scope1, scope2
+
+
+bucketscopes:
+  -
+      name: scope1
+      collections: collection1, collection2, collection3, collection4, collection5, collection6, collection7, collection8, collection9, collection10
+  -
+      name: scope2
+      collections: collection1, collection2, collection3, collection4, collection5, collection6, collection7, collection8, collection9, collection10
+
+
+servers: # each server tag represents a cluster
+  -
+      name: local
+      count: 8
+      ram: 90%
+      rest_username: Administrator
+      rest_password: password
+      data_path: "/data"
+      index_path: "/data"
+      init_nodes: 6
+      buckets: default
+      users: default

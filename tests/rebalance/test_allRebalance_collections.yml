@@ -1,0 +1,155 @@
+-
+  # include rebalance and group templates
+  include: tests/templates/rebalance.yml, tests/templates/groups.yml, tests/templates/kv.yml, tests/templates/bucket.yml
+
+#### this load will run during full cycle ####
+-
+  foreach: "{{range $i, $sc := mkrange 1 2}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.Bucket}} -I {{$.Scale 1000}} -M 50 -B 100 -r 50 --rate-limit {{$.Scale 500}} --random-body
+  --collection scope{{$sc}}.collection1 --collection scope{{$sc}}.collection2 --collection scope{{$sc}}.collection3 --collection scope{{$sc}}.collection4 --collection scope{{$sc}}.collection5
+  --collection scope{{$sc}}.collection6 --collection scope{{$sc}}.collection7 --collection scope{{$sc}}.collection8 --collection scope{{$sc}}.collection9 --collection scope{{$sc}}.collection10
+  --json"
+
+### create 8 scope as scope-1,scope-2 ... ######
+-
+  image: sequoiatools/collections:1.0
+  command: "-i {{.Orchestrator}}:8091 -b {{.Bucket}} -o create -s scope --count 8"
+  wait: true
+
+### create 10 collection in each newly create scope as coll-1,coll-2.... ####
+-
+  foreach: "{{range $i, $sc := mkrange 0 8}}"
+  image: sequoiatools/collections:1.0
+  command: "-i {{$.Orchestrator}}:8091 -b {{$.Bucket}} -o create -s scope-{{$sc}} -c coll --count 10"
+  wait: true
+
+### load data to all scope and all collections ####
+-
+  foreach: "{{range $i, $sc := mkrange 0 8}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.Bucket}} -I {{$.Scale 1000}} -M 50 -B 100 -r 50 --rate-limit {{$.Scale 500}} --random-body
+  --collection scope-{{$sc}}.coll-0 --collection scope-{{$sc}}.coll-1 --collection scope-{{$sc}}.coll-2 --collection scope-{{$sc}}.coll-3 --collection scope-{{$sc}}.coll-4
+  --collection scope-{{$sc}}.coll-5 --collection scope-{{$sc}}.coll-6 --collection scope-{{$sc}}.coll-7 --collection scope-{{$sc}}.coll-8 --collection scope-{{$sc}}.coll-9
+  --json --populate-only"
+  wait: true
+
+
+###############  Rebalance-in ################
+- template: rebalance_in
+  args: "{{.InActiveNode}}"
+  wait: true
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+### delete all collections in scope ####
+-
+  foreach: "{{range $i, $sc := mkrange 0 8}}"
+  image: sequoiatools/collections:1.0
+  command: "-i {{$.Orchestrator}}:8091 -b {{$.Bucket}} -o delete -s scope-{{$sc}} -c coll --count 10"
+  wait: true
+
+### create 10 collection in each newly create scope as coll_1-1,coll_1-2.... ####
+-
+  foreach: "{{range $i, $sc := mkrange 0 8}}"
+  image: sequoiatools/collections:1.0
+  command: "-i {{$.Orchestrator}}:8091 -b {{$.Bucket}} -o create -s scope-{{$sc}} -c coll_1 --count 10"
+  wait: true
+
+### load data to recreated collection ####
+-
+  foreach: "{{range $i, $sc := mkrange 0 8}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.Bucket}} -I {{$.Scale 1000}} -M 50 -B 100 -r 50 --rate-limit {{$.Scale 500}} --random-body
+  --collection scope-{{$sc}}.coll_1-0 --collection scope-{{$sc}}.coll_1-1 --collection scope-{{$sc}}.coll_1-2 --collection scope-{{$sc}}.coll_1-3 --collection scope-{{$sc}}.coll_1-4
+  --collection scope-{{$sc}}.coll_1-5 --collection scope-{{$sc}}.coll_1-6 --collection scope-{{$sc}}.coll_1-7 --collection scope-{{$sc}}.coll_1-8 --collection scope-{{$sc}}.coll_1-9
+  --json --populate-only"
+  wait: true
+
+
+###############  Rebalance-out single node ################
+- template: rebalance_out
+  args: "{{.ActiveDataNode 1}}"
+  wait: true
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+### delete all collections in scope ####
+-
+  foreach: "{{range $i, $sc := mkrange 0 8}}"
+  image: sequoiatools/collections:1.0
+  command: "-i {{$.Orchestrator}}:8091 -b {{$.Bucket}} -o delete -s scope-{{$sc}} -c coll_1 --count 10"
+  wait: true
+
+### create 10 collection in each newly create scope as coll_2-1,coll_2-2.... ####
+-
+  foreach: "{{range $i, $sc := mkrange 0 8}}"
+  image: sequoiatools/collections:1.0
+  command: "-i {{$.Orchestrator}}:8091 -b {{$.Bucket}} -o create -s scope-{{$sc}} -c coll_2 --count 10"
+  wait: true
+
+### load data to recreated collection ####
+-
+  foreach: "{{range $i, $sc := mkrange 0 8}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.Bucket}} -I {{$.Scale 1000}} -M 50 -B 100 -r 50 --rate-limit {{$.Scale 500}} --random-body
+  --collection scope-{{$sc}}.coll_2-0 --collection scope-{{$sc}}.coll_2-1 --collection scope-{{$sc}}.coll_2-2 --collection scope-{{$sc}}.coll_2-3 --collection scope-{{$sc}}.coll_2-4
+  --collection scope-{{$sc}}.coll_2-5 --collection scope-{{$sc}}.coll_2-6 --collection scope-{{$sc}}.coll_2-7 --collection scope-{{$sc}}.coll_2-8 --collection scope-{{$sc}}.coll_2-9
+  --json --populate-only"
+  wait: true
+
+###############  Swap Rebalance ################
+- template: rebalance_swap
+  args: "{{.InActiveNode}},{{.ActiveDataNode 1}}"
+  wait: true
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+
+### delete all collections in scope ####
+-
+  foreach: "{{range $i, $sc := mkrange 0 8}}"
+  image: sequoiatools/collections:1.0
+  command: "-i {{$.Orchestrator}}:8091 -b {{$.Bucket}} -o delete -s scope-{{$sc}} -c coll_2 --count 10"
+  wait: true
+
+### create 10 collection in each newly create scope as coll-1,coll-2.... ####
+-
+  foreach: "{{range $i, $sc := mkrange 0 8}}"
+  image: sequoiatools/collections:1.0
+  command: "-i {{$.Orchestrator}}:8091 -b {{$.Bucket}} -o create -s scope-{{$sc}} -c coll --count 10"
+  wait: true
+
+### load data to all scope and all collections ####
+-
+  foreach: "{{range $i, $sc := mkrange 0 8}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.Bucket}} -I {{$.Scale 1000}} -M 50 -B 100 -r 50 --rate-limit {{$.Scale 500}} --random-body
+  --collection scope-{{$sc}}.coll-0 --collection scope-{{$sc}}.coll-1 --collection scope-{{$sc}}.coll-2 --collection scope-{{$sc}}.coll-3 --collection scope-{{$sc}}.coll-4
+  --collection scope-{{$sc}}.coll-5 --collection scope-{{$sc}}.coll-6 --collection scope-{{$sc}}.coll-7 --collection scope-{{$sc}}.coll-8 --collection scope-{{$sc}}.coll-9
+  --json --populate-only"
+  wait: true
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+### delete 8 scope as scope-1,scope-2 ... ######
+-
+  image: sequoiatools/collections:1.0
+  command: "-i {{.Orchestrator}}:8091 -b {{.Bucket}} -o delete -s scope --count 8"
+  wait: true
