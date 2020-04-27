@@ -30,7 +30,6 @@ servers: # each server tag represents a cluster
       rest_username: Administrator
       rest_password: password
       data_path: "/data"
-      index_path: "/data"
       init_nodes: 6
       buckets: default
       users: default
