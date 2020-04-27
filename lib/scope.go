@@ -334,8 +334,16 @@ func (s *Scope) GetPath(path, name string) string {
 }
 
 func (s *Scope) InitNodes() {
+	// make sure proper couchbase-cli is used
+	var version string
+	if s.Flags.Version != nil && (*s.Flags.Version != "") {
+		version = *s.Flags.Version
+	} else {
+		version = s.Rest.GetServerVersion()
+	}
+	s.Version = version[:3]
 
-	var image = "sequoiatools/couchbase-cli"
+	var image = "sequoiatools/couchbase-cli:" + s.Version
 
 	initNodesOp := func(name string, server *ServerSpec, done chan bool) {
 		ip := s.Provider.GetHostAddress(name)
