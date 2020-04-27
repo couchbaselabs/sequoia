@@ -947,7 +947,7 @@ func (cm *ContainerManager) RunRestContainer(cmd []string) (string, string) {
 		options := cm.NewContainerOptions(image, cmd, volumes)
 		_, container := cm.RunContainer(options)
 		_, err := cm.Client.WaitContainer(container.ID)
-		logerrstr(err.Error())
+		logerr(err)
 		rest_container_id = container.ID
 
 	}
