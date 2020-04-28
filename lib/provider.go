@@ -14,7 +14,7 @@ import (
 	"io/ioutil"
 
 	"github.com/docker/docker/api/types/swarm"
-	"github.com/fsouza/go-dockerclient"
+	docker "github.com/fsouza/go-dockerclient"
 )
 
 type ProviderLabel int
@@ -1000,13 +1000,15 @@ func versionFlavor(ver string) string {
 	case strings.Index(ver, "5.1") == 0:
 		return "spock"
 	case strings.Index(ver, "5.5") == 0:
-        return "vulcan"
+		return "vulcan"
 	case strings.Index(ver, "6.0") == 0:
-        return "alice"
+		return "alice"
 	case strings.Index(ver, "6.5") == 0:
-        return "mad-hatter"
-    case strings.Index(ver, "7.0") == 0:
-        return "cheshire-cat"
+		return "mad-hatter"
+	case strings.Index(ver, "6.6") == 0:
+		return "mad-hatter"
+	case strings.Index(ver, "7.0") == 0:
+		return "cheshire-cat"
 
 	}
 	return "spock"
