@@ -117,11 +117,11 @@
                                      'name': '$8',
                                      'store': false,
                                      'type': '$9'
-                                   }]},
+                                   }]}
                              }
                            }
                      }),
-                     $10, $11"
+                     , scorch"
 
 
 
@@ -265,7 +265,7 @@
 						   	 },
 						    'default_type': '_default',
 						    'docvalues_dynamic': true,
-    					    'index_dynamic: true,
+    					    'index_dynamic': true,
 						    'store_dynamic': false,
 						    'type_field': '_type'
                            },

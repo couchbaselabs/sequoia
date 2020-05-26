@@ -1,11 +1,10 @@
-select result,AVG(rating),MIN(rating),MAX(rating) from `bucket2` use index (using fts) where  rating >= 200 and rating <= 1000 group by result
-select result,SUM(rating) from `bucket2` use index (using fts) where result ="SUCCESS" and rating >= 115 and rating <= 250 group by result
-SELECT * FROM `bucket1` USE INDEX (USING FTS) WHERE result="SUCCESS" and ANY v IN sizes SATISFIES (v > 100 and v < 200) END
-SELECT * FROM `bucket1` WHERE ANY v IN sizes SATISFIES (v > 100)
-SELECT * FROM `bucket1` USE INDEX (USING FTS) WHERE result="SUCCESS" and (ANY v IN sizes SATISFIES (v > 100 and v < 200) END) and (any x in activity satisfies x > "A" and x < "Z"  END)
+select result,AVG(rating),MIN(rating),MAX(rating) from `bucket2` use index (using fts) where  rating >= 200 and rating <= 1000 and `type`="gideon" group by result limit 1000
+select result,SUM(rating) from `bucket2` use index (using fts) where result ="SUCCESS" and rating >= 115 and rating <= 250 and `type`="gideon" group by result limit 100
+SELECT * FROM `bucket1` USE INDEX (USING FTS) WHERE result="SUCCESS" and ANY v IN sizes SATISFIES (v > 100 and v < 200) END and `type`="gideon" limit 200
+SELECT * FROM `bucket1` WHERE ANY v IN sizes SATISFIES (v > 100 and v < 200) and `type`="gideon" limit 250
+SELECT * FROM `bucket1` USE INDEX (USING FTS) WHERE result="SUCCESS" and (ANY v IN sizes SATISFIES (v > 100 and v < 200) END) and (any x in activity satisfies x > "A" and x < "Z"  END) and `type`="gideon" limit 500
 SELECT city, active_hosts[0], FROM `bucket0` USE INDEX (USING FTS) WHERE result in ["SUCCESS","FAILURE"] and (ANY v IN sizes SATISFIES (v > 100 and v < 200) END) and (any x in activity satisfies x > "A" and x < "Z"  END) and ((build_id > 3000 and build_id < 5000) OR (build_id > 8000 and build_id < 9000)) order by city desc offset 10000 limit 200
-select * from `test` b1 use index (using fts) INNER JOIN `bucket2` b2 use index (using fts) on meta(b1).id=meta(b2).id  WHERE b1.rating > 200 and b1.rating < 300 and b2.result="SUCCESS"
-select t1.city, t1.priority from (select b2.* from `bucket0` b2 use index (using fts) where b2.rating>200 and b2.rating<300 ) as t1 where t1.build_id > 4000 and t1.build_id < 5000
+select t1.city, t1.priority from (select b2.* from `bucket0` b2 use index (using fts) where b2.rating>200 and b2.rating<300 ) as t1 where t1.build_id > 4000 and t1.build_id < 5000 limit 300
 
 
 
