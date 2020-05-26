@@ -58,6 +58,72 @@
                      }),
                      $6, $7"
 
+# template to create an index with child field mapping
+# $0 = host
+# $1 = name
+# $2 = bucket
+# $3 = top-level type
+# $4 = child field1 name
+# $5 = child field1 type
+# $6 = child field1 name
+# $7 = child field1 type
+# $8 = child field1 name
+# $9 = child field1 type
+# $10 = optional type mapping
+# $11 = type of index - scorch or upside_down
+-
+  name: create_index_with_3_child_fields
+  actions:
+    -
+      template: _put_index_with_type_mapping
+      args: "$0, $1, $2, $3, ({
+                     '$3': {
+                             'dynamic': false,
+                             'enabled': true,
+                             'default_analyzer': 'keyword',
+                             'properties': {
+                               '$4': {
+                                 'dynamic': false,
+                                 'enabled': true,
+                                 'fields': [
+                                   {
+                                     'include_in_all': true,
+                                     'include_term_vectors': true,
+                                     'index': true,
+                                     'name': '$4',
+                                     'store': false,
+                                     'type': '$5'
+                                   }]},
+                               '$6': {
+                                 'dynamic': false,
+                                 'enabled': true,
+                                 'fields': [
+                                   {
+                                     'include_in_all': true,
+                                     'include_term_vectors': true,
+                                     'index': true,
+                                     'name': '$6',
+                                     'store': false,
+                                     'type': '$7'
+                                   }]},
+                               '$8': {
+                                 'dynamic': false,
+                                 'enabled': true,
+                                 'fields': [
+                                   {
+                                     'include_in_all': true,
+                                     'include_term_vectors': true,
+                                     'index': true,
+                                     'name': '$8',
+                                     'store': false,
+                                     'type': '$9'
+                                   }]},
+                             }
+                           }
+                     }),
+                     $10, $11"
+
+
 
 # template to create an index with child field mapping
 #    and custom type mappings
@@ -159,6 +225,53 @@
                            'store': {
                              'kvStoreName': 'mossStore',
 			     'indexType': '$6'
+                           }
+                         },
+                         'sourceParams': {}
+                      })"
+
+# helper template to create a default index with specific keyword
+# $0 = host
+# $1 = name
+# $2 = bucket
+# $3 = index type - scorch or upside_down
+# $4 = analyzer name
+-
+  name: create_index_with_default_mapping_with_specific_analyzer
+  actions:
+    -
+      template: _put_index
+      args: "$0, $1, ({
+                        'type': 'fulltext-index',
+                         'name': '$1',
+                         'sourceType': 'couchbase',
+                         'sourceName': '$2',
+                         'planParams': {
+                           'maxPartitionsPerPIndex': 171
+                         },
+                         'params': {
+                           'doc_config': {
+                             'mode': 'type_field',
+                             'type_field': 'type'
+                           },
+                           'mapping': {
+   							 'default_analyzer': '$4',
+   							 'default_datetime_parser': 'dateTimeOptional',
+						     'default_field': '_all',
+   							 'default_mapping': {
+						 	    'default_analyzer': 'keyword',
+							    'dynamic': true,
+							    'enabled': true
+						   	 },
+						    'default_type': '_default',
+						    'docvalues_dynamic': true,
+    					    'index_dynamic: true,
+						    'store_dynamic': false,
+						    'type_field': '_type'
+                           },
+                           'store': {
+                             'kvStoreName': 'mossStore',
+						     'indexType': '$3'
                            }
                          },
                          'sourceParams': {}
