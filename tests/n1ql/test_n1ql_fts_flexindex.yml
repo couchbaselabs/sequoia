@@ -8,35 +8,207 @@
 - command: "kv --ops {{.Scale 500}} --create 60 --get 40 --sizes 64 96 --expire 100 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
 - command: "kv --ops {{.Scale 500}} --create 60 --get 40 --sizes 64 96 --delete 20 --expire 100 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}}"
 
-# Create index default mapping index on bucket1
+# Create FTS index default mapping index on bucket1
 -
   template: create_index_with_default_mapping_with_specific_analyzer
   args: "{{.FTSNodePort}}, default_idx1, {{.Bucket}}, scorch, keyword"
+  requires:  "{{eq true .DoOnce }}"
   wait: true
 
-# Create index - custom mapping index on bucket2 on fields - rating result sizes
+# Create FTS index - custom mapping index on bucket2 on fields - rating result sizes
 -
   template: create_index_with_3_child_fields
   args: "{{.FTSNodePort}}, bucket1_idx1, {{.NthBucket 1}}, gideon, rating, number, result, text, sizes, text"
+  requires:  "{{eq true .DoOnce }}"
   wait: true
 
-# Create index - custom mapping index on bucket2 on fields - result sizes activity
+# Create FTS index - custom mapping index on bucket2 on fields - result sizes activity
 -
   template: create_index_with_3_child_fields
   args: "{{.FTSNodePort}}, bucket1_idx2, {{.NthBucket 1}}, gideon, result, text, sizes, text, activity, number"
   wait: true
 
-# Create index - custom mapping index on bucket2 on fields - result sizes activity
+# Create FTS index - custom mapping index on bucket2 on fields - result sizes activity
 -
   template: create_index_with_3_child_fields
   args: "{{.FTSNodePort}}, bucket2_idx1, {{.NthBucket 2}}, gideon, rating, number, result, text, build_id, number"
   wait: true
 
+# Create GSI Primary Indexes on all the buckets
+- image: sequoiatools/cbq
+  command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create primary index on `{{.Bucket}}` using GSI'"
+  wait: true
 
-# ###############  run queries ################
+# Create GSI Primary Indexes on all the buckets
+- image: sequoiatools/cbq
+  command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create primary index on `{{.NthBucket 1}}` using GSI'"
+  wait: true
+
+# Create GSI Primary Indexes on all the buckets
+- image: sequoiatools/cbq
+  command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create primary index on `{{.NthBucket 2}}` using GSI'"
+  wait: true
+
+
+# ############### Run Queries via N1QL ################
 - section_start: query_replica_indexes
 - image: sequoiatools/queryapp
   command: "-J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.5.6/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 0 --print_duration=3600 --bucket {{.Bucket}} --querycount 5 --threads 5 --n1ql True --query_file flex_index_queries.txt --query_timeout=600 --bucket_names [{{.Bucket}},{{.NthBucket 1}},{{.NthBucket 2}}]"
+
+# ############### Run Queries via FTS ################
+-
+  template: query_fts
+  args: "{{.FTSNodePort}}, -1, 50, default_idx1, 5F"
+-
+  template: query_fts
+  args: "{{.FTSNodePort}}, -1, {{.Scale 3}}, bucket1_idx1, +state:9C, -size 10"
+
+# regex search on subfield profile.status with description exclusion
+-
+  template: query_fts
+  args: "{{.FTSNodePort}}, -1, {{.Scale 3}}, bucket2_idx1, +profile.status:4121*, -size 10"
+
+# Sleep for some time after starting the queries (30 mins)
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "1800"
+   wait: true
+
+# ############### Kill CBFT process on an FTS node ################
+-
+  template: kill_process
+  args: "{{.Nodes | .Service `fts` | net 1}}, cbft"
+
+# Sleep for 15 mins
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "900"
+   wait: true
+
+# ###############  Rebalance in an FTS node ################
+- template: rebalance_in
+  args: "{{.InActiveNode}}, index"
   wait: true
 
+
+# Sleep for 15 mins
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "900"
+   wait: true
+
+# ############### Kill CBFT process on an FTS node ################
+-
+  template: kill_process
+  args: "{{.Nodes | .Service `fts` | net 2}}, cbft"
+
+
+# Sleep for 15 mins
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "900"
+   wait: true
+
+# Rebalance out an FTS node
+- template: rebalance_out
+  args: "{{.Nodes | .Service `fts` | net 0}}"
+  wait: true
+
+# Sleep for 15 mins
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "900"
+   wait: true
+
+# ############### Kill CBFT process on an FTS node ################
+-
+  template: kill_process
+  args: "{{.Nodes | .Service `fts` | net 1}}, cbft"
+
+
+# Sleep for 15 mins
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "900"
+   wait: true
+
+# Swap Rebalance an FTS node
+- template: rebalance_swap
+  args: "{{.InActiveNode}}, {{.Nodes | .Service `fts` | net 1}}, index"
+  wait: true
+
+
+# Sleep for 15 mins
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "900"
+   wait: true
+
+# ############### Kill CBFT process on an FTS node ################
+-
+  template: kill_process
+  args: "{{.Nodes | .Service `fts` | net 2}}, cbft"
+
+
+# Sleep for 15 mins
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "900"
+   wait: true
+
+############### Kill query service ################
+-
+  template: kill_process
+  args: "{{.Nodes | .Service `n1ql` | net 1}}, cbq-engine"
+
+# Sleep for 15 mins
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "900"
+   wait: true
+
+# ############### Kill CBFT process on an FTS node ################
+-
+  template: kill_process
+  args: "{{.Nodes | .Service `fts` | net 1}}, cbft"
+
+# Sleep for 15 mins
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "900"
+   wait: true
+
+############### Kill memcached ################
+-
+  template: kill_process
+  args: "{{.NthDataNode 2}}, memcached"
+
+# Sleep for 15 mins
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "900"
+   wait: true
+
+
+# ###############  delete some indexes ################
+-
+  template: drop_index
+  args: "{{.FTSNodePort}}, bucket1_idx2"
+  wait: true
+
+-
+  template: drop_index
+  args: "{{.FTSNodePort}}, bucket2_idx1"
+  wait: true
 
