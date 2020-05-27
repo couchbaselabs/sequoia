@@ -18,14 +18,14 @@
 # Create FTS index - custom mapping index on bucket2 on fields - rating result sizes
 -
   template: create_index_with_3_child_fields
-  args: "{{.FTSNodePort}}, bucket1_idx1, {{.NthBucket 1}}, gideon, rating, number, result, text, sizes, text"
+  args: "{{.FTSNodePort}}, bucket1_idx1, {{.NthBucket 1}}, gideon, rating, number, result, text, sizes, number"
   requires:  "{{eq true .DoOnce }}"
   wait: true
 
 # Create FTS index - custom mapping index on bucket2 on fields - result sizes activity
 -
   template: create_index_with_3_child_fields
-  args: "{{.FTSNodePort}}, bucket1_idx2, {{.NthBucket 1}}, gideon, result, text, sizes, text, activity, number"
+  args: "{{.FTSNodePort}}, bucket1_idx2, {{.NthBucket 1}}, gideon, result, text, sizes, number, activity, number"
   wait: true
 
 # Create FTS index - custom mapping index on bucket2 on fields - result sizes activity
