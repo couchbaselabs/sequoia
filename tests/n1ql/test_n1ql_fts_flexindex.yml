@@ -58,15 +58,15 @@
 # ############### Run Queries via FTS ################
 -
   template: query_fts
-  args: "{{.FTSNodePort}}, -1, 50, default_idx1, 5F"
+  args: "{{.FTSNodePort}}, -1, {{.Scale 5}}, default_idx1, 5F"
 -
   template: query_fts
-  args: "{{.FTSNodePort}}, -1, {{.Scale 3}}, bucket1_idx1, +state:9C, -size 10"
+  args: "{{.FTSNodePort}}, -1, {{.Scale 5}}, bucket1_idx1, +state:9C, -size 10"
 
 # regex search on subfield profile.status with description exclusion
 -
   template: query_fts
-  args: "{{.FTSNodePort}}, -1, {{.Scale 3}}, bucket2_idx1, +profile.status:4121*, -size 10"
+  args: "{{.FTSNodePort}}, -1, {{.Scale 5}}, bucket2_idx1, +profile.status:4121*, -size 10"
 
 # Sleep for some time after starting the queries (30 mins)
 -
