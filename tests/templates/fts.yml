@@ -289,6 +289,16 @@
       image:  appropriate/curl
       command: "-X PUT -u {{.RestUsername}}:{{.RestPassword}} -H Content-Type:application/json http://$0/api/index/$1 -d {{ `$2` | to_double_quote | wrap_single_quote }}"
 
+# top level template to delete index via curl
+# $0 = host
+# $1 = name of index
+# $2 = index definition
+-
+  name: drop_index
+  actions:
+    -
+      image:  appropriate/curl
+      command: "-X DELETE -u {{.RestUsername}}:{{.RestPassword}} http://$0/api/index/$1 "
 
 
 
