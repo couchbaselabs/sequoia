@@ -89,7 +89,7 @@
 
 # ###############  Rebalance in an FTS node ################
 - template: rebalance_in
-  args: "{{.InActiveNode}}, index"
+  args: "{{.InActiveNode}}, fts"
   wait: true
 
 
@@ -140,7 +140,7 @@
 
 # Swap Rebalance an FTS node
 - template: rebalance_swap
-  args: "{{.InActiveNode}}, {{.Nodes | .Service `fts` | net 1}}, index"
+  args: "{{.InActiveNode}}, {{.Nodes | .Service `fts` | net 1}}, fts"
   wait: true
 
 
