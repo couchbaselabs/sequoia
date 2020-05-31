@@ -19,12 +19,12 @@ users:
 buckets:
   -
       name: default
-      ram: 50%
+      ram: 26%
       eviction: fullEviction
   -
       name: other
       count: 2
-      ram: 25%
+      ram: 37%
 
 
 servers: # each server tag represents a cluster
