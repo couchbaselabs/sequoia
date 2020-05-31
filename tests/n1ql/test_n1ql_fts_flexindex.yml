@@ -4,9 +4,9 @@
 
 ############### data loading ################
 - image: sequoiatools/gideon
-  command: "kv --ops {{.Scale 300}} --create 60 --update 40 --delete 25  --expire 100 --ttl 600   --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
-- command: "kv --ops {{.Scale 700}} --create 75 --update 25 --sizes 64 96 --delete 10 --expire 100 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
-- command: "kv --ops {{.Scale 700}} --create 75 --update 25 --sizes 64 96 --delete 20 --expire 100 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}}"
+  command: "kv --ops {{.Scale 200}} --create 60 --update 15 --delete 30  --expire 100 --ttl 600   --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+- command: "kv --ops {{.Scale 500}} --create 60 --update 15 --sizes 64 96 --delete 30 --expire 100 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
+- command: "kv --ops {{.Scale 500}} --create 60 --update 15 --sizes 64 96 --delete 30 --expire 100 --ttl 600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}}"
 
 # Create FTS index default mapping index on bucket1
 -
