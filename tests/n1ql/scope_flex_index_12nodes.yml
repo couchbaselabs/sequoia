@@ -37,11 +37,11 @@ servers: # each server tag represents a cluster
       index_storage: default
       services:
         index: 1
-        index_start: 6
+        index_start: 7
         query: 2
-        query_start: 4
+        query_start: 5
         fts: 5
-        fts_start: 7
+        fts_start: 8
       rest_username: Administrator
       rest_password: password
       data_path: "/data"
