@@ -117,6 +117,83 @@
   command: "300"
   wait: true
 
+### create 10 collection in each newly create scope as coll_3-1,coll_3-2.... ####
+-
+  foreach: "{{range $i, $sc := mkrange 0 9}}"
+  image: sequoiatools/collections:1.0
+  command: "-i {{$.Orchestrator}}:8091 -b {{$.Bucket}} -o create -s scope-{{$sc}} -c coll_3 --count 10"
+  wait: true
+
+### load data to recreated collection ####
+-
+  foreach: "{{range $i, $sc := mkrange 0 9}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.Bucket}} -I {{$.Scale 1000}} -M 50 -B 100 -r 50 --rate-limit {{$.Scale 500}} --random-body
+  --collection scope-{{$sc}}.coll_3-0 --collection scope-{{$sc}}.coll_3-1 --collection scope-{{$sc}}.coll_3-2 --collection scope-{{$sc}}.coll_3-3 --collection scope-{{$sc}}.coll_3-4
+  --collection scope-{{$sc}}.coll_3-5 --collection scope-{{$sc}}.coll_3-6 --collection scope-{{$sc}}.coll_3-7 --collection scope-{{$sc}}.coll_3-8
+  --json --populate-only"
+  wait: true
+
+######## Graceful failover kv node #######
+-
+  template: failover_and_recover
+  args: "{{.ActiveDataNode 1}},full"
+  wait: true
+
+######## Graceful failover kv node #######
+-
+  template: failover_and_recover
+  args: "{{.ActiveDataNode 1}},delta"
+  wait: true
+
+
+### create 10 collection in each newly create scope as coll_4-1,coll_4-2.... ####
+-
+  foreach: "{{range $i, $sc := mkrange 0 9}}"
+  image: sequoiatools/collections:1.0
+  command: "-i {{$.Orchestrator}}:8091 -b {{$.Bucket}} -o create -s scope-{{$sc}} -c coll_4 --count 10"
+  wait: true
+
+### load data to recreated collection ####
+-
+  foreach: "{{range $i, $sc := mkrange 0 9}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.Bucket}} -I {{$.Scale 1000}} -M 50 -B 100 -r 50 --rate-limit {{$.Scale 500}} --random-body
+  --collection scope-{{$sc}}.coll_4-0 --collection scope-{{$sc}}.coll_4-1 --collection scope-{{$sc}}.coll_4-2 --collection scope-{{$sc}}.coll_4-3 --collection scope-{{$sc}}.coll_4-4
+  --collection scope-{{$sc}}.coll_4-5 --collection scope-{{$sc}}.coll_4-6 --collection scope-{{$sc}}.coll_4-7 --collection scope-{{$sc}}.coll_4-8
+  --json --populate-only"
+  wait: true
+
+############### Graceful Failover and rebalance out 1 KV ################
+-
+  template: failover_node
+  args: "{{.ActiveDataNode 1}}"
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+- template: rebalance
+  wait: true
+
+###############  Rebalance-in KV which were out due to failover ################
+-
+  template: add_node
+  args: "{{.NthInActiveNode 0}}"
+  wait: true
+
+
+-
+  template: rebalance
+  wait: true
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
 
 ### delete all collections in scope ####
 -
@@ -134,11 +211,11 @@
 
 ### load data to all scope and all collections ####
 -
-  foreach: "{{range $i, $sc := mkrange 0 8}}"
+  foreach: "{{range $i, $sc := mkrange 0 9}}"
   image: sequoiatools/pillowfight:7.0
   command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.Bucket}} -I {{$.Scale 1000}} -M 50 -B 100 -r 50 --rate-limit {{$.Scale 500}} --random-body
   --collection scope-{{$sc}}.coll-0 --collection scope-{{$sc}}.coll-1 --collection scope-{{$sc}}.coll-2 --collection scope-{{$sc}}.coll-3 --collection scope-{{$sc}}.coll-4
-  --collection scope-{{$sc}}.coll-5 --collection scope-{{$sc}}.coll-6 --collection scope-{{$sc}}.coll-7 --collection scope-{{$sc}}.coll-8 --collection scope-{{$sc}}.coll-9
+  --collection scope-{{$sc}}.coll-5 --collection scope-{{$sc}}.coll-6 --collection scope-{{$sc}}.coll-7 --collection scope-{{$sc}}.coll-8
   --json --populate-only"
   wait: true
 
