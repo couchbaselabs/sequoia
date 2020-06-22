@@ -53,7 +53,7 @@
 # ############### Run Queries via N1QL ################
 - section_start: query_replica_indexes
 - image: sequoiatools/queryapp
-  command: "-J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.5.6/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 0 --print_duration=3600 --bucket {{.Bucket}} --querycount 5 --threads 5 --n1ql True --query_file flex_index_queries.txt --query_timeout=600 --bucket_names [{{.Bucket}},{{.NthBucket 1}},{{.NthBucket 2}}]"
+  command: "-J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.5.6/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 0 --print_duration=3600 --bucket {{.Bucket}} --querycount 5 --threads {{.Scale 1}} --n1ql True --query_file flex_index_queries.txt --query_timeout=600 --bucket_names [{{.Bucket}},{{.NthBucket 1}},{{.NthBucket 2}}]"
 
 # ############### Run Queries via FTS ################
 -
