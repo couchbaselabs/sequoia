@@ -728,6 +728,9 @@ func (s *Scope) CreateBuckets() {
 				if bucket.TTL != "" {
 					command = append(command, "--max-ttl", bucket.TTL)
 				}
+				if bucket.Storage != "" {
+					command = append(command, "--storage-backend", bucket.Storage)
+				}
 
 				desc := "bucket create " + bucketName
 				task := ContainerTask{

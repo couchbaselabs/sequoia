@@ -26,6 +26,7 @@ type BucketSpec struct {
 	Compression     string
 	TTL             string
 	BucketScopes    string
+	Storage         string
 	BucketScopeSpec []BucketScopeSpec
 }
 

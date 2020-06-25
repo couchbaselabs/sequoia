@@ -9,6 +9,7 @@ buckets:
   -
       name: default
       ram: 22%
+      storage : magma
       eviction: fullEviction
       bucketscopes: scope1, scope2
 
