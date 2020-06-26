@@ -2,7 +2,7 @@
 
 ############### Enable Plasma Bloom Filter ################
 - template: set_gsi_config
-  args: "{{.ActiveIndexNode 0}} 'indexer.plasma.backIndex.enablePageBloomFilter' true "
+  args: "{{.ActiveIndexNode 0}}, 'indexer.plasma.backIndex.enablePageBloomFilter':true"
 
 
 ############### data loading ################
