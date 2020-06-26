@@ -1,5 +1,10 @@
 - include: tests/templates/kv.yml, tests/templates/n1ql.yml, tests/templates/rebalance.yml
 
+############### Enable Plasma Bloom Filter ################
+- template: set_gsi_config
+  args: "{{.ActiveIndexNode 0}} 'indexer.plasma.backIndex.enablePageBloomFilter' true "
+
+
 ############### data loading ################
 - image: sequoiatools/gideon
   command: "kv --ops {{.Scale 1000}} --create 30 --get 70 --delete 10  --expire 100 --ttl 600   --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
