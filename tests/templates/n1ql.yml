@@ -41,4 +41,15 @@
       template: attack_query
       args: $0, $1, {{$node | to_ip }}:{{$.QueryPort}}, $2
 
+- # top level template to put index via curl
+  # $0 = host
+  # $1 = setting name
+  # $2 = setting value
+
+  - name: set_gsi_config
+    actions:
+    - image:  appropriate/curl
+      command: "-X POST -u {{.RestUsername}}:{{.RestPassword}} -H Content-Type:application/json http://$0:9102/settings -d {{ `$1` : $2 | to_double_quote | wrap_single_quote }}"
+
+
 
