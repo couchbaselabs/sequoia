@@ -1,5 +1,9 @@
 - include: tests/templates/kv.yml, tests/templates/n1ql.yml, tests/templates/rebalance.yml
 
+############### Enable Plasma Bloom Filter ################
+- template: set_gsi_config
+  args: "{{.ActiveIndexNode 0}}, 'indexer.plasma.backIndex.enablePageBloomFilter':true"
+
 -
   # change projector caching size
   image:  appropriate/curl
@@ -102,18 +106,18 @@
 
 ############### data loading ################
 - image: sequoiatools/fakeit
-  command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.Bucket}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 2500000 /fakeit/test/fixtures/models/links/models/links_big.yaml"
-- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.Bucket}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 2500000 /fakeit/test/fixtures/models/links/models/links_big.yaml"
-- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.Bucket}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 2500000 /fakeit/test/fixtures/models/links/models/links_big.yaml"
-- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.NthBucket 1}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 2500000 /fakeit/test/fixtures/models/links/models/links_big.yaml"
-- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.NthBucket 1}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 2500000 /fakeit/test/fixtures/models/links/models/links_big.yaml"
-- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.NthBucket 1}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 2500000 /fakeit/test/fixtures/models/links/models/links_big.yaml"
+  command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.Bucket}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 1250000 /fakeit/test/fixtures/models/links/models/links_big.yaml"
+- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.Bucket}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 1250000 /fakeit/test/fixtures/models/links/models/links_big.yaml"
+- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.Bucket}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 1250000 /fakeit/test/fixtures/models/links/models/links_big.yaml"
+- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.NthBucket 1}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 1250000 /fakeit/test/fixtures/models/links/models/links_big.yaml"
+- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.NthBucket 1}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 1250000 /fakeit/test/fixtures/models/links/models/links_big.yaml"
+- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.NthBucket 1}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count 1250000 /fakeit/test/fixtures/models/links/models/links_big.yaml"
   wait: true
 
 # ###############  run queries and validate ################
 - section_start: query_replica_indexes
 - image: sequoiatools/queryapp
-  command: "-J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.5.6/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 1800 --print_duration=600 --bucket {{.Bucket}} --querycount 20 --threads 20 --n1ql True --query_file volume_queries.txt --query_timeout=1200 --bucket_names [{{.Bucket}},{{.NthBucket 1}}]"
+  command: "-J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.5.6/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 1800 --print_duration=600 --bucket {{.Bucket}} --querycount 5 --threads 10 --n1ql True --query_file volume_queries.txt --query_timeout=1200 --bucket_names [{{.Bucket}},{{.NthBucket 1}}]"
   wait: true
 - section_end: query_replica_indexes
 
@@ -149,19 +153,19 @@
 # ###############  run queries w/o validation after index-kill ################
 - section_start: query_after_index_kill_0
 - image: sequoiatools/queryapp
-  command: "-J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.5.6/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 1800 --print_duration=600 --bucket {{.Bucket}} --querycount 20 --threads 20 --n1ql True --query_file volume_queries.txt --query_timeout=1200 --bucket_names [{{.Bucket}},{{.NthBucket 1}}]"
+  command: "-J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.5.6/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 1800 --print_duration=600 --bucket {{.Bucket}} --querycount 5 --threads 10 --n1ql True --query_file volume_queries.txt --query_timeout=1200 --bucket_names [{{.Bucket}},{{.NthBucket 1}}]"
   wait: true
 - section_end: query_after_index_kill_0
 
 ############### start loading more data ################
 - image: sequoiatools/fakeit
-  command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.Bucket}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512  --count 5000000 /fakeit/test/fixtures/models/links/models/links_big.yaml"
-- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.NthBucket 1}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512  --count 5000000 /fakeit/test/fixtures/models/links/models/links_big.yaml"
+  command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.Bucket}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512  --count 2500000 /fakeit/test/fixtures/models/links/models/links_big.yaml"
+- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.NthBucket 1}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512  --count 2500000 /fakeit/test/fixtures/models/links/models/links_big.yaml"
 
 # ###############  run queries w/o validation while data is being loaded ################
 - section_start: query_during_load
 - image: sequoiatools/queryapp
-  command: "-J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.5.6/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 1800 --print_duration=600 --bucket {{.Bucket}} --querycount 20 --threads 20 --n1ql True --query_file volume_queries.txt --query_timeout=1200 --bucket_names [{{.Bucket}},{{.NthBucket 1}}]"
+  command: "-J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.5.6/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 1800 --print_duration=600 --bucket {{.Bucket}} --querycount 5 --threads 10 --n1ql True --query_file volume_queries.txt --query_timeout=1200 --bucket_names [{{.Bucket}},{{.NthBucket 1}}]"
   wait: true
 - section_end: query_during_load
 
@@ -179,7 +183,7 @@
 # ###############  run queries w/o validation after rebalance out ################
 - section_start: query_after_rebalance
 - image: sequoiatools/queryapp
-  command: "-J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.5.6/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 1800 --print_duration=600 --bucket {{.Bucket}} --querycount 20 --threads 20 --n1ql True --query_file volume_queries.txt --query_timeout=1200 --bucket_names [{{.Bucket}},{{.NthBucket 1}}]"
+  command: "-J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.5.6/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 1800 --print_duration=600 --bucket {{.Bucket}} --querycount 5 --threads 10 --n1ql True --query_file volume_queries.txt --query_timeout=1200 --bucket_names [{{.Bucket}},{{.NthBucket 1}}]"
   wait: true
 - section_end: query_after_rebalance
 
@@ -204,7 +208,7 @@
 # ###############  run queries w/o validation after index-kill ################
 - section_start: query_after_index_kill
 - image: sequoiatools/queryapp
-  command: "-J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.5.6/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 1800 --print_duration=600 --bucket {{.Bucket}} --querycount 20 --threads 20 --n1ql True --query_file volume_queries.txt --query_timeout=1200 --bucket_names [{{.Bucket}},{{.NthBucket 1}}]"
+  command: "-J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.5.6/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 1800 --print_duration=600 --bucket {{.Bucket}} --querycount 5 --threads 10 --n1ql True --query_file volume_queries.txt --query_timeout=1200 --bucket_names [{{.Bucket}},{{.NthBucket 1}}]"
   wait: true
 - section_end: query_after_index_kill
 
@@ -240,7 +244,7 @@
 # ###############  run queries w/o validation after index-kill ################
 - section_start: query_after_kill
 - image: sequoiatools/queryapp
-  command: "-J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.5.6/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 1800 --print_duration=600 --bucket {{.Bucket}} --querycount 20 --threads 20 --n1ql True --query_file volume_queries.txt --query_timeout=1200 --bucket_names [{{.Bucket}},{{.NthBucket 1}}]"
+  command: "-J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.5.6/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 1800 --print_duration=600 --bucket {{.Bucket}} --querycount 5 --threads 10 --n1ql True --query_file volume_queries.txt --query_timeout=1200 --bucket_names [{{.Bucket}},{{.NthBucket 1}}]"
   wait: true
 - section_end: query_after_kill
 

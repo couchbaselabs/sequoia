@@ -26,13 +26,13 @@ buckets:
 servers: # each server tag represents a cluster
   -
       name: local
-      count: 28
+      count: 30
       ram: 80%
       index_ram: 80%
       index_storage: default
       services:
         index: 15
-        query: 2
+        query: 4
         data: 10
       rest_username: Administrator
       rest_password: password
