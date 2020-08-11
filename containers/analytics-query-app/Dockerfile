@@ -18,6 +18,7 @@ RUN git clone https://github.com/couchbaselabs/AnalyticsQueryApp.git
 COPY queries.txt /AnalyticsQueryApp/Query/queries.txt
 COPY volume_queries.txt /AnalyticsQueryApp/Query/volume_queries.txt
 COPY flex_index_queries.txt /AnalyticsQueryApp/Query/flex_index_queries.txt
+COPY cbse-8684_queries.txt /AnalyticsQueryApp/Query/cbse-8684_queries.txt
 
 WORKDIR /AnalyticsQueryApp/Query
 RUN git pull
