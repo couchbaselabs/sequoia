@@ -4,10 +4,10 @@
 - template: set_gsi_config
   args: "{{.ActiveIndexNode 0}}, 'indexer.settings.persisted_snapshot.moi.interval':180000"
 
-############### data loading - load 25M docs wih scale 1################
+############### data loading - load 25M docs with scale 1################
 - image: sequoiatools/fakeit
-  command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.Bucket}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count {{.Scale 1250000}} /fakeit/test/fixtures/models/links/models/entity.yaml"
-- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.Bucket}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count {{.Scale 1250000}} /fakeit/test/fixtures/models/links/models/entity.yaml"
+  command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.Bucket}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count {{.Scale 12500000}} /fakeit/test/fixtures/models/links/models/entity.yaml"
+- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.Bucket}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count {{.Scale 12500000}} /fakeit/test/fixtures/models/links/models/entity.yaml"
 
 # Sleep for some time to allow some docs to be loaded
 -
