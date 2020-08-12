@@ -4,10 +4,9 @@
 - template: set_gsi_config
   args: "{{.ActiveIndexNode 0}}, 'indexer.settings.persisted_snapshot.moi.interval':180000"
 
-############### data loading - load 25M docs with scale 1################
+############### data loading - load 12.5M docs with scale 1################
 - image: sequoiatools/fakeit
   command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.Bucket}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count {{.Scale 12500000}} /fakeit/test/fixtures/models/links/models/entity.yaml"
-- command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.Bucket}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count {{.Scale 12500000}} /fakeit/test/fixtures/models/links/models/entity.yaml"
 
 # Sleep for some time to allow some docs to be loaded
 -
@@ -36,7 +35,7 @@
 # ###############  run queries for 12 hrs for scale 1 ################
 - section_start: query_replica_indexes
 - image: sequoiatools/queryapp
-  command: "-J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.5.6/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration {{.Scale 43200}} --print_duration=600 --bucket {{.Bucket}} --querycount 5 --threads 10 --n1ql True --query_file cbse-8684_queries.txt --query_timeout=1200 --bucket_names [{{.Bucket}},{{.NthBucket 1}}]"
+  command: "-J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.5.6/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration {{.Scale 43200}} --print_duration=600 --bucket {{.Bucket}} --querycount 3 --threads 3 --n1ql True --query_file cbse-8684_queries.txt --query_timeout=1200 --bucket_names [{{.Bucket}}]"
   wait: true
 
 
