@@ -26,6 +26,7 @@ buckets:
       name: default
       ram: 100%
       eviction: fullEviction
+      ttl: 3600
 
 
 servers: # each server tag represents a cluster

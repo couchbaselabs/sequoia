@@ -1,3 +1,3 @@
 select entity.state , entity.country.countryCode from default where class in ["promotionsnapshot", "clearancesnapshot"] and entity.advertdate > 1 order by entity.country.countryCode
-select class, entity.state, entity.country.countryCode from default where class in ["promotionsnapshot", "clearancesnapshot"] and entity.advertdate > 1 and any s in entity.cond.subCond satisfies any v in s.productG satisfies v > 1778 end end order by entity.endDate DESC
+select class, entity.state, entity.country.countryCode from default where class in ["promotionsnapshot", "clearancesnapshot"] and entity.advertdate > 1 and any s in entity.cond.subConds satisfies any v in s.productG satisfies v > 1778 end end order by entity.endDate DESC
 select entity.state , entity.country.countryCode, entity.endDate from default where class in ["promotionsnapshot", "clearancesnapshot"] and EVERY s IN entity.cond.productG SATISFIES  s > 1778 END order by entity.endDate
