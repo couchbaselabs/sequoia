@@ -18,6 +18,7 @@ docker build -t sequoiatools/tpcc containers/tpcc
 docker build -t sequoiatools/pillowfight containers/pillowfight
 docker build -t sequoiatools/gideon containers/gideon  # depends on pillowfight
 docker build -t sequoiatools/vbr containers/vbr
+docker build -t sequoiatools/catapult containers/catapult
 #docker build -t ycsb containers/ycsb
 #docker build -t mysql containers/mysql
 #docker build -t elasticsearch containers/elasticsearch

@@ -1,0 +1,14 @@
+---
+-
+  include: tests/templates/kv.yml
+
+-
+  image: sequoiatools/gideon
+  command: "kv --ops {{.Scale 1000}} --create 10 --get 90  --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+
+-
+   image: sequoiatools/catapult
+   command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -s _default -c default
+    -n 10 -pc 100 -pu 0 -pd 0 -l uniform -dsn 1 -dpx doc_ -dsx \"\" -dt Person -de 0 -ds 500
+    -st 1 -en 10 -fu \"\" -ac false -ln en"
+   wait: true
