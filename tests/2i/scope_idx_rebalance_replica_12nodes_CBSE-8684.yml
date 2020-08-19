@@ -37,7 +37,7 @@ servers: # each server tag represents a cluster
       index_ram: 90%
       index_storage: memory_optimized
       services:
-        index: 4
+        index: 8
         query: 4
         data: 4
       rest_username: Administrator
