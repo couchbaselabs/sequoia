@@ -4,6 +4,10 @@
 - template: set_gsi_config
   args: "{{.ActiveIndexNode 0}}, 'indexer.settings.persisted_snapshot.moi.interval':180000"
 
+############### update to use golang memory management, indexer config ################
+- template: set_gsi_config
+  args: "{{.ActiveIndexNode 0}}, 'indexer.moi.useMemMgmt':false"
+
 ############### data loading - load 12.5M docs with scale 1################
 - image: sequoiatools/fakeit
   command: "couchbase --server {{.NthDataNode 1}}  --bucket {{.Bucket}} --username Administrator --password password --verbose --use-streams true --high-water-mark 512 --count {{.Scale 12500000}} /fakeit/test/fixtures/models/links/models/entity.yaml"
