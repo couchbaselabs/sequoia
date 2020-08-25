@@ -325,7 +325,7 @@
   wait: true
 -
   image: sequoiatools/eventing:6.6
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} '' {{.RestUsername}} {{.RestPassword}} wait_for_failover"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} None {{.RestUsername}} {{.RestPassword}} wait_for_failover"
   wait: true
 -
   template: rebalance
