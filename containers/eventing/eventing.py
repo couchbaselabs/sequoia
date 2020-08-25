@@ -22,13 +22,16 @@ class EventingOperations():
         if len(sys.argv) > 7:
             self.dump_stats = bool(sys.argv[7])
 
-        # read appcode from file
-        app_definition = self.read_function_definition_from_file(
-            self.app_filename)
+        if self.operation=="wait_for_failover":
+            self.wait_for_failover_complete()
+        else:
+            # read appcode from file
+            app_definition = self.read_function_definition_from_file(
+                self.app_filename)
 
-        response = self.perform_eventing_lifecycle_operation(app_definition)
-        if response:
-            print "Eventing lifecycle operation completed successfully"
+            response = self.perform_eventing_lifecycle_operation(app_definition)
+            if response:
+                print "Eventing lifecycle operation completed successfully"
 
     def read_function_definition_from_file(self, filename):
         script_dir = os.path.dirname(__file__)
@@ -101,6 +104,24 @@ class EventingOperations():
             raise Exception("Invalid operation")
 
         return True
+
+    def wait_for_failover_complete(self):
+        status, content, header = self.failover_rebalance_status()
+        count = 0
+        ### wait for 5 min max
+        while not content:
+            status, content, header = self.failover_rebalance_status()
+            count = count + 1
+            time.sleep(1)
+            if count >= 300:
+                raise Exception("Failover not started even after waiting for long")
+        print("##### Failover started ######")
+        while content:
+            status, content, header = self.failover_rebalance_status()
+            count = count + 1
+            time.sleep(1)
+            print("waiting for failover to complete....")
+        print("##### Failover Completed #####")
 
     def write_stats_to_diagnostics_bucket(self):
 
@@ -366,6 +387,21 @@ class EventingOperations():
         else:
             return False, content, response
 
+    def failover_rebalance_status(self):
+        authorization = base64.encodestring('%s:%s' % (self.username, self.password))
+
+        headers = {'Content-type': 'application/json', 'Authorization': 'Basic %s' % authorization}
+
+        url = "http://" + self.hostname + ":" + self.port + "/getAggRebalanceStatus"
+        response, content = httplib2.Http(timeout=120).request(uri=url, method="GET", headers=headers)
+
+        if response['status'] in ['200', '201', '202']:
+            if content == "true":
+                return True, True, response
+            else:
+                return True, False , response
+        else:
+            return False, content, response
 
 if __name__ == '__main__':
     EventingOperations().run()
