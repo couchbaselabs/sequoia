@@ -7,9 +7,9 @@
 
 ############### data loading ################
 - image: sequoiatools/catapult
-  command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -n {{.Scale 1000}} -pc 100 -pu 25 -pd 25 -dt Hotel -de 3600 -ds 1000
+  command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -n {{.Scale 10000}} -pc 100 -pu 25 -pd 25 -dt Hotel -de 3600 -ds 1000
     -fu \"\" -ac True"
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b --bucket {{.NthBucket 1}} -n {{.Scale 1000}} -pc 100 -pu 25 -pd 25 -dt Hotel -de 3600 -ds 1000
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 1}} -n {{.Scale 10000}} -pc 100 -pu 25 -pd 25 -dt Hotel -de 3600 -ds 1000
     -fu \"\" -ac True"
 
 
@@ -52,11 +52,11 @@
 ###############  Drop all Indexes ################
 - section_start: drop_all_indexes
 - image: sequoiatools/indexmanager
-    command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a drop_all_indexes"
-    wait: true
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a drop_all_indexes"
+  wait: true
 
-  - command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a drop_all_indexes"
-    wait: true
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a drop_all_indexes"
+  wait: true
 
 # Sleep for some time to allow DDL to complete in the background
 -
