@@ -19,7 +19,7 @@ buckets:
       bucketscopes: bucket1_scope1, bucket1_scope2
   -
       name: bucket2
-      ram: 50
+      ram: 50%
       eviction: fullEviction
       bucketscopes: bucket2_scope1, bucket2_scope2
 
