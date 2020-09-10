@@ -10,33 +10,25 @@ users:
       password: password
       roles: admin
       auth_domain: local
+  -
+      name: bucket3
+      password: password
+      roles: admin
+      auth_domain: local
 
 buckets:
   -
       name: bucket1
-      ram: 50%
+      ram: 33%
       eviction: fullEviction
-      bucketscopes: bucket1_scope1, bucket1_scope2
   -
       name: bucket2
-      ram: 50%
+      ram: 33%
       eviction: fullEviction
-      bucketscopes: bucket2_scope1, bucket2_scope2
-
-
-bucketscopes:
   -
-      name: bucket1_scope1
-      collections: bucket1_scope1_coll1, bucket1_scope1_coll2, bucket1_scope1_coll3, bucket1_scope1_coll4, bucket1_scope1_coll5
-  -
-      name: bucket1_scope2
-      collections: bucket1_scope2_coll1, bucket1_scope2_coll2, bucket1_scope2_coll3, bucket1_scope2_coll4, bucket1_scope2_coll5
-  -
-      name: bucket2_scope1
-      collections: bucket2_scope1_coll1, bucket2_scope1_coll2, bucket2_scope1_coll3, bucket2_scope1_coll4, bucket2_scope1_coll5
-  -
-      name: bucket2_scope2
-      collections: bucket2_scope2_coll1, bucket2_scope2_coll2, bucket2_scope2_coll3, bucket2_scope2_coll4, bucket2_scope2_coll5
+      name: bucket3
+      ram: 34%
+      eviction: fullEviction
 
 
 servers: # each server tag represents a cluster
@@ -56,5 +48,5 @@ servers: # each server tag represents a cluster
       data_path: "/data"
       index_path: "/data"
       init_nodes: 10
-      buckets: bucket1, bucket2
-      users: bucket1, bucket2
+      buckets: bucket1, bucket2, bucket3
+      users: bucket1, bucket2, bucket3

@@ -28,7 +28,7 @@ SCOPENAME_SUFFIX = "_scope"
 # Hotel DS
 HOTEL_DS_INDEX_TEMPLATES = [
     {"indexname": "idx1",
-     "statement": "CREATE INDEX idx1 ON keyspacenameplaceholder(country, DISTINCT ARRAY `r`.`ratings`.`Cleanliness` FOR r in `reviews` END,array_count((`public_likes`)),array_count((`reviews`)) DESC,`phone`,`price`,`email`,`address`,`name`,`url`) "},
+     "statement": "CREATE INDEX idx1 ON keyspacenameplaceholder(country, DISTINCT ARRAY `r`.`ratings`.`Check in / front desk` FOR r in `reviews` END,array_count((`public_likes`)),array_count((`reviews`)) DESC,`type`,`phone`,`price`,`email`,`address`,`name`,`url`) "},
     {"indexname": "idx2",
      "statement": "CREATE INDEX idx2 ON keyspacenameplaceholder(`free_breakfast`,`type`,`free_parking`,array_count((`public_likes`)),`price`,`country`)"},
     {"indexname": "idx3",
