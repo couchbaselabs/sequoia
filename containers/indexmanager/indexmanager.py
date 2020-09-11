@@ -53,7 +53,7 @@ class IndexManager:
         parser.add_argument("-a", "--action", choices=["create_index", "build_deferred_index", "drop_all_indexes"],
                             help="Choose an action to be performed. Valid actions : create_index | build_deferred_index"
                                  " | drop_all_indexes", default="create_index")
-        parser.add_argument("-t", "--test_mode", help="Test Mode : Create Scopes/Collections", action='store_true')
+        parser.add_argument("-t", "--test_mode", help="Test Mode : Create Scopes/Collections", action='store_false')
         args = parser.parse_args()
 
         self.node_addr = args.node
@@ -123,7 +123,7 @@ class IndexManager:
         keyspace_name_list = []
         for scope in cb_scopes:
             for coll in scope.collections:
-                keyspace_name_list.append(self.bucket_name + "." + scope.name + "." + coll.name)
+                keyspace_name_list.append("`" + self.bucket_name + "`.`" + scope.name + "`.`" + coll.name + "`")
 
         return (keyspace_name_list)
 
@@ -140,7 +140,8 @@ class IndexManager:
     """
 
     def create_indexes_on_bucket(self, keyspace_name_list):
-        max_num_idx = TOTAL_SCOPES * TOTAL_COLL_PER_SCOPE * self.num_index_per_coll
+        # max_num_idx = TOTAL_SCOPES * TOTAL_COLL_PER_SCOPE * self.num_index_per_coll
+        max_num_idx = len(keyspace_name_list) * self.num_index_per_coll
         total_idx_created = 0
         create_index_statements = []
         self.log.info("Starting to create indexes ")
@@ -278,6 +279,7 @@ class IndexManager:
     """
     Drop all indexes in the cluster
     """
+
     def drop_all_indexes(self, keyspace_name_list):
         drop_idx_query_gen_template = "SELECT RAW 'DROP INDEX `' || name || '` on keyspacename;'  " \
                                       "FROM system:all_indexes WHERE `bucket_id` || '.' || `scope_id` " \
@@ -295,10 +297,10 @@ class IndexManager:
                 sleep(2)
         self.log.info("Drop all indexes completed")
 
-
     """
     Method to execute a query statement 
     """
+
     def _execute_query(self, statement):
         try:
 
@@ -319,7 +321,6 @@ class IndexManager:
             self.log.error("Unexpected error :", sys.exc_info()[0])
 
         return status, results, queryResult
-
 
 
 """
@@ -348,4 +349,5 @@ if __name__ == '__main__':
     elif indexMgr.action == "drop_all_indexes":
         indexMgr.drop_all_indexes(keyspace_name_list)
     else:
-        print("Invalid choice for action. Choose from the following - create_index | build_deferred_index | drop_all_indexes")
+        print(
+            "Invalid choice for action. Choose from the following - create_index | build_deferred_index | drop_all_indexes")
