@@ -16,17 +16,17 @@
 
 ### create 10 collections for each newly create scope as coll-1,coll-2.... ####
 -
-  foreach: "{{range $i, $sc := mkrange 0 7}}"
+  foreach: "{{range $i, $sc := mkrange 0 6}}"
   image: sequoiatools/collections:1.0
   command: "-i {{$.Orchestrator}}:8091 -b {{$.Bucket}} -o create -s scope-{{$sc}} -c coll --count 10"
   wait: true
 -
-  foreach: "{{range $i, $sc := mkrange 0 7}}"
+  foreach: "{{range $i, $sc := mkrange 0 6}}"
   image: sequoiatools/collections:1.0
   command: "-i {{$.Orchestrator}}:8091 -b {{.NthBucket 1}} -o create -s scope-{{$sc}} -c coll --count 10"
   wait: true
 -
-  foreach: "{{range $i, $sc := mkrange 0 6}}"
+  foreach: "{{range $i, $sc := mkrange 0 5}}"
   image: sequoiatools/collections:1.0
   command: "-i {{$.Orchestrator}}:8091 -b {{.NthBucket 2}} -o create -s scope-{{$sc}} -c coll --count 10"
   wait: true
