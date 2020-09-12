@@ -53,7 +53,7 @@ class IndexManager:
         parser.add_argument("-a", "--action", choices=["create_index", "build_deferred_index", "drop_all_indexes"],
                             help="Choose an action to be performed. Valid actions : create_index | build_deferred_index"
                                  " | drop_all_indexes", default="create_index")
-        parser.add_argument("-t", "--test_mode", help="Test Mode : Create Scopes/Collections", action='store_false')
+        parser.add_argument("-t", "--test_mode", help="Test Mode : Create Scopes/Collections", action='store_true')
         args = parser.parse_args()
 
         self.node_addr = args.node
