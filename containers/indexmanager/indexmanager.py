@@ -262,13 +262,13 @@ class IndexManager:
 
     def build_all_deferred_indexes(self, keyspace_name_list):
         build_index_query_template = "build index on keyspacename (( select raw name from system:all_indexes where " \
-                                     "`using`='gsi' and `bucket_id` || '.' || `scope_id` || " \
-                                     "'.' || `keyspace_id` = 'keyspacename' and state = 'deferred'))"
+                                     "`using`='gsi' and '`' || `bucket_id` || '`.`' || `scope_id` || '`.`' || " \
+                                     "`keyspace_id` || '`' = 'keyspacename' and state = 'deferred'))"
 
         for keyspace in keyspace_name_list:
             build_index_query = build_index_query_template.replace("keyspacename", keyspace)
             self.log.info("Building indexes for keyspace : {0}".format(keyspace))
-            self.log.debug("Query used = {0}".format(build_index_query))
+            self.log.info("Query used = {0}".format(build_index_query))
 
             status, results, queryResult = self._execute_query(build_index_query)
 
