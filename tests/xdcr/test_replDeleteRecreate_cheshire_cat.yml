@@ -1,0 +1,211 @@
+---
+#============ create 20 scopes in default bucket on src and target as scope-1,scope-2 ... ===========
+-
+  image: sequoiatools/collections:1.0
+  command: "-i {{.Orchestrator}}:{{.RestPort}} -b {{.Bucket}} -o create -s scope --count 20"
+  wait: true
+-
+  image: sequoiatools/collections:1.0
+  command: "-i {{.Nodes | .Cluster 1 | net 0}}:{{.RestPort}} -b {{.Bucket}} -o create -s scope --count 20"
+  wait: true
+
+#============ create 10 collections for each newly created scope in both src and target as coll-1,coll-2.... ===========
+-
+  foreach: "{{range $i, $sc := mkrange 0 19}}"
+  image: sequoiatools/collections:1.0
+  command: "-i {{$.Orchestrator}}:8091 -b {{$.Bucket}} -o create -s scope-{{$sc}} -c coll --count 10"
+  wait: true
+-
+  foreach: "{{range $i, $sc := mkrange 0 19}}"
+  image: sequoiatools/collections:1.0
+  command: "-i {{$.Nodes | $.Cluster 1 | net 0}}:{{$.RestPort}} -b {{$.Bucket}} -o create -s scope-{{$sc}} -c coll --count 10"
+  wait: true
+
+#=========== Sleep for some time to allow collections manifest to sync =============
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+#============ data loading ============
+-
+  # continously to remote site
+  image: sequoiatools/catapult
+  command: "-i {{.Nodes | .Cluster 1 | net 0}} -u Administrator -p password -b {{.Bucket}} -n {{.Scale 5000}} -pc 100 -ac True"
+-
+  command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -n {{.Scale 5000}} -pc 100 -ac True"
+  duration: 60
+  wait: true
+
+#============ setup xdcr replications ============
+-
+   image: sequoiatools/couchbase-cli
+   command:  "xdcr-setup -c {{.Orchestrator}}:{{.RestPort}} --create --xdcr-cluster-name remote
+        --xdcr-hostname {{.Nodes | .Cluster 1 | net 0}}
+        --xdcr-username {{.Nodes | .Cluster 1 | .Attr `rest_username`}}
+        --xdcr-password {{.Nodes | .Cluster 1 | .Attr `rest_password`}}"
+   wait: true
+-
+   command: "xdcr-replicate -c {{.Orchestrator}}:{{.RestPort}}
+        --create
+        --xdcr-cluster-name remote
+        --xdcr-from-bucket {{.Bucket}}
+        --xdcr-to-bucket {{.Nodes | .Cluster 1 | bucket 0}}"
+   wait: true
+
+#============ swap hard failover ============
+-
+   image: sequoiatools/couchbase-cli
+   command: "server-add -c  {{.Orchestrator}}:{{.RestPort}}
+       --server-add http://{{.NthDataNode 5}}:{{.RestPort}}
+       -u  {{.RestUsername}} -p  {{.RestPassword}}
+       --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
+   wait: true
+-
+   command: "failover -c {{.Orchestrator}}:{{.RestPort}}
+       --server-failover http://{{.NthDataNode 1}}:{{.RestPort}}
+       -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+   wait: true
+-
+   command: "failover -c {{.Orchestrator}}:{{.RestPort}}
+       --server-failover http://{{.NthDataNode 2}}:{{.RestPort}}
+       -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+   wait: true
+-
+   command:  "rebalance -c  {{.Orchestrator}}:{{.RestPort}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   wait: true
+
+#============ get replication id ============
+-
+  image:  appropriate/curl
+  command: "-s http://{{.RestUsername}}:{{.RestPassword}}@{{.Orchestrator | noport}}:{{.ClusterNodes | .Attr `rest_port`}}/pools/default/remoteClusters"
+  alias: ReplId
+  wait: true
+
+#============ data loading ============
+-
+  image: sequoiatools/catapult
+  command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -n {{.Scale 5000}} -pc 100 -ac True"
+  duration: 60
+  wait: true
+
+#============ pause xdcr replications ============
+-
+   image: sequoiatools/couchbase-cli
+   command: "xdcr-replicate -c {{.Orchestrator}}:{{.RestPort}} --pause
+                            -u {{.RestUsername}} -p {{.RestPassword}}
+                            --xdcr-replicator={{(index (.AllLogs `ReplId` | json) 0).uuid }}/default/{{.Bucket}}"
+
+#============ apply filter to xdcr replications ============
+-
+   image: appropriate/curl
+   command: "-u {{.RestUsername}}:{{.RestPassword}} -X POST http://{{.Orchestrator}}:{{.RestPort}}/settings/replications/{{(index (.AllLogs `ReplId` | json) 0).uuid }}/default/{{.Bucket}} -d filterExpression=rating>500 -d filterSkipRestream=0"
+   wait: true
+-
+   command: "-u {{.RestUsername}}:{{.RestPassword}} -X POST http://{{.Orchestrator}}:{{.RestPort}}/settings/replications/{{(index (.AllLogs `ReplId` | json) 0).uuid }}/default/{{.Bucket}} -d filterExpression=REGEXP_CONTAINS(META().id,0$) -d filterSkipRestream=0"
+   wait: true
+-
+   command: "-u {{.RestUsername}}:{{.RestPassword}} -X POST http://{{.Orchestrator}}:{{.RestPort}}/settings/replications/{{(index (.AllLogs `ReplId` | json) 0).uuid }}/default/{{.Bucket}} -d filterExpiration=true -d filterBypassExpiry=true -d filterDeletion=false -d filterExpression=result<>SUCCESS -d filterSkipRestream=1"
+   wait: true
+
+#============ swap add back ============
+-
+   image: sequoiatools/couchbase-cli
+   command: "server-add -c  {{.Orchestrator}}:{{.RestPort}}
+       --server-add http://{{.NthDataNode 1}}:{{.RestPort}}
+       -u  {{.RestUsername}} -p  {{.RestPassword}}
+       --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
+   wait: true
+
+-
+   command: "server-add -c  {{.Orchestrator}}:{{.RestPort}}
+       --server-add http://{{.NthDataNode 2}}:{{.RestPort}}
+       -u  {{.RestUsername}} -p  {{.RestPassword}}
+       --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
+   wait: true
+-
+   command: "failover -c {{.Orchestrator}}:{{.RestPort}}
+       --server-failover http://{{.NthDataNode 5}}:{{.RestPort}}
+       -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+   wait: true
+-
+   command:  "rebalance -c  {{.Orchestrator}}:{{.RestPort}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   wait: true
+
+
+#============ remote add ============
+-
+   image: sequoiatools/couchbase-cli
+   command: "server-add -c  {{.Nodes | .Cluster 1 | net 0}}:{{.RestPort}}
+       --server-add http://{{.Nodes | .Cluster 1 | net 3}}:{{.RestPort}}
+       -u  {{.RestUsername}} -p  {{.RestPassword}}
+       --server-add-username {{.RestUsername}} --server-add-password  {{.RestPassword}}"
+   wait: true
+-
+   command:  "rebalance -c  {{.Nodes | .Cluster 1 | net 0}}:{{.RestPort}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
+   alias: RemoteRebalance
+
+#============ remote setup xdcr replications ============
+-
+   image: sequoiatools/couchbase-cli
+   requires:  "{{eq true .DoOnce}}"
+   command:  "xdcr-setup -c {{.Nodes | .Cluster 1 | net 0}}:{{.RestPort}} --create --xdcr-cluster-name local
+        --xdcr-hostname {{.Orchestrator}}
+        --xdcr-username {{.RestUsername}}
+        --xdcr-password {{.RestPassword}}"
+   wait: true
+-
+   command: "xdcr-replicate -c {{.Nodes | .Cluster 1 | net 0}}:{{.RestPort}}
+        --create
+        --xdcr-cluster-name local
+        --xdcr-from-bucket {{.Nodes | .Cluster 1 | bucket 0}}
+        --xdcr-to-bucket {{.Bucket}}"
+   wait: true
+
+#============ resume xdcr replications ============
+-
+   image: sequoiatools/couchbase-cli
+   command: "xdcr-replicate -c {{.Orchestrator}}:{{.RestPort}} --resume
+                            -u {{.RestUsername}} -p {{.RestPassword}}
+                            --xdcr-replicator={{(index (.AllLogs `ReplId` | json) 0).uuid }}/default/{{.Bucket}}"
+   wait: true
+
+#============ data loading ============
+-
+  image: sequoiatools/catapult
+  command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -n {{.Scale 5000}} -pc 100 -ac True"
+  duration: 60
+  wait: true
+
+#============ clear filter from xdcr replications ============
+-
+   image: appropriate/curl
+   command: "-u {{.RestUsername}}:{{.RestPassword}} -X POST http://{{.Orchestrator}}:{{.RestPort}}/settings/replications/{{(index (.AllLogs `ReplId` | json) 0).uuid }}/default/{{.Bucket}} -d filterExpiration=false -d filterBypassExpiry=false -d filterDeletion=true -d filterExpression= -d filterSkipRestream=1"
+   wait: true
+
+#============ delete xdcr replications ============
+-
+   image: sequoiatools/couchbase-cli
+   command: "xdcr-replicate -c {{.Orchestrator}}:{{.RestPort}} --delete
+                            -u {{.RestUsername}} -p {{.RestPassword}}
+                            --xdcr-replicator={{(index (.AllLogs `ReplId` | json) 0).uuid }}/default/{{.Bucket}}"
+   wait: true
+
+#============ delete xdcr config ============
+-
+   image: sequoiatools/couchbase-cli
+   command:  "xdcr-setup -c {{.Orchestrator}}:{{.RestPort}} --delete --xdcr-cluster-name remote
+                            -u {{.RestUsername}} -p {{.RestPassword}}"
+   wait: true
+
+#============ hard failover remote node when remote finished rebalance-in ============
+-
+  before: "{{.Status `RemoteRebalance` | eq `exited`}}"
+  image: sequoiatools/couchbase-cli
+  command: "failover -c {{.Nodes | .Cluster 1 | net 0}}:{{.RestPort}}
+       --server-failover http://{{.Nodes | .Cluster 1 | net 3}}:{{.RestPort}}
+       -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+-
+  command:  "rebalance -c  {{.Nodes | .Cluster 1 | net 0}}:{{.RestPort}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
