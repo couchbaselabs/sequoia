@@ -45,6 +45,27 @@
       template: pillowfight
       args: "{{.Orchestrator}}, {{.Bucket}},-I {{.Scale 1000}} -B {{.Scale 100}} -t 4 -c 100, {{.AuthPassword}} --durability majority"
 
+  # custom Pillowfight to large number (500) collections used in test_allRebalance_collections.yml
+  # pre-requisite: 10 scopes delscope-1 delscope-2 etc..with 50 collections each delcoll-1 delcoll-2
+  # to-do: take args for scopename, collectionname 
+  name: pillowfight_500_collections
+  actions:
+    -
+      foreach: "{{range $i, $sc := mkrange 1 10}}"
+      image: sequoiatools/pillowfight:7.0
+      command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.Bucket}} -I {{$.Scale 1000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 500}} --random-body
+      --collection delscope-{{$sc}}.delcoll-1 --collection delscope-{{$sc}}.delcoll-2 --collection delscope-{{$sc}}.delcoll-3 --collection delscope-{{$sc}}.delcoll-4 --collection delscope-{{$sc}}.delcoll-5
+      --collection delscope-{{$sc}}.delcoll-6 --collection delscope-{{$sc}}.delcoll-7 --collection delscope-{{$sc}}.delcoll-8 --collection delscope-{{$sc}}.delcoll-9 --collection delscope-{{$sc}}.delcoll-10
+      --collection delscope-{{$sc}}.delcoll-11 --collection delscope-{{$sc}}.delcoll-12 --collection delscope-{{$sc}}.delcoll-13 --collection delscope-{{$sc}}.delcoll-14 --collection delscope-{{$sc}}.delcoll-15
+      --collection delscope-{{$sc}}.delcoll-16 --collection delscope-{{$sc}}.delcoll-17 --collection delscope-{{$sc}}.delcoll-18 --collection delscope-{{$sc}}.delcoll-19 --collection delscope-{{$sc}}.delcoll-20
+      --collection delscope-{{$sc}}.delcoll-21 --collection delscope-{{$sc}}.delcoll-22 --collection delscope-{{$sc}}.delcoll-23 --collection delscope-{{$sc}}.delcoll-24 --collection delscope-{{$sc}}.delcoll-25
+      --collection delscope-{{$sc}}.delcoll-26 --collection delscope-{{$sc}}.delcoll-27 --collection delscope-{{$sc}}.delcoll-28 --collection delscope-{{$sc}}.delcoll-29 --collection delscope-{{$sc}}.delcoll-30
+      --collection delscope-{{$sc}}.delcoll-31 --collection delscope-{{$sc}}.delcoll-32 --collection delscope-{{$sc}}.delcoll-33 --collection delscope-{{$sc}}.delcoll-34 --collection delscope-{{$sc}}.delcoll-35
+      --collection delscope-{{$sc}}.delcoll-36 --collection delscope-{{$sc}}.delcoll-37 --collection delscope-{{$sc}}.delcoll-38 --collection delscope-{{$sc}}.delcoll-39 --collection delscope-{{$sc}}.delcoll-40
+      --collection delscope-{{$sc}}.delcoll-41 --collection delscope-{{$sc}}.delcoll-42 --collection delscope-{{$sc}}.delcoll-43 --collection delscope-{{$sc}}.delcoll-44 --collection delscope-{{$sc}}.delcoll-45
+      --collection delscope-{{$sc}}.delcoll-46 --collection delscope-{{$sc}}.delcoll-47 --collection delscope-{{$sc}}.delcoll-48 --collection delscope-{{$sc}}.delcoll-49 --collection delscope-{{$sc}}.delcoll-50
+      --json --populate-only"
+
 # runs the pillowfight template followed by wait
 # $0 = node
 # $1 = bucket
