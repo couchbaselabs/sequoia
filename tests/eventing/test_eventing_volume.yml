@@ -47,9 +47,9 @@
 ############### create and deploy functions ################
 -
   image: sequoiatools/eventing:6.5
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}}  mad-hatter/bucket_op.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}}  mad-hatter/ABO/bucket_op.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
 -
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}}  mad-hatter/bucket_op_timer.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}}  mad-hatter/ABO/bucket_op_timer.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}}  mad-hatter/n1ql_op.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
 -
@@ -62,10 +62,10 @@
 ############### pause functions ################
 -
   image: sequoiatools/eventing:6.5
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op.json {{.RestUsername}} {{.RestPassword}} pause true"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/ABO/bucket_op.json {{.RestUsername}} {{.RestPassword}} pause true"
   wait: true
 -
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_timer.json {{.RestUsername}} {{.RestPassword}} pause true"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/ABO/bucket_op_timer.json {{.RestUsername}} {{.RestPassword}} pause true"
   wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_curl.json {{.RestUsername}} {{.RestPassword}} pause true"
@@ -86,10 +86,10 @@
 ############### resume functions ################
 -
   image: sequoiatools/eventing:6.5
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op.json {{.RestUsername}} {{.RestPassword}} resume true"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/ABO/bucket_op.json {{.RestUsername}} {{.RestPassword}} resume true"
   wait: true
 -
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_timer.json {{.RestUsername}} {{.RestPassword}} resume true"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/ABO/bucket_op_timer.json {{.RestUsername}} {{.RestPassword}} resume true"
   wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_curl.json {{.RestUsername}} {{.RestPassword}} resume true"
@@ -152,10 +152,10 @@
 ############### pause functions ################
 -
   image: sequoiatools/eventing:6.5
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op.json {{.RestUsername}} {{.RestPassword}} pause true"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/ABO/bucket_op.json {{.RestUsername}} {{.RestPassword}} pause true"
   wait: true
 -
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_timer.json {{.RestUsername}} {{.RestPassword}} pause true"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/ABO/bucket_op_timer.json {{.RestUsername}} {{.RestPassword}} pause true"
   wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_curl.json {{.RestUsername}} {{.RestPassword}} pause true"
@@ -176,10 +176,10 @@
 ############### resume functions ################
 -
   image: sequoiatools/eventing:6.5
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op.json {{.RestUsername}} {{.RestPassword}} resume true"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/ABO/bucket_op.json {{.RestUsername}} {{.RestPassword}} resume true"
   wait: true
 -
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_timer.json {{.RestUsername}} {{.RestPassword}} resume true"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/ABO/bucket_op_timer.json {{.RestUsername}} {{.RestPassword}} resume true"
   wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_curl.json {{.RestUsername}} {{.RestPassword}} resume true"
@@ -225,10 +225,10 @@
 ############### pause functions ################
 -
   image: sequoiatools/eventing:6.5
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op.json {{.RestUsername}} {{.RestPassword}} pause true"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/ABO/bucket_op.json {{.RestUsername}} {{.RestPassword}} pause true"
   wait: true
 -
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_timer.json {{.RestUsername}} {{.RestPassword}} pause true"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/ABO/bucket_op_timer.json {{.RestUsername}} {{.RestPassword}} pause true"
   wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_curl.json {{.RestUsername}} {{.RestPassword}} pause true"
@@ -255,10 +255,10 @@
 ############### resume functions ################
 -
   image: sequoiatools/eventing:6.5
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op.json {{.RestUsername}} {{.RestPassword}} resume true"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/ABO/bucket_op.json {{.RestUsername}} {{.RestPassword}} resume true"
   wait: true
 -
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_timer.json {{.RestUsername}} {{.RestPassword}} resume true"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/ABO/bucket_op_timer.json {{.RestUsername}} {{.RestPassword}} resume true"
   wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_curl.json {{.RestUsername}} {{.RestPassword}} resume true"
@@ -297,10 +297,10 @@
 ############### pause functions ################
 -
   image: sequoiatools/eventing:6.5
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op.json {{.RestUsername}} {{.RestPassword}} pause true"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/ABO/bucket_op.json {{.RestUsername}} {{.RestPassword}} pause true"
   wait: true
 -
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_timer.json {{.RestUsername}} {{.RestPassword}} pause true"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/ABO/bucket_op_timer.json {{.RestUsername}} {{.RestPassword}} pause true"
   wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_curl.json {{.RestUsername}} {{.RestPassword}} pause true"
@@ -338,10 +338,10 @@
 ############### resume functions ################
 -
   image: sequoiatools/eventing:6.5
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op.json {{.RestUsername}} {{.RestPassword}} resume true"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/ABO/bucket_op.json {{.RestUsername}} {{.RestPassword}} resume true"
   wait: true
 -
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_timer.json {{.RestUsername}} {{.RestPassword}} resume true"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/ABO/bucket_op_timer.json {{.RestUsername}} {{.RestPassword}} resume true"
   wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_curl.json {{.RestUsername}} {{.RestPassword}} resume true"
@@ -387,10 +387,10 @@
 ############### pause functions ################
 -
   image: sequoiatools/eventing:6.5
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op.json {{.RestUsername}} {{.RestPassword}} pause true"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/ABO/bucket_op.json {{.RestUsername}} {{.RestPassword}} pause true"
   wait: true
 -
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_timer.json {{.RestUsername}} {{.RestPassword}} pause true"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/ABO/bucket_op_timer.json {{.RestUsername}} {{.RestPassword}} pause true"
   wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_curl.json {{.RestUsername}} {{.RestPassword}} pause true"
@@ -419,10 +419,10 @@
 ############### resume functions ################
 -
   image: sequoiatools/eventing:6.5
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op.json {{.RestUsername}} {{.RestPassword}} resume true"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/ABO/bucket_op.json {{.RestUsername}} {{.RestPassword}} resume true"
   wait: true
 -
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_timer.json {{.RestUsername}} {{.RestPassword}} resume true"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/ABO/bucket_op_timer.json {{.RestUsername}} {{.RestPassword}} resume true"
   wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_curl.json {{.RestUsername}} {{.RestPassword}} resume true"
@@ -468,10 +468,10 @@
 ############### pause functions ################
 -
   image: sequoiatools/eventing:6.5
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op.json {{.RestUsername}} {{.RestPassword}} pause true"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/ABO/bucket_op.json {{.RestUsername}} {{.RestPassword}} pause true"
   wait: true
 -
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_timer.json {{.RestUsername}} {{.RestPassword}} pause true"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/ABO/bucket_op_timer.json {{.RestUsername}} {{.RestPassword}} pause true"
   wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_curl.json {{.RestUsername}} {{.RestPassword}} pause true"
@@ -493,10 +493,10 @@
 ############### resume functions ################
 -
   image: sequoiatools/eventing:6.5
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op.json {{.RestUsername}} {{.RestPassword}} resume true"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/ABO/bucket_op.json {{.RestUsername}} {{.RestPassword}} resume true"
   wait: true
 -
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_timer.json {{.RestUsername}} {{.RestPassword}} resume true"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/ABO/bucket_op_timer.json {{.RestUsername}} {{.RestPassword}} resume true"
   wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_curl.json {{.RestUsername}} {{.RestPassword}} resume true"
@@ -592,10 +592,10 @@
 ############### pause functions ################
 -
   image: sequoiatools/eventing:6.5
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op.json {{.RestUsername}} {{.RestPassword}} pause true"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/ABO/bucket_op.json {{.RestUsername}} {{.RestPassword}} pause true"
   wait: true
 -
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_timer.json {{.RestUsername}} {{.RestPassword}} pause true"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/ABO/bucket_op_timer.json {{.RestUsername}} {{.RestPassword}} pause true"
   wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_curl.json {{.RestUsername}} {{.RestPassword}} pause true"
@@ -615,10 +615,10 @@
 ############### resume functions ################
 -
   image: sequoiatools/eventing:6.5
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op.json {{.RestUsername}} {{.RestPassword}} resume true"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/ABO/bucket_op.json {{.RestUsername}} {{.RestPassword}} resume true"
   wait: true
 -
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_timer.json {{.RestUsername}} {{.RestPassword}} resume true"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/ABO/bucket_op_timer.json {{.RestUsername}} {{.RestPassword}} resume true"
   wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_curl.json {{.RestUsername}} {{.RestPassword}} resume true"
@@ -664,10 +664,10 @@
 ############### pause functions ################
 -
   image: sequoiatools/eventing:6.5
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op.json {{.RestUsername}} {{.RestPassword}} pause true"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/ABO/bucket_op.json {{.RestUsername}} {{.RestPassword}} pause true"
   wait: true
 -
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_timer.json {{.RestUsername}} {{.RestPassword}} pause true"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/ABO/bucket_op_timer.json {{.RestUsername}} {{.RestPassword}} pause true"
   wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_curl.json {{.RestUsername}} {{.RestPassword}} pause true"
@@ -689,10 +689,10 @@
 ############### resume functions ################
 -
   image: sequoiatools/eventing:6.5
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op.json {{.RestUsername}} {{.RestPassword}} resume true"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/ABO/bucket_op.json {{.RestUsername}} {{.RestPassword}} resume true"
   wait: true
 -
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_timer.json {{.RestUsername}} {{.RestPassword}} resume true"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/ABO/bucket_op_timer.json {{.RestUsername}} {{.RestPassword}} resume true"
   wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_curl.json {{.RestUsername}} {{.RestPassword}} resume true"
@@ -731,10 +731,10 @@
 ############### pause functions ################
 -
   image: sequoiatools/eventing:6.5
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op.json {{.RestUsername}} {{.RestPassword}} pause true"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/ABO/bucket_op.json {{.RestUsername}} {{.RestPassword}} pause true"
   wait: true
 -
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_timer.json {{.RestUsername}} {{.RestPassword}} pause true"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/ABO/bucket_op_timer.json {{.RestUsername}} {{.RestPassword}} pause true"
   wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_curl.json {{.RestUsername}} {{.RestPassword}} pause true"
@@ -758,10 +758,10 @@
 ############### resume functions ################
 -
   image: sequoiatools/eventing:6.5
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op.json {{.RestUsername}} {{.RestPassword}} resume true"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/ABO/bucket_op.json {{.RestUsername}} {{.RestPassword}} resume true"
   wait: true
 -
-  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_timer.json {{.RestUsername}} {{.RestPassword}} resume true"
+  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/ABO/bucket_op_timer.json {{.RestUsername}} {{.RestPassword}} resume true"
   wait: true
 -
   command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.EventingPort}} mad-hatter/bucket_op_curl.json {{.RestUsername}} {{.RestPassword}} resume true"

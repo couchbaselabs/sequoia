@@ -1,0 +1,27 @@
+{
+	"appname": "bucket_op",
+	"id": 0,
+	"depcfg": {
+		"buckets": [{
+			"alias": "dst",
+			"bucket_name": "bucket_op_dst",
+			"access": "rw"
+		},
+		{
+			"alias": "dst1",
+			"bucket_name": "sbm_dst",
+			"access": "rw"
+		}],
+		"metadata_bucket": "metadata",
+		"source_bucket": "bucket_op"
+	},
+	"appcode": "function OnUpdate(doc, meta) {\r\n    log(\"Doc created\/updated\", meta.id);\r\n    try{\r\n        var result1= couchbase.insert(dst,meta,doc);\r\n        log(result1);\r\n        var result2= couchbase.insert(dst1,meta,doc);\r\n        log(result1);\r\n    }catch(e){\r\n        log(\"error:\",e);\r\n    }\r\n}\r\n\r\nfunction OnDelete(meta, options) {\r\n    log(\"Doc deleted\/expired\", meta.id);\r\n    try{\r\n    var doc={\"id\":meta.id}\r\n    var result1 = couchbase.delete(dst,doc);\r\n    log(result1);\r\n    var result2 = couchbase.delete(dst1,doc);\r\n    log(result2);\r\n    }catch(e){\r\n        log(\"error:\",e);\r\n    }\r\n}\r\n",
+	"settings": {
+		"dcp_stream_boundary": "everything",
+		"deadline_timeout": 62,
+		"deployment_status": false,
+		"execution_timeout": 60,
+		"log_level": "INFO",
+		"processing_status": false
+	}
+}
