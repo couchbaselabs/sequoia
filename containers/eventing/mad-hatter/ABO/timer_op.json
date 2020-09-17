@@ -1,0 +1,24 @@
+ {
+    "appcode": "function OnUpdate(doc, meta) {\r\n    log(\"Doc created\/updated\", meta.id);\r\n    var expiry = new Date();\r\n    expiry.setSeconds(expiry.getSeconds() + 3);\r\n\r\n    var context = {docID : meta.id, random_text : \"e6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh07Aumoe6cZZGHuh07Aumoe6cZZGHuh07Aumoe6\"};\r\n    createTimer(timerCallback,  expiry, meta.id, context);\r\n}\r\n\r\nfunction timerCallback(context) {\r\n    var result= couchbase.insert(dst_bucket,{\"id\":context.docID},context.random_text);\r\n    log(result);\r\n}\r\n\r\nfunction OnDelete(meta) {\r\n    var expiry = new Date();\r\n    expiry.setSeconds(expiry.getSeconds() + 30);\r\n\r\n    var context = {docID : context.docID };\r\n    createTimer(NDtimerCallback,  expiry, meta.id, context);\r\n}\r\n\r\nfunction NDtimerCallback(context) {\r\n    log(\"Doc deleted\/expired\", meta.id);\r\n    var meta={\"id\":context.docID}\r\n    var result = couchbase.delete(dst_bucket,meta);\r\n    log(result);\r\n}",
+    "depcfg": {
+      "buckets": [
+        {
+          "alias": "dst_bucket",
+          "bucket_name": "timer_op_dst"
+        }
+      ],
+      "metadata_bucket": "metadata",
+      "source_bucket": "timer_op"
+    },
+    "version": "evt-6.0.0-1419-ee",
+    "appname": "timer_op",
+    "settings": {
+      "dcp_stream_boundary": "everything",
+      "deployment_status": false,
+      "log_level": "INFO",
+      "processing_status": false,
+      "execution_timeout": 60,
+      "deadline_timeout": 62,
+      "language_compatibility" : "6.5.0"
+    }
+  }
