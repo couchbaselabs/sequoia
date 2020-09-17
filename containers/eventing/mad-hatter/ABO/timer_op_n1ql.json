@@ -1,0 +1,27 @@
+{
+    "appcode": "function OnUpdate(doc, meta) {\r\n    var expiry = new Date();\r\n    expiry.setSeconds(expiry.getSeconds() + 3);\r\n    if (meta.id.includes(\"_\")){\r\n        var id = meta.id.split(\"_\")[1];\r\n        if(parseInt(id)%5==0){\r\n            var context = {docID : meta.id, random_text : 'e6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0R7Aumoe6cZZGHuh0'};\r\n            createTimer(timerCallback,  expiry, meta.id, context);\r\n        }\r\n    }\r\n}\r\nfunction OnDelete(meta) {\r\n    var expiry = new Date();\r\n    expiry.setSeconds(expiry.getSeconds() + 30);\r\n    if (meta.id.includes(\"_\")){\r\n        var id = meta.id.split(\"_\")[1];\r\n        if(parseInt(id)%5==0){\r\n            var context = {docID : meta.id};\r\n            createTimer(NDtimerCallback,  expiry, meta.id, context);\r\n        }\r\n    }\r\n}\r\nfunction NDtimerCallback(context) {\r\n    var select_query = SELECT * FROM default USE KEYS[$context.docID];\r\n    for (var r of select_query) {\r\n    }\r\n    log(\"deleting: \",context.docID);\r\n    var meta={\"id\":context.docID};\r\n    var result = couchbase.delete(dst_bucket,meta);\r\n    log(result);\r\n}\r\nfunction timerCallback(context) {\r\n    var select_query = SELECT * FROM default USE KEYS[$context.docID];\r\n    for (var r of select_query) {\r\n        log(\"creating: \",context.docID);\r\n        var result= couchbase.insert(dst_bucket,{\"id\":context.docID},context.random_text);\r\n        log(result);\r\n    }\r\n}\r\n",
+    "depcfg": {
+        "buckets": [
+            {
+                "alias": "dst_bucket",
+                "bucket_name": "WAREHOUSE",
+                "access": "rw"
+            }
+        ],
+        "curl": [],
+        "metadata_bucket": "NEW_ORDER",
+        "source_bucket": "default"
+    },
+    "appname": "timer_op",
+    "settings": {
+      "dcp_stream_boundary": "from_now",
+      "deadline_timeout": 62,
+      "deployment_status": false,
+      "execution_timeout": 60,
+      "log_level": "INFO",
+      "processing_status": false,
+      "language_compatibility" : "6.5.0"
+	},
+    "using_timer": true,
+    "src_mutation": false
+}

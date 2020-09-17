@@ -1,0 +1,36 @@
+{
+    "appcode": "function OnUpdate(doc, meta) {\r\n    var result= couchbase.insert(dst_bucket,meta,\"curl bucket op\");\r\n    log(result);\r\n    var request = {\r\n\tpath : 'job\/test_suite_executor\/api\/json?tree=jobs[component]'\r\n    };\r\n    if (meta.id.includes(\"_\")){\r\n        var id = meta.id.split(\"_\")[1];\r\n        if(parseInt(id)%5==0){\r\n        while(true){\r\n            try {\r\n            \tvar response = curl(\"GET\", server, request);\r\n            \tlog('response body received from server:', response.body);\r\n            \tlog('response headers received from server:', response.headers);\r\n            \tlog('response status received from server:', response.status);\r\n            \tvar res= new Uint8Array(response.body);\r\n            \tif(response.status == 200){\r\n            \t         \tbreak; \r\n                \t    }\r\n                }catch (e) {\r\n        \t      log('error:', e);\r\n                }\r\n            }\r\n        }\r\n    }\r\n}\r\n\r\n\r\n\r\nfunction OnDelete(meta) {\r\n    log(\"Doc deleted\/expired\", meta.id);\r\n    var doc={\"id\":meta.id}\r\n    var result = couchbase.delete(dst_bucket,doc);\r\n    log(result);\r\n    var request = {\r\n\tpath : 'job\/test_suite_executor\/api\/json?tree=jobs[component]'\r\n    };\r\n    if (meta.id.includes(\"_\")){\r\n        var id = meta.id.split(\"_\")[1];\r\n        if(parseInt(id)%5==0){\r\n        while(true){\r\n            try {\r\n            \tvar response = curl(\"GET\", server, request);\r\n            \tlog('response body received from server:', response.body);\r\n            \tlog('response headers received from server:', response.headers);\r\n            \tlog('response status received from server:', response.status);\r\n            \tvar res= new Uint8Array(response.body);\r\n            \tif(response.status == 200){\r\n            \t         \tbreak; \r\n                \t    }\r\n                }catch (e) {\r\n        \t      log('error:', e);\r\n                }\r\n            }\r\n        }\r\n    }\r\n}",
+    "depcfg": {
+        "buckets": [
+            {
+                "alias": "dst_bucket",
+                "bucket_name": "ITEM",
+                "access": "rw"
+            }
+        ],
+        "curl": [
+            {
+                "hostname": "http://qa.sc.couchbase.com/",
+                "value": "server",
+                "auth_type": "no-auth",
+                "username": "",
+                "password": "",
+                "bearer_key": "",
+                "allow_cookies": false,
+                "validate_ssl_certificate": false
+            }
+        ],
+        "metadata_bucket": "NEW_ORDER",
+        "source_bucket": "default"
+    },
+    "appname": "bucket_op_curl",
+    "settings": {
+      "dcp_stream_boundary": "from_now",
+      "deadline_timeout": 62,
+      "deployment_status": false,
+      "execution_timeout": 20,
+      "log_level": "INFO",
+      "processing_status": false,
+      "language_compatibility" : "6.5.0"
+	}
+}
