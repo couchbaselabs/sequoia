@@ -26,5 +26,6 @@ COPY bucket_op_complex_function_integration.json /bucket_op_complex_function_int
 COPY bucket_op_function_integration.json /bucket_op_function_integration.json
 COPY alice/* alice/
 COPY mad-hatter/* mad-hatter/
+COPY mad-hatter/ABO/* mad-hatter/ABO/
 
 ENTRYPOINT ["python"]
