@@ -313,7 +313,7 @@
 
 #============ hard failover eventing node ============
 -
-  template: failover_force_and_recover
+  template: failover_force_and_recover_eventing
   args: "{{.ActiveEventingNode 1}},full"
   wait: true
 
