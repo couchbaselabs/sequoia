@@ -27,6 +27,7 @@ type BucketSpec struct {
 	TTL             string
 	BucketScopes    string
 	Storage         string
+	Durability      string
 	BucketScopeSpec []BucketScopeSpec
 }
 

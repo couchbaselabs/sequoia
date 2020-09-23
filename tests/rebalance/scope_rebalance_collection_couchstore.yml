@@ -9,6 +9,7 @@ buckets:
   -
       name: default
       ram: 22%
+      durability: majority
       eviction: fullEviction
       bucketscopes: scope1, scope2
 

@@ -731,6 +731,9 @@ func (s *Scope) CreateBuckets() {
 				if bucket.Storage != "" {
 					command = append(command, "--storage-backend", bucket.Storage)
 				}
+				if bucket.Durability != "" {
+					command = append(command, "--durability-min-level", bucket.Durability)
+				}
 
 				desc := "bucket create " + bucketName
 				task := ContainerTask{
