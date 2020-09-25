@@ -1,6 +1,6 @@
 ---
 -
-  include: tests/templates/rebalance.yml, tests/templates/vegeta.yml, tests/templates/kv.yml, tests/templates/fts.yml, tests/templates/n1ql.yml, tests/templates/multinode_failure.yml
+  include: tests/templates/rebalance.yml, tests/templates/vegeta.yml, tests/templates/kv.yml, tests/templates/fts.yml, tests/templates/n1ql.yml, tests/templates/multinode_failure.yml, tests/templates/collections.yml
 
 ###### update Tombstone Purge Interval ######
 -
@@ -10,71 +10,34 @@
   wait: true
 
 ###### Create scopes and collections ######
-### create 25 scopes across 4 buckets as scope-1,scope-2 ... ######
--
-  image: sequoiatools/collections:1.0
+- template: create-scopes
+  args: "{{.NthBucket 4}}, 7"
   requires:  "{{eq true .DoOnce }}"
-  command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 4}} -o create -s scope --count 7"
-  wait: true
-- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 5}} -o create -s scope --count 6"
+- args: "{{.NthBucket 5}}, 6"
   requires:  "{{eq true .DoOnce }}"
-  wait: true
-- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 6}} -o create -s scope --count 6"
+- args: "{{.NthBucket 6}}, 6"
   requires:  "{{eq true .DoOnce }}"
-  wait: true
-- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 7}} -o create -s scope --count 6"
+- args: "{{.NthBucket 7}}, 6"
   requires:  "{{eq true .DoOnce }}"
-  wait: true
-
 ## Create 10 scopes across 2 buckets as scope-1, scope-2. The Collection CRUD workload will be run against these buckets.
--
-  image: sequoiatools/collections:1.0
+- args: "{{.NthBucket 8}}, 5"
   requires:  "{{eq true .DoOnce }}"
-  command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 8}} -o create -s scope --count 5"
-  wait: true
-- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 9}} -o create -s scope --count 5"
+- args: "{{.NthBucket 9}}, 5"
   requires:  "{{eq true .DoOnce }}"
-  wait: true
 
-
-### create 8 collections for each newly create scope as coll-1,coll-2.... ####
--
-  foreach: "{{range $i, $sc := mkrange 0 6}}"
-  image: sequoiatools/collections:1.0
-  command: "-i {{$.Orchestrator}}:8091 -b bucket4 -o create -s scope-{{$sc}} -c coll --count 8"
-  ### There is a bug in sequoia which causes issues when using variable name inside a foreach loop. Need to fix and optimize this part
+- template: create-collections
+  args: "{{.NthBucket 4}}, 6, 8"
   requires:  "{{eq true .DoOnce }}"
-  wait: true
--
-  foreach: "{{range $i, $sc := mkrange 0 5}}"
-  image: sequoiatools/collections:1.0
-  command: "-i {{$.Orchestrator}}:8091 -b bucket5 -o create -s scope-{{$sc}} -c coll --count 8"
+- args: "{{.NthBucket 5}}, 5, 8"
   requires:  "{{eq true .DoOnce }}"
-  wait: true
--
-  foreach: "{{range $i, $sc := mkrange 0 5}}"
-  image: sequoiatools/collections:1.0
-  command: "-i {{$.Orchestrator}}:8091 -b bucket6 -o create -s scope-{{$sc}} -c coll --count 8"
+- args: "{{.NthBucket 6}}, 5, 8"
   requires:  "{{eq true .DoOnce }}"
-  wait: true
--
-  foreach: "{{range $i, $sc := mkrange 0 5}}"
-  image: sequoiatools/collections:1.0
-  command: "-i {{$.Orchestrator}}:8091 -b bucket7 -o create -s scope-{{$sc}} -c coll --count 8"
+- args: "{{.NthBucket 7}}, 5, 8"
   requires:  "{{eq true .DoOnce }}"
-  wait: true
--
-  foreach: "{{range $i, $sc := mkrange 0 4}}"
-  image: sequoiatools/collections:1.0
-  command: "-i {{$.Orchestrator}}:8091 -b bucket8 -o create -s scope-{{$sc}} -c coll --count 5"
+- args: "{{.NthBucket 8}}, 4, 5"
   requires:  "{{eq true .DoOnce }}"
-  wait: true
--
-  foreach: "{{range $i, $sc := mkrange 0 4}}"
-  image: sequoiatools/collections:1.0
-  command: "-i {{$.Orchestrator}}:8091 -b bucket9 -o create -s scope-{{$sc}} -c coll --count 5"
+- args: "{{.NthBucket 9}}, 4, 5"
   requires:  "{{eq true .DoOnce }}"
-  wait: true
 
 # Sleep for some time to allow collections manifest to sync
 -
@@ -106,14 +69,9 @@
    wait: true
 
 ### delete all collections in scope #### --> Replace this with the Collection CRUD workload that will run throughout the test in the background
--
-  foreach: "{{range $i, $sc := mkrange 0 4}}"
-  image: sequoiatools/collections:1.0
-  command: "-i {{$.Orchestrator}}:8091 -b bucket8 -o delete -s scope-{{$sc}} -c coll_1 --count 5"
--
-  foreach: "{{range $i, $sc := mkrange 0 4}}"
-  image: sequoiatools/collections:1.0
-  command: "-i {{$.Orchestrator}}:8091 -b bucket8 -o delete -s scope-{{$sc}} -c coll_1 --count 5"
+- template: delete-collections
+  args: "{{.NthBucket 8}}, 4, 5"
+- args: "{{.NthBucket 9}}, 4, 5"
 
 # rebalance out a node
 - template: rebalance_out
@@ -121,16 +79,9 @@
   wait: true
 
 ### recreate the dropped collections
--
-  foreach: "{{range $i, $sc := mkrange 0 4}}"
-  image: sequoiatools/collections:1.0
-  command: "-i {{$.Orchestrator}}:8091 -b bucket8 -o create -s scope-{{$sc}} -c coll --count 5"
-  wait: true
--
-  foreach: "{{range $i, $sc := mkrange 0 4}}"
-  image: sequoiatools/collections:1.0
-  command: "-i {{$.Orchestrator}}:8091 -b bucket9 -o create -s scope-{{$sc}} -c coll --count 5"
-  wait: true
+- template: create-collections
+  args: "{{.NthBucket 8}}, 4, 5"
+- args: "{{.NthBucket 9}}, 4, 5"
 
 #### Load pillowfight data to bucket8 & 9 ####
 -
@@ -216,13 +167,13 @@
 
 ############### data loading to collections ################
 - image: sequoiatools/catapult
-  command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 4}} -n {{.Scale 40000}} -pc 100 -pu 25 -pd 25 -dt Hotel -de {{.Scale 7200}} -ds 1000
+  command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 4}} -n {{.Scale 40000}} -pc 100 -pu 25 -pd 25 -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf
     -fu \"\" -ac True"
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 5}} -n {{.Scale 40000}} -pc 100 -pu 25 -pd 25 -dt Hotel -de {{.Scale 7200}} -ds 1000
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 5}} -n {{.Scale 40000}} -pc 100 -pu 25 -pd 25 -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf
     -fu \"\" -ac True"
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 6}} -n {{.Scale 40000}} -pc 100 -pu 25 -pd 25 -dt Hotel -de {{.Scale 7200}} -ds 1000
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 6}} -n {{.Scale 40000}} -pc 100 -pu 25 -pd 25 -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf
     -fu \"\" -ac True"
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 7}} -n {{.Scale 40000}} -pc 100 -pu 25 -pd 25 -dt Hotel -de {{.Scale 7200}} -ds 1000
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 7}} -n {{.Scale 40000}} -pc 100 -pu 25 -pd 25 -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf
     -fu \"\" -ac True"
 
 
@@ -235,14 +186,9 @@
   wait: true
 
 ### delete all collections in scope ####
--
-foreach: "{{range $i, $sc := mkrange 0 4}}"
-  image: sequoiatools/collections:1.0
-  command: "-i {{$.Orchestrator}}:8091 -b bucket8 -o delete -s scope-{{$sc}} -c coll_1 --count 5"
--
-  foreach: "{{range $i, $sc := mkrange 0 4}}"
-  image: sequoiatools/collections:1.0
-  command: "-i {{$.Orchestrator}}:8091 -b bucket8 -o delete -s scope-{{$sc}} -c coll_1 --count 5"
+- template: delete-collections
+  args: "{{.NthBucket 8}}, 4, 5"
+- args: "{{.NthBucket 9}}, 4, 5"
 
 # swap rebalance
 - template: rebalance_swap
@@ -250,16 +196,10 @@ foreach: "{{range $i, $sc := mkrange 0 4}}"
   wait: true
 
 ### recreate the dropped collections
--
-  foreach: "{{range $i, $sc := mkrange 0 4}}"
-  image: sequoiatools/collections:1.0
-  command: "-i {{$.Orchestrator}}:8091 -b bucket8 -o create -s scope-{{$sc}} -c coll --count 5"
-  wait: true
--
-  foreach: "{{range $i, $sc := mkrange 0 4}}"
-  image: sequoiatools/collections:1.0
-  command: "-i {{$.Orchestrator}}:8091 -b bucket9 -o create -s scope-{{$sc}} -c coll --count 5"
-  wait: true
+- template: create-collections
+  args: "{{.NthBucket 8}}, 4, 5"
+- args: "{{.NthBucket 9}}, 4, 5"
+
 
 #### Load pillowfight data to bucket8 & 9 ####
 -
@@ -297,30 +237,18 @@ foreach: "{{range $i, $sc := mkrange 0 4}}"
   duration: 7200
 
 ### delete all collections in scope ####
--
-foreach: "{{range $i, $sc := mkrange 0 4}}"
-  image: sequoiatools/collections:1.0
-  command: "-i {{$.Orchestrator}}:8091 -b bucket8 -o delete -s scope-{{$sc}} -c coll_1 --count 5"
--
-  foreach: "{{range $i, $sc := mkrange 0 4}}"
-  image: sequoiatools/collections:1.0
-  command: "-i {{$.Orchestrator}}:8091 -b bucket8 -o delete -s scope-{{$sc}} -c coll_1 --count 5"
+- template: delete-collections
+  args: "{{.NthBucket 8}}, 4, 5"
+- args: "{{.NthBucket 9}}, 4, 5"
 
 # Change the topology (performs rebalance in/out/swap eventing nodes)
 - test: tests/eventing/test_eventing_rebalance_integration_timers.yml
   section: topology_change
 
 ### recreate the dropped collections
--
-  foreach: "{{range $i, $sc := mkrange 0 4}}"
-  image: sequoiatools/collections:1.0
-  command: "-i {{$.Orchestrator}}:8091 -b bucket8 -o create -s scope-{{$sc}} -c coll --count 5"
-  wait: true
--
-  foreach: "{{range $i, $sc := mkrange 0 4}}"
-  image: sequoiatools/collections:1.0
-  command: "-i {{$.Orchestrator}}:8091 -b bucket9 -o create -s scope-{{$sc}} -c coll --count 5"
-  wait: true
+- template: create-collections
+  args: "{{.NthBucket 8}}, 4, 5"
+- args: "{{.NthBucket 9}}, 4, 5"
 
 #### Load pillowfight data to bucket8 & 9 ####
 -
@@ -332,7 +260,7 @@ foreach: "{{range $i, $sc := mkrange 0 4}}"
 - command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{.NthBucket 9}} -I {{$.Scale 1000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 500}} --random-body
   --collection scope{{$sc}}.collection1 --collection scope{{$sc}}.collection2 --collection scope{{$sc}}.collection3 --collection scope{{$sc}}.collection4 --collection scope{{$sc}}.collection5
   --json"
-  
+
 
 # Sleep for some time to allow some docs to be loaded to the collections
 -
@@ -342,30 +270,18 @@ foreach: "{{range $i, $sc := mkrange 0 4}}"
    wait: true
 
 ### delete all collections in scope #### --> Replace this with the Collection CRUD workload that will run throughout the test in the background
--
-foreach: "{{range $i, $sc := mkrange 0 4}}"
-  image: sequoiatools/collections:1.0
-  command: "-i {{$.Orchestrator}}:8091 -b bucket8 -o delete -s scope-{{$sc}} -c coll_1 --count 5"
--
-  foreach: "{{range $i, $sc := mkrange 0 4}}"
-  image: sequoiatools/collections:1.0
-  command: "-i {{$.Orchestrator}}:8091 -b bucket8 -o delete -s scope-{{$sc}} -c coll_1 --count 5"
+- template: delete-collections
+  args: "{{.NthBucket 8}}, 4, 5"
+- args: "{{.NthBucket 9}}, 4, 5"
 
 # Change the topology (performs rebalance in/out/swap analytics nodes)
 - test: tests/analytics/test_analytics_integration.yml
   section: analytics_topology_change
 
 ### recreate the dropped collections  --> Replace this with the Collection CRUD workload that will run throughout the test in the background
--
-  foreach: "{{range $i, $sc := mkrange 0 4}}"
-  image: sequoiatools/collections:1.0
-  command: "-i {{$.Orchestrator}}:8091 -b bucket8 -o create -s scope-{{$sc}} -c coll --count 5"
-  wait: true
--
-  foreach: "{{range $i, $sc := mkrange 0 4}}"
-  image: sequoiatools/collections:1.0
-  command: "-i {{$.Orchestrator}}:8091 -b bucket9 -o create -s scope-{{$sc}} -c coll --count 5"
-  wait: true
+- template: create-collections
+  args: "{{.NthBucket 8}}, 4, 5"
+- args: "{{.NthBucket 9}}, 4, 5"
 
 #### Load pillowfight data to bucket8 & 9 ####
 -
@@ -463,30 +379,18 @@ foreach: "{{range $i, $sc := mkrange 0 4}}"
   wait: true
 
 ### delete all collections in scope #### --> Replace this with the Collection CRUD workload that will run throughout the test in the background
--
-foreach: "{{range $i, $sc := mkrange 0 4}}"
-  image: sequoiatools/collections:1.0
-  command: "-i {{$.Orchestrator}}:8091 -b bucket8 -o delete -s scope-{{$sc}} -c coll_1 --count 5"
--
-  foreach: "{{range $i, $sc := mkrange 0 4}}"
-  image: sequoiatools/collections:1.0
-  command: "-i {{$.Orchestrator}}:8091 -b bucket8 -o delete -s scope-{{$sc}} -c coll_1 --count 5"
+- template: delete-collections
+  args: "{{.NthBucket 8}}, 4, 5"
+- args: "{{.NthBucket 9}}, 4, 5"
 
 # change the topologies on the 2i test
 - test: tests/2i/test_idx_mad_hatter_integration.yml
   section: change_indexer_topologies
 
 ### recreate the dropped collections  --> Replace this with the Collection CRUD workload that will run throughout the test in the background
--
-  foreach: "{{range $i, $sc := mkrange 0 4}}"
-  image: sequoiatools/collections:1.0
-  command: "-i {{$.Orchestrator}}:8091 -b bucket8 -o create -s scope-{{$sc}} -c coll --count 5"
-  wait: true
--
-  foreach: "{{range $i, $sc := mkrange 0 4}}"
-  image: sequoiatools/collections:1.0
-  command: "-i {{$.Orchestrator}}:8091 -b bucket9 -o create -s scope-{{$sc}} -c coll --count 5"
-  wait: true
+- template: create-collections
+  args: "{{.NthBucket 8}}, 4, 5"
+- args: "{{.NthBucket 9}}, 4, 5"
 
 #### Load pillowfight data to bucket8 & 9 ####
 -
@@ -515,14 +419,9 @@ foreach: "{{range $i, $sc := mkrange 0 4}}"
   wait: true
 
 ### delete all collections in scope #### --> Replace this with the Collection CRUD workload that will run throughout the test in the background
--
-  foreach: "{{range $i, $sc := mkrange 0 4}}"
-  image: sequoiatools/collections:1.0
-  command: "-i {{$.Orchestrator}}:8091 -b bucket8 -o delete -s scope-{{$sc}} -c coll_1 --count 5"
--
-  foreach: "{{range $i, $sc := mkrange 0 4}}"
-  image: sequoiatools/collections:1.0
-  command: "-i {{$.Orchestrator}}:8091 -b bucket8 -o delete -s scope-{{$sc}} -c coll_1 --count 5"
+- template: delete-collections
+  args: "{{.NthBucket 8}}, 4, 5"
+- args: "{{.NthBucket 9}}, 4, 5"
 
 # swap failover
 - template: add_node
@@ -533,16 +432,9 @@ foreach: "{{range $i, $sc := mkrange 0 4}}"
   wait: true
 
 ### recreate the dropped collections  --> Replace this with the Collection CRUD workload that will run throughout the test in the background
--
-  foreach: "{{range $i, $sc := mkrange 0 4}}"
-  image: sequoiatools/collections:1.0
-  command: "-i {{$.Orchestrator}}:8091 -b bucket8 -o create -s scope-{{$sc}} -c coll --count 5"
-  wait: true
--
-  foreach: "{{range $i, $sc := mkrange 0 4}}"
-  image: sequoiatools/collections:1.0
-  command: "-i {{$.Orchestrator}}:8091 -b bucket9 -o create -s scope-{{$sc}} -c coll --count 5"
-  wait: true
+- template: create-collections
+  args: "{{.NthBucket 8}}, 4, 5"
+- args: "{{.NthBucket 9}}, 4, 5"
 
 #### Load pillowfight data to bucket8 & 9 ####
 -
@@ -572,14 +464,9 @@ foreach: "{{range $i, $sc := mkrange 0 4}}"
   wait: true
 
 ### delete all collections in scope #### --> Replace this with the Collection CRUD workload that will run throughout the test in the background
--
-foreach: "{{range $i, $sc := mkrange 0 4}}"
-  image: sequoiatools/collections:1.0
-  command: "-i {{$.Orchestrator}}:8091 -b bucket8 -o delete -s scope-{{$sc}} -c coll_1 --count 5"
--
-  foreach: "{{range $i, $sc := mkrange 0 4}}"
-  image: sequoiatools/collections:1.0
-  command: "-i {{$.Orchestrator}}:8091 -b bucket8 -o delete -s scope-{{$sc}} -c coll_1 --count 5"
+- template: delete-collections
+  args: "{{.NthBucket 8}}, 4, 5"
+- args: "{{.NthBucket 9}}, 4, 5"
 
 # swap hard failover
 - template: add_node
@@ -592,16 +479,9 @@ foreach: "{{range $i, $sc := mkrange 0 4}}"
   wait: true
 
 ### recreate the dropped collections  --> Replace this with the Collection CRUD workload that will run throughout the test in the background
--
-  foreach: "{{range $i, $sc := mkrange 0 4}}"
-  image: sequoiatools/collections:1.0
-  command: "-i {{$.Orchestrator}}:8091 -b bucket8 -o create -s scope-{{$sc}} -c coll --count 5"
-  wait: true
--
-  foreach: "{{range $i, $sc := mkrange 0 4}}"
-  image: sequoiatools/collections:1.0
-  command: "-i {{$.Orchestrator}}:8091 -b bucket9 -o create -s scope-{{$sc}} -c coll --count 5"
-  wait: true
+- template: create-collections
+  args: "{{.NthBucket 8}}, 4, 5"
+- args: "{{.NthBucket 9}}, 4, 5"
 
 #### Load pillowfight data to bucket8 & 9 ####
 -
@@ -622,14 +502,9 @@ foreach: "{{range $i, $sc := mkrange 0 4}}"
    wait: true
 
 ### delete all collections in scope #### --> Replace this with the Collection CRUD workload that will run throughout the test in the background
--
-foreach: "{{range $i, $sc := mkrange 0 4}}"
-  image: sequoiatools/collections:1.0
-  command: "-i {{$.Orchestrator}}:8091 -b bucket8 -o delete -s scope-{{$sc}} -c coll_1 --count 5"
--
-  foreach: "{{range $i, $sc := mkrange 0 4}}"
-  image: sequoiatools/collections:1.0
-  command: "-i {{$.Orchestrator}}:8091 -b bucket8 -o delete -s scope-{{$sc}} -c coll_1 --count 5"
+- template: delete-collections
+  args: "{{.NthBucket 8}}, 4, 5"
+- args: "{{.NthBucket 9}}, 4, 5"
 
 # do multinode failover , failing only one node as we have 1 replica
 - template: autofailover1Node
@@ -637,16 +512,9 @@ foreach: "{{range $i, $sc := mkrange 0 4}}"
   wait: true
 
 ### recreate the dropped collections  --> Replace this with the Collection CRUD workload that will run throughout the test in the background
--
-  foreach: "{{range $i, $sc := mkrange 0 4}}"
-  image: sequoiatools/collections:1.0
-  command: "-i {{$.Orchestrator}}:8091 -b bucket8 -o create -s scope-{{$sc}} -c coll --count 5"
-  wait: true
--
-  foreach: "{{range $i, $sc := mkrange 0 4}}"
-  image: sequoiatools/collections:1.0
-  command: "-i {{$.Orchestrator}}:8091 -b bucket9 -o create -s scope-{{$sc}} -c coll --count 5"
-  wait: true
+- template: create-collections
+  args: "{{.NthBucket 8}}, 4, 5"
+- args: "{{.NthBucket 9}}, 4, 5"
 
 #### Load pillowfight data to bucket8 & 9 ####
 -
@@ -670,14 +538,9 @@ foreach: "{{range $i, $sc := mkrange 0 4}}"
   wait: true
 
 ### delete all collections in scope #### --> Replace this with the Collection CRUD workload that will run throughout the test in the background
--
-foreach: "{{range $i, $sc := mkrange 0 4}}"
-  image: sequoiatools/collections:1.0
-  command: "-i {{$.Orchestrator}}:8091 -b bucket8 -o delete -s scope-{{$sc}} -c coll_1 --count 5"
--
-  foreach: "{{range $i, $sc := mkrange 0 4}}"
-  image: sequoiatools/collections:1.0
-  command: "-i {{$.Orchestrator}}:8091 -b bucket8 -o delete -s scope-{{$sc}} -c coll_1 --count 5"
+- template: delete-collections
+  args: "{{.NthBucket 8}}, 4, 5"
+- args: "{{.NthBucket 9}}, 4, 5"
 
 - template: add_node
   args: "{{.NthInActiveNode 0}}"
@@ -686,16 +549,9 @@ foreach: "{{range $i, $sc := mkrange 0 4}}"
   wait: true
 
 ### recreate the dropped collections  --> Replace this with the Collection CRUD workload that will run throughout the test in the background
--
-  foreach: "{{range $i, $sc := mkrange 0 4}}"
-  image: sequoiatools/collections:1.0
-  command: "-i {{$.Orchestrator}}:8091 -b bucket8 -o create -s scope-{{$sc}} -c coll --count 5"
-  wait: true
--
-  foreach: "{{range $i, $sc := mkrange 0 4}}"
-  image: sequoiatools/collections:1.0
-  command: "-i {{$.Orchestrator}}:8091 -b bucket9 -o create -s scope-{{$sc}} -c coll --count 5"
-  wait: true
+- template: create-collections
+  args: "{{.NthBucket 8}}, 4, 5"
+- args: "{{.NthBucket 9}}, 4, 5"
 
 #### Load pillowfight data to bucket8 & 9 ####
 -

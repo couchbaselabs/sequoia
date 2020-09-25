@@ -2,7 +2,7 @@ import json
 import sys
 from datetime import datetime
 from couchbase.cluster import Cluster, ClusterOptions, QueryOptions
-from couchbase.exceptions import QueryException, QueryIndexAlreadyExistsException
+from couchbase.exceptions import QueryException, QueryIndexAlreadyExistsException,TimeoutException
 from couchbase_core.cluster import PasswordAuthenticator
 from couchbase_core.bucketmanager import BucketManager
 from couchbase.management.collections import *
@@ -282,19 +282,20 @@ class IndexManager:
 
     def drop_all_indexes(self, keyspace_name_list):
         drop_idx_query_gen_template = "SELECT RAW 'DROP INDEX `' || name || '` on keyspacename;'  " \
-                                      "FROM system:all_indexes WHERE `bucket_id` || '.' || `scope_id` " \
-                                      "|| '.' || `keyspace_id` = 'keyspacename';"
+                                      "FROM system:all_indexes WHERE '`' || `bucket_id` || '`.`' || `scope_id` " \
+                                      "|| '`.`' || `keyspace_id` || '`' = 'keyspacename';"
 
         self.log.info("Starting to drop all indexes ")
         for keyspace in keyspace_name_list:
             drop_idx_query_gen = drop_idx_query_gen_template.replace("keyspacename", keyspace)
 
             status, results, queryResult = self._execute_query(drop_idx_query_gen)
-            for result in results:
-                drop_status, _, _ = self._execute_query(result)
+            if status is not None:
+                for result in results:
+                    drop_status, _, _ = self._execute_query(result)
 
-                # Sleep for 2 secs after dropping an index
-                sleep(2)
+                    # Sleep for 2 secs after dropping an index
+                    sleep(2)
         self.log.info("Drop all indexes completed")
 
     """
@@ -302,9 +303,13 @@ class IndexManager:
     """
 
     def _execute_query(self, statement):
-        try:
+        status = None
+        results = None
+        queryResult = None
 
-            queryResult = self.cluster.query(statement)
+        try:
+            timeout = timedelta(minutes=5)
+            queryResult = self.cluster.query(statement,QueryOptions(timeout=timeout))
             status = queryResult.metadata().status()
             results = queryResult.rows()
 
@@ -317,6 +322,9 @@ class IndexManager:
         except QueryIndexAlreadyExistsException as qiaeerr:
             self.log.debug("qiaeerr")
             self.log.error(qiaeerr)
+        except TimeoutException as terr:
+            self.log.debug("terr")
+            self.log.error(terr)
         except:
             self.log.error("Unexpected error :", sys.exc_info()[0])
 

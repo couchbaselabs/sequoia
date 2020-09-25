@@ -1,0 +1,52 @@
+---
+users:
+  -
+      name: bucket1
+      password: password
+      roles: admin
+      auth_domain: local
+  -
+      name: bucket2
+      password: password
+      roles: admin
+      auth_domain: local
+  -
+      name: bucket3
+      password: password
+      roles: admin
+      auth_domain: local
+
+buckets:
+  -
+      name: bucket1
+      ram: 33%
+      eviction: fullEviction
+  -
+      name: bucket2
+      ram: 33%
+      eviction: fullEviction
+  -
+      name: bucket3
+      ram: 34%
+      eviction: fullEviction
+
+
+servers: # each server tag represents a cluster
+  -
+      name: local
+      count: 12
+      ram: 90%
+      index_ram: 85%
+      index_storage: memory_optimized
+      services:
+        index: 6
+        index_start: 7
+        query: 2
+        query_start: 5
+      rest_username: Administrator
+      rest_password: password
+      data_path: "/data"
+      index_path: "/data"
+      init_nodes: 12
+      buckets: bucket1, bucket2, bucket3
+      users: bucket1, bucket2, bucket3
