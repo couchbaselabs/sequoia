@@ -93,8 +93,8 @@ servers: # each server tag represents a cluster
       analytics_path: "/data"
       rest_port: 8091
       init_nodes: 2
-      buckets: remote
-      users: remote
+      buckets: remote,bucket4,bucket8,bucket9
+      users: remote,bucket4,bucket8,bucket9
 
 
 buckets:

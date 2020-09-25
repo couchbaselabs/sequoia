@@ -1,37 +1,40 @@
 # Template to create scopes
-# $0 = bucketname
-# $1 = Number of scopes to be created
+# $0 = Cluster
+# $1 = bucketname
+# $2 = Number of scopes to be created
 -
   name: create-scopes
   actions:
     -
       image: sequoiatools/collections:1.0
-      command: "-i {{.Orchestrator}}:{{.RestPort}} -b $0 -o create -s scope --count $1"
+      command: "-i $0:{{.RestPort}} -b $1 -o create -s scope --count $2"
       wait: true
 
 # Template to create collections
-# $0 = bucketname
-# $1 = Number of scopes - 1
-# $2 = Number of collections to be created per scope
+# $0 = Cluster
+# $1 = bucketname
+# $2 = Number of scopes - 1
+# $3 = Number of collections to be created per scope
 -
   name: create-collections
   actions:
     -
-      foreach: "{{range $i, $sc := mkrange 0 $1}}"
+      foreach: "{{range $i, $sc := mkrange 0 $2}}"
       image: sequoiatools/collections:1.0
-      command: "-i {{$.Orchestrator}}:{{.RestPort}} -b $0 -o create -s scope-{{$sc}} -c coll --count $2"
+      command: "-i $0:{{.RestPort}} -b $1 -o create -s scope-{{$sc}} -c coll --count $3"
       ### There is a bug in sequoia which causes issues when using variable name inside a foreach loop. Need to fix and optimize this part
       wait: true
 
 # Template to delete collections
-# $0 = bucketname
-# $1 = Number of scopes - 1
-# $2 = Number of collections to be created per scope
+# $0 = Cluster
+# $1 = bucketname
+# $2 = Number of scopes - 1
+# $3 = Number of collections to be created per scope
 -
   name: delete-collections
   actions:
     -
-      foreach: "{{range $i, $sc := mkrange 0 $1}}"
+      foreach: "{{range $i, $sc := mkrange 0 $2}}"
       image: sequoiatools/collections:1.0
-      command: "-i {{$.Orchestrator}}:8091 -b $0 -o delete -s scope-{{$sc}} -c coll_1 --count $2"
+      command: "-i $0:8091 -b $1 -o delete -s scope-{{$sc}} -c coll_1 --count $3"
       wait: true
