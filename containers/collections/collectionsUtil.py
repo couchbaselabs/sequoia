@@ -1,3 +1,5 @@
+import random
+
 import httplib2
 import json
 from optparse import OptionParser
@@ -11,10 +13,16 @@ class CollectionOperations():
         parser.add_option("-u",dest="username",default="Administrator",help="user name default=Administrator")
         parser.add_option("-p",dest="password",default="password",help="password default=password")
         parser.add_option("-b",dest="bucket",default="default",help="bucket, default=default")
-        parser.add_option("-o",dest="operations",choices=['get','create','delete'],help="create or delete scope/collections")
+        parser.add_option("-o",dest="operations",choices=['get','create','delete','create_multi_scope_collection'],help="create or delete scope/collections")
         parser.add_option("-s",dest="scopename",help="scope name")
         parser.add_option("-c",dest="collectionname",help="collection name")
         parser.add_option("--count",dest="count",type="int",default=1,help="count of collection/scope to be created/deleted, default=1")
+        parser.add_option("--scope_count", dest="scope_count", type="int", default=1,
+                          help="count of scopes to be created in multi-scope/coll operation, default=1")
+        parser.add_option("--collection_count", dest="collection_count", type="int", default=1,
+                          help="count of scopes to be created in multi-scope/coll operation, default=1")
+        parser.add_option("--collection_distribution", dest="collection_distribution", choices=["uniform","random"],
+                          default="uniform",help="Number of collections per scope to be created uniformly/randomly")
         #parser.add_option("--list",dest="list",type="string",help="list of collections/scope to be deleted")
 
         options, args = parser.parse_args()
@@ -59,6 +67,8 @@ class CollectionOperations():
                     self.delete_multiple_collection(options.bucket,options.scopename,options.collectionname,self.count)
         elif options.operations =="get":
             self.getallcollections(options.bucket)
+        elif options.operations == "create_multi_scope_collection":
+            self.create_multi_scopes_collections(options.bucket, options.scope_count, options.collection_count, options.scopename, options.collectionname, options.collection_distribution)
 
     def getallcollections(self,bucket):
         url=bucket+"/collections"
@@ -75,6 +85,12 @@ class CollectionOperations():
         print(json.dumps(collection_map, sort_keys=True,indent=4))
         return collection_map
 
+    def getallscopes(self,bucket):
+        url = bucket+"/collections"
+        passed, content, response=self.api_call(url, "GET")
+        scopes_list = content["scopes"]
+        return scopes_list
+
     def create_scope(self,bucket,scope):
         scope_list=scope.split(",")
         for scope in scope_list:
@@ -83,9 +99,28 @@ class CollectionOperations():
             passed,response,content=self.api_call(url,"POST",body=scope_body)
             print(response,content)
     
-    def create_multiple_scope(self,bucket,scope,count):
+    def create_multiple_scope(self, bucket, scope, count):
         for i in range(count):
-            self.create_scope(bucket,scope+"-"+str(i))
+            self.create_scope(bucket, scope + "-" + str(i))
+
+    def create_multi_scopes_collections(self, bucket, scope_count, collection_count, scope_prefix="scope_", collection_prefix="coll_", collection_distribution="uniform"):
+        collections_created = 0
+        for i in range(0, scope_count):
+            self.create_scope(bucket, scope_prefix + str(i))
+            if collection_distribution == "uniform":
+                num_collections = (collection_count - collections_created) // (scope_count - i)
+            else:
+                num_collections = random.randint(int((collection_count - collections_created) // (scope_count - i) * 0.5), int((collection_count - collections_created) // (scope_count - i)*1.5))
+
+            if collections_created >= collection_count:
+                num_collections = 0
+            if (collections_created + num_collections) > collection_count:
+                num_collections = collection_count - collections_created
+
+            if num_collections > 0:
+                self.create_multiple_collection(bucket, scope_prefix + str(i), collection_prefix, num_collections)
+
+            collections_created += num_collections
 
     def create_collection(self,bucket,scope,collection):
         coll_list=collection.split(",")

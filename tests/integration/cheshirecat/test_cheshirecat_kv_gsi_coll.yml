@@ -9,52 +9,28 @@
   command: "setting-compaction -c {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}} --metadata-purge-interval .04 --compaction-db-percentage 30 --compaction-view-percentage 30"
   wait: true
 
-###### Create scopes and collections in local cluster ######
-- template: create-scopes
-  args: "{{.Orchestrator}}, {{.NthBucket 4}}, 7"
+### create 35 scopes and 250 collections in local cluster across 6 buckets as scope_1,scope_2 ... ######
+- template: create-multi-scopes-collections
+  args: "{{.Orchestrator}}, {{.NthBucket 4}}, 7, 56, uniform"
   requires:  "{{eq true .DoOnce }}"
-- args: "{{.Orchestrator}}, {{.NthBucket 5}}, 6"
+- args: "{{.Orchestrator}}, {{.NthBucket 5}}, 6, 48, uniform"
   requires:  "{{eq true .DoOnce }}"
-- args: "{{.Orchestrator}}, {{.NthBucket 6}}, 6"
+- args: "{{.Orchestrator}}, {{.NthBucket 6}}, 6, 48, uniform"
   requires:  "{{eq true .DoOnce }}"
-- args: "{{.Orchestrator}}, {{.NthBucket 7}}, 6"
+- args: "{{.Orchestrator}}, {{.NthBucket 7}}, 6, 48, uniform"
   requires:  "{{eq true .DoOnce }}"
-## Create 10 scopes across 2 buckets as scope-1, scope-2. The Collection CRUD workload will be run against these buckets.
-- args: "{{.Orchestrator}}, {{.NthBucket 8}}, 5"
+- args: "{{.Orchestrator}}, {{.NthBucket 8}}, 5, 25, uniform"
   requires:  "{{eq true .DoOnce }}"
-- args: "{{.Orchestrator}}, {{.NthBucket 9}}, 5"
-  requires:  "{{eq true .DoOnce }}"
-
-- template: create-collections
-  args: "{{.Orchestrator}}, {{.NthBucket 4}}, 6, 8"
-  requires:  "{{eq true .DoOnce }}"
-- args: "{{.Orchestrator}}, {{.NthBucket 5}}, 5, 8"
-  requires:  "{{eq true .DoOnce }}"
-- args: "{{.Orchestrator}}, {{.NthBucket 6}}, 5, 8"
-  requires:  "{{eq true .DoOnce }}"
-- args: "{{.Orchestrator}}, {{.NthBucket 7}}, 5, 8"
-  requires:  "{{eq true .DoOnce }}"
-- args: "{{.Orchestrator}}, {{.NthBucket 8}}, 4, 5"
-  requires:  "{{eq true .DoOnce }}"
-- args: "{{.Orchestrator}}, {{.NthBucket 9}}, 4, 5"
+- args: "{{.Orchestrator}}, {{.NthBucket 9}}, 5, 25, uniform"
   requires:  "{{eq true .DoOnce }}"
 
 ###### Create scopes and collections in remote cluster  ######
-- template: create-scopes
-  args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 4}}, 7"
+- template: create-multi-scopes-collections
+  args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 4}}, 7, 56, uniform"
   requires:  "{{eq true .DoOnce }}"
-## Create 10 scopes across 2 buckets as scope-1, scope-2. The Collection CRUD workload will be run against these buckets.
-- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 8}}, 5"
+- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 8}}, 5, 25, uniform"
   requires:  "{{eq true .DoOnce }}"
-- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 9}}, 5"
-  requires:  "{{eq true .DoOnce }}"
-
-- template: create-collections
-  args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 4}}, 6, 8"
-  requires:  "{{eq true .DoOnce }}"
-- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 8}}, 4, 5"
-  requires:  "{{eq true .DoOnce }}"
-- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 9}}, 4, 5"
+- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 9}}, 5, 25, uniform"
   requires:  "{{eq true .DoOnce }}"
 
 # Sleep for some time to allow collections manifest to sync
@@ -99,11 +75,11 @@
   wait: true
 
 ### recreate the dropped collections
-- template: create-collections
-  args: "{{.Orchestrator}}, {{.NthBucket 8}}, 4, 5"
-- args: "{{.Orchestrator}}, {{.NthBucket 9}}, 4, 5"
-- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 8}}, 4, 5"
-- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 9}}, 4, 5"
+- template: create-multi-scopes-collections
+  args: "{{.Orchestrator}}, {{.NthBucket 8}}, 5, 25, uniform"
+- args: "{{.Orchestrator}}, {{.NthBucket 9}}, 5, 25, uniform"
+- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 8}}, 5, 25, uniform"
+- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 9}}, 5, 25, uniform"
 
 #### Load pillowfight data to bucket8 & 9 ####
 -
@@ -220,11 +196,11 @@
   wait: true
 
 ### recreate the dropped collections
-- template: create-collections
-  args: "{{.Orchestrator}}, {{.NthBucket 8}}, 4, 5"
-- args: "{{.Orchestrator}}, {{.NthBucket 9}}, 4, 5"
-- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 8}}, 4, 5"
-- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 9}}, 4, 5"
+- template: create-multi-scopes-collections
+  args: "{{.Orchestrator}}, {{.NthBucket 8}}, 5, 25, uniform"
+- args: "{{.Orchestrator}}, {{.NthBucket 9}}, 5, 25, uniform"
+- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 8}}, 5, 25, uniform"
+- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 9}}, 5, 25, uniform"
 
 #### Load pillowfight data to bucket8 & 9 ####
 -
@@ -273,11 +249,11 @@
   section: topology_change
 
 ### recreate the dropped collections
-- template: create-collections
-  args: "{{.Orchestrator}}, {{.NthBucket 8}}, 4, 5"
-- args: "{{.Orchestrator}}, {{.NthBucket 9}}, 4, 5"
-- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 8}}, 4, 5"
-- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 9}}, 4, 5"
+- template: create-multi-scopes-collections
+  args: "{{.Orchestrator}}, {{.NthBucket 8}}, 5, 25, uniform"
+- args: "{{.Orchestrator}}, {{.NthBucket 9}}, 5, 25, uniform"
+- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 8}}, 5, 25, uniform"
+- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 9}}, 5, 25, uniform"
 
 #### Load pillowfight data to bucket8 & 9 ####
 -
@@ -310,11 +286,11 @@
   section: analytics_topology_change
 
 ### recreate the dropped collections  --> Replace this with the Collection CRUD workload that will run throughout the test in the background
-- template: create-collections
-  args: "{{.Orchestrator}}, {{.NthBucket 8}}, 4, 5"
-- args: "{{.Orchestrator}}, {{.NthBucket 9}}, 4, 5"
-- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 8}}, 4, 5"
-- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 9}}, 4, 5"
+- template: create-multi-scopes-collections
+  args: "{{.Orchestrator}}, {{.NthBucket 8}}, 5, 25, uniform"
+- args: "{{.Orchestrator}}, {{.NthBucket 9}}, 5, 25, uniform"
+- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 8}}, 5, 25, uniform"
+- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 9}}, 5, 25, uniform"
 
 #### Load pillowfight data to bucket8 & 9 ####
 -
@@ -444,11 +420,11 @@
   section: change_indexer_topologies
 
 ### recreate the dropped collections  --> Replace this with the Collection CRUD workload that will run throughout the test in the background
-- template: create-collections
-  args: "{{.Orchestrator}}, {{.NthBucket 8}}, 4, 5"
-- args: "{{.Orchestrator}}, {{.NthBucket 9}}, 4, 5"
-- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 8}}, 4, 5"
-- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 9}}, 4, 5"
+- template: create-multi-scopes-collections
+  args: "{{.Orchestrator}}, {{.NthBucket 8}}, 5, 25, uniform"
+- args: "{{.Orchestrator}}, {{.NthBucket 9}}, 5, 25, uniform"
+- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 8}}, 5, 25, uniform"
+- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 9}}, 5, 25, uniform"
 
 #### Load pillowfight data to bucket8 & 9 ####
 -
@@ -492,11 +468,11 @@
   wait: true
 
 ### recreate the dropped collections  --> Replace this with the Collection CRUD workload that will run throughout the test in the background
-- template: create-collections
-  args: "{{.Orchestrator}}, {{.NthBucket 8}}, 4, 5"
-- args: "{{.Orchestrator}}, {{.NthBucket 9}}, 4, 5"
-- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 8}}, 4, 5"
-- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 9}}, 4, 5"
+- template: create-multi-scopes-collections
+  args: "{{.Orchestrator}}, {{.NthBucket 8}}, 5, 25, uniform"
+- args: "{{.Orchestrator}}, {{.NthBucket 9}}, 5, 25, uniform"
+- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 8}}, 5, 25, uniform"
+- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 9}}, 5, 25, uniform"
 
 #### Load pillowfight data to bucket8 & 9 ####
 -
@@ -543,11 +519,11 @@
   wait: true
 
 ### recreate the dropped collections  --> Replace this with the Collection CRUD workload that will run throughout the test in the background
-- template: create-collections
-  args: "{{.Orchestrator}}, {{.NthBucket 8}}, 4, 5"
-- args: "{{.Orchestrator}}, {{.NthBucket 9}}, 4, 5"
-- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 8}}, 4, 5"
-- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 9}}, 4, 5"
+- template: create-multi-scopes-collections
+  args: "{{.Orchestrator}}, {{.NthBucket 8}}, 5, 25, uniform"
+- args: "{{.Orchestrator}}, {{.NthBucket 9}}, 5, 25, uniform"
+- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 8}}, 5, 25, uniform"
+- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 9}}, 5, 25, uniform"
 
 #### Load pillowfight data to bucket8 & 9 ####
 -
@@ -580,11 +556,11 @@
   wait: true
 
 ### recreate the dropped collections  --> Replace this with the Collection CRUD workload that will run throughout the test in the background
-- template: create-collections
-  args: "{{.Orchestrator}}, {{.NthBucket 8}}, 4, 5"
-- args: "{{.Orchestrator}}, {{.NthBucket 9}}, 4, 5"
-- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 8}}, 4, 5"
-- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 9}}, 4, 5"
+- template: create-multi-scopes-collections
+  args: "{{.Orchestrator}}, {{.NthBucket 8}}, 5, 25, uniform"
+- args: "{{.Orchestrator}}, {{.NthBucket 9}}, 5, 25, uniform"
+- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 8}}, 5, 25, uniform"
+- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 9}}, 5, 25, uniform"
 
 #### Load pillowfight data to bucket8 & 9 ####
 -
@@ -621,11 +597,11 @@
   wait: true
 
 ### recreate the dropped collections  --> Replace this with the Collection CRUD workload that will run throughout the test in the background
-- template: create-collections
-  args: "{{.Orchestrator}}, {{.NthBucket 8}}, 4, 5"
-- args: "{{.Orchestrator}}, {{.NthBucket 9}}, 4, 5"
-- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 8}}, 4, 5"
-- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 9}}, 4, 5"
+- template: create-multi-scopes-collections
+  args: "{{.Orchestrator}}, {{.NthBucket 8}}, 5, 25, uniform"
+- args: "{{.Orchestrator}}, {{.NthBucket 9}}, 5, 25, uniform"
+- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 8}}, 5, 25, uniform"
+- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 9}}, 5, 25, uniform"
 
 #### Load pillowfight data to bucket8 & 9 ####
 -

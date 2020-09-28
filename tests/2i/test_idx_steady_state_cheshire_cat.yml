@@ -4,33 +4,15 @@
 - template: set_gsi_config
   args: "{{.ActiveIndexNode 0}}, 'indexer.plasma.backIndex.enablePageBloomFilter':true"
 
-### create 20 scopes across 3 buckets as scope-1,scope-2 ... ######
+### create 20 scopes and 200 collections across 3 buckets as scope_1,scope_2 ... ######
 -
   image: sequoiatools/collections:1.0
-  command: "-i {{.Orchestrator}}:8091 -b {{.Bucket}} -o create -s scope --count 7"
+  command: "-i {{.Orchestrator}}:8091 -b {{.Bucket}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count=7 --collection_count=70 --collection_distribution=random"
   wait: true
-- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 1}} -o create -s scope --count 7"
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 1}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count=7 --collection_count=70 --collection_distribution=random"
   wait: true
-- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 2}} -o create -s scope --count 6"
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 2}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count=6 --collection_count=60 --collection_distribution=random"
   wait: true
-
-### create 10 collections for each newly create scope as coll-1,coll-2.... ####
--
-  foreach: "{{range $i, $sc := mkrange 0 6}}"
-  image: sequoiatools/collections:1.0
-  command: "-i {{$.Orchestrator}}:8091 -b {{$.Bucket}} -o create -s scope-{{$sc}} -c coll --count 10"
-  wait: true
--
-  foreach: "{{range $i, $sc := mkrange 0 6}}"
-  image: sequoiatools/collections:1.0
-  command: "-i {{$.Orchestrator}}:8091 -b bucket2 -o create -s scope-{{$sc}} -c coll --count 10"
-  wait: true
--
-  foreach: "{{range $i, $sc := mkrange 0 5}}"
-  image: sequoiatools/collections:1.0
-  command: "-i {{$.Orchestrator}}:8091 -b bucket3 -o create -s scope-{{$sc}} -c coll --count 10"
-  wait: true
-
 
 # Sleep for some time to allow collections manifest to sync
 -

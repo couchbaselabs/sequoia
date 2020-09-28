@@ -36,5 +36,18 @@
     -
       foreach: "{{range $i, $sc := mkrange 0 $2}}"
       image: sequoiatools/collections:1.0
-      command: "-i $0:8091 -b $1 -o delete -s scope-{{$sc}} -c coll_1 --count $3"
+      command: "-i $0:{{.RestPort}} -b $1 -o delete -s scope-{{$sc}} -c coll_1 --count $3"
+      wait: true
+
+# Template to delete collections
+# $0 = Cluster
+# $1 = bucketname
+# $2 = Number of scopes - 1
+# $3 = Number of collections to be created per scope
+-
+  name: create-multi-scopes-collections
+  actions:
+    -
+      image: sequoiatools/collections:1.0
+      command: "-i $0:{{.RestPort}} -b $1 -o create_multi_scope_collection -s scope_ -c coll_ --scope_count=$2 --collection_count=$3 --collection_distribution=$4"
       wait: true
