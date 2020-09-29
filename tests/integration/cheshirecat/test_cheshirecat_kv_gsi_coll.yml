@@ -44,17 +44,6 @@
 - template: pillowfight_durability
   args: "{{.Orchestrator}}, {{.Bucket}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 2000}}, {{.AuthPassword}} --durability majority"
 
-#### Load pillowfight data to bucket8 & 9 ####
--
-  foreach: "{{range $i, $sc := mkrange 0 4}}"
-  image: sequoiatools/pillowfight:7.0
-  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{.NthBucket 8}} -I {{$.Scale 1000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 500}} --random-body
-  --collection scope{{$sc}}.collection1 --collection scope{{$sc}}.collection2 --collection scope{{$sc}}.collection3 --collection scope{{$sc}}.collection4 --collection scope{{$sc}}.collection5
-  --json"
-- command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{.NthBucket 9}} -I {{$.Scale 1000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 500}} --random-body
-  --collection scope{{$sc}}.collection1 --collection scope{{$sc}}.collection2 --collection scope{{$sc}}.collection3 --collection scope{{$sc}}.collection4 --collection scope{{$sc}}.collection5
-  --json"
-  
 # Sleep for some time to allow some docs to be loaded to the collections
 -
    image: sequoiatools/cmd
@@ -80,17 +69,6 @@
 - args: "{{.Orchestrator}}, {{.NthBucket 9}}, 5, 25, uniform"
 - args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 8}}, 5, 25, uniform"
 - args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 9}}, 5, 25, uniform"
-
-#### Load pillowfight data to bucket8 & 9 ####
--
-  foreach: "{{range $i, $sc := mkrange 0 4}}"
-  image: sequoiatools/pillowfight:7.0
-  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{.NthBucket 8}} -I {{$.Scale 1000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 500}} --random-body
-  --collection scope{{$sc}}.collection1 --collection scope{{$sc}}.collection2 --collection scope{{$sc}}.collection3 --collection scope{{$sc}}.collection4 --collection scope{{$sc}}.collection5
-  --json"
-- command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{.NthBucket 9}} -I {{$.Scale 1000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 500}} --random-body
-  --collection scope{{$sc}}.collection1 --collection scope{{$sc}}.collection2 --collection scope{{$sc}}.collection3 --collection scope{{$sc}}.collection4 --collection scope{{$sc}}.collection5
-  --json"
 
 # Sleep for some time to allow some docs to be loaded to the collections
 -
@@ -165,14 +143,10 @@
 
 ############### data loading to collections ################
 - image: sequoiatools/catapult
-  command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 4}} -n {{.Scale 40000}} -pc 100 -pu 25 -pd 25 -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf
-    -fu \"\" -ac True"
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 5}} -n {{.Scale 40000}} -pc 100 -pu 25 -pd 25 -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf
-    -fu \"\" -ac True"
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 6}} -n {{.Scale 40000}} -pc 100 -pu 25 -pd 25 -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf
-    -fu \"\" -ac True"
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 7}} -n {{.Scale 40000}} -pc 100 -pu 25 -pd 25 -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf
-    -fu \"\" -ac True"
+  command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 4}} -n {{.Scale 40000}} -pc 100 -pu 25 -pd 25 -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 60 -fu price,free_parking -ac True"
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 5}} -n {{.Scale 40000}} -pc 100 -pu 25 -pd 25 -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 60 -fu price,free_parking -ac True"
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 6}} -n {{.Scale 40000}} -pc 100 -pu 25 -pd 25 -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 60 -fu price,free_parking -ac True"
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 7}} -n {{.Scale 40000}} -pc 100 -pu 25 -pd 25 -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 60 -fu price,free_parking -ac True"
 
 
 # query replica indexes
@@ -201,17 +175,6 @@
 - args: "{{.Orchestrator}}, {{.NthBucket 9}}, 5, 25, uniform"
 - args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 8}}, 5, 25, uniform"
 - args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 9}}, 5, 25, uniform"
-
-#### Load pillowfight data to bucket8 & 9 ####
--
-  foreach: "{{range $i, $sc := mkrange 0 4}}"
-  image: sequoiatools/pillowfight:7.0
-  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{.NthBucket 8}} -I {{$.Scale 1000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 500}} --random-body
-  --collection scope{{$sc}}.collection1 --collection scope{{$sc}}.collection2 --collection scope{{$sc}}.collection3 --collection scope{{$sc}}.collection4 --collection scope{{$sc}}.collection5
-  --json"
-- command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{.NthBucket 9}} -I {{$.Scale 1000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 500}} --random-body
-  --collection scope{{$sc}}.collection1 --collection scope{{$sc}}.collection2 --collection scope{{$sc}}.collection3 --collection scope{{$sc}}.collection4 --collection scope{{$sc}}.collection5
-  --json"
 
 # Sleep for some time to allow some docs to be loaded to the collections
 -
@@ -255,18 +218,6 @@
 - args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 8}}, 5, 25, uniform"
 - args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 9}}, 5, 25, uniform"
 
-#### Load pillowfight data to bucket8 & 9 ####
--
-  foreach: "{{range $i, $sc := mkrange 0 4}}"
-  image: sequoiatools/pillowfight:7.0
-  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{.NthBucket 8}} -I {{$.Scale 1000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 500}} --random-body
-  --collection scope{{$sc}}.collection1 --collection scope{{$sc}}.collection2 --collection scope{{$sc}}.collection3 --collection scope{{$sc}}.collection4 --collection scope{{$sc}}.collection5
-  --json"
-- command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{.NthBucket 9}} -I {{$.Scale 1000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 500}} --random-body
-  --collection scope{{$sc}}.collection1 --collection scope{{$sc}}.collection2 --collection scope{{$sc}}.collection3 --collection scope{{$sc}}.collection4 --collection scope{{$sc}}.collection5
-  --json"
-
-
 # Sleep for some time to allow some docs to be loaded to the collections
 -
    image: sequoiatools/cmd
@@ -291,17 +242,6 @@
 - args: "{{.Orchestrator}}, {{.NthBucket 9}}, 5, 25, uniform"
 - args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 8}}, 5, 25, uniform"
 - args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 9}}, 5, 25, uniform"
-
-#### Load pillowfight data to bucket8 & 9 ####
--
-  foreach: "{{range $i, $sc := mkrange 0 4}}"
-  image: sequoiatools/pillowfight:7.0
-  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{.NthBucket 8}} -I {{$.Scale 1000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 500}} --random-body
-  --collection scope{{$sc}}.collection1 --collection scope{{$sc}}.collection2 --collection scope{{$sc}}.collection3 --collection scope{{$sc}}.collection4 --collection scope{{$sc}}.collection5
-  --json"
-- command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{.NthBucket 9}} -I {{$.Scale 1000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 500}} --random-body
-  --collection scope{{$sc}}.collection1 --collection scope{{$sc}}.collection2 --collection scope{{$sc}}.collection3 --collection scope{{$sc}}.collection4 --collection scope{{$sc}}.collection5
-  --json"
 
 # Sleep for some time to allow some docs to be loaded to the collections
 -
@@ -426,17 +366,6 @@
 - args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 8}}, 5, 25, uniform"
 - args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 9}}, 5, 25, uniform"
 
-#### Load pillowfight data to bucket8 & 9 ####
--
-  foreach: "{{range $i, $sc := mkrange 0 4}}"
-  image: sequoiatools/pillowfight:7.0
-  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{.NthBucket 8}} -I {{$.Scale 1000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 500}} --random-body
-  --collection scope{{$sc}}.collection1 --collection scope{{$sc}}.collection2 --collection scope{{$sc}}.collection3 --collection scope{{$sc}}.collection4 --collection scope{{$sc}}.collection5
-  --json"
-- command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{.NthBucket 9}} -I {{$.Scale 1000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 500}} --random-body
-  --collection scope{{$sc}}.collection1 --collection scope{{$sc}}.collection2 --collection scope{{$sc}}.collection3 --collection scope{{$sc}}.collection4 --collection scope{{$sc}}.collection5
-  --json"
-
 # Sleep for some time to allow some docs to be loaded to the collections
 -
    image: sequoiatools/cmd
@@ -473,17 +402,6 @@
 - args: "{{.Orchestrator}}, {{.NthBucket 9}}, 5, 25, uniform"
 - args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 8}}, 5, 25, uniform"
 - args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 9}}, 5, 25, uniform"
-
-#### Load pillowfight data to bucket8 & 9 ####
--
-  foreach: "{{range $i, $sc := mkrange 0 4}}"
-  image: sequoiatools/pillowfight:7.0
-  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{.NthBucket 8}} -I {{$.Scale 1000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 500}} --random-body
-  --collection scope{{$sc}}.collection1 --collection scope{{$sc}}.collection2 --collection scope{{$sc}}.collection3 --collection scope{{$sc}}.collection4 --collection scope{{$sc}}.collection5
-  --json"
-- command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{.NthBucket 9}} -I {{$.Scale 1000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 500}} --random-body
-  --collection scope{{$sc}}.collection1 --collection scope{{$sc}}.collection2 --collection scope{{$sc}}.collection3 --collection scope{{$sc}}.collection4 --collection scope{{$sc}}.collection5
-  --json"
 
 # Sleep for some time to allow some docs to be loaded to the collections
 -
@@ -525,17 +443,6 @@
 - args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 8}}, 5, 25, uniform"
 - args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 9}}, 5, 25, uniform"
 
-#### Load pillowfight data to bucket8 & 9 ####
--
-  foreach: "{{range $i, $sc := mkrange 0 4}}"
-  image: sequoiatools/pillowfight:7.0
-  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{.NthBucket 8}} -I {{$.Scale 1000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 500}} --random-body
-  --collection scope{{$sc}}.collection1 --collection scope{{$sc}}.collection2 --collection scope{{$sc}}.collection3 --collection scope{{$sc}}.collection4 --collection scope{{$sc}}.collection5
-  --json"
-- command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{.NthBucket 9}} -I {{$.Scale 1000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 500}} --random-body
-  --collection scope{{$sc}}.collection1 --collection scope{{$sc}}.collection2 --collection scope{{$sc}}.collection3 --collection scope{{$sc}}.collection4 --collection scope{{$sc}}.collection5
-  --json"
-
 # Sleep for some time to allow some docs to be loaded to the collections
 -
    image: sequoiatools/cmd
@@ -561,17 +468,6 @@
 - args: "{{.Orchestrator}}, {{.NthBucket 9}}, 5, 25, uniform"
 - args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 8}}, 5, 25, uniform"
 - args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 9}}, 5, 25, uniform"
-
-#### Load pillowfight data to bucket8 & 9 ####
--
-  foreach: "{{range $i, $sc := mkrange 0 4}}"
-  image: sequoiatools/pillowfight:7.0
-  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{.NthBucket 8}} -I {{$.Scale 1000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 500}} --random-body
-  --collection scope{{$sc}}.collection1 --collection scope{{$sc}}.collection2 --collection scope{{$sc}}.collection3 --collection scope{{$sc}}.collection4 --collection scope{{$sc}}.collection5
-  --json"
-- command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{.NthBucket 9}} -I {{$.Scale 1000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 500}} --random-body
-  --collection scope{{$sc}}.collection1 --collection scope{{$sc}}.collection2 --collection scope{{$sc}}.collection3 --collection scope{{$sc}}.collection4 --collection scope{{$sc}}.collection5
-  --json"
 
 # Sleep for some time to allow some docs to be loaded to the collections
 -
@@ -602,17 +498,6 @@
 - args: "{{.Orchestrator}}, {{.NthBucket 9}}, 5, 25, uniform"
 - args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 8}}, 5, 25, uniform"
 - args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 9}}, 5, 25, uniform"
-
-#### Load pillowfight data to bucket8 & 9 ####
--
-  foreach: "{{range $i, $sc := mkrange 0 4}}"
-  image: sequoiatools/pillowfight:7.0
-  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{.NthBucket 8}} -I {{$.Scale 1000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 500}} --random-body
-  --collection scope{{$sc}}.collection1 --collection scope{{$sc}}.collection2 --collection scope{{$sc}}.collection3 --collection scope{{$sc}}.collection4 --collection scope{{$sc}}.collection5
-  --json"
-- command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{.NthBucket 9}} -I {{$.Scale 1000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 500}} --random-body
-  --collection scope{{$sc}}.collection1 --collection scope{{$sc}}.collection2 --collection scope{{$sc}}.collection3 --collection scope{{$sc}}.collection4 --collection scope{{$sc}}.collection5
-  --json"
 
 # Sleep for some time to allow some docs to be loaded to the collections
 -
