@@ -51,24 +51,10 @@
    command: "600"
    wait: true
 
-### delete all collections in scope #### --> Replace this with the Collection CRUD workload that will run throughout the test in the background
-- template: delete-collections
-  args: "{{.Orchestrator}}, {{.NthBucket 8}}, 4, 5"
-- args: "{{.Orchestrator}}, {{.NthBucket 9}}, 4, 5"
-- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 8}}, 4, 5"
-- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 9}}, 4, 5"
-
 # rebalance out a node
 - template: rebalance_out
   args: "{{.ActiveDataNode 1}}:{{.RestPort}}"
   wait: true
-
-### recreate the dropped collections
-- template: create-multi-scopes-collections
-  args: "{{.Orchestrator}}, {{.NthBucket 8}}, 5, 25, uniform"
-- args: "{{.Orchestrator}}, {{.NthBucket 9}}, 5, 25, uniform"
-- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 8}}, 5, 25, uniform"
-- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 9}}, 5, 25, uniform"
 
 # Sleep for some time to allow some docs to be loaded to the collections
 -
@@ -157,24 +143,10 @@
 - command: "-J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.5.6/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration {{.Scale 3600}} --print_duration=3600 --bucket {{.NthBucket 7}} --querycount 10 --threads 10 --n1ql True --query_timeout=600 --scan_consistency REQUEST_PLUS --bucket_names [{{.NthBucket 4}},{{.NthBucket 5}},{{.NthBucket 6}},{{.NthBucket 7}}] --collections_mode --dataset hotel"
   wait: true
 
-### delete all collections in scope ####
-- template: delete-collections
-  args: "{{.Orchestrator}}, {{.NthBucket 8}}, 4, 5"
-- args: "{{.Orchestrator}}, {{.NthBucket 9}}, 4, 5"
-- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 8}}, 4, 5"
-- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 9}}, 4, 5"
-
 # swap rebalance
 - template: rebalance_swap
   args: "{{.InActiveNode}}, {{.ActiveDataNode 2}}"
   wait: true
-
-### recreate the dropped collections
-- template: create-multi-scopes-collections
-  args: "{{.Orchestrator}}, {{.NthBucket 8}}, 5, 25, uniform"
-- args: "{{.Orchestrator}}, {{.NthBucket 9}}, 5, 25, uniform"
-- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 8}}, 5, 25, uniform"
-- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 9}}, 5, 25, uniform"
 
 # Sleep for some time to allow some docs to be loaded to the collections
 -
@@ -200,23 +172,9 @@
 - command: "kv --ops {{.Scale 600}} --create 15 --get 80 --delete 5  --expire 100 --ttl 660 --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 128"
   duration: 7200
 
-### delete all collections in scope ####
-- template: delete-collections
-  args: "{{.Orchestrator}}, {{.NthBucket 8}}, 4, 5"
-- args: "{{.Orchestrator}}, {{.NthBucket 9}}, 4, 5"
-- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 8}}, 4, 5"
-- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 9}}, 4, 5"
-
 # Change the topology (performs rebalance in/out/swap eventing nodes)
 - test: tests/eventing/test_eventing_rebalance_integration_timers.yml
   section: topology_change
-
-### recreate the dropped collections
-- template: create-multi-scopes-collections
-  args: "{{.Orchestrator}}, {{.NthBucket 8}}, 5, 25, uniform"
-- args: "{{.Orchestrator}}, {{.NthBucket 9}}, 5, 25, uniform"
-- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 8}}, 5, 25, uniform"
-- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 9}}, 5, 25, uniform"
 
 # Sleep for some time to allow some docs to be loaded to the collections
 -
@@ -225,23 +183,9 @@
    command: "600"
    wait: true
 
-### delete all collections in scope #### --> Replace this with the Collection CRUD workload that will run throughout the test in the background
-- template: delete-collections
-  args: "{{.Orchestrator}}, {{.NthBucket 8}}, 4, 5"
-- args: "{{.Orchestrator}}, {{.NthBucket 9}}, 4, 5"
-- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 8}}, 4, 5"
-- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 9}}, 4, 5"
-
 # Change the topology (performs rebalance in/out/swap analytics nodes)
 - test: tests/analytics/test_analytics_integration.yml
   section: analytics_topology_change
-
-### recreate the dropped collections  --> Replace this with the Collection CRUD workload that will run throughout the test in the background
-- template: create-multi-scopes-collections
-  args: "{{.Orchestrator}}, {{.NthBucket 8}}, 5, 25, uniform"
-- args: "{{.Orchestrator}}, {{.NthBucket 9}}, 5, 25, uniform"
-- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 8}}, 5, 25, uniform"
-- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 9}}, 5, 25, uniform"
 
 # Sleep for some time to allow some docs to be loaded to the collections
 -
@@ -348,23 +292,9 @@
 - template: pillowfight_htp
   wait: true
 
-### delete all collections in scope #### --> Replace this with the Collection CRUD workload that will run throughout the test in the background
-- template: delete-collections
-  args: "{{.Orchestrator}}, {{.NthBucket 8}}, 4, 5"
-- args: "{{.Orchestrator}}, {{.NthBucket 9}}, 4, 5"
-- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 8}}, 4, 5"
-- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 9}}, 4, 5"
-
 # change the topologies on the 2i test
 - test: tests/2i/test_idx_mad_hatter_integration.yml
   section: change_indexer_topologies
-
-### recreate the dropped collections  --> Replace this with the Collection CRUD workload that will run throughout the test in the background
-- template: create-multi-scopes-collections
-  args: "{{.Orchestrator}}, {{.NthBucket 8}}, 5, 25, uniform"
-- args: "{{.Orchestrator}}, {{.NthBucket 9}}, 5, 25, uniform"
-- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 8}}, 5, 25, uniform"
-- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 9}}, 5, 25, uniform"
 
 # Sleep for some time to allow some docs to be loaded to the collections
 -
@@ -381,13 +311,6 @@
 - template: pillowfight_htp
   wait: true
 
-### delete all collections in scope #### --> Replace this with the Collection CRUD workload that will run throughout the test in the background
-- template: delete-collections
-  args: "{{.Orchestrator}}, {{.NthBucket 8}}, 4, 5"
-- args: "{{.Orchestrator}}, {{.NthBucket 9}}, 4, 5"
-- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 8}}, 4, 5"
-- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 9}}, 4, 5"
-
 # swap failover
 - template: add_node
   args: "{{.InActiveNode}}"
@@ -395,13 +318,6 @@
   args: "{{.ActiveDataNode 1}}"
 - template: rebalance
   wait: true
-
-### recreate the dropped collections  --> Replace this with the Collection CRUD workload that will run throughout the test in the background
-- template: create-multi-scopes-collections
-  args: "{{.Orchestrator}}, {{.NthBucket 8}}, 5, 25, uniform"
-- args: "{{.Orchestrator}}, {{.NthBucket 9}}, 5, 25, uniform"
-- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 8}}, 5, 25, uniform"
-- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 9}}, 5, 25, uniform"
 
 # Sleep for some time to allow some docs to be loaded to the collections
 -
@@ -419,13 +335,6 @@
 - template: pillowfight_htp
   wait: true
 
-### delete all collections in scope #### --> Replace this with the Collection CRUD workload that will run throughout the test in the background
-- template: delete-collections
-  args: "{{.Orchestrator}}, {{.NthBucket 8}}, 4, 5"
-- args: "{{.Orchestrator}}, {{.NthBucket 9}}, 4, 5"
-- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 8}}, 4, 5"
-- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 9}}, 4, 5"
-
 # swap hard failover
 - template: add_node
   args: "{{.InActiveNode}}"
@@ -436,13 +345,6 @@
 - template: rebalance
   wait: true
 
-### recreate the dropped collections  --> Replace this with the Collection CRUD workload that will run throughout the test in the background
-- template: create-multi-scopes-collections
-  args: "{{.Orchestrator}}, {{.NthBucket 8}}, 5, 25, uniform"
-- args: "{{.Orchestrator}}, {{.NthBucket 9}}, 5, 25, uniform"
-- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 8}}, 5, 25, uniform"
-- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 9}}, 5, 25, uniform"
-
 # Sleep for some time to allow some docs to be loaded to the collections
 -
    image: sequoiatools/cmd
@@ -450,24 +352,10 @@
    command: "600"
    wait: true
 
-### delete all collections in scope #### --> Replace this with the Collection CRUD workload that will run throughout the test in the background
-- template: delete-collections
-  args: "{{.Orchestrator}}, {{.NthBucket 8}}, 4, 5"
-- args: "{{.Orchestrator}}, {{.NthBucket 9}}, 4, 5"
-- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 8}}, 4, 5"
-- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 9}}, 4, 5"
-
 # do multinode failover , failing only one node as we have 1 replica
 - template: autofailover1Node
   args: "{{.ActiveDataNode 1}}"
   wait: true
-
-### recreate the dropped collections  --> Replace this with the Collection CRUD workload that will run throughout the test in the background
-- template: create-multi-scopes-collections
-  args: "{{.Orchestrator}}, {{.NthBucket 8}}, 5, 25, uniform"
-- args: "{{.Orchestrator}}, {{.NthBucket 9}}, 5, 25, uniform"
-- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 8}}, 5, 25, uniform"
-- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 9}}, 5, 25, uniform"
 
 # Sleep for some time to allow some docs to be loaded to the collections
 -
@@ -479,25 +367,11 @@
 - template: pillowfight_htp
   wait: true
 
-### delete all collections in scope #### --> Replace this with the Collection CRUD workload that will run throughout the test in the background
-- template: delete-collections
-  args: "{{.Orchestrator}}, {{.NthBucket 8}}, 4, 5"
-- args: "{{.Orchestrator}}, {{.NthBucket 9}}, 4, 5"
-- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 8}}, 4, 5"
-- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 9}}, 4, 5"
-
 - template: add_node
   args: "{{.NthInActiveNode 0}}"
 - args: "{{.NthInActiveNode 1}}"
 - template: rebalance
   wait: true
-
-### recreate the dropped collections  --> Replace this with the Collection CRUD workload that will run throughout the test in the background
-- template: create-multi-scopes-collections
-  args: "{{.Orchestrator}}, {{.NthBucket 8}}, 5, 25, uniform"
-- args: "{{.Orchestrator}}, {{.NthBucket 9}}, 5, 25, uniform"
-- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 8}}, 5, 25, uniform"
-- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 9}}, 5, 25, uniform"
 
 # Sleep for some time to allow some docs to be loaded to the collections
 -
