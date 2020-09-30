@@ -11,6 +11,7 @@ import random
 import argparse
 import logging
 import requests
+import time
 
 ## Constants
 
@@ -53,6 +54,7 @@ class IndexManager:
         parser.add_argument("-a", "--action", choices=["create_index", "build_deferred_index", "drop_all_indexes"],
                             help="Choose an action to be performed. Valid actions : create_index | build_deferred_index"
                                  " | drop_all_indexes", default="create_index")
+        parser.add_argument("-m", "--build_max_collections", type=int, default=0, help="Build Indexes on max number of collections")
         parser.add_argument("-t", "--test_mode", help="Test Mode : Create Scopes/Collections", action='store_true')
         args = parser.parse_args()
 
@@ -65,6 +67,7 @@ class IndexManager:
         self.dataset = args.dataset
         self.action = args.action
         self.test_mode = args.test_mode
+        self.max_num_collections = args.build_max_collections
 
         self.idx_def_templates = HOTEL_DS_INDEX_TEMPLATES
 
@@ -260,21 +263,45 @@ class IndexManager:
     query with a subquery that would fetch all deferred indexes for that collection.
     """
 
-    def build_all_deferred_indexes(self, keyspace_name_list):
+    def build_all_deferred_indexes(self, keyspace_name_list, max_collections_to_build=0):
         build_index_query_template = "build index on keyspacename (( select raw name from system:all_indexes where " \
                                      "`using`='gsi' and '`' || `bucket_id` || '`.`' || `scope_id` || '`.`' || " \
                                      "`keyspace_id` || '`' = 'keyspacename' and state = 'deferred'))"
-
+        counter = 0
+        keyspace_batch = []
         for keyspace in keyspace_name_list:
-            build_index_query = build_index_query_template.replace("keyspacename", keyspace)
-            self.log.info("Building indexes for keyspace : {0}".format(keyspace))
-            self.log.info("Query used = {0}".format(build_index_query))
+            if max_collections_to_build > 0:
+                if counter < 10:
+                    build_index_query = build_index_query_template.replace("keyspacename", keyspace)
+                    self.log.info("Building indexes for keyspace : {0}".format(keyspace))
+                    self.log.debug("Query used = {0}".format(build_index_query))
 
-            status, results, queryResult = self._execute_query(build_index_query)
+                    status, results, queryResult = self._execute_query(build_index_query)
+                    counter += 1
+                    keyspace_batch.append(keyspace)
 
-            # Sleep for 2 secs after issuing a build index for all indexes for a collection
-            sleep(2)
-        self.log.info("Building all deferred indexes completed ")
+                    # Sleep for 2 secs after issuing a build index for all indexes for a collection
+                    sleep(2)
+                else:
+                    # Wait for all indexes to be built
+                    indexes_built = self.wait_for_indexes_to_be_built(keyspace_batch)
+                    if not indexes_built:
+                        self.log.error("All indexes not built until timed out")
+                        break
+                    counter = 0
+                    keyspace_batch.clear()
+            else:
+                build_index_query = build_index_query_template.replace("keyspacename", keyspace)
+                self.log.info("Building indexes for keyspace : {0}".format(keyspace))
+                self.log.debug("Query used = {0}".format(build_index_query))
+
+                status, results, queryResult = self._execute_query(build_index_query)
+
+                # Sleep for 2 secs after issuing a build index for all indexes for a collection
+                sleep(2)
+
+        if indexes_built:
+            self.log.info("Building all deferred indexes completed ")
 
     """
     Drop all indexes in the cluster
@@ -297,6 +324,38 @@ class IndexManager:
                     # Sleep for 2 secs after dropping an index
                     sleep(2)
         self.log.info("Drop all indexes completed")
+
+    def wait_for_indexes_to_be_built(self, keyspace_name_list, timeout=3600, sleep_interval=15):
+
+        # select count(*) from system_indexes where '`' || `bucket_id` || '`.`' || `scope_id` " \
+        #                                       "|| '`.`' || `keyspace_id` || '`' in [keyspacename] and state!="online"
+        index_status_check_query_template = "SELECT RAW count(*)  FROM system:all_indexes WHERE '`' || " \
+                                            "`bucket_id` || '`.`' || `scope_id` || '`.`' || `keyspace_id` || '`' " \
+                                            "in keyspace_name_list and state != 'online';"
+
+        st_time = time.time()
+        timedout = st_time + timeout
+        indexes_online = False
+
+        while (timedout > time.time()):
+            query = index_status_check_query_template.replace("keyspace_name_list",str(keyspace_name_list))
+            self.log.debug("Wait query : {0}".format(query))
+            status, result, queryResult = self._execute_query(query)
+            self.log.debug("Result = {0}".format(str(result)))
+            if result == 0:
+                indexes_online = True
+                break
+            else:
+                self.log.debug("Waiting for indexes to be built")
+                sleep(sleep_interval)
+
+        if not indexes_online:
+            self.log.warning("Timed out waiting for indexes to be online")
+
+        return indexes_online
+
+
+
 
     """
     Method to execute a query statement 
@@ -351,7 +410,7 @@ if __name__ == '__main__':
     if indexMgr.action == "create_index":
         indexMgr.create_indexes_on_bucket(keyspace_name_list)
     elif indexMgr.action == "build_deferred_index":
-        indexMgr.build_all_deferred_indexes(keyspace_name_list)
+        indexMgr.build_all_deferred_indexes(keyspace_name_list, indexMgr.max_num_collections)
         # The SDK way to build all deferred indexes is not yet working in Python SDK 3.0.4. To revisit once implemented.
         # indexMgr.build_all_deferred_indexes_sdk(keyspace_name_list)
     elif indexMgr.action == "drop_all_indexes":

@@ -6,17 +6,17 @@ users:
     roles: admin
     auth_domain: local
   -
-    name: bucket1
+    name: WAREHOUSE
     password: password
     roles: admin
     auth_domain: local
   -
-    name: bucket2
+    name: NEW_ORDER
     password: password
     roles: admin
     auth_domain: local
   -
-    name: bucket3
+    name: ITEM
     password: password
     roles: admin
     auth_domain: local
@@ -80,8 +80,8 @@ servers: # each server tag represents a cluster
       rest_port: 8091
       query_port: 8093
       init_nodes: 28
-      buckets: default,bucket1,bucket2,,bucket3,bucket4,bucket5,bucket6,bucket7,bucket8,bucket9
-      users: default,bucket1,bucket2,,bucket3,bucket4,bucket5,bucket6,bucket7,bucket8,bucket9
+      buckets: default,WAREHOUSE,NEW_ORDER,ITEM,bucket4,bucket5,bucket6,bucket7,bucket8,bucket9
+      users: default,WAREHOUSE,NEW_ORDER,ITEM,bucket4,bucket5,bucket6,bucket7,bucket8,bucket9
   -
       name: remote
       count: 2
@@ -106,14 +106,14 @@ buckets:
       ddocs: scale
       compression: active
   -
-      name: bucket1
+      name: WAREHOUSE
       ram: 5%
   -
-      name: bucket2
+      name: NEW_ORDER
       ram: 5%
       ttl: 600
   -
-      name: bucket3
+      name: ITEM
       ram: 5%
       ddocs: all
   -
