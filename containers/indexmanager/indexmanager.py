@@ -127,7 +127,7 @@ class IndexManager:
         for scope in cb_scopes:
             for coll in scope.collections:
                 keyspace_name_list.append("`" + self.bucket_name + "`.`" + scope.name + "`.`" + coll.name + "`")
-
+        self.log.info(str(keyspace_name_list))
         return (keyspace_name_list)
 
     """
@@ -271,18 +271,7 @@ class IndexManager:
         keyspace_batch = []
         for keyspace in keyspace_name_list:
             if max_collections_to_build > 0:
-                if counter < 10:
-                    build_index_query = build_index_query_template.replace("keyspacename", keyspace)
-                    self.log.info("Building indexes for keyspace : {0}".format(keyspace))
-                    self.log.debug("Query used = {0}".format(build_index_query))
-
-                    status, results, queryResult = self._execute_query(build_index_query)
-                    counter += 1
-                    keyspace_batch.append(keyspace)
-
-                    # Sleep for 2 secs after issuing a build index for all indexes for a collection
-                    sleep(2)
-                else:
+                if counter >= 10:
                     # Wait for all indexes to be built
                     indexes_built = self.wait_for_indexes_to_be_built(keyspace_batch)
                     if not indexes_built:
@@ -290,6 +279,17 @@ class IndexManager:
                         break
                     counter = 0
                     keyspace_batch.clear()
+
+                build_index_query = build_index_query_template.replace("keyspacename", keyspace)
+                self.log.info("Building indexes for keyspace : {0}".format(keyspace))
+                self.log.info("Query used = {0}".format(build_index_query))
+
+                status, results, queryResult = self._execute_query(build_index_query)
+                counter += 1
+                keyspace_batch.append(keyspace)
+
+                # Sleep for 2 secs after issuing a build index for all indexes for a collection
+                sleep(2)
             else:
                 build_index_query = build_index_query_template.replace("keyspacename", keyspace)
                 self.log.info("Building indexes for keyspace : {0}".format(keyspace))
@@ -339,10 +339,10 @@ class IndexManager:
 
         while (timedout > time.time()):
             query = index_status_check_query_template.replace("keyspace_name_list",str(keyspace_name_list))
-            self.log.debug("Wait query : {0}".format(query))
+            self.log.info("Wait query : {0}".format(query))
             status, result, queryResult = self._execute_query(query)
-            self.log.debug("Result = {0}".format(str(result)))
-            if result == 0:
+            self.log.info("Result = {0}".format(str(result)))
+            if result[0] == 0:
                 indexes_online = True
                 break
             else:
