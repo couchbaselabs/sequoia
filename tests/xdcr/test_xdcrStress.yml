@@ -1,0 +1,22 @@
+---
+
+#============ Load data ============
+- # continuous
+  image: sequoiatools/catapult
+  command: "-i {{.Nodes | .Cluster 1 | net 0}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -n {{.Scale 5000}} -pc 100 -ac True -lf True"
+- command: "-i {{.Orchestrator}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}} -n {{.Scale 5000}} -pc 100 -pu 25 -pd 25 -dt Person -de {{.Scale 7200}} -ds 1000
+      -fu \"\" -ac True -lf True"
+- command: "-i {{.Orchestrator}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 5}} -n {{.Scale 10000}} -pc 100 -pu 25 -pd 25 -dt Hotel -de {{.Scale 7200}} -ds 1000
+      -fu \"\" -ac True -lf True"
+- command: "-i {{.Orchestrator}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 6}} -n {{.Scale 15000}} -pc 100 -pu 25 -pd 25 -dt Person -de {{.Scale 7200}} -ds 1000
+      -fu \"\" -ac True -lf True"
+- command: "-i {{.Orchestrator}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 7}} -n {{.Scale 20000}} -pc 100 -pu 25 -pd 25 -dt Hotel -de {{.Scale 7200}} -ds 1000
+      -fu \"\" -ac True -lf True"
+
+
+#============ Manipulate replications ============
+- image: sequoiatools/xdcrmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -rn {{.Nodes | .Cluster 1 | net 0}} -ro {{.RestPort}} -ru {{.RestUsername}} -rp {{.RestPassword}} -l True"
+
+
+#============ Cluster Ops ============
