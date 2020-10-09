@@ -68,7 +68,6 @@ class XDCRManager:
                          }
         self.actions = ["create_replication", "delete_replication", "change_setting",
                         "flush_bucket", "flush_all_buckets",
-                        "delete_bucket", "delete_all_buckets",
                         "cleanup", "validate"]
         self.args = self.parseargs()
         self.node_rep_map = {}
@@ -160,7 +159,7 @@ class XDCRManager:
             self.flush_bucket(node, self._random_bucket(node))
         elif action == "flush_all_buckets":
             self.flush_all_buckets(node)
-        elif action == "delete_bucket":
+        elif action == "create_collections":
             self.delete_bucket(node, self._random_bucket(node))
         elif action == "delete_all_buckets":
             self.delete_all_buckets(node)
