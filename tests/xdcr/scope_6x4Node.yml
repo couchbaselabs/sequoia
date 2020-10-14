@@ -37,7 +37,7 @@ servers:
       ram: 90%
       rest_username: Administrator
       rest_password: password
-      init_nodes: 6
+      init_nodes: 5
       data_path: "/data"
       buckets: bucket0, bucket1, bucket2
       users: bucket0, bucket1, bucket2
@@ -47,7 +47,7 @@ servers:
       ram: 90%
       rest_username: Administrator
       rest_password: password
-      init_nodes: 4
+      init_nodes: 3
       data_path: "/data"
       buckets: bucket0, bucket1, bucket2
       users: bucket0, bucket1, bucket2
