@@ -64,6 +64,12 @@
   command: "-e=http://{{.QueryNodePort}}  -u=queryUser5 -p=password5 -script='create index usr5_city_idx on `{{.Bucket}}`(city)'"
 - section_end: rbac_query
 
+# Wait till all indexes are completely built
+-
+   image: sequoiatools/wait_for_idx_build_complete
+   command: "{{.ActiveIndexNode 0}} {{.RestUsername}} {{.RestPassword}}"
+   wait: true
+
 ### until 100M items ######
 -
    template: wait_for_items
