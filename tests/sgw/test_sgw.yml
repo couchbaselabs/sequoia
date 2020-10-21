@@ -43,7 +43,7 @@
 -
    image: sequoiatools/cmd
    entrypoint: sleep
-   command: "300"
+   command: "3600"
    wait: true
 
 # Wait till all indexes are completely built
@@ -96,12 +96,6 @@
    command: "300"
    wait: true
 
-###############  Rebalance-in two nodes ################
-- template: add_node
-  args: "{{.NthInActiveNode 0}}, index"
-- args: "{{.NthInActiveNode 1}}, index"
-- template: rebalance
-  wait: true
 # Sleep for some more time after rebalance completes
 -
    image: sequoiatools/cmd
