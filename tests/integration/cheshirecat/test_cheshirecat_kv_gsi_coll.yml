@@ -40,6 +40,12 @@
    command: "300"
    wait: true
 
+# Start Collections CRUD on bucket 4 & bucket5
+-
+  image: sequoiatools/collections:1.0
+  command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 8}} -o crud_mode --crud_interval=2 --max_scopes=10 --max_collections=100"
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 9}} -o crud_mode --crud_interval=2 --max_scopes=10 --max_collections=100"
+
 # continous kv loading
 - template: pillowfight_durability
   args: "{{.Orchestrator}}, {{.Bucket}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 2000}}, {{.AuthPassword}} --durability majority"
@@ -117,6 +123,12 @@
    image: sequoiatools/wait_for_idx_build_complete
    command: "{{.ActiveIndexNode 0}} {{.RestUsername}} {{.RestPassword}}"
    wait: true
+
+# Start creating indexes in a loop on bucket4 & bucket5 (Collection CRUD workload)
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 3}} -d hotel -a create_index_loop --interval 10"
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}} -d hotel -a create_index_loop --interval 10"
+
 
 # replica data loading for 30 minutes with docs that will expire after 1 hour
 - image: sequoiatools/gideon

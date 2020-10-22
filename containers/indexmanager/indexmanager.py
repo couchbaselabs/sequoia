@@ -1,4 +1,5 @@
 import json
+import string
 import sys
 from datetime import datetime
 from couchbase.cluster import Cluster, ClusterOptions, QueryOptions
@@ -51,10 +52,14 @@ class IndexManager:
                                  "If action=drop_index, number of indexes to be dropped per collection of bucket")
         parser.add_argument("-d", "--dataset", help="Dataset to be used for the test. Choices are - hotel",
                             default="hotel")
-        parser.add_argument("-a", "--action", choices=["create_index", "build_deferred_index", "drop_all_indexes"],
+        parser.add_argument("-a", "--action", choices=["create_index", "build_deferred_index", "drop_all_indexes", "create_index_loop"],
                             help="Choose an action to be performed. Valid actions : create_index | build_deferred_index"
                                  " | drop_all_indexes", default="create_index")
         parser.add_argument("-m", "--build_max_collections", type=int, default=0, help="Build Indexes on max number of collections")
+        parser.add_argument("--interval", type=int, default=60,
+                            help="Interval between 2 create index statements when running in a loop")
+        parser.add_argument("--timeout", type=int, default=0,
+                            help="Timeout for create index loop. 0 (default) is infinite")
         parser.add_argument("-t", "--test_mode", help="Test Mode : Create Scopes/Collections", action='store_true')
         args = parser.parse_args()
 
@@ -66,6 +71,8 @@ class IndexManager:
         self.num_index_per_coll = args.num_index_per_collection
         self.dataset = args.dataset
         self.action = args.action
+        self.interval = args.interval
+        self.timeout = args.timeout
         self.test_mode = args.test_mode
         self.max_num_collections = args.build_max_collections
 
@@ -129,6 +136,60 @@ class IndexManager:
                 keyspace_name_list.append("`" + self.bucket_name + "`.`" + scope.name + "`.`" + coll.name + "`")
         self.log.info(str(keyspace_name_list))
         return (keyspace_name_list)
+
+    def create_indexes_on_bucket_in_a_loop(self, timeout, interval):
+        # Establish timeout. If timeout > 0, run in infinite loop
+        end_time = 0
+        if timeout > 0:
+            end_time = time.time() + timeout
+        while True:
+            random.seed(datetime.now())
+
+            keyspace_name_list = self.get_all_collections()
+            keyspace_name = random.choice(keyspace_name_list)
+            idx_template = random.choice(self.idx_def_templates)
+            idx_statement = idx_template['statement']
+            idx_name = idx_template['indexname']
+
+            is_partitioned_idx = bool(random.getrandbits(1))
+            is_defer_idx = bool(random.getrandbits(1))
+            idx_instances = 1
+            with_clause_list = []
+
+            if is_partitioned_idx:
+                idx_statement = idx_statement + " partition by hash(meta().id) "
+                num_partition = random.randint(2, self.max_num_partitions + 1)
+                with_clause_list.append("\'num_partition\':%s" % num_partition)
+                idx_instances *= num_partition
+
+            if self.max_num_replica > 0:
+                num_replica = random.randint(1, self.max_num_replica)
+                with_clause_list.append("\'num_replica\':%s" % num_replica)
+                idx_instances *= num_replica + 1
+
+            if is_defer_idx:
+                with_clause_list.append("\'defer_build\':true")
+
+            if is_partitioned_idx or (self.max_num_replica > 0) or is_defer_idx:
+                idx_statement = idx_statement + " with {"
+                idx_statement = idx_statement + ','.join(with_clause_list) + "}"
+
+            idx_statement = idx_statement.replace("keyspacenameplaceholder", keyspace_name)
+            new_idx_name = idx_name + "_" + ''.join(random.choices(string.ascii_uppercase +
+                             string.digits, k=10))
+            idx_statement = idx_statement.replace(idx_name, new_idx_name)
+
+            self.log.info("Creating index : %s" % idx_statement)
+
+            status, results, queryResult = self._execute_query(idx_statement)
+
+            # Exit if timed out
+            if timeout > 0 and time.time() > end_time:
+                break
+
+            # Wait for the interval before doing the next CRUD operation
+            time.sleep(interval)
+
 
     """
     Create indexes on the given bucket.
@@ -300,8 +361,7 @@ class IndexManager:
                 # Sleep for 2 secs after issuing a build index for all indexes for a collection
                 sleep(2)
 
-        if indexes_built:
-            self.log.info("Building all deferred indexes completed ")
+        self.log.info("Building all deferred indexes completed ")
 
     """
     Drop all indexes in the cluster
@@ -415,6 +475,8 @@ if __name__ == '__main__':
         # indexMgr.build_all_deferred_indexes_sdk(keyspace_name_list)
     elif indexMgr.action == "drop_all_indexes":
         indexMgr.drop_all_indexes(keyspace_name_list)
+    elif indexMgr.action == "create_index_loop":
+        indexMgr.create_indexes_on_bucket_in_a_loop(indexMgr.timeout, indexMgr.interval)
     else:
         print(
             "Invalid choice for action. Choose from the following - create_index | build_deferred_index | drop_all_indexes")
