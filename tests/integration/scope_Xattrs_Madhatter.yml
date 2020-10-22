@@ -41,6 +41,7 @@ servers: # each server tag represents a cluster
         query: 2
         fts: 2
         eventing: 3
+        eventing_start: 3
         analytics: 3
       rest_username: Administrator
       rest_password: password
