@@ -3,7 +3,7 @@ import string
 import sys
 from datetime import datetime
 from couchbase.cluster import Cluster, ClusterOptions, QueryOptions
-from couchbase.exceptions import QueryException, QueryIndexAlreadyExistsException,TimeoutException
+from couchbase.exceptions import QueryException, QueryIndexAlreadyExistsException, TimeoutException
 from couchbase_core.cluster import PasswordAuthenticator
 from couchbase_core.bucketmanager import BucketManager
 from couchbase.management.collections import *
@@ -52,10 +52,13 @@ class IndexManager:
                                  "If action=drop_index, number of indexes to be dropped per collection of bucket")
         parser.add_argument("-d", "--dataset", help="Dataset to be used for the test. Choices are - hotel",
                             default="hotel")
-        parser.add_argument("-a", "--action", choices=["create_index", "build_deferred_index", "drop_all_indexes", "create_index_loop"],
-                            help="Choose an action to be performed. Valid actions : create_index | build_deferred_index"
+        parser.add_argument("-a", "--action",
+                            choices=["create_index", "build_deferred_index", "drop_all_indexes", "create_index_loop",
+                                     "alter_indexes"],
+                            help="Choose an action to be performed. Valid actions : create_index | build_deferred_index | drop_all_indexes | create_index_loop | alter_indexes"
                                  " | drop_all_indexes", default="create_index")
-        parser.add_argument("-m", "--build_max_collections", type=int, default=0, help="Build Indexes on max number of collections")
+        parser.add_argument("-m", "--build_max_collections", type=int, default=0,
+                            help="Build Indexes on max number of collections")
         parser.add_argument("--interval", type=int, default=60,
                             help="Interval between 2 create index statements when running in a loop")
         parser.add_argument("--timeout", type=int, default=0,
@@ -176,12 +179,14 @@ class IndexManager:
 
             idx_statement = idx_statement.replace("keyspacenameplaceholder", keyspace_name)
             new_idx_name = idx_name + "_" + ''.join(random.choices(string.ascii_uppercase +
-                             string.digits, k=10))
+                                                                   string.digits, k=10))
             idx_statement = idx_statement.replace(idx_name, new_idx_name)
 
             self.log.info("Creating index : %s" % idx_statement)
 
             status, results, queryResult = self._execute_query(idx_statement)
+            if status is None:
+                raise Exception("Query service probably has issues")
 
             # Exit if timed out
             if timeout > 0 and time.time() > end_time:
@@ -189,7 +194,6 @@ class IndexManager:
 
             # Wait for the interval before doing the next CRUD operation
             time.sleep(interval)
-
 
     """
     Create indexes on the given bucket.
@@ -260,6 +264,111 @@ class IndexManager:
         self.log.info("Create indexes completed")
 
     """
+    Alter indexes
+    """
+
+    def alter_indexes(self, timeout, interval=900):
+
+        # Establish timeout. If timeout > 0, run in infinite loop
+        end_time = 0
+        if timeout > 0:
+            end_time = time.time() + timeout
+        while True:
+            random.seed(datetime.now())
+
+            # Get all index nodes in the cluster
+            idx_node_list = self.find_nodes_with_service(self.get_services_map(), "index")
+            idx_node_list.sort()
+
+            # Get Index Map for indexes in the bucket
+            index_map = self.get_index_map(self.bucket_name, idx_node_list[0])
+
+            # Randomly choose an index to be altered
+            index = random.choice(index_map)
+
+            # Check the index for replicas
+            idx_replica_count = index["numReplica"]
+
+            # Check the index for hosts
+            idx_hosts = []
+            if idx_replica_count > 0:
+                for idx in index_map:
+                    if idx["defnId"] == index["defnId"]:
+                        idx_hosts.extend(idx["hosts"])
+            else:
+                idx_hosts = index["hosts"]
+
+            idx_unique_hosts = []
+            [idx_unique_hosts.append(x) for x in idx_hosts if x not in idx_unique_hosts]
+            idx_unique_hosts.sort()
+
+            self.log.info(
+                "Index selected to alter : {0} numReplica={1} numPartition={2} hosts={3}".format(index["indexName"],
+                                                                                                 idx_replica_count,
+                                                                                                 index["numPartition"],
+                                                                                                 idx_unique_hosts))
+
+            # Randomize action for alter index
+            possible_actions = []
+            if idx_replica_count > 0:
+                if idx_replica_count == self.max_num_replica:
+                    possible_actions = ["move", "decrease_replica_count", "drop_replica"]
+                else:
+                    possible_actions = ["move", "increase_replica_count", "decrease_replica_count", "drop_replica"]
+            else:
+                possible_actions = ["move", "increase_replica_count"]
+
+            if len(idx_unique_hosts) < len(idx_node_list):
+                possible_actions.append("move")
+
+            alter_index_action = random.choice(possible_actions)
+
+            # Perform action
+            # Create and execute alter index query
+            full_keyspace_name = "`" + index["bucket"] + "`.`" + index["scope"] + "`.`" + index["collection"] + "`"
+            full_index_name = "default:" + full_keyspace_name + "." + index["indexName"]
+
+            with_clause = {}
+            if alter_index_action == "move":
+                with_clause["action"] = "move"
+                with_clause["nodes"] = []
+                final_node_list = random.sample(idx_node_list, len(idx_unique_hosts))
+                final_node_list.sort()
+                if final_node_list == idx_unique_hosts:
+                    final_node_list = random.sample(idx_node_list, len(idx_unique_hosts))
+                    final_node_list.sort()
+
+                for node in final_node_list:
+                    with_clause["nodes"].append(node + ":8091")
+
+            if alter_index_action == "increase_replica_count":
+                with_clause["action"] = "replica_count"
+                with_clause["num_replica"] = idx_replica_count + 1
+
+            if alter_index_action == "decrease_replica_count":
+                with_clause["action"] = "replica_count"
+                with_clause["num_replica"] = idx_replica_count - 1
+
+            if alter_index_action == "drop_replica":
+                with_clause["action"] = "drop_replica"
+                with_clause["replicaId"] = random.randint(0, idx_replica_count)
+
+            alter_index_stmt = "ALTER INDEX " + full_index_name + " WITH " + str(with_clause)
+            self.log.info("Alter index query : {0}".format(alter_index_stmt))
+
+            status, results, queryResult = self._execute_query(alter_index_stmt)
+
+            # Wait for indexes to be built completely
+            self.wait_for_indexes_to_be_built([full_keyspace_name])
+
+            # Exit if timed out
+            if timeout > 0 and time.time() > end_time:
+                break
+
+            # Sleep for interval
+            time.sleep(interval)
+
+    """
     Determine number of index nodes in the cluster and set max num replica accordingly.
     """
 
@@ -267,6 +376,26 @@ class IndexManager:
         nodelist = self.find_nodes_with_service(self.get_services_map(), "index")
         self.max_num_replica = len(nodelist) - 1  # Max num replica = number of idx nodes in cluster - 1
         self.log.info("Setting Max Replica for this test to : {0}".format(self.max_num_replica))
+
+    """
+    Return the index map for the specified bucket
+    """
+
+    def get_index_map(self, bucket, index_node_addr, index_node_port=9102):
+        endpoint = "http://" + index_node_addr + ":" + str(index_node_port) + "/getIndexStatus"
+        # Get map of indexes in the cluster
+        response = requests.get(endpoint, auth=(
+            self.username, self.password), verify=True, )
+
+        idx_map = []
+
+        if (response.ok):
+            response = json.loads(response.text)
+            for index in response["status"]:
+                if index["bucket"] == bucket:
+                    idx_map.append(index)
+
+        return idx_map
 
     """
     Populate the service map for all nodes in the cluster.
@@ -398,7 +527,7 @@ class IndexManager:
         indexes_online = False
 
         while (timedout > time.time()):
-            query = index_status_check_query_template.replace("keyspace_name_list",str(keyspace_name_list))
+            query = index_status_check_query_template.replace("keyspace_name_list", str(keyspace_name_list))
             self.log.info("Wait query : {0}".format(query))
             status, result, queryResult = self._execute_query(query)
             self.log.info("Result = {0}".format(str(result)))
@@ -414,9 +543,6 @@ class IndexManager:
 
         return indexes_online
 
-
-
-
     """
     Method to execute a query statement 
     """
@@ -428,9 +554,15 @@ class IndexManager:
 
         try:
             timeout = timedelta(minutes=5)
-            queryResult = self.cluster.query(statement,QueryOptions(timeout=timeout))
-            status = queryResult.metadata().status()
-            results = queryResult.rows()
+            queryResult = self.cluster.query(statement, QueryOptions(timeout=timeout))
+            try:
+                status = queryResult.metadata().status()
+                results = queryResult.rows()
+            except:
+                self.log.error("Unexpected error :", sys.exc_info()[0])
+                self.log.info("Query didnt return status or results")
+                pass
+
 
         except QueryException as qerr:
             self.log.debug("qerr")
@@ -477,6 +609,8 @@ if __name__ == '__main__':
         indexMgr.drop_all_indexes(keyspace_name_list)
     elif indexMgr.action == "create_index_loop":
         indexMgr.create_indexes_on_bucket_in_a_loop(indexMgr.timeout, indexMgr.interval)
+    elif indexMgr.action == "alter_indexes":
+        indexMgr.alter_indexes(indexMgr.timeout, indexMgr.interval)
     else:
         print(
             "Invalid choice for action. Choose from the following - create_index | build_deferred_index | drop_all_indexes")

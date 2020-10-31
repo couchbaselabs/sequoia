@@ -63,6 +63,12 @@
   wait: true
 
 
+###############  Alter indexes throughout the iteration ################
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -d hotel -a alter_indexes --interval 600"
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -d hotel -a alter_indexes --interval 600"
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -d hotel -a alter_indexes --interval 600"
+
 # Wait till all indexes are completely built
 -
    image: sequoiatools/wait_for_idx_build_complete

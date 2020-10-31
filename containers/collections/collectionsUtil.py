@@ -28,8 +28,8 @@ class CollectionOperations():
                           help="count of scopes to be created in multi-scope/coll operation, default=1")
         parser.add_option("--collection_distribution", dest="collection_distribution", choices=["uniform", "random"],
                           default="uniform", help="Number of collections per scope to be created uniformly/randomly")
-        parser.add_option("--max_scopes", dest="max_scopes", help="Max scopes to be created in CRUD mode", default=10)
-        parser.add_option("--max_collections", dest="max_collections",
+        parser.add_option("--max_scopes", dest="max_scopes", type="int", help="Max scopes to be created in CRUD mode", default=10)
+        parser.add_option("--max_collections", dest="max_collections", type="int",
                           help="Max collections to be created in CRUD mode", default=100)
         parser.add_option("--crud_timeout", dest="crud_timeout",
                           help="Timeout for CRUD mode (in secs). Default = 0 (infinite)", type="int", default=0)
@@ -244,7 +244,7 @@ class CollectionOperations():
             if random_obj == "scope":
                 if curr_scope_num == 1:
                     operation = "create"
-                elif curr_scope_num >= max_scopes:
+                elif curr_scope_num >= int(max_scopes):
                     operation = "drop"
                 else:
                     operation = random_operation
@@ -265,7 +265,7 @@ class CollectionOperations():
             else:
                 if curr_coll_count == 1:
                     operation = "create"
-                elif curr_coll_count >= max_collections:
+                elif curr_coll_count >= int(max_collections):
                     operation = "drop"
                 else:
                     operation = random_operation
