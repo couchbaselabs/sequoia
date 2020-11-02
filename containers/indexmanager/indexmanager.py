@@ -37,6 +37,8 @@ HOTEL_DS_INDEX_TEMPLATES = [
      "statement": "CREATE INDEX idx3 ON keyspacenameplaceholder(`free_breakfast`,`free_parking`,`country`,`city`) "}
 ]
 
+HOTEL_DS_CBO_FIELDS = "`country`, DISTINCT ARRAY `r`.`ratings`.`Check in / front desk`, array_count((`public_likes`)),array_count((`reviews`)) DESC,`type`,`phone`,`price`,`email`,`address`,`name`,`url`,`free_breakfast`,`free_parking`,`city`"
+
 
 class IndexManager:
 
@@ -54,15 +56,17 @@ class IndexManager:
                             default="hotel")
         parser.add_argument("-a", "--action",
                             choices=["create_index", "build_deferred_index", "drop_all_indexes", "create_index_loop",
-                                     "alter_indexes"],
+                                     "alter_indexes", "enable_cbo"],
                             help="Choose an action to be performed. Valid actions : create_index | build_deferred_index | drop_all_indexes | create_index_loop | alter_indexes"
-                                 " | drop_all_indexes", default="create_index")
+                                 " | drop_all_indexes | enable_cbo", default="create_index")
         parser.add_argument("-m", "--build_max_collections", type=int, default=0,
                             help="Build Indexes on max number of collections")
         parser.add_argument("--interval", type=int, default=60,
                             help="Interval between 2 create index statements when running in a loop")
         parser.add_argument("--timeout", type=int, default=0,
                             help="Timeout for create index loop. 0 (default) is infinite")
+        parser.add_argument("--cbo_enable_ratio", type=int, default=25,
+                            help="Specify on how many % of collections should CBO be enabled. Range = 1-100")
         parser.add_argument("-t", "--test_mode", help="Test Mode : Create Scopes/Collections", action='store_true')
         args = parser.parse_args()
 
@@ -78,12 +82,16 @@ class IndexManager:
         self.timeout = args.timeout
         self.test_mode = args.test_mode
         self.max_num_collections = args.build_max_collections
+        self.cbo_enable_ratio = args.cbo_enable_ratio
+        if self.cbo_enable_ratio > 100:
+            self.cbo_enable_ratio = 25
 
         self.idx_def_templates = HOTEL_DS_INDEX_TEMPLATES
 
         # If there are more datasets supported, this can be expanded.
         if self.dataset == "hotel":
             self.idx_def_templates = HOTEL_DS_INDEX_TEMPLATES
+            self.cbo_fields = HOTEL_DS_CBO_FIELDS
 
         # Initialize connections to the cluster
         self.cb_admin = Admin(self.username, self.password, self.node_addr, self.node_port)
@@ -369,6 +377,28 @@ class IndexManager:
             time.sleep(interval)
 
     """
+    Enable CBO on some collections randomly
+    """
+
+    def enable_cbo_and_update_statistics(self, cbo_collections_ratio=25):
+        # Get list of all collections with indexes
+        get_all_indexes_collections_query_for_bucket = "select raw '`' || `bucket_id` || '`.`' || `scope_id` || '`.`' || `keyspace_id` || '`' from system:all_indexes where `using`='gsi' and '`' || `bucket_id` = '{0}'".format(
+            self.bucket_name)
+        status, results, queryResult = self._execute_query(get_all_indexes_collections_query_for_bucket)
+        keyspace_list = results[0]
+
+        # Select a few collections
+        cbo_collections_list = random.sample(keyspace_list, abs(len(keyspace_list) * cbo_collections_ratio / 100))
+
+        # Run update statistics for these collections
+        for coll in cbo_collections_list:
+            update_stats_query = "UPDATE STATISTICS FOR {0}({1};".format(coll, self.cbo_fields)
+            status, results, queryResult = self._execute_query(update_stats_query)
+            time.sleep(2)
+
+        # TBD : Periodically update statistics in a loop for these collections
+
+    """
     Determine number of index nodes in the cluster and set max num replica accordingly.
     """
 
@@ -611,6 +641,8 @@ if __name__ == '__main__':
         indexMgr.create_indexes_on_bucket_in_a_loop(indexMgr.timeout, indexMgr.interval)
     elif indexMgr.action == "alter_indexes":
         indexMgr.alter_indexes(indexMgr.timeout, indexMgr.interval)
+    elif indexMgr.action == "enable_cbo":
+        indexMgr.enable_cbo_and_update_statistics(indexMgr.cbo_enable_ratio)
     else:
         print(
             "Invalid choice for action. Choose from the following - create_index | build_deferred_index | drop_all_indexes")

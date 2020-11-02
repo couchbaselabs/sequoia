@@ -4,7 +4,7 @@
 - template: set_gsi_config
   args: "{{.ActiveIndexNode 0}}, 'indexer.plasma.backIndex.enablePageBloomFilter':true"
 
-### create 20 scopes and 200 collections across 3 buckets as scope_1,scope_2 ... ######
+############### create 20 scopes and 200 collections across 3 buckets as scope_1,scope_2 ... ###############
 -
   image: sequoiatools/collections:1.0
   command: "-i {{.Orchestrator}}:8091 -b {{.Bucket}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count=7 --collection_count=70 --collection_distribution=random"
@@ -14,14 +14,14 @@
 - command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 2}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count=6 --collection_count=60 --collection_distribution=random"
   wait: true
 
-# Sleep for some time to allow collections manifest to sync
+############### Sleep for some time to allow collections manifest to sync ###############
 -
    image: sequoiatools/cmd
    entrypoint: sleep
    command: "300"
    wait: true
 
-# Start Collections CRUD on bucket 4 & bucket5
+############### Start Collections CRUD on bucket 4 & bucket5 ###############
 -
   image: sequoiatools/collections:1.0
   command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 3}} -o crud_mode --crud_interval=2 --max_scopes=10 --max_collections=100"
@@ -63,19 +63,35 @@
   wait: true
 
 
+############### Wait till all indexes are completely built ###############
+-
+   image: sequoiatools/wait_for_idx_build_complete
+   command: "{{.ActiveIndexNode 0}} {{.RestUsername}} {{.RestPassword}}"
+   wait: true
+
+############### Enable CBO on 25% of the indexes on all buckets ###############
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a enable_cbo --cbo_enable_ratio 25"
+  wait: true
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a enable_cbo --cbo_enable_ratio 25"
+  wait: true
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -a enable_cbo --cbo_enable_ratio 25"
+  wait: true
+
+############### Sleep for some time to allow statistics to be collected ###############
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "300"
+   wait: true
+
 ###############  Alter indexes throughout the iteration ################
 - image: sequoiatools/indexmanager
   command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -d hotel -a alter_indexes --interval 600"
 - command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -d hotel -a alter_indexes --interval 600"
 - command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -d hotel -a alter_indexes --interval 600"
 
-# Wait till all indexes are completely built
--
-   image: sequoiatools/wait_for_idx_build_complete
-   command: "{{.ActiveIndexNode 0}} {{.RestUsername}} {{.RestPassword}}"
-   wait: true
-
-# Start creating indexes in a loop on bucket4 & bucket5 (Collection CRUD workload)
+############### Start creating indexes in a loop on bucket4 & bucket5 (Collection CRUD workload) ###############
 - image: sequoiatools/indexmanager
   command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 3}} -d hotel -a create_index_loop --interval 10"
 - command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}} -d hotel -a create_index_loop --interval 10"
