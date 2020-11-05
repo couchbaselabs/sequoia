@@ -206,6 +206,12 @@ func (t *TemplateResolver) EventingPort() string {
 	return t.Attr("eventing_port", nodes)
 }
 
+// Shortcut: {{.ClusterNodes | .Attr `backup_port`}}
+func (t *TemplateResolver) BackupPort() string {
+        nodes := t.ClusterNodes()
+        return t.Attr("backup_port", nodes)
+}
+
 // Shortcut: {{.ClusterNodes | .Attr `analytics_port`}}
 func (t *TemplateResolver) AnalyticsPort() string {
 	nodes := t.ClusterNodes()
@@ -301,9 +307,21 @@ func (t *TemplateResolver) EventingNode() string {
 	return t.Address(0, serviceNodes)
 }
 
+// Shortcut: .BackupNode | .Service `backup` | net 0
+func (t *TemplateResolver) BackupNode() string {
+        nodes := t.ClusterNodes()
+        serviceNodes := t.Service("backup", nodes)
+        return t.Address(0, serviceNodes)
+}
+
 // Shortcut: {{.EventingNode | noport}}:{{.EventingPort}}
 func (t *TemplateResolver) EventingNodePort() string {
 	return fmt.Sprintf("%s:%s", t.NoPort(t.EventingNode()), t.EventingPort())
+}
+
+// Shortcut: {{.BackupNode | noport}}:{{.BackupPort}}
+func (t *TemplateResolver) BackupNodePort() string {
+        return fmt.Sprintf("%s:%s", t.NoPort(t.BackupNode()), t.BackupPort())
 }
 
 // Shortcut: .ClusterNodes | .Service `eventing` | active n
@@ -313,11 +331,25 @@ func (t *TemplateResolver) ActiveEventingNode(eventing int) string {
 	return t.ActiveFilter(eventing, serviceNodes)
 }
 
+// Shortcut: .ClusterNodes | .Service `backup` | active n
+func (t *TemplateResolver) ActiveBackupNode(backup int) string {
+        nodes := t.ClusterNodes()
+        serviceNodes := t.Service("backup", nodes)
+        return t.ActiveFilter(backup, serviceNodes)
+}
+
 // Shortcut: .ClusterNodes | .Service `eventing` | net N
 func (t *TemplateResolver) NthEventingNode(n int) string {
 	nodes := t.ClusterNodes()
 	serviceNodes := t.Service("eventing", nodes)
 	return t.Address(n, serviceNodes)
+}
+
+// Shortcut: .ClusterNodes | .Service `backup` | net N
+func (t *TemplateResolver) NthBackupNode(n int) string {
+        nodes := t.ClusterNodes()
+        serviceNodes := t.Service("backup", nodes)
+        return t.Address(n, serviceNodes)
 }
 
 // Shortcut: .AnalyticsNode | .Service `analytics` | net 0

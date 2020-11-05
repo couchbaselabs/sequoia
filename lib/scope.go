@@ -94,6 +94,13 @@ func NewScope(flags TestFlags, cm *ContainerManager) Scope {
 				spec.Servers[i].EventingPort = "8096"
 			}
 		}
+		if spec.Servers[i].BackupPort == "" {
+                        if provider.GetType() == "dev" {
+                                spec.Servers[i].BackupPort = fmt.Sprintf("%d", 9200+i)
+                        } else {
+                                spec.Servers[i].BackupPort = "8097"
+                        }
+                }
 		if spec.Servers[i].AnalyticsPort == "" {
 			if provider.GetType() == "dev" {
 				spec.Servers[i].AnalyticsPort = fmt.Sprintf("%d", 9200+i)
@@ -497,7 +504,7 @@ func (s *Scope) InitCluster() {
 			}
 			command = append(command, "--cluster-eventing-ramsize", server.EventingRam)
 		}
-
+		
 		command = cliCommandValidator(s.Version, command)
 
 		desc := "init cluster " + orchestrator

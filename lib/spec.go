@@ -55,6 +55,7 @@ type ServerSpec struct {
 	FTSPort         string `yaml:"fts_port"`
 	QueryPort       string `yaml:"query_port"`
 	EventingPort    string `yaml:"eventing_port"`
+        BackupPort      string `yaml:"backup_port"`
 	AnalyticsPort   string `yaml:"analytics_port"`
 	InitNodes       uint8  `yaml:"init_nodes"`
 	DataPath        string `yaml:"data_path"`
@@ -122,11 +123,13 @@ func (s *ServerSpec) InitNodeServices() {
 	numFtsNodes := s.Services["fts"]
 	numDataNodes := s.Services["data"]
 	numEventingNodes := s.Services["eventing"]
+        numBackupNodes := s.Services["backup"]
 	numAnalyticsNodes := s.Services["analytics"]
 	customIndexStart := s.Services["index_start"]
 	customQueryStart := s.Services["query_start"]
 	customFtsStart := s.Services["fts_start"]
 	customEventingStart := s.Services["eventing_start"]
+        customBackupStart := s.Services["backup_start"]
 	customAnalyticsStart := s.Services["analytics_start"]
 
 	s.NodeServices = make(map[string][]string)
@@ -137,7 +140,7 @@ func (s *ServerSpec) InitNodeServices() {
 	// overlapping if possible when specific
 	// number of service types provided
 
-	analyticsStartPos := numNodes - numQueryNodes - numIndexNodes - numFtsNodes - numEventingNodes - numAnalyticsNodes
+	analyticsStartPos := numNodes - numQueryNodes - numIndexNodes - numFtsNodes - numEventingNodes - numAnalyticsNodes - numBackupNodes
 	if customAnalyticsStart > 0 {
 		// override
 		analyticsStartPos = customAnalyticsStart - 1
@@ -146,7 +149,7 @@ func (s *ServerSpec) InitNodeServices() {
 		analyticsStartPos = 0
 	}
 
-	eventingStartPos := numNodes - numQueryNodes - numIndexNodes - numFtsNodes - numEventingNodes
+	eventingStartPos := numNodes - numQueryNodes - numIndexNodes - numFtsNodes - numEventingNodes - numBackupNodes
 	if customEventingStart > 0 {
 		// override
 		eventingStartPos = customEventingStart - 1
@@ -154,6 +157,15 @@ func (s *ServerSpec) InitNodeServices() {
 	if eventingStartPos >= numNodes {
 		eventingStartPos = 0
 	}
+
+        backupStartPos := numNodes - numQueryNodes - numIndexNodes - numFtsNodes - numBackupNodes
+        if customBackupStart > 0 {
+                // override
+                backupStartPos = customBackupStart - 1
+        }
+        if backupStartPos >= numNodes {
+                backupStartPos = 0
+        }
 
 	indexStartPos := numNodes - numQueryNodes - numIndexNodes - numFtsNodes
 	if customIndexStart > 0 {
@@ -195,6 +207,10 @@ func (s *ServerSpec) InitNodeServices() {
 			s.NodeServices[name] = append(s.NodeServices[name], "eventing")
 			numEventingNodes--
 		}
+                if i >= backupStartPos && numBackupNodes > 0 {
+                        s.NodeServices[name] = append(s.NodeServices[name], "backup")
+                        numBackupNodes--
+                }
 		if i >= indexStartPos && numIndexNodes > 0 {
 			s.NodeServices[name] = append(s.NodeServices[name], "index")
 			numIndexNodes--
@@ -326,6 +342,8 @@ func (s *ScopeSpec) ToAttr(attr string) string {
 		return "FTSPort"
 	case "eventing_port":
 		return "EventingPort"
+	case "backup_port":
+                return "BackupPort"
 	case "analytics_port":
 		return "AnalyticsPort"
 	}
