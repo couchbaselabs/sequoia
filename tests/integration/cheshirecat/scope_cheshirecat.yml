@@ -69,6 +69,9 @@ servers: # each server tag represents a cluster
       services:
         index: 6
         query: 2
+        query_start: 13
+        backup: 1
+        backup_start: 13
         fts: 2
         eventing: 3
         analytics: 3
