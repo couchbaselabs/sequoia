@@ -1,67 +1,90 @@
----
-- include: tests/templates/rebalance.yml, tests/templates/multinode_failure.yml
-
+- include: tests/templates/rebalance.yml, tests/templates/multinode_failure.yml, tests/templates/stats.yml
 ##=========== create 20 scopes and 200 collections across 3 buckets as scope_1,scope_2 ... =============
 - image: sequoiatools/collections:1.0
-  command: "-i {{.Orchestrator}}:{{$.RestPort}} -b {{.Bucket}} -o create_multi_scope_collection -s scope- -c coll- --scope_count=7 --collection_count=70"
-  wait: true
-- command: "-i {{.Orchestrator}}:{{$.RestPort}} -b {{.NthBucket 1}} -o create_multi_scope_collection -s scope- -c coll- --scope_count=7 --collection_count=70"
-  wait: true
-- command: "-i {{.Orchestrator}}:{{$.RestPort}} -b {{.NthBucket 2}} -o create_multi_scope_collection -s scope- -c coll- --scope_count=6 --collection_count=60"
-  wait: true
+  command: "-i {{.Orchestrator}}:{{$.RestPort}} -b {{.Bucket}} -o create_multi_scope_collection
+            -s scope- -c coll --scope_count=7 --collection_count=70"
+- command: "-i {{.Orchestrator}}:{{$.RestPort}} -b {{.NthBucket 1}} -o create_multi_scope_collection
+            -s scope- -c coll --scope_count=7 --collection_count=70"
+- command: "-i {{.Orchestrator}}:{{$.RestPort}} -b {{.NthBucket 2}} -o create_multi_scope_collection
+            -s scope- -c coll --scope_count=6 --collection_count=60"
 
 - image: sequoiatools/collections:1.0
-  command: "-i {{$.Nodes | $.Cluster 1 | net 0}}:{{$.RestPort}} -b {{.Bucket}} -o create_multi_scope_collection -s scope- -c coll- --scope_count=7 --collection_count=70"
-  wait: true
-- command: "-i {{$.Nodes | $.Cluster 1 | net 0}}:{{$.RestPort}} -b {{.NthBucket 1}} -o create_multi_scope_collection -s scope- -c coll- --scope_count=7 --collection_count=70"
-  wait: true
-- command: "-i {{$.Nodes | $.Cluster 1 | net 0}}:{{$.RestPort}} -b {{.NthBucket 2}} -o create_multi_scope_collection -s scope- -c coll- --scope_count=6 --collection_count=60"
-  wait: true
+  command: "-i {{$.Nodes | $.Cluster 1 | net 0}}:{{$.RestPort}} -b {{.Bucket}} -o create_multi_scope_collection
+            -s scope- -c coll --scope_count=7 --collection_count=70"
+- command: "-i {{$.Nodes | $.Cluster 1 | net 0}}:{{$.RestPort}} -b {{.NthBucket 1}} -o create_multi_scope_collection
+            -s scope- -c coll --scope_count=7 --collection_count=70"
+- command: "-i {{$.Nodes | $.Cluster 1 | net 0}}:{{$.RestPort}} -b {{.NthBucket 2}} -o create_multi_scope_collection
+            -s scope- -c coll --scope_count=6 --collection_count=60"
 
 #=========== Sleep for some time to allow collections manifest to sync =============
 - image: sequoiatools/cmd
   entrypoint: sleep
-  command: "300"
+  command: "60"
   wait: true
 
 #============ Initial data load on local ============
 - image: sequoiatools/catapult
   command: "-i {{.Orchestrator}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -n {{.Scale 2000}} -pc 100
-  -dt Hotel -de {{.Scale 2000}} -ac True -log_level FATAL"
-  wait: true
+  -dt Hotel -ac True"
 - command: "-i {{.Orchestrator}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -n {{.Scale 4000}} -pc 100
-  -dt Person -de {{.Scale 4000}} -ac True -log_level FATAL"
-  wait: true
-- command: "-i {{.Orchestrator}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -n {{.Scale 6000}} -pc 100
-  -dt Employee -de {{.Scale 6000}} -ac True -log_level FATAL"
-  wait: true
+  -dt Person -ac True"
 
 #============ Create replications ============
+- image: sequoiatools/couchbase-cli
+  command:  "xdcr-setup -c {{.Orchestrator}}:{{.RestPort}} --create --xdcr-cluster-name remote
+        --xdcr-hostname {{.Nodes | .Cluster 1 | net 0}}
+        --xdcr-username {{.Nodes | .Cluster 1 | .Attr `rest_username`}}
+        --xdcr-password {{.Nodes | .Cluster 1 | .Attr `rest_password`}}"
+  wait: true
+- command:  "xdcr-setup -c {{.Orchestrator}}:{{.RestPort}} --create --xdcr-cluster-name self
+        --xdcr-hostname {{.Orchestrator}}
+        --xdcr-username {{.RestUsername}}
+        --xdcr-password {{.RestPassword}}"
+  wait: true
+- command:  "xdcr-setup -c {{.Nodes | .Cluster 1 | net 0}} --create --xdcr-cluster-name remote
+        --xdcr-hostname {{.Orchestrator}}
+        --xdcr-username {{.RestUsername}}
+        --xdcr-password {{.RestPassword}}"
+  wait: true
 # unidirectional : local.bucket0 -> remote.bucket0
-- image: sequoiatools/xdcrmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}}
-  -rn {{.Nodes | .Cluster 1 | net 0}} -ro {{.RestPort}} -ru {{.RestUsername}} -rp {{.RestPassword}}
-  -b {{.Bucket}} -rb {{.Bucket}} -a create_replication"
+- command: "xdcr-replicate -c {{.Orchestrator}}:{{.RestPort}}
+        --create
+        --xdcr-cluster-name remote
+        --xdcr-from-bucket {{.Bucket}}
+        --xdcr-to-bucket {{.Bucket}}"
+  wait: true
 # unidirectional : local.bucket1 -> remote.bucket1
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}}
-  -rn {{.Nodes | .Cluster 1 | net 0}} -ro {{.RestPort}} -ru {{.RestUsername}} -rp {{.RestPassword}}
-  -b {{.NthBucket 1}} -rb {{.NthBucket 1}} -a create_replication"
+- command: "xdcr-replicate -c {{.Orchestrator}}:{{.RestPort}}
+        --create
+        --xdcr-cluster-name remote
+        --xdcr-from-bucket {{.NthBucket 1}}
+        --xdcr-to-bucket {{.NthBucket 1}}"
+  wait: true
 # unidirectional intracluster: local.bucket1 -> local.bucket2
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}}
-  -rn {{.Orchestrator}} -ro {{.RestPort}} -ru {{.RestUsername}} -rp {{.RestPassword}}
-  -b {{.NthBucket 1}} -rb {{.NthBucket 2}} -a create_replication"
+- command: "xdcr-replicate -c {{.Orchestrator}}:{{.RestPort}}
+        --create
+        --xdcr-cluster-name self
+        --xdcr-from-bucket {{.NthBucket 1}}
+        --xdcr-to-bucket {{.NthBucket 2}}"
+  wait: true
 # bi-directional: local.bucket2 <-> remote.bucket2
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}}
-  -rn {{.Nodes | .Cluster 1 | net 0}} -ro {{.RestPort}} -ru {{.RestUsername}} -rp {{.RestPassword}}
-  -b {{.NthBucket 2}} -rb {{.NthBucket 2}} -a create_replication"
-- command: "-n {{.Nodes | .Cluster 1 | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}}
-  -rn {{.Orchestrator}} -ro {{.RestPort}} -ru {{.RestUsername}} -rp {{.RestPassword}}
-  -b {{.NthBucket 2}} -rb {{.NthBucket 2}} -a create_replication"
+- command: "xdcr-replicate -c {{.Orchestrator}}:{{.RestPort}}
+        --create
+        --xdcr-cluster-name remote
+        --xdcr-from-bucket {{.NthBucket 2}}
+        --xdcr-to-bucket {{.NthBucket 2}}"
+  wait: true
+- command: "xdcr-replicate -c {{.Nodes | .Cluster 1 | net 0}}
+        --create
+        --xdcr-cluster-name remote
+        --xdcr-from-bucket {{.NthBucket 2}}
+        --xdcr-to-bucket {{.NthBucket 2}}"
+  wait: true
 
 #============ Cluster Ops ============
 # swap failover
 - template: add_node
-  args: "{{.NthDataNode 5}}"
+  args: "{{.NthDataNode 6}}"
 - template: failover_node_forced
   args: "{{.NthDataNode 1}}"
 - template: failover_node_forced
@@ -69,22 +92,22 @@
 - template: rebalance
   wait: true
 
-# start continuous crud on all buckets in local and remote
+# start continuous crud
 - image: sequoiatools/catapult
-  command: "-i {{.Orchestrator}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -n {{.Scale 2000}} -pc 100
-  -dt Hotel -de {{.Scale 2000}} -ac True -sd True -lf True -log_level FATAL"
-  wait: true
-- command: "-i {{.Orchestrator}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -n {{.Scale 4000}} -pc 100
-  -dt Person -de {{.Scale 4000}} -ac True -sd True -lf True -log_level FATAL"
-  wait: true
-- command: "-i {{.Orchestrator}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -n {{.Scale 6000}} -pc 100
-  -dt Employee -de {{.Scale 6000}} -ac True -sd True -lf True -log_level FATAL"
-  wait: true
-
+  command: "-i {{.Orchestrator}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}}
+            -n {{.Scale 10000}} -pc 100 -pu 40 -pd 60 -dt Hotel
+            -ac True -sd True -lf True -li 300"
+  alias: CatapultBucket0
+- command: "-i {{.Orchestrator}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}}
+            -n {{.Scale 20000}} -pc 100 -pu 40 -pd 60 -dt Person -de {{.Scale 200}}
+            -ac True -sd True -lf True -li 300"
+- command: "-i {{.Orchestrator}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}}
+            -n {{.Scale 30000}} -pc 100 -pu 40 -pd 60 -dt Employee -de {{.Scale 400}}
+            -ac True -sd True -lf True -li 300"
 - image: sequoiatools/catapult
-  command: "-i {{.Nodes | .Cluster 1 | net 0}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -n {{.Scale 6000}} -pc 100
-  -dt Employee -de {{.Scale 6000}} -ac True -sd True -lf True -log_level FATAL"
-  wait: true
+  command: "-i {{.Nodes | .Cluster 1 | net 0}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}}
+            -n {{.Scale 40000}} -pc 100 -pu 60 -pd 40 -dt Employee -de {{.Scale 600}}
+            -ac True -sd True -lf True -li 300"
 
 #============  Swap Rebalance ################
 - template: rebalance_swap
@@ -94,16 +117,13 @@
 #============ get replication id ============
 -
   image:  appropriate/curl
-  command: "-s http://{{.RestUsername}}:{{.RestPassword}}@{{.Orchestrator | noport}}:{{.ClusterNodes | .Attr `rest_port`}}/pools/default/remoteClusters"
+  command: "-s http://{{.RestUsername}}:{{.RestPassword}}@{{.Orchestrator}}:{{.RestPort}}/pools/default/remoteClusters"
   alias: replId
   wait: true
 
 #============ Delete recreate  ============
-# delete replications with src local.bucket0, local.bucket1, local.bucket2
+# delete replications with src local.bucket1, local.bucket2
 - image: sequoiatools/xdcrmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a delete_replication
-  -replid {{(index (.AllLogs `replId` | json) 0).uuid }}/{{.Bucket}}/{{.Bucket}}"
-  wait: true
 - command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a delete_replication
   -replid {{(index (.AllLogs `replId` | json) 0).uuid }}/{{.NthBucket 1}}/{{.NthBucket 1}}"
   wait: true
@@ -114,12 +134,12 @@
 # delete coll-0 to coll-9 in scope-0 to scope-2 in bucket0 to bucket2 on remote and local
 - foreach: "{{range $i, $offset := mkrange 0 2}}"
   image: sequoiatools/collections:1.0
-  command: "-i {{$.Nodes | $.Cluster 1 | net 0}}:{{$.RestPort}} -b bucket{{$offset}} -o delete -s scope-{{$offset}} -c coll --count 10"
-  wait: true
+  command: "-i {{$.Nodes | $.Cluster 1 | net 0}}:{{$.RestPort}}
+            -b bucket{{$offset}} -o delete -s scope-{{$offset}} -c coll --count 10"
 - foreach: "{{range $i, $offset := mkrange 0 2}}"
   image: sequoiatools/collections:1.0
-  command: "-i {{$.Orchestrator}}:{{$.RestPort}} -b bucket{{$offset}} -o delete -s scope-{{$offset}} -c coll --count 10"
-  wait: true
+  command: "-i {{$.Orchestrator}}:{{$.RestPort}}
+            -b bucket{{$offset}} -o delete -s scope-{{$offset}} -c coll --count 10"
 
 # recreate replications with src local.bucket0, local.bucket1, local.bucket2
 - image: sequoiatools/xdcrmanager
@@ -144,79 +164,128 @@
 - foreach: "{{range $i, $offset := mkrange 0 2}}"
   image: sequoiatools/collections:1.0
   command: "-i {{$.Orchestrator}}:{{$.RestPort}} -b bucket{{$offset}} -o delete -s scope --count 5"
-  wait: true
 
 - foreach: "{{range $i, $offset := mkrange 0 2}}"
   image: sequoiatools/collections:1.0
   command: "-i {{$.Nodes | $.Cluster 1 | net 0}}:{{$.RestPort}} -b bucket{{$offset}} -o delete -s scope --count 5"
-  wait: true
 
 # recreate scope_0 to scope_4 in bucket_0 to bucket_2 on local and remote
 - foreach: "{{range $i, $offset := mkrange 0 2}}"
   image: sequoiatools/collections:1.0
   command: "-i {{$.Orchestrator}}:{{$.RestPort}} -b bucket{{$offset}} -o create -s scope --count 5"
-  wait: true
 - foreach: "{{range $i, $offset := mkrange 0 2}}"
   image: sequoiatools/collections:1.0
   command: "-i {{$.Nodes | $.Cluster 1 | net 0}}:{{$.RestPort}} -b bucket{{$offset}} -o create -s scope --count 5"
-  wait: true
 
 # recreate coll-0 to coll-9 in scope_0 to scope_2 in bucket_0 to bucket_2 on local and remote
 - foreach: "{{range $i, $offset := mkrange 0 2}}"
   image: sequoiatools/collections:1.0
-  command: "-i {{$.Nodes | $.Cluster 1 | net 0}}:{{$.RestPort}} -b bucket{{$offset}} -o create -s scope-{{$offset}} -c coll --count 10"
-  wait: true
+  command: "-i {{$.Nodes | $.Cluster 1 | net 0}}:{{$.RestPort}} -b bucket{{$offset}}
+            -o create -s scope-{{$offset}} -c coll --count 10"
 - foreach: "{{range $i, $offset := mkrange 0 2}}"
   image: sequoiatools/collections:1.0
-  command: "-i {{$.Orchestrator}}:{{$.RestPort}} -b bucket{{$offset}} -o create -s scope-{{$offset}} -c coll --count 10"
-  wait: true
+  command: "-i {{$.Orchestrator}}:{{$.RestPort}} -b bucket{{$offset}}
+            -o create -s scope-{{$offset}} -c coll --count 10"
 
-#============ pause local.bucket0->remote.bucket0 replication ============
+##============ pause-sleep-resume local.bucket0->remote.bucket0 replication 2 times ============
+# pause
 - image: sequoiatools/couchbase-cli
-  command: "xdcr-replicate -c {{.Orchestrator}}:{{.RestPort}} --pause -u {{.RestUsername}} -p {{.RestPassword}} --xdcr-replicator={{(index (.AllLogs `ReplId` | json) 0).uuid }}/{{.Bucket}}/{{.Bucket}}"
-
-#=========== Sleep for some time to allow collections manifest to sync =============
+  command: "xdcr-replicate -c {{.Orchestrator}}:{{.RestPort}} --pause -u {{.RestUsername}} -p {{.RestPassword}}
+            --xdcr-replicator={{(index (.AllLogs `ReplId` | json) 0).uuid }}/{{.Bucket}}/{{.Bucket}}"
+# sleep
 - image: sequoiatools/cmd
   entrypoint: sleep
   command: "300"
   wait: true
-
-#============ resume local.bucket0->remote.bucket0 replication ============
+# resume
 - image: sequoiatools/couchbase-cli
-  command: "xdcr-replicate -c {{.Orchestrator}}:{{.RestPort}} --resume -u {{.RestUsername}} -p {{.RestPassword}} --xdcr-replicator={{(index (.AllLogs `ReplId` | json) 0).uuid }}/{{.Bucket}}/{{.Bucket}}"
+  command: "xdcr-replicate -c {{.Orchestrator}}:{{.RestPort}} --resume -u {{.RestUsername}} -p {{.RestPassword}}
+            --xdcr-replicator={{(index (.AllLogs `ReplId` | json) 0).uuid }}/{{.Bucket}}/{{.Bucket}}"
+# pause
+- image: sequoiatools/couchbase-cli
+  command: "xdcr-replicate -c {{.Orchestrator}}:{{.RestPort}} --pause -u {{.RestUsername}} -p {{.RestPassword}}
+            --xdcr-replicator={{(index (.AllLogs `ReplId` | json) 0).uuid }}/{{.Bucket}}/{{.Bucket}}"
+# sleep
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+# resume
+- image: sequoiatools/couchbase-cli
+  command: "xdcr-replicate -c {{.Orchestrator}}:{{.RestPort}} --resume -u {{.RestUsername}} -p {{.RestPassword}}
+            --xdcr-replicator={{(index (.AllLogs `ReplId` | json) 0).uuid }}/{{.Bucket}}/{{.Bucket}}"
+
 
 #=========== Flush all buckets on remote ==============
 - foreach: "{{range $i, $offset := mkrange 0 2}}"
   image: appropriate/curl
-  command: "-u {{$.RestUsername}}:{{$.RestPassword}} -X POST http://{{$.Nodes | $.Cluster 1 | net 0}}:{{$.RestPort}}/pools/default/buckets/bucket{{$offset}}/controller/doFlush"
+  command: "-u {{$.RestUsername}}:{{$.RestPassword}} -X POST
+            http://{{$.Nodes | $.Cluster 1 | net 0}}:{{$.RestPort}}/pools/default/buckets/bucket{{$offset}}/controller/doFlush"
 
 
 #=========== Collections settings =============
-- foreach: "{{range $i, $offset := mkrange 0 2}}"
-  image: appropriate/curl
-  command: "-u {{$.RestUsername}}:{{$.RestPassword}} -X POST http://{{$.Orchestrator}}:{{$.RestPort}}/settings/replications/{{(index ($.AllLogs `ReplId` | json) 0).uuid }}/bucket{{$offset}}/bucket{{$offset}}
+# toggle explicit mapping for bucket0->bucket0
+- image: appropriate/curl
+  command: "-u {{$.RestUsername}}:{{$.RestPassword}} -X POST
+            http://{{$.Orchestrator}}:{{$.RestPort}}/settings/replications/{{(index ($.AllLogs `ReplId` | json) 0).uuid }}%2Fbucket0%2Fbucket0
             -d collectionsExplicitMapping=true
-            -d colMappingRules={\"scope-{{$offset}}\":\"scope-{{$offset}}\"}"
+            -d colMappingRules={\"scope-1\":\"scope-1\"}"
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
   wait: true
-- foreach: "{{range $i, $offset := mkrange 0 2}}"
-  image: appropriate/curl
-  command: "-u {{$.RestUsername}}:{{$.RestPassword}} -X POST http://{{$.Orchestrator}}:{{$.RestPort}}/settings/replications/{{(index ($.AllLogs `ReplId` | json) 0).uuid }}/bucket{{$offset}}/bucket{{$offset}}
-            -d collectionsExplicitMapping=false
+- image: appropriate/curl
+  command: "-u {{$.RestUsername}}:{{$.RestPassword}} -X POST
+            http://{{$.Orchestrator}}:{{$.RestPort}}/settings/replications/{{(index ($.AllLogs `ReplId` | json) 0).uuid }}%2Fbucket0%2Fbucket0
+            -d collectionsExplicitMapping=false"
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+# toggle migration mode for bucket1->bucket1
+- image: appropriate/curl
+  command: "-u {{$.RestUsername}}:{{$.RestPassword}} -X POST
+            http://{{$.Orchestrator}}:{{$.RestPort}}/settings/replications/{{(index ($.AllLogs `ReplId` | json) 0).uuid }}%2Fbucket1%2Fbucket1
+            -d collectionsExplicitMapping=true
             -d collectionsMigrationMode=true
-            -d colMappingRules={\"scope-{{$offset}}:coll-{{$offset}}\":\"scope-{{$offset}}:coll-{{$offset}}\"}"
+            -d colMappingRules={\"scope-2.coll-2\":\"scope-2.coll-2\"}"
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
   wait: true
-- foreach: "{{range $i, $offset := mkrange 0 2}}"
-  image: appropriate/curl
-  command: "-u {{$.RestUsername}}:{{$.RestPassword}} -X POST http://{{$.Orchestrator}}:{{$.RestPort}}/settings/replications/{{(index ($.AllLogs `ReplId` | json) 0).uuid }}/bucket{{$offset}}/bucket{{$offset}}
+- image: appropriate/curl
+  command: "-u {{$.RestUsername}}:{{$.RestPassword}} -X POST
+            http://{{$.Orchestrator}}:{{$.RestPort}}/settings/replications/{{(index ($.AllLogs `ReplId` | json) 0).uuid }}%2Fbucket1%2Fbucket1
             -d collectionsExplicitMapping=false
-            -d collectionsMigrationMode=false
-            -d collectionsMirroringMode=true"
+            -d collectionsMigrationMode=false"
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+# toggle oso mode for all buckets
+- foreach: "{{range $i, $offset := mkrange 0 2}}"
+  image: appropriate/curl
+  command: "-u {{$.RestUsername}}:{{$.RestPassword}} -X POST
+            http://{{$.Orchestrator}}:{{$.RestPort}}/settings/replications/{{(index ($.AllLogs `ReplId` | json) 0).uuid }}%2Fbucket{{$offset}}%2Fbucket{{$offset}}
+            -d collectionsOSOMode=true"
+  wait: true
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
   wait: true
 - foreach: "{{range $i, $offset := mkrange 0 2}}"
   image: appropriate/curl
-  command: "-u {{$.RestUsername}}:{{$.RestPassword}} -X POST http://{{$.Orchestrator}}:{{$.RestPort}}/settings/replications/{{(index ($.AllLogs `ReplId` | json) 0).uuid }}/bucket{{$offset}}/bucket{{$offset}}
-            -d collectionsExplicitMapping=true -d collectionsMigrationMode=true -d colMappingRules={\"REGEXP_CONTAINS(META().id,{{$offset}}$)\":\"scope-{{$offset}}:coll-{{$offset}}\"}
-            -d filterExpression=EXISTS(country)"
+  command: "-u {{$.RestUsername}}:{{$.RestPassword}} -X POST
+            http://{{$.Orchestrator}}:{{$.RestPort}}/settings/replications/{{(index ($.AllLogs `ReplId` | json) 0).uuid }}%2Fbucket{{$offset}}%2Fbucket{{$offset}}
+            -d collectionsOSOMode=false"
+# migration + advanced filter + oso for bucket2->bucket2
+- image: appropriate/curl
+  command: "-u {{$.RestUsername}}:{{$.RestPassword}} -X POST
+            http://{{$.Orchestrator}}:{{$.RestPort}}/settings/replications/{{(index ($.AllLogs `ReplId` | json) 0).uuid }}%2Fbucket2%2Fbucket2
+            -d collectionsExplicitMapping=true -d collectionsMigrationMode=true
+            -d colMappingRules={\"REGEXP_CONTAINS(META().id,{{$offset}}$)\":\"scope-{{$offset}}.coll-{{$offset}}\"}
+            -d filterExpression=EXISTS(country)
+            -d collectionsOSOMode=true"
   wait: true
 
 #============ More Cluster Ops ============
@@ -242,14 +311,37 @@
   wait: true
 - command:  "rebalance -c  {{.Nodes | .Cluster 1 | net 0}}:{{.RestPort}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
 
+#============ item count check ============
+# stop data loading for bucket0
+- client:
+  op: rm
+  container: CatapultBucket0
+# check curr_items >= loaded docs on both src and remote
+- template: wait_for_stat
+  args: "{{.RestUsername}}:{{.RestPassword}},
+         {{.Orchestrator}}:{{.RestPort}},
+         {{.Bucket}},
+         curr_items, ge, {{.Scale 10000}}"
+- template: wait_for_stat
+  args: "{{.RestUsername}}:{{.RestPassword}},
+         {{.Nodes | .Cluster 1 | net 0}}:{{.RestPort}},
+         {{.Bucket}},
+         curr_items, ge, {{.Scale 10000}}"
+
 #============ delete xdcr replications ============
 - foreach: "{{range $i, $offset := mkrange 0 2}}"
-  image: sequoiatools/xdcrmanager
+  image: appropriate/curl
   command: "-n {{$.Orchestrator}} -o {{$.RestPort}} -u {{$.RestUsername}} -p {{$.RestPassword}} -a delete_replication
-  -replid {{(index (.AllLogs `ReplId` | json) 0).uuid }}/bucket{{$offset}}/bucket{{$offset}}"
+            -replid {{(index (.AllLogs `ReplId` | json) 0).uuid }}%2Fbucket{{$offset}}%2Fbucket{{$offset}}"
   wait: true
 
-#============ delete xdcr config ============
+- image: appropriate/curl
+  command: "-n {{$.Orchestrator}} -o {{$.RestPort}} -u {{$.RestUsername}} -p {{$.RestPassword}} -a delete_replication
+            -replid {{(index (.AllLogs `ReplId` | json) 0).uuid }}%2Fbucket{{$offset}}%2Fbucket{{$offset}}"
+  wait: true
+
+#============ delete xdcr remotes ============
 - image: sequoiatools/couchbase-cli
-  command:  "xdcr-setup -c {{$.Orchestrator}}:{{$.RestPort}} --delete --xdcr-cluster-name remote -u {{$.RestUsername}} -p {{$.RestPassword}}"
+  command:  "xdcr-setup -c {{$.Orchestrator}}:{{$.RestPort}} --delete --xdcr-cluster-name remote
+             -u {{$.RestUsername}} -p {{$.RestPassword}}"
   wait: true

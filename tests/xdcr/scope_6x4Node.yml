@@ -19,22 +19,22 @@ users:
 buckets:
   -
       name: bucket0
-      ram: 33%
+      ram: 15%
       eviction: fullEviction
   -
       name: bucket1
-      ram: 33%
+      ram: 15%
       eviction: fullEviction
   -
       name: bucket2
-      ram: 34%
+      ram: 15%
       eviction: fullEviction
 
 servers:
   -
       name: local
       count: 6
-      ram: 90%
+      ram: 95%
       rest_username: Administrator
       rest_password: password
       init_nodes: 5
@@ -44,7 +44,7 @@ servers:
   -
       name: remote
       count: 4
-      ram: 90%
+      ram: 95%
       rest_username: Administrator
       rest_password: password
       init_nodes: 3
