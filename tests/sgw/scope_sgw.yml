@@ -35,7 +35,7 @@ buckets:
 servers: # each server tag represents a cluster
   -
       name: local
-      count: 11
+      count: 12
       ram: 90%
       index_ram: 90%
       index_storage: memory_optimized
@@ -43,7 +43,7 @@ servers: # each server tag represents a cluster
         index: 5
         index_start: 1
         query: 2
-        query_start: 10
+        query_start: 11
       rest_username: Administrator
       rest_password: password
       data_path: "/data"
