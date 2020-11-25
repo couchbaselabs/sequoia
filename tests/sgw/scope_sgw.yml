@@ -24,24 +24,24 @@ users:
 buckets:
   -
       name: default
-      ram: 30%
+      ram: 50%
       eviction: fullEviction
   -
       name: other
       count: 3
-      ram: 15%
+      ram: 16%
 
 
 servers: # each server tag represents a cluster
   -
       name: local
       count: 12
-      ram: 40%
-      index_ram: 40%
-      index_storage: memory_optimized
+      ram: 80%
+      index_ram: 80%
+      index_storage: default
       services:
         index: 5
-        index_start: 1
+        index_start: 6
         query: 2
         query_start: 11
       rest_username: Administrator
