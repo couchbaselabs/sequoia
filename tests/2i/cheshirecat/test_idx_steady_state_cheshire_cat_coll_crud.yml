@@ -84,6 +84,14 @@
 - section_end: query_replica_indexes
 
 
+############### Temporary : Sleep for 2 hrs to allow debugging ###############
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "7200"
+   wait: true
+
+
 ###############  Drop all Indexes ################
 - section_start: drop_all_indexes
 - image: sequoiatools/indexmanager

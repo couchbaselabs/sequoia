@@ -3,7 +3,7 @@ import string
 import sys
 from datetime import datetime
 from couchbase.cluster import Cluster, ClusterOptions, QueryOptions
-from couchbase.exceptions import QueryException, QueryIndexAlreadyExistsException, TimeoutException
+from couchbase.exceptions import QueryException, QueryIndexAlreadyExistsException, TimeoutException, HTTPException
 from couchbase_core.cluster import PasswordAuthenticator
 from couchbase_core.bucketmanager import BucketManager
 from couchbase.management.collections import *
@@ -194,7 +194,8 @@ class IndexManager:
 
             status, results, queryResult = self._execute_query(idx_statement)
             if status is None:
-                raise Exception("Query service probably has issues")
+                #raise Exception("Query service probably has issues")
+                self.log.info("Some issue running the create index statement")
 
             # Exit if timed out
             if timeout > 0 and time.time() > end_time:
