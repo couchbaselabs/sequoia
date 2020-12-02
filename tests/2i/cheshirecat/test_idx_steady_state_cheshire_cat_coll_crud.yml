@@ -25,7 +25,10 @@
 -
   image: sequoiatools/collections:1.0
   command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 3}} -o crud_mode --crud_interval=10 --max_scopes=10 --max_collections=100"
-- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 4}} -o crud_mode --crud_interval=10 --max_scopes=10 --max_collections=100"
+  alias: collection_crud1
+-
+  command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 4}} -o crud_mode --crud_interval=10 --max_scopes=10 --max_collections=100"
+  alias: collection_crud2
 
 
 ############### data loading ################
@@ -53,13 +56,13 @@
 ###############  build all deferred indexes ################
 
 - image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a build_deferred_index -m 10"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a build_deferred_index -m 5"
   wait: true
 
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a build_deferred_index -m 10"
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a build_deferred_index -m 5"
   wait: true
 
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -a build_deferred_index -m 10"
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -a build_deferred_index -m 5"
   wait: true
 
 
@@ -72,7 +75,10 @@
 ############### Start creating indexes in a loop on bucket4 & bucket5 (Collection CRUD workload) ###############
 - image: sequoiatools/indexmanager
   command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 3}} -d hotel -a create_index_loop --interval 20"
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}} -d hotel -a create_index_loop --interval 20"
+  alias: index_loop1
+-
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}} -d hotel -a create_index_loop --interval 20"
+  alias: index_loop2
 
 # ###############  run queries ################
 - section_start: query_replica_indexes
@@ -83,12 +89,27 @@
   wait: true
 - section_end: query_replica_indexes
 
-
-############### Temporary : Sleep for 2 hrs to allow debugging ###############
+############### Stop Collections CRUD and index creation on bucket4 & bucket5 ###############
+-
+  client:
+    op: rm
+    container: collection_crud1
+-
+  client:
+    op: rm
+    container: collection_crud2
+-
+  client:
+    op: rm
+    container: index_loop1
+-
+  client:
+    op: rm
+    container: index_loop2
 -
    image: sequoiatools/cmd
    entrypoint: sleep
-   command: "7200"
+   command: "600"
    wait: true
 
 
@@ -102,6 +123,12 @@
   wait: true
 
 - command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -a drop_all_indexes"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 3}} -a drop_all_indexes"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}} -a drop_all_indexes"
   wait: true
 
 # Sleep for some time to allow DDL to complete in the background
