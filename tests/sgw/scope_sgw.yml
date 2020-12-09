@@ -51,3 +51,9 @@ servers: # each server tag represents a cluster
       init_nodes: 12
       buckets: default,other
       users: default,other-1,other-2,other-3
+
+syncgateways:
+  -
+      name: sg
+      servers: local 
+      config: default_cc.json

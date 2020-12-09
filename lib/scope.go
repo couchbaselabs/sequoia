@@ -1045,3 +1045,43 @@ func (s *Scope) getClusteInfo() {
 		fmt.Println("###### ", key, ":", len(value), "===== >", value, " ###########")
 	}
 }
+
+func (s *Scope) ConfigSyncGateway() {
+	var image = "sgw-config"
+	
+	// configure sync gateway
+	operation := func(name string, ssh_user string, ssh_pwd string, serverNames []string, bucketName string, bucketUser string, bucketUserPwd string, sgws *[]SyncGatewaySpec) {
+
+		cbs := []string{}
+		for _, sn := range serverNames {
+			ip := s.Provider.GetHostAddress(sn)
+			cbs = append(cbs, ip)
+		}
+		cbsIps := strings.Join(cbs, ",")
+
+		sgwIp := s.Provider.GetHostAddress(name)
+
+		command := []string{"MOBILE_TESTKIT_BRANCH=sequoia/sgw-component-testing",
+			"SSH_USER=" + ssh_user,
+			"SSH_PWD=" + ssh_pwd,
+			"CBS_HOSTS=" + cbsIps,
+			"SGW_HOSTS=" + sgwIp,
+			"BUCKET_NAME=" + bucketName,
+			"BUCKET_USER=" + bucketUser,
+			"BUCKET_USER_PASSWORD=" + bucketUserPwd,
+		}
+
+		desc := "config sync gateway"
+		task := ContainerTask{
+			Describe: desc,
+			Image:    image,
+			Command:  command,
+			Async:    false,
+		}
+		s.Cm.Run(&task)
+	}
+
+	// apply only to orchestrator
+	s.Spec.ApplyToAllSyncGateway(operation)
+
+}

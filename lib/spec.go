@@ -261,6 +261,36 @@ func (s *ScopeSpec) ApplyToAllServersAsync(operation func(string, *ServerSpec, c
 	}
 }
 
+func (s *ScopeSpec) ApplyToAllSyncGateway(operation func(string, string, string, []string, string, string, string, *[]SyncGatewaySpec)) {
+	s.ApplyToSyncGateway(operation, 0, 0)
+}
+
+func (s *ScopeSpec) ApplyToSyncGateway(operation func(string, string, string, []string, string, string, string, *[]SyncGatewaySpec),
+	startIdx int, endIdx int) {
+
+	useLen := false
+	if endIdx == 0 {
+		useLen = true
+	}
+
+	cbs := s.Servers[0].Names
+	ssh_user := s.Servers[0].SSHUsername
+	ssh_pwd := s.Servers[0].SSHPassword
+	bucket_name := s.Buckets[0].Names[0]
+	username := s.Users[0].Name
+	password := s.Users[0].Password
+
+	for _, sgw := range s.SyncGateways {
+		if useLen {
+			endIdx = len(sgw.Names)
+		}
+		for _, sgwName := range sgw.Names[startIdx:endIdx] {
+			// allowed apply func to modify server
+			operation(sgwName, ssh_user, ssh_pwd, cbs, bucket_name, username, password, &s.SyncGateways)
+		}
+	}
+}
+
 func (s *ScopeSpec) ApplyToAllSyncGatewayAsync(operation func(string, *SyncGatewaySpec, chan bool)) {
 
 	waitChans := []chan bool{}

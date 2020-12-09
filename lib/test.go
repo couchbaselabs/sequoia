@@ -186,7 +186,8 @@ func (t *Test) Run(scope Scope) {
 			}
 		}
 
-		scope.SetupMobile()
+		scope.Provider.ProvideSyncGateways(scope.Spec.SyncGateways)
+		scope.ConfigSyncGateway()
 
 	} else if (scope.Provider.GetType() != "docker") &&
 		(scope.Provider.GetType() != "swarm") {

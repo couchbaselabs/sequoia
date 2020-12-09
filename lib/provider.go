@@ -192,7 +192,11 @@ func (p *FileProvider) ProvideCouchbaseServers(filename *string, servers []Serve
 	for _, server := range servers {
 		for _, name := range server.Names {
 			if i < len(hosts) {
-				p.ServerNameIp[name] = hosts[i]
+				parts := strings.Split(hosts[i], ":")
+				prefix := parts[0]
+				if prefix != "syncgateway" {
+					p.ServerNameIp[name] = hosts[i]
+				}
 			}
 			i++
 		}
@@ -208,7 +212,7 @@ func (p *FileProvider) ProvideSyncGateways(syncGateways []SyncGatewaySpec) {
 	hosts := strings.Split(hostNames, " ")
 	gatewayHosts := []string{}
 	for _, host := range hosts {
-		parts := strings.Split(host, ",")
+		parts := strings.Split(host, ":")
 		prefix := parts[0]
 		if prefix == "syncgateway" {
 			if len(parts) > 1 {
