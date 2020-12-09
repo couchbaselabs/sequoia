@@ -1047,7 +1047,7 @@ func (s *Scope) getClusteInfo() {
 }
 
 func (s *Scope) ConfigSyncGateway() {
-	var image = "sgw-config"
+	var image = "sequoiatools/sgw-config"
 	
 	// configure sync gateway
 	operation := func(name string, ssh_user string, ssh_pwd string, serverNames []string, bucketName string, bucketUser string, bucketUserPwd string, sgws *[]SyncGatewaySpec) {
