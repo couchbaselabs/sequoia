@@ -60,6 +60,43 @@
    command: "600"
    wait: true
 
+# start xdcr replications
+- image: sequoiatools/couchbase-cli
+  requires:  "{{eq true .DoOnce }}"
+  command:  "xdcr-setup -c {{.Orchestrator}}:{{.RestPort}} --create --xdcr-cluster-name remote
+        --xdcr-hostname {{.Nodes | .Cluster 1 | net 0}}
+        --xdcr-username {{.Nodes | .Cluster 1 | .Attr `rest_username`}}
+        --xdcr-password {{.Nodes | .Cluster 1 | .Attr `rest_password`}}"
+  wait: true
+- command: "xdcr-replicate -c {{.Orchestrator}}:{{.RestPort}}
+        --create
+        --xdcr-cluster-name remote
+        --xdcr-from-bucket {{.Bucket}}
+        --xdcr-to-bucket {{.Nodes | .Cluster 1 | bucket 0}}
+        --enable-compression 1"
+  wait: true
+- command: "xdcr-replicate -c {{.Orchestrator}}:{{.RestPort}}
+        --create
+        --xdcr-cluster-name remote
+        --xdcr-from-bucket {{.NthBucket 4}}
+        --xdcr-to-bucket {{.Nodes | .Cluster 1 | bucket 1}}
+        --enable-compression 1"
+  wait: true
+- command: "xdcr-replicate -c {{.Orchestrator}}:{{.RestPort}}
+        --create
+        --xdcr-cluster-name remote
+        --xdcr-from-bucket {{.NthBucket 8}}
+        --xdcr-to-bucket {{.Nodes | .Cluster 1 | bucket 2}}
+        --enable-compression 1"
+  wait: true
+- command: "xdcr-replicate -c {{.Orchestrator}}:{{.RestPort}}
+        --create
+        --xdcr-cluster-name remote
+        --xdcr-from-bucket {{.NthBucket 9}}
+        --xdcr-to-bucket {{.Nodes | .Cluster 1 | bucket 3}}
+        --enable-compression 1"
+  wait: true
+
 # rebalance out a node
 - template: rebalance_out
   args: "{{.ActiveDataNode 1}}:{{.RestPort}}"
@@ -244,44 +281,6 @@
 - template: query_fts
   args: "{{.FTSNodePort}}, -1, {{.Scale 3}}, social, +profile.status:4121*, -size 10"
 
-
-# start xdcr replications
-- image: sequoiatools/couchbase-cli
-  requires:  "{{eq true .DoOnce }}"
-  command:  "xdcr-setup -c {{.Orchestrator}}:{{.RestPort}} --create --xdcr-cluster-name remote
-        --xdcr-hostname {{.Nodes | .Cluster 1 | net 0}}
-        --xdcr-username {{.Nodes | .Cluster 1 | .Attr `rest_username`}}
-        --xdcr-password {{.Nodes | .Cluster 1 | .Attr `rest_password`}}"
-  wait: true
-- command: "xdcr-replicate -c {{.Orchestrator}}:{{.RestPort}}
-        --create
-        --xdcr-cluster-name remote
-        --xdcr-from-bucket {{.Bucket}}
-        --xdcr-to-bucket {{.Nodes | .Cluster 1 | bucket 0}}
-	--enable-compression 1"
-  wait: true
-- command: "xdcr-replicate -c {{.Orchestrator}}:{{.RestPort}}
-        --create
-        --xdcr-cluster-name remote
-        --xdcr-from-bucket {{.NthBucket 4}}
-        --xdcr-to-bucket {{.Nodes | .Cluster 1 | bucket 1}}
-        --enable-compression 1"
-  wait: true
-- command: "xdcr-replicate -c {{.Orchestrator}}:{{.RestPort}}
-        --create
-        --xdcr-cluster-name remote
-        --xdcr-from-bucket {{.NthBucket 8}}
-        --xdcr-to-bucket {{.Nodes | .Cluster 1 | bucket 2}}
-        --enable-compression 1"
-  wait: true
-- command: "xdcr-replicate -c {{.Orchestrator}}:{{.RestPort}}
-        --create
-        --xdcr-cluster-name remote
-        --xdcr-from-bucket {{.NthBucket 9}}
-        --xdcr-to-bucket {{.Nodes | .Cluster 1 | bucket 3}}
-        --enable-compression 1"
-  wait: true
-
 # get replication id
 -
   image:  appropriate/curl
@@ -348,6 +347,25 @@
    entrypoint: sleep
    command: "600"
    wait: true
+
+# Pause and Resume XDCR replications
+- 
+  image: appropriate/curl
+  command: "-u {{.RestUsername}}:{{.RestPassword}} -X POST http://{{.Orchestrator}}:{{.RestPort}}/settings/replications/{{(index (.AllLogs `ReplId` | json) 0).uuid }}/default/{{.Bucket}} -d pauseRequested=true"
+  wait: true
+  command: "-u {{.RestUsername}}:{{.RestPassword}} -X POST http://{{.Orchestrator}}:{{.RestPort}}/settings/replications/{{(index (.AllLogs `ReplId` | json) 0).uuid }}/{{.NthBucket 8}}/{{.Nodes | .Cluster 1 | bucket 2}} -d pauseRequested=true"
+  wait: true
+- 
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+-
+  image: appropriate/curl
+  command: "-u {{.RestUsername}}:{{.RestPassword}} -X POST http://{{.Orchestrator}}:{{.RestPort}}/settings/replications/{{(index (.AllLogs `ReplId` | json) 0).uuid }}/default/{{.Bucket}} -d pauseRequested=false"
+  wait: true
+  command: "-u {{.RestUsername}}:{{.RestPassword}} -X POST http://{{.Orchestrator}}:{{.RestPort}}/settings/replications/{{(index (.AllLogs `ReplId` | json) 0).uuid }}/{{.NthBucket 8}}/{{.Nodes | .Cluster 1 | bucket 2}} -d pauseRequested=false"
+  wait: true
 
 # load some new docs
 - image: sequoiatools/gideon
