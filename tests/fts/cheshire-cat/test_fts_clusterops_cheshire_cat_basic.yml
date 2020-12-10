@@ -1,0 +1,182 @@
+- include: tests/templates/kv.yml, tests/templates/rebalance.yml
+
+############### create 20 scopes and 200 collections across 3 buckets as scope_1,scope_2 ... ###############
+-
+  image: sequoiatools/collections:1.0
+  command: "-i {{.Orchestrator}}:8091 -b {{.Bucket}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count=7 --collection_count=70 --collection_distribution=random"
+  wait: true
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 1}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count=7 --collection_count=70 --collection_distribution=random"
+  wait: true
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 2}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count=6 --collection_count=60 --collection_distribution=random"
+  wait: true
+
+############### Sleep for some time to allow collections manifest to sync ###############
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "300"
+   wait: true
+
+
+############### data loading ################
+- image: sequoiatools/catapult
+  command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -n {{.Scale 50000}} -pc 100 -pu 25 -pd 25
+    -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 60 -fu price,free_parking -ac True"
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 1}} -n {{.Scale 50000}} -pc 100 -pu 25
+    -pd 25 -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 60 -fu price,free_parking -ac True"
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 2}} -n {{.Scale 50000}} -pc 100 -pu 25
+    -pd 25 -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 60 -fu price,free_parking -ac True"
+
+
+###############  create indexes ################
+- section_start: create_fts_indexes
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -i 17 -a create_index"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -i 17 -a create_index"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -i 16 -a create_index"
+  wait: true
+- section_end: create_fts_indexes
+
+
+############### Wait for some time till all indexes are completely built ###############
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "1200"
+   wait: true
+
+
+# ###############  run queries ################
+- section_start: query_fts_indexes
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -t 0"
+
+- section_end: query_fts_indexes
+
+# Sleep for some time after starting the queries (15 mins)
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "900"
+   wait: true
+
+# ############### Kill CBFT process on an FTS node ################
+-
+  template: kill_process
+  args: "{{.Nodes | .Service `fts` | net 1}}, cbft"
+
+# Sleep for 15 mins
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "900"
+   wait: true
+
+# ###############  Rebalance in an FTS node ################
+- template: rebalance_in
+  args: "{{.InActiveNode}}, fts"
+  wait: true
+
+
+# Sleep for 15 mins
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "900"
+   wait: true
+
+# ############### Kill CBFT process on an FTS node ################
+-
+  template: kill_process
+  args: "{{.Nodes | .Service `fts` | net 2}}, cbft"
+
+
+# Sleep for 15 mins
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "900"
+   wait: true
+
+# Rebalance out an FTS node
+- template: rebalance_out
+  args: "{{.Nodes | .Service `fts` | net 0}}"
+  wait: true
+
+# Sleep for 15 mins
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "900"
+   wait: true
+
+# ############### Kill CBFT process on an FTS node ################
+-
+  template: kill_process
+  args: "{{.Nodes | .Service `fts` | net 1}}, cbft"
+
+
+# Sleep for 15 mins
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "900"
+   wait: true
+
+# Swap Rebalance an FTS node
+- template: rebalance_swap
+  args: "{{.InActiveNode}}, {{.Nodes | .Service `fts` | net 1}}, fts"
+  wait: true
+
+
+# Sleep for 15 mins
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "900"
+   wait: true
+
+# ############### Kill CBFT process on an FTS node ################
+-
+  template: kill_process
+  args: "{{.Nodes | .Service `fts` | net 2}}, cbft"
+
+
+# Sleep for 15 mins
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "900"
+   wait: true
+
+
+############### Kill memcached ################
+-
+  template: kill_process
+  args: "{{.NthDataNode 2}}, memcached"
+
+# Sleep for 15 mins
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "900"
+   wait: true
+
+
+###############  Drop all Indexes ################
+- section_start: drop_all_indexes
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a drop_all_indexes"
+  wait: true
+
+# Sleep for some time to allow DDL to complete in the background
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "600"
+   wait: true
+- section_end: drop_all_indexes
