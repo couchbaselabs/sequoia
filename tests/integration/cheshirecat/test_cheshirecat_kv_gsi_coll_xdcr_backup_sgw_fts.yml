@@ -175,16 +175,16 @@
 
 # Create FTS indexes on collections
 - image: sequoiatools/ftsindexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}} -i 13 -a create_index"
+  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}} -i 13 -a create_index"
   wait: true
 
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 5}} -i 13 -a create_index"
+- command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 5}} -i 13 -a create_index"
   wait: true
 
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 6}} -i 12 -a create_index"
+- command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 6}} -i 12 -a create_index"
   wait: true
 
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 7}} -i 12 -a create_index"
+- command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 7}} -i 12 -a create_index"
   wait: true
 
 # run sync gateway testing through mobile-testkit - versions supplied are placeholders - they will be replaced with actual values during the run
@@ -227,7 +227,7 @@
 
 # query FTS indexes
 - image: sequoiatools/ftsindexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -t 0"
+  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -t 0"
 
 # Sleep for some time to allow some queries to be run against the collections
 -
@@ -512,7 +512,7 @@
 
 # Drop FTS indexes
 - image: sequoiatools/ftsindexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a drop_all_indexes"
+  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a drop_all_indexes"
   wait: true
 
 # Sleep for some time to allow DDL to complete in the background
