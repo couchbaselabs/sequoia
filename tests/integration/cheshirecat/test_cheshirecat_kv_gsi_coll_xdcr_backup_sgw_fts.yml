@@ -227,7 +227,7 @@
 
 # query FTS indexes
 - image: sequoiatools/ftsindexmanager
-  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -t 0"
+  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a run_queries -t 0"
 
 # Sleep for some time to allow some queries to be run against the collections
 -
@@ -512,7 +512,7 @@
 
 # Drop FTS indexes
 - image: sequoiatools/ftsindexmanager
-  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a drop_all_indexes"
+  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a delete_all_indexes"
   wait: true
 
 # Sleep for some time to allow DDL to complete in the background
