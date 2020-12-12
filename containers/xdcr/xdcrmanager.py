@@ -199,7 +199,7 @@ class XDCRManager:
         elif action == "cleanup":
             pass
         elif action == "validate":
-            pass
+            self.compare_item_counts(src, remote, src_bkt, remote_bkt)
 
     def execute_cmd(self, cmd, timeout=60):
         command = Command(cmd, self.args.debug)
@@ -251,7 +251,6 @@ class XDCRManager:
             "curl -X DELETE -u " + node["username"] + ':' + node["password"] + " http://" + node_ip + ':' + node[
                 "port"] +
             "/pools/default/buckets/" + bucket)
-        self.refresh_maps(node_ip)
 
     def delete_all_buckets(self, node_ip):
         for bucket in self.node_bkt_map[node_ip]:
@@ -259,38 +258,28 @@ class XDCRManager:
 
     def _create_remote_ref(self, src_ip, remote_ip):
         src = self.nodes[src_ip]
-        existing_remotes = self.execute_cmd(
-            "curl -u " + src["username"] + ':' + src["password"] + " http://" + src_ip + ':' + src["port"] +
-            "/pools/default/remoteClusters")
-        if remote_ip not in existing_remotes:
-            remote = self.nodes[remote_ip]
-            self.execute_cmd(
-                "curl -v -u " + src["username"] + ':' + src["password"] + " http://" + src_ip + ':' + src["port"] +
-                "/pools/default/remoteClusters -d name=" + src_ip + "to" + remote_ip +
-                " -d hostname=" + remote_ip + ':' + remote["port"] + " -d username=" + remote[
-                    "username"] + " -d password=" + remote["password"])
-        return (src_ip + "to" + remote_ip)
+        remote = self.nodes[remote_ip]
+        self.execute_cmd(
+            "curl -v -u " + src["username"] + ':' + src["password"] + " http://" + src_ip + ':' + src["port"] +
+            "/pools/default/remoteClusters -d name=" + src_ip + "to" + remote_ip +
+            " -d hostname=" + remote_ip + ':' + remote["port"] + " -d username=" + remote[
+                "username"] + " -d password=" + remote["password"])
+        time.sleep(30)
+        return src_ip + "to" + remote_ip
 
     def create_replication(self, src_ip, remote_ip, src_bkt, remote_bkt):
         ref = self._create_remote_ref(src_ip, remote_ip)
         src = self.nodes[src_ip]
-        replid = self.execute_cmd(
+        self.execute_cmd(
             "curl -X POST -u " + src["username"] + ':' + src["password"] + " http://" + src_ip + ':' + src["port"] +
             "/controller/createReplication -d fromBucket=" + str(src_bkt) + " -d toCluster=" + ref +
             " -d toBucket=" + str(remote_bkt) + " -d replicationType=continuous")
-        replid = str(replid)
-        if "id" in replid:
-            lines = replid.split('{"id":"')
-            for line in range(1, len(lines)):
-                repl = lines[line].split('/')[0]
-                self.refresh_maps(src_ip, add_repl=repl)
 
     def delete_replication(self, node_ip, replid):
         node = self.nodes[node_ip]
         self.execute_cmd(
             "curl -X POST -u " + node["username"] + ':' + node["password"] + " http://" + node_ip + ':' + node["port"] +
             "/controller/cancelXDCR/" + replid + " -X DELETE")
-        self.refresh_maps(node_ip, drop_repl=replid)
 
     def change_setting(self, node_ip, replication, setting, val):
         node = self.nodes[node_ip]
@@ -298,6 +287,23 @@ class XDCRManager:
             "curl -X POST -u " + node["username"] + ':' + node["password"] + " http://" + node_ip + ':' + node["port"] +
             "/settings/replications/" + replication + ' -d ' + setting + '=' + str(val))
 
+    def _get_bkt_item_count(self, node_ip, bucket):
+        node = self.nodes[node_ip]
+        num_items = self.execute_cmd("curl -s -u " +
+                                     node["username"] + ':' + node["password"] +
+                                     " http://" + node_ip + ':' + node["port"] +
+                                     "/pools/default/buckets/" + bucket +
+                                     "/stats | jq .op.samples.curr_items[-1]")
+        return int(num_items[0])
+
+    def compare_item_counts(self, src, remote, src_bkt, remote_bkt):
+        src_count = self._get_bkt_item_count(src, src_bkt)
+        remote_count = self._get_bkt_item_count(remote, remote_bkt)
+        if src_count != remote_count:
+            raise Exception(
+                "Validation failed. No. of items in source {0}.{1} = {2} does not match "
+                "remote {3}.{4} = {5}".format(src, src_bkt, src_count,
+                                              remote, remote_bkt, remote_count))
 
 if __name__ == '__main__':
     xdcrMgr = XDCRManager()

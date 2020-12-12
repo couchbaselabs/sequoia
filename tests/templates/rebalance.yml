@@ -149,7 +149,7 @@
       image: sequoiatools/couchbase-cli:7.0
       command: "failover -c {{.Orchestrator}}:{{.RestPort}}
           --server-failover $0:{{.RestPort}}
-          -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+          -u  {{.RestUsername}} -p  {{.RestPassword}} --force --hard"
       wait: true
 
 # recover a node

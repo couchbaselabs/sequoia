@@ -217,6 +217,18 @@ func (s *Scope) InitCli() {
 
 }
 
+func (s *Scope) GetCliImage() string {
+    // make sure proper couchbase-cli is used
+	var version string
+	if s.Flags.Version != nil && (*s.Flags.Version != "") {
+		version = *s.Flags.Version
+	} else {
+		version = s.Rest.GetServerVersion()
+	}
+	s.Version = version[:3]
+	return "sequoiatools/couchbase-cli:" + s.Version
+}
+
 func (s *Scope) WaitForServers() {
 
 	var image = "martin/wait"
@@ -341,17 +353,7 @@ func (s *Scope) GetPath(path, name string) string {
 }
 
 func (s *Scope) InitNodes() {
-	// make sure proper couchbase-cli is used
-	var version string
-	if s.Flags.Version != nil && (*s.Flags.Version != "") {
-		version = *s.Flags.Version
-	} else {
-		version = s.Rest.GetServerVersion()
-	}
-	s.Version = version[:3]
-
-	var image = "sequoiatools/couchbase-cli:" + s.Version
-
+	var image = s.GetCliImage()
 	initNodesOp := func(name string, server *ServerSpec, done chan bool) {
 		ip := s.Provider.GetHostAddress(name)
 		parts := strings.Split(ip, ",")
@@ -406,17 +408,7 @@ func (s *Scope) InitNodes() {
 }
 
 func (s *Scope) InitCluster() {
-	// make sure proper couchbase-cli is used
-	var version string
-	if s.Flags.Version != nil && (*s.Flags.Version != "") {
-		version = *s.Flags.Version
-	} else {
-		version = s.Rest.GetServerVersion()
-	}
-	s.Version = version[:3]
-
-	var image = "sequoiatools/couchbase-cli:" + s.Version
-
+	var image = s.GetCliImage()
 	initClusterOp := func(name string, server *ServerSpec) {
 		orchestrator := server.Names[0]
 		ip := s.Provider.GetHostAddress(orchestrator)
@@ -533,8 +525,7 @@ func (s *Scope) AddUsers() {
 	if strings.Compare(s.Version, "5.0") == -1 {
 		return
 	}
-
-	var image = "sequoiatools/couchbase-cli"
+    var image = s.GetCliImage()
 
 	// add users
 	operation := func(name string, server *ServerSpec) {
@@ -582,17 +573,7 @@ func (s *Scope) AddUsers() {
 }
 
 func (s *Scope) AddNodes() {
-
-	// make sure proper couchbase-cli is used for node init
-	var version string
-	if s.Flags.Version != nil && (*s.Flags.Version != "") {
-		version = *s.Flags.Version
-	} else {
-		version = s.Rest.GetServerVersion()
-	}
-
-	s.Version = version[:3]
-	var image = "sequoiatools/couchbase-cli:" + s.Version
+    var image = s.GetCliImage()
 	addNodesOp := func(name string, server *ServerSpec) {
 
 		if server.InitNodes <= server.NodesActive {
@@ -647,8 +628,7 @@ func (s *Scope) AddNodes() {
 }
 
 func (s *Scope) RebalanceClusters() {
-
-	var image = "sequoiatools/couchbase-cli"
+	var image = s.GetCliImage()
 	// configure rebalance operation
 	operation := func(name string, server *ServerSpec) {
 
@@ -681,16 +661,7 @@ func (s *Scope) RebalanceClusters() {
 
 func (s *Scope) CreateBuckets() {
 	//fmt.Printf("%+v\n", s.Spec.Buckets)
-	// make sure proper couchbase-cli is used
-	var version string
-	if s.Flags.Version != nil && (*s.Flags.Version != "") {
-		version = *s.Flags.Version
-	} else {
-		version = s.Rest.GetServerVersion()
-	}
-	s.Version = version[:3]
-
-	var image = "sequoiatools/couchbase-cli:" + s.Version
+	var image = s.GetCliImage()
 
 	if s.Spec.Servers[0].NumberOfBuckets != "" {
 		s.Rest.updateNumberOfBucktes(s.Spec.Servers[0].NumberOfBuckets)
@@ -964,9 +935,7 @@ func (s *Scope) CreateViews() {
 }
 
 func (s *Scope) DeleteBuckets() {
-
-	var image = "sequoiatools/couchbase-cli"
-
+	var image = s.GetCliImage()
 	// configure rebalance operation
 	operation := func(name string, server *ServerSpec) {
 
@@ -1003,9 +972,7 @@ func (s *Scope) DeleteBuckets() {
 }
 
 func (s *Scope) RemoveNodes() {
-
-	var image = "sequoiatools/couchbase-cli"
-
+    var image = s.GetCliImage()
 	rmNodesOp := func(name string, server *ServerSpec) {
 
 		orchestrator := server.Names[0]
