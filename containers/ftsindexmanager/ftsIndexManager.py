@@ -99,6 +99,7 @@ HOTEL_DS_FIELDS = [
         "type": "text",
         "is_nested_object": False,
         "field_code": "public_likes",
+        "score_none": True,
         "queries": [{
             "match": "Daina Cassin",
             "field": "public_likes"
@@ -183,6 +184,7 @@ class FTSIndexManager:
         self.num_indexes = args.num_indexes
         self.dataset = args.dataset
         self.action = args.action
+        self.duration = args.duration
 
         self.idx_def_templates = HOTEL_DS_FIELDS
 
@@ -541,7 +543,11 @@ class FTSIndexManager:
         index_field = random.choice(index_fields)
         self.log.info("--------------- Running query on {0} field {1} ---------------".format(index_name, index_field))
         query = random.choice(index_field["queries"])
-        status, content, response = self.run_fts_query(index_name, query)
+
+        if "score_none" in index_field:
+            status, content, response = self.run_fts_query(index_name, query, score_none=True)
+        else:
+            status, content, response = self.run_fts_query(index_name, query, score_none=False)
 
         self.log.info("Status : {0} \nResponse : {1} \nTotal Hits : {2}".format(status, response["status"],
                                                                                 content["total_hits"]))
@@ -552,7 +558,7 @@ class FTSIndexManager:
     Run single FTS query
     """
 
-    def run_fts_query(self, index_name, query):
+    def run_fts_query(self, index_name, query, score_none=False):
         uri = "/api/index/" + index_name + "/query"
 
         body = {}
@@ -560,6 +566,8 @@ class FTSIndexManager:
         body["fields"] = ["*"]
         body["highlight"] = {}
         body["query"] = query
+        if score_none:
+            body["score"] = "none"
 
         self.log.info("URI : {0} body : {1}".format(uri, body))
 
