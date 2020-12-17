@@ -150,6 +150,7 @@ HOTEL_DS_FIELDS = [
 # Some constants
 NUM_WORKERS = 4  # Max number of worker threads to execute queries
 BATCH_SIZE = 100  # Number of FTS queries to be run by each worker thread
+FTS_PORT = 8094
 
 
 class FTSIndexManager:
@@ -169,6 +170,9 @@ class FTSIndexManager:
         parser.add_argument("-t", "--duration", type=int,
                             help="Duration for queries to be run for. 0 (default) is infinite",
                             default="0")
+        parser.add_argument("--print_interval", type=int,
+                            help="Interval to print query result summary. Default is 10 mins",
+                            default="600")
         parser.add_argument("-a", "--action",
                             choices=["create_index", "run_queries", "delete_all_indexes"],
                             help="Choose an action to be performed. Valid actions : create_index, run_queries, delete_all_indexes",
@@ -185,6 +189,7 @@ class FTSIndexManager:
         self.dataset = args.dataset
         self.action = args.action
         self.duration = args.duration
+        self.print_interval = args.print_interval
 
         self.idx_def_templates = HOTEL_DS_FIELDS
 
@@ -450,7 +455,7 @@ class FTSIndexManager:
 
         # Create FTS index via REST
         index_definition = json.dumps(index_def_dict)
-        status, content, response = self.http_request(self.node_addr, 8094, "/api/index/{0}".format(idx_name),
+        status, content, response = self.http_request(self.node_addr, FTS_PORT, "/api/index/{0}".format(idx_name),
                                                       method="PUT", body=index_definition)
 
         return status
@@ -461,12 +466,11 @@ class FTSIndexManager:
 
     def get_fts_index_list(self):
         index_names = []
-        status, content, response = self.http_request(self.node_addr, 8094, "/api/index")
+        status, content, response = self.http_request(self.node_addr, FTS_PORT, "/api/index")
         if status:
-            self.log.info(content)
             index_names = list(content["indexDefs"]["indexDefs"].keys())
             # self.log.info("FTS indexes in cluster - \n : ".format(list(content["indexDefs"]["indexDefs"].keys())))
-            self.log.info("FTS indexes in cluster - : \n{0}".format(index_names))
+            self.log.debug("FTS indexes in cluster - : \n{0}".format(index_names))
 
         return index_names
 
@@ -478,7 +482,7 @@ class FTSIndexManager:
         index_names = self.get_fts_index_list()
         for index in index_names:
             uri = "/api/index/" + index
-            status, content, response = self.http_request(self.node_addr, 8094, uri, method="DELETE")
+            status, content, response = self.http_request(self.node_addr, FTS_PORT, uri, method="DELETE")
             if not status:
                 self.log.info("Status : {0} \nResponse : {1} \nContent : {2}".format(status, response, content))
                 self.log.info("Index {0} not deleted".format(index))
@@ -508,18 +512,37 @@ class FTSIndexManager:
     def fts_query_runner(self):
 
         threads = []
+        queries_run = 0
+        queries_passed = 0
+        queries_failed = 0
         with ThreadPoolExecutor(max_workers=NUM_WORKERS) as executor:
             # Establish timeout. If timeout > 0, run in infinite loop
             end_time = 0
+            print_time = 0
             if self.duration > 0:
                 end_time = time.time() + self.duration
+
+            if self.print_interval > 0:
+                print_time = time.time() + self.print_interval
+
             while True:
                 random.seed(datetime.now())
                 for i in range(BATCH_SIZE):
                     threads.append(executor.submit(self.generate_and_run_fts_query))
 
                 for task in as_completed(threads):
-                    pass
+                    result = task.result()
+                    queries_run += 1
+                    if result:
+                        queries_passed += 1
+                    else:
+                        queries_failed += 1
+
+                # Print result summary if the print interval has passed
+                if self.print_interval > 0 and time.time() > print_time:
+                    self.log.info("Queries Run = {0} | Queries Passed = {1} | Queries Failed = {2}".format(queries_run, queries_passed, queries_failed))
+                    # Set next time to print result summary
+                    print_time = time.time() + self.print_interval
 
                 # Exit if timed out
                 if self.duration > 0 and time.time() > end_time:
@@ -566,12 +589,25 @@ class FTSIndexManager:
         body["fields"] = ["*"]
         body["highlight"] = {}
         body["query"] = query
+        body["explain"] = random.choice([True, False])
         if score_none:
             body["score"] = "none"
 
+        # Randomize size (not more than 1000)
+        size = random.randint(100, 1000)
+
+        # Randomize offset (from)
+        offset = random.randint(0, 10000)
+
+        body["size"] = size
+        body["from"] = offset
+
         self.log.info("URI : {0} body : {1}".format(uri, body))
 
-        status, content, response = self.http_request(self.node_addr, 8094, uri, method="POST", body=json.dumps(body))
+        #Randomize FTS host on which the query has to be run for load distribution
+        fts_node_list = self.find_nodes_with_service(self.get_services_map(), "fts")
+        query_host = random.choice(fts_node_list)
+        status, content, response = self.http_request(query_host, FTS_PORT, uri, method="POST", body=json.dumps(body))
 
         return status, content, response
 
