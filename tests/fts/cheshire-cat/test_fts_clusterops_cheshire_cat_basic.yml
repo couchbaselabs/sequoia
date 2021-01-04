@@ -53,7 +53,9 @@
 # ###############  run queries ################
 - section_start: query_fts_indexes
 - image: sequoiatools/ftsindexmanager
-  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a run_queries -t 0"
+  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a run_queries -t 0  --print_interval 600"
+- command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a run_queries -t 0  --print_interval 600"
+- command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -a run_queries -t 0  --print_interval 600"
 
 - section_end: query_fts_indexes
 
@@ -88,6 +90,56 @@
    entrypoint: sleep
    command: "900"
    wait: true
+
+# ############### Kill CBFT process on an FTS node ################
+-
+  template: kill_process
+  args: "{{.Nodes | .Service `fts` | net 2}}, cbft"
+
+
+# Sleep for 15 mins
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "900"
+   wait: true
+
+###############  Rebalance out data node ################
+- template: rebalance_out
+  args: "({{.NthDataNode 1}})"
+  wait: true
+
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "300"
+   wait: true
+
+############### Kill memcached ################
+-
+  template: kill_process
+  args: "{{.NthDataNode 2}}, memcached"
+
+# Sleep for 15 mins
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "900"
+   wait: true
+
+###############  Add back data node ################
+- template: rebalance_in
+  args: "{{.InActiveNode}}"
+  wait: true
+
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "300"
+   wait: true
+
 
 # ############### Kill CBFT process on an FTS node ################
 -
@@ -153,6 +205,17 @@
    command: "900"
    wait: true
 
+# Swap Rebalance a data node
+- template: rebalance_swap
+  args: "{{.InActiveNode}}, {{.NthDataNode 2}}"
+  wait: true
+
+# Sleep for 15 mins
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "900"
+   wait: true
 
 ############### Kill memcached ################
 -
@@ -166,11 +229,98 @@
    command: "900"
    wait: true
 
+###############  Failover and addback FTS node ################
+- template: failover_force_and_recover
+  args: "{{.Nodes | .Service `fts` | net 2}}, full"
+  wait: true
+
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "300"
+   wait: true
+
+# ############### Kill CBFT process on an FTS node ################
+-
+  template: kill_process
+  args: "{{.Nodes | .Service `fts` | net 1}}, cbft"
+
+# Sleep for 15 mins
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "900"
+   wait: true
+
+
+###############  Failover and rebalance out FTS node ################
+- template: failover_node_forced
+  args: "{{.Nodes | .Service `fts` | net 3}}"
+- template: rebalance
+  wait: true
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "300"
+   wait: true
+
+############### Kill memcached ################
+-
+  template: kill_process
+  args: "{{.NthDataNode 2}}, memcached"
+
+# Sleep for 15 mins
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "900"
+   wait: true
+
+# ###############  Rebalance in an FTS node ################
+- template: rebalance_in
+  args: "{{.InActiveNode}}, fts"
+  wait: true
+
+# Sleep for 15 mins
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "900"
+   wait: true
+
+###############  Failover and addback FTS node ################
+- template: failover_node
+  args: "{{.ActiveDataNode 2}}"
+
+# Sleep for 5 mins
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "300"
+   wait: true
+
+- template: add_node
+  args: "{{.InActiveNode}}"
+
+- template: rebalance
+  wait: true
+
+# Sleep for 15 mins
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "900"
+   wait: true
 
 ###############  Drop all Indexes ################
 - section_start: drop_all_indexes
 - image: sequoiatools/ftsindexmanager
   command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a delete_all_indexes"
+- command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a delete_all_indexes"
+- command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -a delete_all_indexes"
+
   wait: true
 
 # Sleep for some time to allow DDL to complete in the background

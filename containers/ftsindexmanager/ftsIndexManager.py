@@ -148,8 +148,8 @@ HOTEL_DS_FIELDS = [
 ]
 
 # Some constants
-NUM_WORKERS = 4  # Max number of worker threads to execute queries
-BATCH_SIZE = 100  # Number of FTS queries to be run by each worker thread
+NUM_WORKERS = 2  # Max number of worker threads to execute queries
+BATCH_SIZE = 20  # Number of FTS queries to be run by each worker thread
 FTS_PORT = 8094
 
 
@@ -529,6 +529,7 @@ class FTSIndexManager:
                 random.seed(datetime.now())
                 for i in range(BATCH_SIZE):
                     threads.append(executor.submit(self.generate_and_run_fts_query))
+                    time.sleep(5)
 
                 for task in as_completed(threads):
                     result = task.result()
@@ -540,7 +541,7 @@ class FTSIndexManager:
 
                 # Print result summary if the print interval has passed
                 if self.print_interval > 0 and time.time() > print_time:
-                    self.log.info("Queries Run = {0} | Queries Passed = {1} | Queries Failed = {2}".format(queries_run, queries_passed, queries_failed))
+                    self.log.info("======== Queries Run = {0} | Queries Passed = {1} | Queries Failed = {2} ========".format(queries_run, queries_passed, queries_failed))
                     # Set next time to print result summary
                     print_time = time.time() + self.print_interval
 
@@ -572,8 +573,15 @@ class FTSIndexManager:
         else:
             status, content, response = self.run_fts_query(index_name, query, score_none=False)
 
-        self.log.info("Status : {0} \nResponse : {1} \nTotal Hits : {2}".format(status, response["status"],
+        try:
+            if status:
+                self.log.info("Status : {0} \nResponse : {1} \nTotal Hits : {2}".format(status, response["status"],
                                                                                 content["total_hits"]))
+        except TypeError as terr:
+            self.log.debug("terr")
+            self.log.info("Content does not have total hits = {0}".format(content))
+        except:
+            self.log.error("Unexpected error :", sys.exc_info()[0])
 
         return status
 
