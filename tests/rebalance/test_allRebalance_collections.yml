@@ -260,7 +260,7 @@
 -
   foreach: "{{range $i, $sc := mkrange 0 10}}"
   image: sequoiatools/collections:1.0
-  command: "-i {{$.Orchestrator}}:8091 -b {{$.Bucket}} -o delete -s delscope-{{$sc}} -c delcoll --count 50"
+    command: "-i {{$.Orchestrator}}:8091 -b {{$.Bucket}} -o delete -s delscope-{{$sc}} -c delcoll --count 50"
   wait: true
 
 -

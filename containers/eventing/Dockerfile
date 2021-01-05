@@ -8,6 +8,7 @@ RUN apt-get install -y build-essential libssl-dev libffi-dev python-dev
 RUN pip install httplib2 docker
 RUN mkdir alice
 COPY eventing.py /eventing.py
+COPY eventing_helper.py /eventing_helper.py
 COPY eventing_validator.py /eventing_validator.py
 COPY bucket_op_function.json /bucket_op_function.json
 COPY bucket_op_function1.json /bucket_op_function1.json
@@ -27,5 +28,6 @@ COPY bucket_op_function_integration.json /bucket_op_function_integration.json
 COPY alice/* alice/
 COPY mad-hatter/* mad-hatter/
 COPY mad-hatter/ABO/* mad-hatter/ABO/
+COPY CC/* CC/
 
 ENTRYPOINT ["python"]
