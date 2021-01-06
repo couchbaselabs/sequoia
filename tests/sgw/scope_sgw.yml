@@ -55,5 +55,4 @@ servers: # each server tag represents a cluster
 syncgateways:
   -
       name: sg
-      servers: local 
-      config: default_cc.json
+      servers: local
