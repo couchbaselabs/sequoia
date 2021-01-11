@@ -14,6 +14,7 @@ RUN curl -L "http://search.maven.org/remotecontent?filepath=org/python/jython-in
     rm jython_installer-${JYTHON_VERSION}.jar
 
 RUN git clone https://github.com/couchbaselabs/AnalyticsQueryApp.git
+RUN pip install requests
 
 COPY queries.txt /AnalyticsQueryApp/Query/queries.txt
 COPY volume_queries.txt /AnalyticsQueryApp/Query/volume_queries.txt
