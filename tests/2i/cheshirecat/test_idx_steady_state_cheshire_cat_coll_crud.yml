@@ -80,6 +80,22 @@
   command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}} -d hotel -a create_index_loop --interval 20"
   alias: index_loop2
 
+# Sleep for some time to allow some indexes to be created on bucket4 & bucket5
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "1200"
+   wait: true
+
+# Start dropping indexes in a loop on bucket4 & bucket5 (Collection CRUD workload)
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 3}} -d hotel -a drop_index_loop"
+  alias: index_drop_loop1
+-
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}} -d hotel -a drop_index_loop"
+  alias: index_drop_loop2
+
+
 # ###############  run queries ################
 - section_start: query_replica_indexes
 - image: sequoiatools/queryapp
@@ -106,6 +122,14 @@
   client:
     op: rm
     container: index_loop2
+-
+  client:
+    op: rm
+    container: index_drop_loop1
+-
+  client:
+    op: rm
+    container: index_drop_loop2
 -
    image: sequoiatools/cmd
    entrypoint: sleep

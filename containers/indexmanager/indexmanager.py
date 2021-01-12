@@ -56,9 +56,9 @@ class IndexManager:
                             default="hotel")
         parser.add_argument("-a", "--action",
                             choices=["create_index", "build_deferred_index", "drop_all_indexes", "create_index_loop",
-                                     "alter_indexes", "enable_cbo"],
-                            help="Choose an action to be performed. Valid actions : create_index | build_deferred_index | drop_all_indexes | create_index_loop | alter_indexes"
-                                 " | drop_all_indexes | enable_cbo", default="create_index")
+                                     "drop_index_loop", "alter_indexes", "enable_cbo"],
+                            help="Choose an action to be performed. Valid actions : create_index | build_deferred_index | drop_all_indexes | create_index_loop | "
+                                 "drop_index_loop | alter_indexes | enable_cbo ", default="create_index")
         parser.add_argument("-m", "--build_max_collections", type=int, default=0,
                             help="Build Indexes on max number of collections")
         parser.add_argument("--interval", type=int, default=60,
@@ -526,7 +526,6 @@ class IndexManager:
     """
     Drop all indexes in the cluster
     """
-
     def drop_all_indexes(self, keyspace_name_list):
         drop_idx_query_gen_template = "SELECT RAW 'DROP INDEX `' || name || '` on keyspacename;'  " \
                                       "FROM system:all_indexes WHERE '`' || `bucket_id` || '`.`' || `scope_id` " \
@@ -544,6 +543,37 @@ class IndexManager:
                     # Sleep for 2 secs after dropping an index
                     sleep(2)
         self.log.info("Drop all indexes completed")
+
+    """
+    Drop random indexes in a loop
+    """
+    def drop_indexes_in_a_loop(self, timeout, interval):
+        # Establish timeout. If timeout > 0, run in infinite loop
+        end_time = 0
+        if timeout > 0:
+            end_time = time.time() + timeout
+        while True:
+            random.seed(datetime.now())
+
+            drop_random_index_query_gen = "SELECT RAW 'DROP INDEX `' || name || '` on `' || bucket_id || '`.`' || scope_id || '`.`' || keyspace_id || '`;'  FROM system:all_indexes limit 1"
+
+            status, results, queryResult = self._execute_query(drop_random_index_query_gen)
+            if status is not None and len(results) > 0:
+                for result in results:
+                    drop_status, _, _ = self._execute_query(result)
+
+                    # Sleep for 2 secs after dropping an index
+                    sleep(2)
+            else:
+                pass
+
+            # Exit if timed out
+            if timeout > 0 and time.time() > end_time:
+                break
+
+            # Wait for the interval before doing the next CRUD operation
+            time.sleep(interval)
+
 
     def wait_for_indexes_to_be_built(self, keyspace_name_list, timeout=3600, sleep_interval=15):
 
@@ -644,6 +674,8 @@ if __name__ == '__main__':
         indexMgr.alter_indexes(indexMgr.timeout, indexMgr.interval)
     elif indexMgr.action == "enable_cbo":
         indexMgr.enable_cbo_and_update_statistics(indexMgr.cbo_enable_ratio)
+    elif indexMgr.action == "drop_index_loop":
+        indexMgr.drop_indexes_in_a_loop(indexMgr.timeout, indexMgr.interval)
     else:
         print(
             "Invalid choice for action. Choose from the following - create_index | build_deferred_index | drop_all_indexes")

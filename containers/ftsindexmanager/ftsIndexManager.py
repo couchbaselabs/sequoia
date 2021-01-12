@@ -109,7 +109,7 @@ HOTEL_DS_FIELDS = [
                 "field": "public_likes"
             },
             {
-                "wildcard": "D*",
+                "wildcard": "Dain*",
                 "field": "public_likes"
             }]},
     {
@@ -173,9 +173,13 @@ class FTSIndexManager:
         parser.add_argument("--print_interval", type=int,
                             help="Interval to print query result summary. Default is 10 mins",
                             default="600")
+        parser.add_argument("--interval", type=int, default=60,
+                            help="Interval between 2 create index calls when running in a loop")
+        parser.add_argument("--timeout", type=int, default=0,
+                            help="Timeout for create index loop. 0 (default) is infinite")
         parser.add_argument("-a", "--action",
-                            choices=["create_index", "run_queries", "delete_all_indexes"],
-                            help="Choose an action to be performed. Valid actions : create_index, run_queries, delete_all_indexes",
+                            choices=["create_index", "run_queries", "delete_all_indexes", "create_index_loop"],
+                            help="Choose an action to be performed. Valid actions : create_index, run_queries, delete_all_indexes, create_index_loop",
                             default="create_index")
 
         args = parser.parse_args()
@@ -190,6 +194,8 @@ class FTSIndexManager:
         self.action = args.action
         self.duration = args.duration
         self.print_interval = args.print_interval
+        self.interval = args.interval
+        self.timeout = args.timeout
 
         self.idx_def_templates = HOTEL_DS_FIELDS
 
@@ -260,11 +266,11 @@ class FTSIndexManager:
     """
     Create n number of indexes for the specified bucket. These indexes could be on a single or multiple collections
     """
-
     def create_fts_indexes_for_bucket(self):
         coll_list = self.get_all_collections()
         multi_coll_scopes = self.get_all_scopes_with_multiple_collections()
         for i in range(0, self.num_indexes):
+            random.seed(datetime.now())
             collections = []
             if len(multi_coll_scopes) > 0:
                 # Select if to create single collection index or multi-collection (25% chance for multi collection idx)
@@ -283,9 +289,10 @@ class FTSIndexManager:
                 collections = random.sample(population=scope_obj[scope_name], k=random.randint(1, num_coll))
 
             self.log.info("===== Creating {1} FTS index on {0} =====".format(collections, index_type))
-            status = self.create_fts_index_on_collections(collections)
+            status, content, response = self.create_fts_index_on_collections(collections)
 
             if not status:
+                self.log.info("Content = {0} \nResponse = {1}".format(content, response))
                 self.log.info("Index creation on {0} did not succeed. Pls check logs.".format(collections))
 
             # Remove the scope or collection on which the index was created
@@ -294,7 +301,58 @@ class FTSIndexManager:
             else:
                 multi_coll_scopes.remove(scope_obj)
 
+        ### TO - DO
+        # Validate if all indexes have been created
         self.get_fts_index_list()
+
+    """
+        Create n number of indexes for the specified bucket. These indexes could be on a single or multiple collections
+        """
+
+    def create_fts_indexes_in_a_loop(self, timeout, interval):
+        # Establish timeout. If timeout > 0, run in infinite loop
+        end_time = 0
+        if timeout > 0:
+            end_time = time.time() + timeout
+        while True:
+
+            coll_list = self.get_all_collections()
+            multi_coll_scopes = self.get_all_scopes_with_multiple_collections()
+
+            collections = []
+            random.seed(datetime.now())
+            if len(multi_coll_scopes) > 0:
+                # Select if to create single collection index or multi-collection (25% chance for multi collection idx)
+                index_type = random.choice(["single", "single", "single", "multi"])
+            else:
+                index_type = "single"
+
+            if index_type == "single":
+                collections.append(random.choice(coll_list))
+            else:
+                # Select a scope with multiple collections first
+                scope_obj = random.choice(multi_coll_scopes)
+                scope_name = list(scope_obj.keys())[0]
+                num_coll = len(scope_obj[scope_name])
+                # Now randomly select a subset of random number collections from that scope
+                collections = random.sample(population=scope_obj[scope_name], k=random.randint(1, num_coll))
+
+            self.log.info("===== Creating {1} FTS index on {0} =====".format(collections, index_type))
+            status, content, response = self.create_fts_index_on_collections(collections)
+
+            if not status:
+                self.log.info("Content = {0} \nResponse = {1}".format(content, response))
+                self.log.info("Index creation on {0} did not succeed. Pls check logs.".format(collections))
+
+            # Exit if timed out
+            if timeout > 0 and time.time() > end_time:
+                break
+
+        # Wait for the interval before doing the next CRUD operation
+        time.sleep(interval)
+
+
+
 
     """
     Create FTS indexes on a given bucket with collections
@@ -458,7 +516,7 @@ class FTSIndexManager:
         status, content, response = self.http_request(self.node_addr, FTS_PORT, "/api/index/{0}".format(idx_name),
                                                       method="PUT", body=index_definition)
 
-        return status
+        return status, content, response
 
     """
     Retrieve list of FTS indexes in the cluster
@@ -712,6 +770,8 @@ if __name__ == '__main__':
         ftsIndexMgr.fts_query_runner()
     elif ftsIndexMgr.action == "delete_all_indexes":
         ftsIndexMgr.delete_all_indexes()
+    elif ftsIndexMgr.action == "create_index_loop":
+        ftsIndexMgr.create_fts_indexes_in_a_loop(ftsIndexMgr.timeout, ftsIndexMgr.interval)
     else:
         print(
             "Invalid choice for action. Choose from the following - create_index | build_deferred_index | drop_all_indexes")
