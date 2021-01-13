@@ -67,8 +67,8 @@
 # ###############  run queries ################
 - section_start: query_replica_indexes
 - image: sequoiatools/queryapp
-  command: "-J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.5.6/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration {{.Scale 3600}} --print_duration=3600 --bucket {{.Bucket}} --querycount 10 --threads 5 --n1ql True --query_timeout=600 --scan_consistency REQUEST_PLUS --bucket_names [{{.Bucket}},{{.NthBucket 1}},{{.NthBucket 2}}] --txns True --dataset hotel"
-- command: "-J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.5.6/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 1}} --port {{.QueryPort}} --duration {{.Scale 3600}} --print_duration=3600 --bucket {{.NthBucket 1}} --querycount 10 --threads 5 --n1ql True --query_timeout=600 --scan_consistency REQUEST_PLUS --bucket_names [{{.Bucket}},{{.NthBucket 1}},{{.NthBucket 2}}] --txns True --dataset hotel"
+  command: "-J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.5.6/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration {{.Scale 3600}} --print_duration=3600 --bucket {{.Bucket}} --querycount 10 --threads 3 --n1ql True --query_timeout=600 --scan_consistency REQUEST_PLUS --bucket_names [{{.Bucket}},{{.NthBucket 1}},{{.NthBucket 2}}] --txns True --dataset hotel"
+- command: "-J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.5.6/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 1}} --port {{.QueryPort}} --duration {{.Scale 3600}} --print_duration=3600 --bucket {{.NthBucket 1}} --querycount 10 --threads 3 --n1ql True --query_timeout=600 --scan_consistency REQUEST_PLUS --bucket_names [{{.Bucket}},{{.NthBucket 1}},{{.NthBucket 2}}] --txns True --dataset hotel"
   wait: true
 - section_end: query_replica_indexes
 
