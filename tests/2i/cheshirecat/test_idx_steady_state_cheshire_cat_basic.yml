@@ -4,6 +4,16 @@
 - template: set_gsi_config
   args: "{{.ActiveIndexNode 0}}, 'indexer.plasma.backIndex.enablePageBloomFilter':true"
 
+############### Enable Plasma In memory compression ################
+- template: set_gsi_config
+  args: "{{.ActiveIndexNode 0}}, 'indexer.plasma.mainIndex.enableInMemoryCompression':true"
+- template: set_gsi_config
+  args: "{{.ActiveIndexNode 0}}, 'indexer.plasma.backIndex.enableInMemoryCompression':true"
+
+############### Enable GSI OSO mode ################
+- template: set_gsi_config
+  args: "{{.ActiveIndexNode 0}}, 'indexer.build.enableOSO':true"
+
 ############### create 20 scopes and 200 collections across 3 buckets as scope_1,scope_2 ... ###############
 -
   image: sequoiatools/collections:1.0

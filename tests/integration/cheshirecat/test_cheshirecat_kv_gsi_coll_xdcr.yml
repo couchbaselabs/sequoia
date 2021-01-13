@@ -9,6 +9,20 @@
   command: "setting-compaction -c {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}} --metadata-purge-interval .04 --compaction-db-percentage 30 --compaction-view-percentage 30"
   wait: true
 
+############### Enable Plasma Bloom Filter ################
+- template: set_gsi_config
+  args: "{{.ActiveIndexNode 0}}, 'indexer.plasma.backIndex.enablePageBloomFilter':true"
+
+############### Enable Plasma In memory compression ################
+- template: set_gsi_config
+  args: "{{.ActiveIndexNode 0}}, 'indexer.plasma.mainIndex.enableInMemoryCompression':true"
+- template: set_gsi_config
+  args: "{{.ActiveIndexNode 0}}, 'indexer.plasma.backIndex.enableInMemoryCompression':true"
+
+############### Enable GSI OSO mode ################
+- template: set_gsi_config
+  args: "{{.ActiveIndexNode 0}}, 'indexer.build.enableOSO':true"
+
 ### create 35 scopes and 250 collections in local cluster across 6 buckets as scope_1,scope_2 ... ######
 - template: create-multi-scopes-collections
   args: "{{.Orchestrator}}, {{.NthBucket 4}}, 7, 56, uniform"
