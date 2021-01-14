@@ -53,8 +53,8 @@ servers: # each server tag represents a cluster
   -
       name: local
       count: 12
-      ram: 90%
-      index_ram: 85%
+      ram: 80%
+      index_ram: 80%
       index_storage: memory_optimized
       services:
         index: 6
