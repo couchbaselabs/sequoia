@@ -36,10 +36,13 @@
 - image: sequoiatools/catapult
   command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -n {{.Scale 50000}} -pc 100 -pu 25 -pd 25
     -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 60 -fu price,free_parking -ac True"
+  alias: collection_bucket1_doc_ops
 - command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 1}} -n {{.Scale 50000}} -pc 100 -pu 25
     -pd 25 -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 60 -fu price,free_parking -ac True"
+  alias: collection_bucket2_doc_ops
 - command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 2}} -n {{.Scale 50000}} -pc 100 -pu 25
     -pd 25 -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 60 -fu price,free_parking -ac True"
+  alias: collection_bucket3_doc_ops
 
 
 ###############  create indexes ################
@@ -83,6 +86,38 @@
   wait: true
 - section_end: query_replica_indexes
 
+
+############### Stop Data loading to cool down system for item count check ###############
+-
+  client:
+    op: rm
+    container: collection_bucket1_doc_ops
+-
+  client:
+    op: rm
+    container: collection_bucket2_doc_ops
+-
+  client:
+    op: rm
+    container: collection_bucket3_doc_ops
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "1200"
+   wait: true
+
+###############  Item Count Check ################
+- section_start: item_count_check
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a item_count_check --sample_size 10"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a item_count_check --sample_size 10"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -a item_count_check --sample_size 10"
+  wait: true
+- section_end: item_count_check
 
 ###############  Drop all Indexes ################
 - section_start: drop_all_indexes

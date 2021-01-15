@@ -56,9 +56,10 @@ class IndexManager:
                             default="hotel")
         parser.add_argument("-a", "--action",
                             choices=["create_index", "build_deferred_index", "drop_all_indexes", "create_index_loop",
-                                     "drop_index_loop", "alter_indexes", "enable_cbo"],
+                                     "drop_index_loop", "alter_indexes", "enable_cbo", "item_count_check"],
                             help="Choose an action to be performed. Valid actions : create_index | build_deferred_index | drop_all_indexes | create_index_loop | "
-                                 "drop_index_loop | alter_indexes | enable_cbo ", default="create_index")
+                                 "drop_index_loop | alter_indexes | enable_cbo | item_count_check",
+                            default="create_index")
         parser.add_argument("-m", "--build_max_collections", type=int, default=0,
                             help="Build Indexes on max number of collections")
         parser.add_argument("--interval", type=int, default=60,
@@ -67,6 +68,8 @@ class IndexManager:
                             help="Timeout for create index loop. 0 (default) is infinite")
         parser.add_argument("--cbo_enable_ratio", type=int, default=25,
                             help="Specify on how many % of collections should CBO be enabled. Range = 1-100")
+        parser.add_argument("--sample_size", type=int, default=5,
+                            help="Specify how many indexes to be sampled for item count check. Default = 5")
         parser.add_argument("-t", "--test_mode", help="Test Mode : Create Scopes/Collections", action='store_true')
         args = parser.parse_args()
 
@@ -85,6 +88,7 @@ class IndexManager:
         self.cbo_enable_ratio = args.cbo_enable_ratio
         if self.cbo_enable_ratio > 100:
             self.cbo_enable_ratio = 25
+        self.sample_size = args.sample_size
 
         self.idx_def_templates = HOTEL_DS_INDEX_TEMPLATES
 
@@ -194,7 +198,7 @@ class IndexManager:
 
             status, results, queryResult = self._execute_query(idx_statement)
             if status is None:
-                #raise Exception("Query service probably has issues")
+                # raise Exception("Query service probably has issues")
                 self.log.info("Some issue running the create index statement")
 
             # Exit if timed out
@@ -400,6 +404,100 @@ class IndexManager:
         # TBD : Periodically update statistics in a loop for these collections
 
     """
+    Item Count Check
+    1. Get the index map for a given bucket
+    2. Randomly select some indexes from the index map 
+    3. For each selected index, extract items_count for index stat from the stats endpoint <hostname>:9102/stats?consumerFilter=planner
+    4. If there are multiple hosts in the index map for the selected index, aggregate the items count across host 
+    5. Run a count(*) query against the collection to get the KV item count
+    6. Compare result from 4 & 5 and raiseException if not matching 
+    """
+
+    def item_count_check(self, sample_size=5):
+        # Get all index nodes in the cluster
+        idx_node_list = self.find_nodes_with_service(self.get_services_map(), "index")
+        idx_node_list.sort()
+
+        # Get Index Map for indexes in the bucket
+        index_map = self.get_index_map(self.bucket_name, idx_node_list[0])
+
+        # Randomly choose indexes on which item count check has to be performed
+        item_count_check_indexes = random.sample(index_map, sample_size)
+
+        errors = []
+
+        for index in item_count_check_indexes:
+            stat_key = index["bucket"] + ":" + index["scope"] + ":" + index["collection"] + ":" + index[
+                "name"] + ":items_count"
+            keyspace_name_for_query = "`" + index["bucket"] + "`.`" + index["scope"] + "`.`" + index["collection"] + "`"
+
+            index_item_count = 0
+            for host in index["hosts"]:
+                item_count = self.get_stats(stat_key, host.split(":")[0])
+                if item_count >= 0:
+                    index_item_count += item_count
+                else:
+                    self.log.info("Got an error retrieving stat {0} from {1}".format(stat_key, host.split(":")[0]))
+                    errors_obj = {}
+                    errors_obj["type"] = "error_retrieving_stats"
+                    errors_obj["index_name"] = index["name"]
+                    errors_obj["keyspace"] = keyspace_name_for_query
+                    errors.append(errors_obj)
+
+            # Get Collection item count from KV via N1QL
+            kv_item_count = -1
+            kv_item_count_query = "select raw count(*) from {0};".format(keyspace_name_for_query)
+            status, results, queryResult = self._execute_query(kv_item_count_query)
+            if status is not None:
+                for result in results:
+                    self.log.debug(result)
+                    kv_item_count = result
+            else:
+                self.log.info("Got an error retrieving stat from query via n1ql with query - {0}. Status : {1} ".format(
+                    kv_item_count_query, status))
+                errors_obj = {}
+                errors_obj["type"] = "error_retrieving_stats_from_kv_via_n1ql"
+                errors_obj["index_name"] = index["name"]
+                errors_obj["keyspace"] = keyspace_name_for_query
+                errors.append(errors_obj)
+
+            self.log.info(
+                "Item count for index {0} on {1} is {2}. Total items in collection are {3}".format(index["name"],
+                                                                                                   keyspace_name_for_query,
+                                                                                                   index_item_count,
+                                                                                                   kv_item_count))
+            if int(index_item_count) != int(kv_item_count):
+                errors_obj = {}
+                errors_obj["type"] = "item_count_check_failed"
+                errors_obj["index_name"] = index["name"]
+                errors_obj["keyspace"] = keyspace_name_for_query
+                errors_obj["index_item_count"] = index_item_count
+                errors_obj["kv_item_count"] = kv_item_count
+                errors.append(errors_obj)
+
+        if len(errors) > 0:
+            self.log.error("There were errors in the item count check phase - \n{0}".format(errors))
+        else:
+            self.log.info("Item check count passed. No discrepancies seen.")
+
+    def get_stats(self, stat_key, index_node_addr, index_node_port=9102):
+        endpoint = "http://" + index_node_addr + ":" + str(index_node_port) + "/stats?consumerFilter=planner"
+        # Get index stats from the indexer node
+        response = requests.get(endpoint, auth=(
+            self.username, self.password), verify=True, )
+
+        if (response.ok):
+            response = json.loads(response.text)
+            if stat_key in response:
+                return int(response[stat_key])
+            else:
+                self.log.info("Stat {0} not found in stats output for host {1}".format(stat_key, index_node_addr))
+                return -1
+        else:
+            self.log.info("Stat endpoint request status was not 200 : {0}".format(response))
+            return -1
+
+    """
     Determine number of index nodes in the cluster and set max num replica accordingly.
     """
 
@@ -526,6 +624,7 @@ class IndexManager:
     """
     Drop all indexes in the cluster
     """
+
     def drop_all_indexes(self, keyspace_name_list):
         drop_idx_query_gen_template = "SELECT RAW 'DROP INDEX `' || name || '` on keyspacename;'  " \
                                       "FROM system:all_indexes WHERE '`' || `bucket_id` || '`.`' || `scope_id` " \
@@ -547,6 +646,7 @@ class IndexManager:
     """
     Drop random indexes in a loop
     """
+
     def drop_indexes_in_a_loop(self, timeout, interval):
         # Establish timeout. If timeout > 0, run in infinite loop
         end_time = 0
@@ -573,7 +673,6 @@ class IndexManager:
 
             # Wait for the interval before doing the next CRUD operation
             time.sleep(interval)
-
 
     def wait_for_indexes_to_be_built(self, keyspace_name_list, timeout=3600, sleep_interval=15):
 
@@ -676,6 +775,8 @@ if __name__ == '__main__':
         indexMgr.enable_cbo_and_update_statistics(indexMgr.cbo_enable_ratio)
     elif indexMgr.action == "drop_index_loop":
         indexMgr.drop_indexes_in_a_loop(indexMgr.timeout, indexMgr.interval)
+    elif indexMgr.action == "item_count_check":
+        indexMgr.item_count_check(indexMgr.sample_size)
     else:
         print(
             "Invalid choice for action. Choose from the following - create_index | build_deferred_index | drop_all_indexes")
