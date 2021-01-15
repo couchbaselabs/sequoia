@@ -523,7 +523,7 @@
 -
    image: sequoiatools/cmd
    entrypoint: sleep
-   command: "600"
+   command: "1200"
    wait: true
 
 #============ XDCR item count check for buckets ============
@@ -539,6 +539,18 @@
 - command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}}
             -a validate -rn {{.Nodes | .Cluster 1 | net 0}} -ro {{.RestPort}} -ru {{.RestUsername}}
             -rp {{.RestPassword}} -b {{.NthBucket 9}} -rb {{.Nodes | .Cluster 1 | bucket 3}}"
+  wait: true
+
+
+###############  GSI Item Count Check ################
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a item_count_check --sample_size 10"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a item_count_check --sample_size 10"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -a item_count_check --sample_size 10"
   wait: true
 
 # Drop GSI indexes
