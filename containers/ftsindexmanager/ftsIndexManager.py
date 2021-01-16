@@ -1,12 +1,15 @@
 import base64
 import copy
 import json
+import socket
 import string
 import sys
 import threading
 from concurrent.futures import as_completed
 from concurrent.futures.thread import ThreadPoolExecutor
 from datetime import datetime
+from http.client import RemoteDisconnected
+
 from couchbase.cluster import Cluster, ClusterOptions, QueryOptions
 from couchbase.exceptions import QueryException, QueryIndexAlreadyExistsException, TimeoutException
 from couchbase_core.cluster import PasswordAuthenticator
@@ -680,7 +683,6 @@ class FTSIndexManager:
     """
     Generic method to perform a REST call
     """
-
     def http_request(self, host, port, uri, method="GET", body=None):
         credentials = '{}:{}'.format(self.username, self.password)
         authorization = base64.encodebytes(credentials.encode('utf-8'))
@@ -693,7 +695,14 @@ class FTSIndexManager:
         url = "http://" + host + ":" + str(port) + uri
         http = httplib2.Http(timeout=120)
         http.add_credentials(self.username, self.password)
-        response, content = http.request(uri=url, method=method, headers=headers, body=body)
+        try:
+            response, content = http.request(uri=url, method=method, headers=headers, body=body)
+
+        except (RemoteDisconnected, httplib2.HttpLib2Error, socket.error) as ex:
+            self.log.info(ex)
+            self.log.info("Request timed out")
+            return False, None, None
+
         if response['status'] in ['200', '201', '202']:
             return True, json.loads(content), response
         else:
@@ -727,11 +736,6 @@ class FTSIndexManager:
                 clusternode = {}
                 clusternode["hostname"] = node["hostname"].replace(":8091", "")
                 clusternode["services"] = node["services"]
-                mem_used = int(node["memoryTotal"]) - int(node["memoryFree"])
-                clusternode["memUsage"] = round(
-                    float(mem_used / float(node["memoryTotal"]) * 100), 2)
-                clusternode["cpuUsage"] = round(
-                    node["systemStats"]["cpu_utilization_rate"], 2)
                 clusternode["status"] = node["status"]
                 node_map.append(clusternode)
         else:

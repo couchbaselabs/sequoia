@@ -93,14 +93,6 @@
     op: rm
     container: index_loop2
 -
-  client:
-    op: rm
-    container: index_drop_loop1
--
-  client:
-    op: rm
-    container: index_drop_loop2
--
    image: sequoiatools/cmd
    entrypoint: sleep
    command: "600"
