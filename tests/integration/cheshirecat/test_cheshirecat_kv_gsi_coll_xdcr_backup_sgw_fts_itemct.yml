@@ -207,14 +207,6 @@
   command: "COUCHBASE_SERVER_VERSION=7.0.0-3814 SYNC_GATEWAY_VERSION=2.8.0-374 CBLITE_VERSIONS=2.8.0-153 CBLITE_PLATFORM=net-msft CBLITE_HOSTS=10.100.161.31 NUM_OF_DOCS=1000 NUM_OF_DOC_UPDATES=10 NUM_OF_DOCS_TO_UPDATE=10 NUM_OF_DOCS_TO_DELETE=1 NUM_OF_DOCS_IN_ITR=40 NUM_OF_DOCS_TO_ADD=5 REPL_STATUS_CHECK_SLEEP_TIME=20 UP_TIME=1 LITESERV_USER=Administrator LITESERV_PWD=couchbase SSH_USER=root SSH_PWD=couchbase USE_LOCAL_TESTSERVER=true MOBILE_TESTKIT_BRANCH=sequoia/sgw-component-testing CBS_HOSTS={{.Orchestrator}} SGW_HOSTS=172.23.104.254 MODE=cc"
   wait: true
 
-# Start creating indexes in a loop on bucket4 & bucket5 (Collection CRUD workload)
-- image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 8}} -d hotel -a create_index_loop --interval 20"
-  alias: index_loop1
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 9}} -d hotel -a create_index_loop --interval 20"
-  alias: index_loop2
-
-
 # replica data loading for 30 minutes with docs that will expire after 1 hour
 - image: sequoiatools/gideon
   command: "kv --ops {{.Scale 500}} --create 10 --delete 8 --get 82 --sizes 64 96  --expire 100 --ttl 3600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
@@ -496,14 +488,6 @@
   client:
     op: rm
     container: collection_crud2
--
-  client:
-    op: rm
-    container: index_loop1
--
-  client:
-    op: rm
-    container: index_loop2
 -
   client:
     op: rm
