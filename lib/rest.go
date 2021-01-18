@@ -324,7 +324,7 @@ func (r *RestClient) createScope(bucketName, scopeName string) {
 	host := r.GetOrchestrator()
 	url := r.Provider.GetRestUrl(host)
 	auth := r.GetAuth(host)
-	reqUrl := fmt.Sprintf("%s/pools/default/buckets/%s/collections", url, bucketName)
+	reqUrl := fmt.Sprintf("%s/pools/default/buckets/%s/scopes", url, bucketName)
 	//fmt.Printf("URL: %s", reqUrl)
 	var s CollectionId
 	data := "name=" + scopeName
@@ -335,7 +335,7 @@ func (r *RestClient) createCollections(bucketName, scopeName, collectionName str
 	host := r.GetOrchestrator()
 	url := r.Provider.GetRestUrl(host)
 	auth := r.GetAuth(host)
-	reqUrl := fmt.Sprintf("%s/pools/default/buckets/%s/collections/%s", url, bucketName, scopeName)
+	reqUrl := fmt.Sprintf("%s/pools/default/buckets/%s/scopes/%s/collections", url, bucketName, scopeName)
 	//fmt.Printf("URL: %s", reqUrl)
 	var s CollectionId
 	data := "name=" + collectionName
