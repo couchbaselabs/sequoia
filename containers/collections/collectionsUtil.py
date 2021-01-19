@@ -92,7 +92,7 @@ class CollectionOperations():
                                            options.crud_timeout, options.crud_interval)
 
     def getallcollections(self, bucket):
-        url = bucket + "/collections"
+        url = bucket + "/scopes"
         passed, content, response = self.api_call(url, "GET")
         collection_map = {}
         scopes_dict = content["scopes"]
@@ -107,7 +107,7 @@ class CollectionOperations():
         return collection_map
 
     def get_all_collections_for_scope(self, bucket, scope):
-        url = bucket + "/collections"
+        url = bucket + "/scopes"
         passed, content, response = self.api_call(url, "GET")
         collection_map = {}
         coll_list = []
@@ -122,12 +122,12 @@ class CollectionOperations():
         return coll_list
 
     def get_raw_collection_map(self, bucket):
-        url = bucket + "/collections"
+        url = bucket + "/scopes"
         passed, content, response = self.api_call(url, "GET")
         return content
 
     def getallscopes(self, bucket):
-        url = bucket + "/collections"
+        url = bucket + "/scopes"
         passed, content, response = self.api_call(url, "GET")
         scopes_list = content["scopes"]
         return scopes_list
@@ -144,7 +144,7 @@ class CollectionOperations():
     def create_scope(self, bucket, scope):
         scope_list = scope.split(",")
         for scope in scope_list:
-            url = bucket + "/collections"
+            url = bucket + "/scopes"
             scope_body = str("name=" + scope).encode('utf-8')
             passed, response, content = self.api_call(url, "POST", body=scope_body)
             print(response, content)
@@ -178,7 +178,7 @@ class CollectionOperations():
     def create_collection(self, bucket, scope, collection):
         coll_list = collection.split(",")
         for collection in coll_list:
-            url = bucket + "/collections/" + scope
+            url = bucket + "/scopes/" + scope + "/collections"
             collection_body = str("name=" + collection).encode('utf-8')
             passed, response, content = self.api_call(url, "POST", body=collection_body)
             print(response, content)
@@ -190,26 +190,26 @@ class CollectionOperations():
     def delete_scope(self, bucket, scope):
         scope_list = scope.split(",")
         for scope in scope_list:
-            url = bucket + "/collections/" + scope
+            url = bucket + "/scopes/" + scope
             passed, response, content = self.api_call(url, "DELETE")
             print(response, content)
 
     def delete_multiple_scope(self, bucket, scope_name, count):
         for i in range(count):
-            url = bucket + "/collections/" + scope_name + "-" + str(i)
+            url = bucket + "/scopes/" + scope_name + "-" + str(i)
             passed, response, content = self.api_call(url, "DELETE")
             print(response, content)
 
     def delete_collection(self, bucket, scope, collection):
         coll_list = collection.split(",")
         for collection in coll_list:
-            url = bucket + "/collections/" + scope + "/" + collection
+            url = bucket + "/scopes/" + scope + "/collections/" + collection
             passed, response, content = self.api_call(url, "DELETE")
             print(response, content)
 
     def delete_multiple_collection(self, bucket, scope, collection_name, count):
         for i in range(count):
-            url = bucket + "/collections/" + scope + "/" + collection_name + "-" + str(i)
+            url = bucket + "/scopes/" + scope + "/collections/" + collection_name + "-" + str(i)
             passed, response, content = self.api_call(url, "DELETE")
             print(response, content)
 
