@@ -269,6 +269,7 @@ class FTSIndexManager:
     """
     Create n number of indexes for the specified bucket. These indexes could be on a single or multiple collections
     """
+
     def create_fts_indexes_for_bucket(self):
         coll_list = self.get_all_collections()
         multi_coll_scopes = self.get_all_scopes_with_multiple_collections()
@@ -353,9 +354,6 @@ class FTSIndexManager:
 
         # Wait for the interval before doing the next CRUD operation
         time.sleep(interval)
-
-
-
 
     """
     Create FTS indexes on a given bucket with collections
@@ -602,7 +600,9 @@ class FTSIndexManager:
 
                 # Print result summary if the print interval has passed
                 if self.print_interval > 0 and time.time() > print_time:
-                    self.log.info("======== Queries Run = {0} | Queries Passed = {1} | Queries Failed = {2} ========".format(queries_run, queries_passed, queries_failed))
+                    self.log.info(
+                        "======== Queries Run = {0} | Queries Passed = {1} | Queries Failed = {2} ========".format(
+                            queries_run, queries_passed, queries_failed))
                     # Set next time to print result summary
                     print_time = time.time() + self.print_interval
 
@@ -623,9 +623,23 @@ class FTSIndexManager:
     def generate_and_run_fts_query(self):
         index_names = self.get_fts_index_list()
 
-        index_name = random.choice(index_names)
-        index_fields = self.get_index_fields(index_name)
-        index_field = random.choice(index_fields)
+        try:
+            index_name = random.choice(index_names)
+        except Exception as e:
+            self.log.info("Exception fetching index names : {0} - {1}".format(index_names, str(e)))
+            return False
+        if index_name:
+            index_fields = self.get_index_fields(index_name)
+            try:
+                index_field = random.choice(index_fields)
+            except Exception as e:
+                self.log.info(
+                    "Exception fetching index fields {0} for index  : {1} - {2}".format(index_fields, index_name,
+                                                                                        str(e)))
+                return False
+        else:
+            self.log.info("Index name selected for running query is empty. Discarding attempt to run query")
+            return False
         self.log.info("--------------- Running query on {0} field {1} ---------------".format(index_name, index_field))
         query = random.choice(index_field["queries"])
 
@@ -636,8 +650,8 @@ class FTSIndexManager:
 
         try:
             if status:
-                self.log.info("Status : {0} \nResponse : {1} \nTotal Hits : {2}".format(status, response["status"],
-                                                                                content["total_hits"]))
+                self.log.debug("Status : {0} \nResponse : {1} \nTotal Hits : {2}".format(status, response["status"],
+                                                                                        content["total_hits"]))
         except TypeError as terr:
             self.log.debug("terr")
             self.log.info("Content does not have total hits = {0}".format(content))
@@ -671,9 +685,9 @@ class FTSIndexManager:
         body["size"] = size
         body["from"] = offset
 
-        self.log.info("URI : {0} body : {1}".format(uri, body))
+        self.log.debug("URI : {0} body : {1}".format(uri, body))
 
-        #Randomize FTS host on which the query has to be run for load distribution
+        # Randomize FTS host on which the query has to be run for load distribution
         fts_node_list = self.find_nodes_with_service(self.get_services_map(), "fts")
         query_host = random.choice(fts_node_list)
         status, content, response = self.http_request(query_host, FTS_PORT, uri, method="POST", body=json.dumps(body))
@@ -683,6 +697,7 @@ class FTSIndexManager:
     """
     Generic method to perform a REST call
     """
+
     def http_request(self, host, port, uri, method="GET", body=None):
         credentials = '{}:{}'.format(self.username, self.password)
         authorization = base64.encodebytes(credentials.encode('utf-8'))
