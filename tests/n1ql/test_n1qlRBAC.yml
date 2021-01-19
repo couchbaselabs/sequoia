@@ -62,13 +62,13 @@
         'delete from  `{{.Bucket}}` where rating < 700 limit 20', queryUser4, password4"
 - image: sequoiatools/cbq
   command: "-e=http://{{.QueryNodePort}}  -u=queryUser5 -p=password5 -script='create index usr5_city_idx on `{{.Bucket}}`(city)'"
-- section_end: rbac_query
 
 # Wait till all indexes are completely built
 -
    image: sequoiatools/wait_for_idx_build_complete
    command: "{{.ActiveIndexNode 0}} {{.RestUsername}} {{.RestPassword}}"
    wait: true
+- section_end: rbac_query
 
 ### until 100M items ######
 -
