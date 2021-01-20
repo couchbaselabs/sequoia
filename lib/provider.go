@@ -223,6 +223,7 @@ func (p *FileProvider) ProvideSyncGateways(syncGateways []SyncGatewaySpec) {
 	}
 
 	// provide an ip for each gateway
+	var j int
 	for _, syncGateway := range syncGateways {
 
 		syncGatewayNameList := ExpandServerName(syncGateway.Name, syncGateway.Count, syncGateway.CountOffset+1)
@@ -230,10 +231,11 @@ func (p *FileProvider) ProvideSyncGateways(syncGateways []SyncGatewaySpec) {
 
 			var i int
 			if i < len(gatewayHosts) {
-				p.ServerNameIp[syncGatewayName] = gatewayHosts[i]
+				p.ServerNameIp[syncGatewayName] = gatewayHosts[i+j]
 			}
 			i++
 		}
+		j++
 
 	}
 

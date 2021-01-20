@@ -68,7 +68,7 @@
 - 
   image: sequoiatools/sgw
   command: "MOBILE_TESTKIT_BRANCH=sequoia/sgw-component-testing CBS_HOSTS={{.Orchestrator}} COUCHBASE_SERVER_VERSION=7.0.0-4226 SGW_HOSTS={{.SyncGatewayAll}} SYNC_GATEWAY_VERSION=2.8.0-374 SSH_USER={{.SSHUsername}} SSH_PWD={{.SSHPassword}} UP_TIME=86400 COLLECT_LOGS=false SERVER_SEED_DOCS=100000 MAX_DOCS=1200 NUM_USERS=12 CREATE_BATCH_SIZE=1000 CREATE_DELAY=0.1 UPDATE_BATCH_SIZE=3 UPDATE_DOCS_PERCENTAGE=0.1 UPDATE_DELAY=1 CHANGES_DELAY=10 CHANGES_LIMIT=200"
-  wait: false
+  wait: true
 
 ###############  Rebalance-in single node ################
 - template: rebalance_in

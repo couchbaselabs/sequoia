@@ -8,65 +8,55 @@ do
 
     case "$KEY" in
             MOBILE_TESTKIT_BRANCH)          MOBILE_TESTKIT_BRANCH=${VALUE} ;;
+            CBS_HOSTS)                      CBS_HOSTS=${VALUE} ;;
             COUCHBASE_SERVER_VERSION)       COUCHBASE_SERVER_VERSION=${VALUE} ;;
+            SGW_HOSTS)                      SGW_HOSTS=${VALUE} ;;
             SYNC_GATEWAY_VERSION)           SYNC_GATEWAY_VERSION=${VALUE} ;;     
-            CBLITE_VERSIONS)                CBLITE_VERSIONS=${VALUE} ;;
-            CBLITE_HOSTS)                   CBLITE_HOSTS=${VALUE} ;;
-            CBLITE_PLATFORM)                CBLITE_PLATFORM=${VALUE} ;;
-            NUM_OF_DOCS)                    NUM_OF_DOCS=${VALUE} ;;
-            NUM_OF_DOC_UPDATES)             NUM_OF_DOC_UPDATES=${VALUE} ;;
-            NUM_OF_DOCS_TO_UPDATE)          NUM_OF_DOCS_TO_UPDATE=${VALUE} ;;
-            NUM_OF_DOCS_TO_DELETE)          NUM_OF_DOCS_TO_DELETE=${VALUE} ;;
-            NUM_OF_DOCS_IN_ITR)             NUM_OF_DOCS_IN_ITR=${VALUE} ;;
-            NUM_OF_DOCS_TO_ADD)             NUM_OF_DOCS_TO_ADD=${VALUE} ;;
-            REPL_STATUS_CHECK_SLEEP_TIME)   REPL_STATUS_CHECK_SLEEP_TIME=${VALUE} ;;
-            UP_TIME)                        UP_TIME=${VALUE} ;;
-            LITESERV_USER)                  LITESERV_USER=${VALUE} ;;
-            LITESERV_PWD)                   LITESERV_PWD=${VALUE} ;;
+            COLLECT_LOGS)                   COLLECT_LOGS=${VALUE} ;;
+            SERVER_SEED_DOCS)               SERVER_SEED_DOCS=${VALUE} ;;
+            MAX_DOCS)                       MAX_DOCS=${VALUE} ;;
+            NUM_USERS)                      NUM_USERS=${VALUE} ;;
+            CREATE_BATCH_SIZE)              CREATE_BATCH_SIZE=${VALUE} ;;
+            CREATE_DELAY)                   CREATE_DELAY=${VALUE} ;;
+            UPDATE_BATCH_SIZE)              UPDATE_BATCH_SIZE=${VALUE} ;;
+            UPDATE_DOCS_PERCENTAGE)         UPDATE_DOCS_PERCENTAGE=${VALUE} ;;
+            UPDATE_DELAY)                   UPDATE_DELAY=${VALUE} ;;
+            CHANGES_DELAY)                  CHANGES_DELAY=${VALUE} ;;
+            CHANGES_LIMIT)                  CHANGES_LIMIT=${VALUE} ;;
             SSH_USER)                       SSH_USER=${VALUE} ;;
             SSH_PWD)                        SSH_PWD=${VALUE} ;;
-            USE_LOCAL_TESTSERVER)           USE_LOCAL_TESTSERVER=${VALUE} ;;
-            CBS_HOSTS)                      CBS_HOSTS=${VALUE} ;;
-            SGW_HOSTS)                      SGW_HOSTS=${VALUE} ;;
-            MODE)                           MODE=${VALUE} ;;
-            TEST_NAME)                      TEST_NAME=${VALUE} ;;
-            *)   
-    esac    
+            UP_TIME)                        UP_TIME=${VALUE} ;;
+            *)
+    esac
 
 done
 
+
 echo "MOBILE_TESTKIT_BRANCH = $MOBILE_TESTKIT_BRANCH"
+echo "CBS_HOSTS = $CBS_HOSTS"
 echo "COUCHBASE_SERVER_VERSION = $COUCHBASE_SERVER_VERSION"
+echo "SGW_HOSTS = $SGW_HOSTS"
 echo "SYNC_GATEWAY_VERSION = $SYNC_GATEWAY_VERSION"
-echo "CBLITE_VERSIONS = $CBLITE_VERSIONS"
-echo "CBLITE_HOSTS = $CBLITE_HOSTS"
-echo "CBLITE_PLATFORM=$CBLITE_PLATFORM"
-echo "NUM_OF_DOCS = $NUM_OF_DOCS"
-echo "NUM_OF_DOC_UPDATES = $NUM_OF_DOC_UPDATES"
-echo "NUM_OF_DOCS_TO_UPDATE = $NUM_OF_DOCS_TO_UPDATE"
-echo "NUM_OF_DOCS_TO_DELETE = $NUM_OF_DOCS_TO_DELETE"
-echo "NUM_OF_DOCS_IN_ITR = $NUM_OF_DOCS_IN_ITR"
-echo "NUM_OF_DOCS_TO_ADD = $NUM_OF_DOCS_TO_ADD"
-echo "REPL_STATUS_CHECK_SLEEP_TIME = $REPL_STATUS_CHECK_SLEEP_TIME"
-echo "UP_TIME = $UP_TIME"
-echo "LITESERV_USER = $LITESERV_USER"
-echo "LITESERV_PWD = $LITESERV_PWD"
+echo "COLLECT_LOGS = $COLLECT_LOGS"
+echo "SERVER_SEED_DOCS = $SERVER_SEED_DOCS"
+echo "MAX_DOCS=$MAX_DOCS"
+echo "NUM_USERS = $NUM_USERS"
+echo "CREATE_BATCH_SIZE = $CREATE_BATCH_SIZE"
+echo "CREATE_DELAY = $CREATE_DELAY"
+echo "UPDATE_BATCH_SIZE = $UPDATE_BATCH_SIZE"
+echo "UPDATE_DOCS_PERCENTAGE = $UPDATE_DOCS_PERCENTAGE"
+echo "UPDATE_DELAY = $UPDATE_DELAY"
+echo "CHANGES_DELAY = $CHANGES_DELAY"
+echo "CHANGES_LIMIT = $CHANGES_LIMIT"
 echo "SSH_USER = $SSH_USER"
 echo "SSH_PWD = $SSH_PWD"
-echo "USE_LOCAL_TESTSERVER = $USE_LOCAL_TESTSERVER"
-echo "CBS_HOSTS = $CBS_HOSTS"
-echo "SGW_HOSTS = $SGW_HOSTS"
-echo "MODE = $MODE"
-echo "TEST_NAME = $TEST_NAME"
+echo "UP_TIME = $UP_TIME"
+
 
 git checkout $MOBILE_TESTKIT_BRANCH
 git pull origin $MOBILE_TESTKIT_BRANCH
 git fetch
 git reset --hard origin/$MOBILE_TESTKIT_BRANCH
-
-export LITESERV_MSFT_HOST_USER=${LITESERV_USER}
-export LITESERV_MSFT_HOST_PASSWORD=${LITESERV_PWD}
-export OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES
 
 source setup.sh
 
@@ -84,32 +74,28 @@ cat ansible.cfg
 python libraries/utilities/generate_clusters_from_pool.py
 python libraries/utilities/install_keys.py --public-key-path=~/.ssh/id_rsa.pub --ssh-user=${SSH_USER} --ssh-password=${SSH_PWD}
 
-if [ -z "$TEST_NAME" ] 
-then
-	TEST_KEYWORD=""
+if [ "$COLLECT_LOGS" == "true" ]; then
+	COLLECT_LOGS_FLAG = "--collect-logs"  
 else
-	TEST_KEYWORD="-k $TEST_NAME"
+	COLLECT_LOGS_FLAG = ""
 fi
-
 
 echo "Running system test"
 pytest -s -rsx \
-  --timeout 864000 ${TEST_KEYWORD} \
-  --liteserv-versions=${CBLITE_VERSIONS} \
-  --liteserv-hosts=${CBLITE_HOSTS} \
-  --liteserv-ports=8080 \
-  --liteserv-platforms=${CBLITE_PLATFORM} \
-  --xattrs --enable-file-logging --delta-sync --no-db-delete \
-  --skip-provisioning \
-  --sequoia \
-  --num-of-docs=${NUM_OF_DOCS} \
-  --num-of-doc-updates=${NUM_OF_DOC_UPDATES} \
-  --num-of-docs-to-update=${NUM_OF_DOCS_TO_UPDATE} \
-  --num-of-docs-to-delete=${NUM_OF_DOCS_TO_DELETE} \
-  --num-of-docs-in-itr=${NUM_OF_DOCS_IN_ITR} \
-  --num-of-docs-to-add=${NUM_OF_DOCS_TO_ADD} \
-  --up-time=${UP_TIME} \
-  --repl-status-check-sleep-time=${REPL_STATUS_CHECK_SLEEP_TIME} \
+  --timeout 864000 \
+  --collect-logs=${COLLECT_LOGS} \
+  --cbs-endpoints=${CBS_HOSTS} \
+  --server-version=${COUCHBASE_SERVER_VERSION} \
+  --sgw-endpoints=${SGW_HOSTS} \
   --sync-gateway-version=${SYNC_GATEWAY_VERSION} \
-  --mode=${MODE} --server-version=${COUCHBASE_SERVER_VERSION} \
-  --create-db-per-suite=cbl-test testsuites/CBLTester/System_test_multiple_device/test_system_testing.py
+  --server-seed-docs=${SERVER_SEED_DOCS} \
+  --max-docs=${MAX_DOCS} \
+  --num-users=${NUM_USERS} \
+  --create-batch-size=${CREATE_BATCH_SIZE} \
+  --create-delay=${CREATE_DELAY} \
+  --update-batch-size=${UPDATE_BATCH_SIZE} \
+  --update-docs-percentage=${UPDATE_DOCS_PERCENTAGE} \
+  --update-delay=${UPDATE_DELAY} \
+  --changes-delay=${CHANGES_DELAY} \
+  --changes-limit=${CHANGES_LIMIT} \
+  --up-time=${UP_TIME} testsuites/syncgateway/system/sequoia/test_system_test.py

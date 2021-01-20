@@ -39,6 +39,8 @@ servers: # each server tag represents a cluster
       ram: 80%
       index_ram: 80%
       index_storage: default
+      ssh_username: root
+      ssh_password: couchbase
       services:
         index: 5
         index_start: 6
@@ -55,4 +57,5 @@ servers: # each server tag represents a cluster
 syncgateways:
   -
       name: sg
-      servers: local
+      cluster: local
+      count: 1    

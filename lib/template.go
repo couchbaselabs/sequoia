@@ -780,3 +780,25 @@ func (t *TemplateResolver) SyncGateway() string {
 	}
 	return val
 }
+
+// returns sync gateway ip list
+func (t *TemplateResolver) SyncGatewayAll() string {
+	val := ""
+
+	syncSpecs := t.SyncGateways()
+	if len(syncSpecs) <= 0 {
+		return val
+	}
+
+	for _, sgw := range syncSpecs[0:len(syncSpecs)] {
+		name := sgw.Names[0]
+		if name != "" {
+			if val == "" {
+				val = t.Scope.Provider.GetHostAddress(name)
+			} else {
+				val = val + "," + t.Scope.Provider.GetHostAddress(name)
+			}
+		}
+	}
+	return val
+}

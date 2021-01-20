@@ -55,7 +55,7 @@ type ServerSpec struct {
 	FTSPort         string `yaml:"fts_port"`
 	QueryPort       string `yaml:"query_port"`
 	EventingPort    string `yaml:"eventing_port"`
-        BackupPort      string `yaml:"backup_port"`
+	BackupPort      string `yaml:"backup_port"`
 	AnalyticsPort   string `yaml:"analytics_port"`
 	InitNodes       uint8  `yaml:"init_nodes"`
 	DataPath        string `yaml:"data_path"`
@@ -73,9 +73,11 @@ type ServerSpec struct {
 }
 
 type SyncGatewaySpec struct {
-	Name        string
+	Name        string `yaml:"name"`
 	Names       []string
-	Count       uint8
+	ClusterName string `yaml:"cluster"`
+	Server      ServerSpec
+	Count       uint8 `yaml:"count"`
 	CountOffset uint8
 }
 
@@ -123,13 +125,13 @@ func (s *ServerSpec) InitNodeServices() {
 	numFtsNodes := s.Services["fts"]
 	numDataNodes := s.Services["data"]
 	numEventingNodes := s.Services["eventing"]
-        numBackupNodes := s.Services["backup"]
+	numBackupNodes := s.Services["backup"]
 	numAnalyticsNodes := s.Services["analytics"]
 	customIndexStart := s.Services["index_start"]
 	customQueryStart := s.Services["query_start"]
 	customFtsStart := s.Services["fts_start"]
 	customEventingStart := s.Services["eventing_start"]
-        customBackupStart := s.Services["backup_start"]
+	customBackupStart := s.Services["backup_start"]
 	customAnalyticsStart := s.Services["analytics_start"]
 
 	s.NodeServices = make(map[string][]string)
@@ -158,14 +160,14 @@ func (s *ServerSpec) InitNodeServices() {
 		eventingStartPos = 0
 	}
 
-        backupStartPos := numNodes - numQueryNodes - numIndexNodes - numFtsNodes - numBackupNodes
-        if customBackupStart > 0 {
-                // override
-                backupStartPos = customBackupStart - 1
-        }
-        if backupStartPos >= numNodes {
-                backupStartPos = 0
-        }
+	backupStartPos := numNodes - numQueryNodes - numIndexNodes - numFtsNodes - numBackupNodes
+	if customBackupStart > 0 {
+		// override
+		backupStartPos = customBackupStart - 1
+	}
+	if backupStartPos >= numNodes {
+		backupStartPos = 0
+	}
 
 	indexStartPos := numNodes - numQueryNodes - numIndexNodes - numFtsNodes
 	if customIndexStart > 0 {
@@ -207,10 +209,10 @@ func (s *ServerSpec) InitNodeServices() {
 			s.NodeServices[name] = append(s.NodeServices[name], "eventing")
 			numEventingNodes--
 		}
-                if i >= backupStartPos && numBackupNodes > 0 {
-                        s.NodeServices[name] = append(s.NodeServices[name], "backup")
-                        numBackupNodes--
-                }
+		if i >= backupStartPos && numBackupNodes > 0 {
+			s.NodeServices[name] = append(s.NodeServices[name], "backup")
+			numBackupNodes--
+		}
 		if i >= indexStartPos && numIndexNodes > 0 {
 			s.NodeServices[name] = append(s.NodeServices[name], "index")
 			numIndexNodes--
@@ -261,10 +263,12 @@ func (s *ScopeSpec) ApplyToAllServersAsync(operation func(string, *ServerSpec, c
 	}
 }
 
+// ApplyToAllSyncGateway is to set all sync gateway configs
 func (s *ScopeSpec) ApplyToAllSyncGateway(operation func(string, string, string, []string, string, string, string, *[]SyncGatewaySpec)) {
 	s.ApplyToSyncGateway(operation, 0, 0)
 }
 
+// ApplyToSyncGateway is to set sync gateway variables and trigger sync gateway config process
 func (s *ScopeSpec) ApplyToSyncGateway(operation func(string, string, string, []string, string, string, string, *[]SyncGatewaySpec),
 	startIdx int, endIdx int) {
 
@@ -273,20 +277,30 @@ func (s *ScopeSpec) ApplyToSyncGateway(operation func(string, string, string, []
 		useLen = true
 	}
 
-	cbs := s.Servers[0].Names
-	ssh_user := s.Servers[0].SSHUsername
-	ssh_pwd := s.Servers[0].SSHPassword
-	bucket_name := s.Buckets[0].Names[0]
-	username := s.Users[0].Name
-	password := s.Users[0].Password
-
 	for _, sgw := range s.SyncGateways {
 		if useLen {
 			endIdx = len(sgw.Names)
 		}
 		for _, sgwName := range sgw.Names[startIdx:endIdx] {
+			cbs := sgw.Server.Names
+			sshUser := sgw.Server.SSHUsername
+			sshPwd := sgw.Server.SSHPassword
+			bucketName := sgw.Server.BucketSpecs[0].Names[0]
+
+			// processing bucket username and password
+			busers := strings.Split(sgw.Server.Users, ",")
+			username := busers[0]
+			var password string
+
+			for _, user := range s.Users {
+				if user.Name == username {
+					password = user.Password
+					break
+				}
+			}
+
 			// allowed apply func to modify server
-			operation(sgwName, ssh_user, ssh_pwd, cbs, bucket_name, username, password, &s.SyncGateways)
+			operation(sgwName, sshUser, sshPwd, cbs, bucketName, username, password, &s.SyncGateways)
 		}
 	}
 }
@@ -373,7 +387,7 @@ func (s *ScopeSpec) ToAttr(attr string) string {
 	case "eventing_port":
 		return "EventingPort"
 	case "backup_port":
-                return "BackupPort"
+		return "BackupPort"
 	case "analytics_port":
 		return "AnalyticsPort"
 	}
@@ -500,7 +514,15 @@ func ConfigureSpec(spec *ScopeSpec) {
 
 	// Add Sync Gateway names to spec
 	for i, syncGateway := range spec.SyncGateways {
+		spec.SyncGateways[i].Name = syncGateway.Name
 		spec.SyncGateways[i].Names = ExpandServerName(syncGateway.Name, syncGateway.Count, 1)
+
+		for _, server := range spec.Servers {
+			if spec.SyncGateways[i].ClusterName == server.Name {
+				spec.SyncGateways[i].Server = server
+				break
+			}
+		}
 	}
 
 	// Add Accel names to spec
