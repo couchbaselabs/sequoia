@@ -30,6 +30,11 @@ users:
       password: password
       roles: admin
       auth_domain: local
+  -
+      name: crud
+      password: password
+      roles: admin
+      auth_domain: local
 
 
 buckets:
@@ -50,7 +55,10 @@ buckets:
       ram: 12%
   -
       name: metadata
-      ram: 20%
+      ram: 15%
+  -
+      name: crud
+      ram: 5%
 
 
 servers: # each server tag represents a cluster
@@ -69,5 +77,5 @@ servers: # each server tag represents a cluster
       index_path: "/data"
       rest_username: Administrator
       rest_password: password
-      buckets: bucket_op,source_op,timer_op,curl_op,n1ql_op,metadata
-      users: bucket_op,source_op,timer_op,curl_op,n1ql_op,metadata
+      buckets: bucket_op,source_op,timer_op,curl_op,n1ql_op,metadata,crud
+      users: bucket_op,source_op,timer_op,curl_op,n1ql_op,metadata,crud

@@ -14,17 +14,17 @@
   wait: true
 - command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 4}} -o create_multi_scope_collection -s scope_ -c coll --scope_count=2 --collection_count=10 --collection_distribution=uniform"
   wait: true
-- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 5}} -o create_multi_scope_collection -s scope_ -c coll --scope_count=5 --collection_count=15 --collection_distribution=uniform"
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 5}} -o create_multi_scope_collection -s scope_ -c coll --scope_count=5 --collection_count=25 --collection_distribution=uniform"
   wait: true
 
 ####### load data into all collections #######
 -
   image: sequoiatools/gideon2
-  command: "kv --ops {{.Scale 100}} --create 100  --hosts {{.Orchestrator}} --bucket bucket_op --scope scope_0 --collection ALL"
-- command: "kv --ops {{.Scale 100}} --create 100  --hosts {{.Orchestrator}} --bucket timer_op --scope scope_0 --collection ALL"
-- command: "kv --ops {{.Scale 100}} --create 100  --hosts {{.Orchestrator}} --bucket n1ql_op --scope scope_0 --collection ALL"
-- command: "kv --ops {{.Scale 100}} --create 100  --hosts {{.Orchestrator}} --bucket source_op --scope scope_0 --collection ALL"
-- command: "kv --ops {{.Scale 100}} --create 100  --hosts {{.Orchestrator}} --bucket curl_op --scope scope_0 --collection ALL"
+  command: "kv --ops {{.Scale 100}} --create 100  --hosts {{.Orchestrator}} --bucket bucket_op --scope scope_0 --collection coll-0,coll-1,coll-2"
+- command: "kv --ops {{.Scale 100}} --create 100  --hosts {{.Orchestrator}} --bucket timer_op --scope scope_0 --collection coll-0,coll-1,coll-2"
+- command: "kv --ops {{.Scale 100}} --create 100  --hosts {{.Orchestrator}} --bucket n1ql_op --scope scope_0 --collection coll-0,coll-1,coll-2"
+- command: "kv --ops {{.Scale 100}} --create 100  --hosts {{.Orchestrator}} --bucket source_op --scope scope_0 --collection coll-0,coll-1,coll-2"
+- command: "kv --ops {{.Scale 100}} --create 100  --hosts {{.Orchestrator}} --bucket curl_op --scope scope_0 --collection coll-0,coll-1,coll-2"
 
 #### create handlers #####
 - foreach: "{{range $i, $sc := mkrange 0 2}}"
@@ -65,31 +65,56 @@
   wait: true
 
 ###############  Rebalance-in eventing ################
-- template: rebalance_in
+- template: rebalance_in_wo_wait
   args: "{{.InActiveNode}}, eventing"
   wait: true
 
+# Start Collections CRUD on bucket 6 & bucket5
 -
-  image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "300"
+  image: sequoiatools/collections:1.0
+  command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 6}} -o crud_mode --crud_interval=10 --max_scopes=10 --max_collections=100"
+  alias: collection_crud1
+
+-
+  template: wait_for_rebalance
+  wait: true
+
+#### delete scope_1 for bucket op
+- image: sequoiatools/collections:1.0
+  command: "-i {{$.Orchestrator}}:8091 -b bucket_op -o delete -s scope_1"
   wait: true
 
 ###############  Rebalance-out single node ################
-- template: rebalance_out
+- template: rebalance_out_wo_wait
   args: "{{.ActiveEventingNode 1}}"
+  wait: true
+
+##### recreate collection in bucket_op -> scope_1
+- image: sequoiatools/collections:1.0
+  command: "-i {{.Orchestrator}}:8091 -b {{.Bucket}} -o create -s scope_1"
   wait: true
 
 -
   image: sequoiatools/cmd
   entrypoint: sleep
-  command: "300"
+  command: "60"
+  wait: true
+
+### recreate collections
+- image: sequoiatools/collections:1.0
+  command: "-i {{.Orchestrator}}:8091 -b {{.Bucket}} -o create -s scope_1 -c coll --count 5"
+  wait: true
+
+-
+  template: wait_for_rebalance
   wait: true
 
 ###############  Swap Rebalance ################
 - template: rebalance_swap
   args: "{{.InActiveNode}},{{.ActiveEventingNode 1}}, eventing"
   wait: true
+
+
 
 #### pause bucket op ####
 - image: sequoiatools/eventing:7.0
@@ -111,36 +136,118 @@
 - command: "eventing_helper.py -i {{.EventingNode}} -u {{.RestUsername}} -p {{.RestPassword}} -o wait_for_state --state deployed --name sbm"
   wait: true
 
+#### create handlers #####
+- foreach: "{{range $i, $sc := mkrange 3 4}}"
+  image: sequoiatools/eventing:7.0
+  command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -s bucket_op.scope_0.coll-{{$sc}} -m metadata.scope_0.coll-{{$sc}} -d dst_bucket.bucket_op.scope_1.coll-{{$sc}}.rw -t bucket_op -o create --name bucket_nw{{$sc}}"
+  wait: true
+- foreach: "{{range $i, $sc := mkrange 3 4}}"
+  image: sequoiatools/eventing:7.0
+  command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -s timer_op.scope_0.coll-{{$sc}} -m metadata.scope_1.coll-{{$sc}} -d dst_bucket.timer_op.scope_1.coll-{{$sc}}.rw -t timers -o create --name timers_nw{{$sc}}"
+  wait: true
+- foreach: "{{range $i, $sc := mkrange 3 4}}"
+  image: sequoiatools/eventing:7.0
+  command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -s curl_op.scope_0.coll-{{$sc}} -m metadata.scope_2.coll-{{$sc}} -d dst_bucket.curl_op.scope_1.coll-{{$sc}}.rw -t curl -o create --name curl_nw{{$sc}}"
+  wait: true
+- foreach: "{{range $i, $sc := mkrange 3 4}}"
+  image: sequoiatools/eventing:7.0
+  command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -s n1ql_op.scope_0.coll-{{$sc}} -m metadata.scope_3.coll-{{$sc}} -d dst_bucket.n1ql_op.scope_1.coll-{{$sc}}.rw -t n1ql -o create --name n1ql_nw{{$sc}}"
+  wait: true
+- foreach: "{{range $i, $sc := mkrange 3 4}}"
+  image: sequoiatools/eventing:7.0
+  command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -s source_op.scope_0.coll-{{$sc}} -m metadata.scope_4.coll-{{$sc}} -d dst_bucket.source_op.scope_0.coll-{{$sc}}.rw -t sbm -o create --name sbm_nw{{$sc}}"
+  wait: true
+
+####### load data into all collections #######
+-
+  image: sequoiatools/gideon2
+  command: "kv --ops {{.Scale 100}} --create 100  --hosts {{.Orchestrator}} --bucket bucket_op --scope scope_0 --collection coll-3,coll-4"
+- command: "kv --ops {{.Scale 100}} --create 100  --hosts {{.Orchestrator}} --bucket timer_op --scope scope_0 --collection coll-3,coll-4"
+- command: "kv --ops {{.Scale 100}} --create 100  --hosts {{.Orchestrator}} --bucket n1ql_op --scope scope_0 --collection coll-3,coll-4"
+- command: "kv --ops {{.Scale 100}} --create 100  --hosts {{.Orchestrator}} --bucket source_op --scope scope_0 --collection coll-3,coll-4"
+- command: "kv --ops {{.Scale 100}} --create 100  --hosts {{.Orchestrator}} --bucket curl_op --scope scope_0 --collection coll-3,coll-4"
+
+#### deploy new handlers #####
+- image: sequoiatools/eventing:7.0
+  command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o deploy --name bucket_nw"
+- command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o deploy --name timers_nw"
+- command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o deploy --name curl_nw"
+- command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o deploy --name n1ql_nw"
+- command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o deploy --name sbm_nw"
+
+- image: sequoiatools/eventing:7.0
+  command: "eventing_helper.py -i {{.EventingNode}} -u {{.RestUsername}} -p {{.RestPassword}} -o wait_for_state --state deployed --name bucket_nw"
+  wait: true
+- command: "eventing_helper.py -i {{.EventingNode}} -u {{.RestUsername}} -p {{.RestPassword}} -o wait_for_state --state deployed --name timers_nw"
+  wait: true
+- command: "eventing_helper.py -i {{.EventingNode}} -u {{.RestUsername}} -p {{.RestPassword}} -o wait_for_state --state deployed --name curl_nw"
+  wait: true
+- command: "eventing_helper.py -i {{.EventingNode}} -u {{.RestUsername}} -p {{.RestPassword}} -o wait_for_state --state deployed --name n1ql_nw"
+  wait: true
+- command: "eventing_helper.py -i {{.EventingNode}} -u {{.RestUsername}} -p {{.RestPassword}} -o wait_for_state --state deployed --name sbm_nw"
+  wait: true
+
+
+#### delete scope_1 for bucket op
+- image: sequoiatools/collections:1.0
+  command: "-i {{$.Orchestrator}}:8091 -b timer_op -o delete -s scope_0"
+  wait: true
+
+
 ###############  Rebalance-in data ################
 - template: rebalance_in
   args: "{{.InActiveNode}}"
   wait: true
 
--
-  image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "300"
-  wait: true
 
 ###############  Rebalance-out single data node ################
 - template: rebalance_out
   args: "{{.NthDataNode 1}}"
   wait: true
 
+#### wait for handler to be undeployed ####
+- image: sequoiatools/eventing:7.0
+  command: "eventing_helper.py -i {{.EventingNode}} -u {{.RestUsername}} -p {{.RestPassword}} -o wait_for_state --state undeployed --name timers"
+  wait: true
+
 -
   image: sequoiatools/cmd
   entrypoint: sleep
   command: "300"
   wait: true
 
+##### recreate collection in bucket_op -> scope_1
+- image: sequoiatools/collections:1.0
+  command: "-i {{.Orchestrator}}:8091 -b timer_op -o create -s scope_0"
+  wait: true
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "60"
+  wait: true
+
+### recreate collections
+- image: sequoiatools/collections:1.0
+  command: "-i {{.Orchestrator}}:8091 -b timer_op -o create -s scope_0 -c coll --count 5"
+  wait: true
+
+
 #### resume bucket op ####
 - image: sequoiatools/eventing:7.0
   command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o resume --name bucket_op"
   wait: true
 
+#### deploy timers ####
+- image: sequoiatools/eventing:7.0
+  command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o deploy --name timers"
+  wait: true
+
 #### wait for handler to be deployed ####
 - image: sequoiatools/eventing:7.0
   command: "eventing_helper.py -i {{.EventingNode}} -u {{.RestUsername}} -p {{.RestPassword}} -o wait_for_state --state deployed --name bucket_op"
+  wait: true
+- command: "eventing_helper.py -i {{.EventingNode}} -u {{.RestUsername}} -p {{.RestPassword}} -o wait_for_state --state deployed --name timers"
   wait: true
 
 ###############  Swap data nodes ################
@@ -211,16 +318,6 @@
 - template: rebalance
   wait: true
 
-#### undeploy bucket op ####
-- image: sequoiatools/eventing:7.0
-  command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o undeploy --name bucket_op"
-  wait: true
-
-#### wait for handler to be undeployed ####
-- image: sequoiatools/eventing:7.0
-  command: "eventing_helper.py -i {{.EventingNode}} -u {{.RestUsername}} -p {{.RestPassword}} -o wait_for_state --state undeployed --name bucket_op"
-  wait: true
-
 ###############  Rebalance-in eventing,KV which were out due to failover ################
 -
   template: add_node
@@ -229,23 +326,26 @@
 - args: "{{.NthInActiveNode 2}},eventing"
   wait: true
 
-
 -
   template: rebalance
   wait: true
 
 #### undeploy all ####
 - image: sequoiatools/eventing:7.0
-  command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o undeploy --name timers"
+  command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o undeploy"
   wait: true
-- command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o undeploy --name sbm"
-  wait: true
-- command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o undeploy --name curl"
-  wait: true
-- command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o undeploy --name n1ql"
+
+#### wait for handler to be deployed ####
+- image: sequoiatools/eventing:7.0
+  command: "eventing_helper.py -i {{.EventingNode}} -u {{.RestUsername}} -p {{.RestPassword}} -o wait_for_state --state undeployed"
   wait: true
 
 #### delete all ####
 - image: sequoiatools/eventing:7.0
   command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o delete"
   wait: true
+
+-
+  client:
+    op: rm
+    container: collection_crud1

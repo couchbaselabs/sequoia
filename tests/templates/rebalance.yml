@@ -330,3 +330,43 @@
     -
       template: disable_autofailover
       wait: true
+
+# rebalance the cluster
+# $0 = optional orchestrator node
+-
+  name: rebalance_witout_wait
+  actions:
+    -
+      image: sequoiatools/couchbase-cli:7.0
+      command:  "rebalance
+                -c {{if gt (len `$0`) 2}}$0{{else}}{{.Orchestrator}}{{end}}:{{.RestPort}}
+                -u  {{.RestUsername}} -p  {{.RestPassword}}"
+      condwait: "{{if eq `windows` .Platform }}
+                    false
+                 {{end}}"
+
+
+# rebalance in a single node
+# $0 = server to add
+# $1 = optional services (default data)
+-
+  name: rebalance_in_wo_wait
+  actions:
+    -
+      template: add_node
+      args: "$0, ($1)"
+    -
+      template: rebalance_witout_wait
+
+
+# rebalance out a single node
+# $0 = server to remove
+-
+  name: rebalance_out_wo_wait
+  actions:
+    -
+      image: sequoiatools/couchbase-cli:7.0
+      command: "rebalance -c  {{.Orchestrator}}:{{.RestPort}} --server-remove $0  -u  {{.RestUsername}} -p  {{.RestPassword}}"
+      condwait: "{{if eq `windows` .Platform }}
+                    false
+                 {{end}}"

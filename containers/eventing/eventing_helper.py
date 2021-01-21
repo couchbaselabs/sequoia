@@ -226,8 +226,8 @@ class EventingHelper:
         headers = {'Content-type': 'application/json', 'Authorization': 'Basic %s' % authorization}
         url = "http://" + self.hostname + ":8091" + "/_p/event/api/v1/status"
         method="GET"
-
         response, content = httplib2.Http(timeout=120).request(uri=url, method=method, headers=headers)
+        print("v1/status {}".format(content))
         result=json.loads(content)
         status=response['status']
         if not status:
@@ -235,13 +235,16 @@ class EventingHelper:
             raise Exception("Failed to get deployed apps")
         composite_status = None
         while composite_status != app_status:
-            print("checking {} for {}".format(app_status,appname))
-            time.sleep(5)
-            response, content = httplib2.Http(timeout=120).request(uri=url, method=method, headers=headers)
-            result = json.loads(content)
-            for i in range(len(result['apps'])):
-                if result['apps'][i]['name']== appname:
-                    composite_status = result['apps'][i]['composite_status']
+            try:
+                print("checking {} for {}".format(app_status,appname))
+                time.sleep(5)
+                response, content = httplib2.Http(timeout=120).request(uri=url, method=method, headers=headers)
+                result = json.loads(content)
+                for i in range(len(result['apps'])):
+                    if result['apps'][i]['name']== appname:
+                        composite_status = result['apps'][i]['composite_status']
+            except Exception as e:
+                print(e)
 
     def delete_handlers(self,handler=None):
         authorization = base64.encodestring('%s:%s' % (self.username, self.password))
@@ -268,7 +271,7 @@ class EventingHelper:
             raise Exception(content)
 
     def fillter_handler(self,handlers,prefix):
-        return [str for str in handlers if re.match(r'[^\d]+|^', str).group(0) in prefix]
+        return [str for str in handlers if prefix in str]
 
     def verify_doc(self, options):
         source_collection=options.source
