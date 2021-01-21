@@ -7,13 +7,17 @@ import sys
 
 class WaitForAllIndexBuildComplete():
     def check_index_status(self):
-
-        if len(sys.argv) != 4:
+        if len(sys.argv) < 4:
             raise Exception("This script expects 3 arguments - index node ip, username, password")
 
         index_status_endpoint = "http://" + sys.argv[1] + ":9102/getIndexStatus"
         cluster_username = sys.argv[2]
         cluster_password = sys.argv[3]
+        # Buckets to be skipped for checking build status
+        excluded_buckets = []
+        if sys.argv[4]:
+            excluded_buckets = sys.argv[4].split(",")
+
 
         # Get status for all indexes
         response = requests.get(index_status_endpoint, auth=(cluster_username, cluster_password), verify=True)
@@ -25,10 +29,14 @@ class WaitForAllIndexBuildComplete():
                 all_indexes_built = True
                 # Check the status field for all indexes. status should be ready for all indexes.
                 for index in response["status"]:
-                    if index["status"] != "Ready":
-                        all_indexes_built &= False
+                    if (index["bucket"] not in excluded_buckets):
+                        if index["status"] != "Ready":
+                            all_indexes_built &= False
+                        else:
+                            all_indexes_built &= True
                     else:
-                        all_indexes_built &= True
+                        pass
+
                 return all_indexes_built
             else:
                 raise Exception("IndexStatus does not have status field")
