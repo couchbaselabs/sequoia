@@ -13,15 +13,22 @@
 -
   image: sequoiatools/couchbase-cli
   requires:  "{{eq true .DoOnce }}"
-  command: "setting-audit -c {{.Orchestrator}}:8091 -u {{.RestUsername}} -p {{.RestPassword}} --audit-enabled 1 --audit-log-path /data --audit-log-rotate-interval 604800"
+  command: "setting-audit -c {{.Orchestrator}}:8091 -u {{.RestUsername}} -p {{.RestPassword}} --set --audit-enabled 1 --audit-log-path /data --audit-log-rotate-interval 604800"
   wait: true
 
 ###### enable n2n encryption ######
+-
+  template: disable_autofailover
+  requires:  "{{eq true .DoOnce }}"
 -
   image: sequoiatools/couchbase-cli
   requires:  "{{eq true .DoOnce }}"
   command: "node-to-node-encryption -c {{.Orchestrator}}:8091 -u {{.RestUsername}} -p {{.RestPassword}} --enable"
   wait: true
+-
+  template: enable_autofailover
+  args: "120,1"
+  requires:  "{{eq true .DoOnce }}"
 
 ############### Enable Plasma Bloom Filter ################
 - template: set_gsi_config

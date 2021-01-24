@@ -75,9 +75,9 @@ servers: # each server tag represents a cluster
         analytics: 3
       rest_username: Administrator
       rest_password: password
-      data_path: "/data"
-      index_path: "/data"
-      analytics_path: "/data"
+      data_path: "/data/couchbase"
+      index_path: "/data/couchbase"
+      analytics_path: "/data/couchbase"
       rest_port: 8091
       query_port: 8093
       init_nodes: 29
@@ -89,9 +89,9 @@ servers: # each server tag represents a cluster
       ram: 60%
       rest_username: Administrator
       rest_password: password
-      data_path: "/data"
-      index_path: "/data"
-      analytics_path: "/data"
+      data_path: "/data/couchbase"
+      index_path: "/data/couchbase"
+      analytics_path: "/data/couchbase"
       rest_port: 8091
       init_nodes: 2
       buckets: remote,bucket4,bucket8,bucket9
