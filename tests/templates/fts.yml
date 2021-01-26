@@ -321,3 +321,12 @@
                     -url http://{{.RestUsername}}:{{.RestPassword}}@$0/api/index/$3/query
                     -query $4
                     $5"
+
+# top level template to put index via curl
+# $0 = host
+# $1 = setting name
+name: set_fts_manager_options
+actions:
+  -
+    image:  appropriate/curl
+    command: "-X POST -u {{.RestUsername}}:{{.RestPassword}} -H Content-Type:application/json http://$0:8094/settings -d {{`{$1}` | to_double_quote}}"

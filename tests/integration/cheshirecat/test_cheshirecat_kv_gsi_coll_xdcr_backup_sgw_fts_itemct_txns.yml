@@ -49,6 +49,10 @@
 - template: set_gsi_config
   args: "{{.ActiveIndexNode 0}}, 'indexer.settings.rebalance.redistribute_indexes':true"
 
+############### Set FTS bleveMaxResultWindow to 100000 ################
+- template: set_fts_manager_options
+  args: "{{.Nodes | .Service `fts` | net 0}}, 'bleveMaxResultWindow':'100000'"
+
 ##### create a backup plan which backups up every 6 hours and merges every 2 days at 12:00noon to filesystem repo
 -  
   image:  appropriate/curl
@@ -221,16 +225,16 @@
 
 # Create FTS indexes on collections
 - image: sequoiatools/ftsindexmanager
-  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}} -i 5 -a create_index"
+  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}} -i 2 -a create_index"
   wait: true
 
-- command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 5}} -i 5 -a create_index"
+- command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 5}} -i 2 -a create_index"
   wait: true
 
-- command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 6}} -i 5 -a create_index"
+- command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 6}} -i 2 -a create_index"
   wait: true
 
-- command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 7}} -i 5 -a create_index"
+- command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 7}} -i 2 -a create_index"
   wait: true
 
 # run sync gateway testing through mobile-testkit - versions supplied are placeholders - they will be replaced with actual values during the run
@@ -349,15 +353,6 @@
 # create fts index with nested type mappings and store results
 - template: create_index_with_child_field_nested_type_mapping
   args: "{{.FTSNodePort}}, social, default, gideon, description, profile, status, true, , scorch"
-
-# direct search on state key
-- template: query_fts
-  args: "{{.FTSNodePort}}, -1, {{.Scale 3}}, good_state, +state:9C, -size 10"
-
-
-# regex search on subfield profile.status with description exclusion
-- template: query_fts
-  args: "{{.FTSNodePort}}, -1, {{.Scale 3}}, social, +profile.status:4121*, -size 10"
 
 # get replication id
 -
