@@ -40,22 +40,27 @@ users:
 buckets:
   -
       name: bucket_op
-      ram: 12%
+      ram: 15%
+      ttl: 3600
   -
       name: timer_op
-      ram: 12%
+      ram: 15%
+      ttl: 3600
   -
       name: source_op
-      ram: 12%
+      ram: 15%
+      ttl: 3600
   -
       name: n1ql_op
-      ram: 12%
+      ram: 15%
+      ttl: 3600
   -
       name: curl_op
-      ram: 12%
+      ram: 15%
+      ttl: 3600
   -
       name: metadata
-      ram: 15%
+      ram: 5%
   -
       name: crud
       ram: 5%
