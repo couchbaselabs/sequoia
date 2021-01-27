@@ -124,8 +124,3 @@ views:
   -
     name: all_ids
     map: "emit(meta.id, null)"
-
-syncgateways:
-  -
-    name: sg
-    count: 1

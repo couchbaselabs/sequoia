@@ -22,9 +22,5 @@ servers:
     buckets: data-bucket
     users: data-bucket
 
-syncgateways:
-  - name: sg.st
-    count: 2
-
 loadbalancer:
   name: lb.st

@@ -26,9 +26,5 @@ servers:
       index: 2
       query: 2
 
-syncgateways:
-  - name: sg.st
-    count: 3
-
 loadbalancer:
   name: lb.st

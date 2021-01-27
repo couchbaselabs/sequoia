@@ -24,8 +24,3 @@ servers:
      init_nodes: 1
      buckets: data-bucket
      users: data-bucket
-
-syncgateways:
-  -
-    name: sg.st
-    count: 1

@@ -31,11 +31,3 @@ servers:
     init_nodes: 1
     buckets: data-bucket,index-bucket
     users: data-bucket,index-bucket
-
-syncgateways:
-  - name: sg.st
-    count: 2
-
-accels:
-  - name: ac.st
-    count: 1
