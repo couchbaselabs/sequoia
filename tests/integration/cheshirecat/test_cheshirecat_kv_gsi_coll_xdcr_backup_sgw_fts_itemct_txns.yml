@@ -67,28 +67,28 @@
   command: "-u {{.RestUsername}}:{{.RestPassword}} -X POST http://{{.Orchestrator}}:8091/_p/backup/api/v1/cluster/self/repository/active/my_repo -H Content-Type:application/json -d '{\"plan\": \"my_plan\", \"archive\": \"/data/archive\"}'"
   wait: true 
 
-### create 35 scopes and 250 collections in local cluster across 6 buckets as scope_1,scope_2 ... ######
+### create (scale * 10) scopes and (scale * 80) collections in local cluster across 6 buckets as scope_1,scope_2 ... ######
 - template: create-multi-scopes-collections
-  args: "{{.Orchestrator}}, {{.NthBucket 4}}, 7, 56, uniform"
+  args: "{{.Orchestrator}}, {{.NthBucket 4}}, {{.Scale 2}}, {{.Scale 15}}, uniform"
   requires:  "{{eq true .DoOnce }}"
-- args: "{{.Orchestrator}}, {{.NthBucket 5}}, 6, 48, uniform"
+- args: "{{.Orchestrator}}, {{.NthBucket 5}}, {{.Scale 2}}, {{.Scale 15}}, uniform"
   requires:  "{{eq true .DoOnce }}"
-- args: "{{.Orchestrator}}, {{.NthBucket 6}}, 6, 48, uniform"
+- args: "{{.Orchestrator}}, {{.NthBucket 6}}, {{.Scale 2}}, {{.Scale 15}}, uniform"
   requires:  "{{eq true .DoOnce }}"
-- args: "{{.Orchestrator}}, {{.NthBucket 7}}, 6, 48, uniform"
+- args: "{{.Orchestrator}}, {{.NthBucket 7}}, {{.Scale 2}}, {{.Scale 15}}, uniform"
   requires:  "{{eq true .DoOnce }}"
-- args: "{{.Orchestrator}}, {{.NthBucket 8}}, 5, 25, uniform"
+- args: "{{.Orchestrator}}, {{.NthBucket 8}}, {{.Scale 1}}, {{.Scale 10}}, uniform"
   requires:  "{{eq true .DoOnce }}"
-- args: "{{.Orchestrator}}, {{.NthBucket 9}}, 5, 25, uniform"
+- args: "{{.Orchestrator}}, {{.NthBucket 9}}, {{.Scale 1}}, {{.Scale 10}}, uniform"
   requires:  "{{eq true .DoOnce }}"
 
 ###### Create scopes and collections in remote cluster  ######
 - template: create-multi-scopes-collections
-  args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 4}}, 7, 56, uniform"
+  args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 4}}, {{.Scale 2}}, {{.Scale 15}}, uniform"
   requires:  "{{eq true .DoOnce }}"
-- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 8}}, 5, 25, uniform"
+- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 8}}, {{.Scale 2}}, {{.Scale 10}}, uniform"
   requires:  "{{eq true .DoOnce }}"
-- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 9}}, 5, 25, uniform"
+- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 9}}, {{.Scale 2}}, {{.Scale 10}}, uniform"
   requires:  "{{eq true .DoOnce }}"
 
 # Sleep for some time to allow collections manifest to sync
@@ -194,16 +194,16 @@
 
 # Create indexes on the collections
 - image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}} -i 5 -a create_index"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}} -i {{.Scale 2}} -a create_index"
   wait: true
 
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 5}} -i 5 -a create_index"
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 5}} -i {{.Scale 2}} -a create_index"
   wait: true
 
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 6}} -i 5 -a create_index"
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 6}} -i {{.Scale 2}} -a create_index"
   wait: true
 
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 7}} -i 5 -a create_index"
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 7}} -i {{.Scale 2}} -a create_index"
   wait: true
 
 ###############  build all deferred indexes ################
@@ -230,16 +230,16 @@
 
 # Create FTS indexes on collections
 - image: sequoiatools/ftsindexmanager
-  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}} -i 2 -a create_index"
+  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}} -i {{.Scale 1}} -a create_index"
   wait: true
 
-- command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 5}} -i 2 -a create_index"
+- command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 5}} -i {{.Scale 1}} -a create_index"
   wait: true
 
-- command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 6}} -i 2 -a create_index"
+- command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 6}} -i {{.Scale 1}} -a create_index"
   wait: true
 
-- command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 7}} -i 2 -a create_index"
+- command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 7}} -i {{.Scale 1}} -a create_index"
   wait: true
 
 # run sync gateway testing through mobile-testkit - versions supplied are placeholders - they will be replaced with actual values during the run
