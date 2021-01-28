@@ -152,7 +152,6 @@ HOTEL_DS_FIELDS = [
 
 # Some constants
 NUM_WORKERS = 2  # Max number of worker threads to execute queries
-BATCH_SIZE = 20  # Number of FTS queries to be run by each worker thread
 FTS_PORT = 8094
 
 
@@ -173,6 +172,9 @@ class FTSIndexManager:
         parser.add_argument("-t", "--duration", type=int,
                             help="Duration for queries to be run for. 0 (default) is infinite",
                             default="0")
+        parser.add_argument("-nq", "--num_queries_per_worker", type=int,
+                            help="Number of FTS queries to be run by each worker thread",
+                            default=10)
         parser.add_argument("--print_interval", type=int,
                             help="Interval to print query result summary. Default is 10 mins",
                             default="600")
@@ -180,9 +182,13 @@ class FTSIndexManager:
                             help="Interval between 2 create index calls when running in a loop")
         parser.add_argument("--timeout", type=int, default=0,
                             help="Timeout for create index loop. 0 (default) is infinite")
+        parser.add_argument("-vt", "--validation_timeout", type=int, default=1200,
+                            help="Timeout for item_count_check")
         parser.add_argument("-a", "--action",
-                            choices=["create_index", "run_queries", "delete_all_indexes", "create_index_loop"],
-                            help="Choose an action to be performed. Valid actions : create_index, run_queries, delete_all_indexes, create_index_loop",
+                            choices=["create_index", "run_queries", "delete_all_indexes", "create_index_loop",
+                                     "item_count_check"],
+                            help="Choose an action to be performed. Valid actions : create_index, run_queries, "
+                                 "delete_all_indexes, create_index_loop, item_count_check",
                             default="create_index")
 
         args = parser.parse_args()
@@ -199,6 +205,8 @@ class FTSIndexManager:
         self.print_interval = args.print_interval
         self.interval = args.interval
         self.timeout = args.timeout
+        self.num_queries_per_worker = args.num_queries_per_worker
+        self.validation_timeout = args.validation_timeout
 
         self.idx_def_templates = HOTEL_DS_FIELDS
 
@@ -265,6 +273,43 @@ class FTSIndexManager:
                 scope_obj[scope.name] = collections
                 multi_coll_scopes.append(scope_obj)
         return multi_coll_scopes
+
+    """
+    Item Count Check
+    1. Get all fts index names
+    2. for each index
+        a. extract items_count for index 
+        b. extact all collections index created on
+        c. Run a count(*) query against all the collection to get the KV item count and add them
+        d. Compare result from a & c and raiseException if not matching 
+    """
+
+    def item_count_check(self):
+        stat_time = time.time()
+        end_time = stat_time + self.validation_timeout
+        indexes_validated = []
+        while time.time() < end_time:
+            index_list = self.get_fts_index_list()
+            if len(index_list) == len(indexes_validated):
+                break
+            errors = []
+
+            for index_name in index_list:
+                if index_name not in indexes_validated:
+                    index_item_count = self.get_fts_index_doc_count(index_name)
+                    all_index_col_count = self.get_fts_index_collections_count(index_name)
+                    self.log.info(f'{index_name} : index_count : {index_item_count}, all_index_col_count : {all_index_col_count}')
+                    if int(index_item_count) != int(all_index_col_count):
+                        errors_obj = {"type": "item_count_check_failed", "index_name": index_name,
+                                      "index_item_count": index_item_count, "all_index_col_count": all_index_col_count}
+                        errors.append(errors_obj)
+                    else:
+                        indexes_validated.append(index_name)
+
+            if len(errors) > 0:
+                self.log.error("There were errors in the item count check phase - \n{0}".format(errors))
+            else:
+                self.log.info("Item check count passed. No discrepancies seen.")
 
     """
     Create n number of indexes for the specified bucket. These indexes could be on a single or multiple collections
@@ -534,6 +579,83 @@ class FTSIndexManager:
         return index_names
 
     """
+    Given index name, Retrieve item count in the index
+    """
+    def get_fts_index_doc_count(self, name):
+        """ get number of docs indexed"""
+        status, content, response = self.http_request(self.node_addr, FTS_PORT, "/api/index/{0}/count".format(name))
+        return content['count']
+
+    def get_fts_index_collections_count(self, name):
+        """ get number of docs indexed"""
+        status, content, response = self.http_request(self.node_addr, FTS_PORT, "/api/index/{0}".format(name))
+        types = content["indexDef"]["params"]["mapping"]["types"]
+        bucket_name = content["indexDef"]["sourceName"]
+        collection_list = list(types.keys())
+        tot_index_col_count = 0
+        for col in collection_list:
+            scope, collection = col.split(".")
+            keyspace_name_for_query = "`" + bucket_name + "`.`" + scope + "`.`" + collection + "`"
+            # Get Collection item count from KV via N1QL
+            kv_item_count_query = "select raw count(*) from {0};".format(keyspace_name_for_query)
+            try:
+                status, results, queryResult = self._execute_query(kv_item_count_query)
+                if status is not None:
+                    for result in results:
+                        self.log.debug(result)
+                        tot_index_col_count += result
+                else:
+                    self.log.info("Got an error retrieving stat from query via n1ql with query - {0}. Status : {1} ".
+                                  format(kv_item_count_query, status))
+            except Exception as e:
+                self.log.info("Got an error retrieving stat from query via n1ql with query - {0}. Exception : {1} ".
+                              format(kv_item_count_query, str(e)))
+
+        return tot_index_col_count
+
+
+    """
+    Method to execute a query statement 
+    """
+
+    def _execute_query(self, statement):
+        status = None
+        results = None
+        queryResult = None
+        nodelist = self.find_nodes_with_service(self.get_services_map(), "n1ql")
+        query_node = Cluster('couchbase://{0}'.format(nodelist[0]),
+                               ClusterOptions(PasswordAuthenticator(self.username, self.password)))
+
+        try:
+            timeout = timedelta(minutes=5)
+            queryResult = query_node.query(statement, QueryOptions(timeout=timeout))
+            try:
+                status = queryResult.metadata().status()
+                results = queryResult.rows()
+            except:
+                self.log.error("Unexpected error :", sys.exc_info()[0])
+                self.log.info("Query didnt return status or results")
+                pass
+
+
+        except QueryException as qerr:
+            self.log.debug("qerr")
+            self.log.error(qerr)
+        except HTTPException as herr:
+            self.log.debug("herr")
+            self.log.error(herr)
+        except QueryIndexAlreadyExistsException as qiaeerr:
+            self.log.debug("qiaeerr")
+            self.log.error(qiaeerr)
+        except TimeoutException as terr:
+            self.log.debug("terr")
+            self.log.error(terr)
+        except:
+            self.log.error("Unexpected error :", sys.exc_info()[0])
+
+        return status, results, queryResult
+
+    """
     Delete all FTS indexes
     """
 
@@ -586,7 +708,7 @@ class FTSIndexManager:
 
             while True:
                 random.seed(datetime.now())
-                for i in range(BATCH_SIZE):
+                for i in range(self.num_queries_per_worker):
                     threads.append(executor.submit(self.generate_and_run_fts_query))
                     time.sleep(5)
 
@@ -791,6 +913,8 @@ if __name__ == '__main__':
         ftsIndexMgr.delete_all_indexes()
     elif ftsIndexMgr.action == "create_index_loop":
         ftsIndexMgr.create_fts_indexes_in_a_loop(ftsIndexMgr.timeout, ftsIndexMgr.interval)
+    elif ftsIndexMgr.action == "item_count_check":
+        ftsIndexMgr.item_count_check()
     else:
         print(
             "Invalid choice for action. Choose from the following - create_index | build_deferred_index | drop_all_indexes")

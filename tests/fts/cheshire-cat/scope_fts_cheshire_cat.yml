@@ -58,6 +58,8 @@ servers: # each server tag represents a cluster
       services:
         fts: 6
         fts_start: 7
+        query: 2
+        query_start: 5
       rest_username: Administrator
       rest_password: password
       data_path: "/data"

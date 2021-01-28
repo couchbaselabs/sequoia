@@ -22,10 +22,13 @@
 - image: sequoiatools/catapult
   command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -n {{.Scale 50000}} -pc 100 -pu 25 -pd 25
     -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 60 -fu price,free_parking -ac True"
+  alias: collection_bucket_doc_ops
 - command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 1}} -n {{.Scale 50000}} -pc 100 -pu 25
     -pd 25 -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 60 -fu price,free_parking -ac True"
+  alias: collection_bucket1_doc_ops
 - command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 2}} -n {{.Scale 50000}} -pc 100 -pu 25
     -pd 25 -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 60 -fu price,free_parking -ac True"
+  alias: collection_bucket2_doc_ops
 
 
 ###############  create indexes ################
@@ -42,24 +45,43 @@
 - section_end: create_fts_indexes
 
 
-############### Wait for some time till all indexes are completely built ###############
--
-   image: sequoiatools/cmd
-   entrypoint: sleep
-   command: "1200"
-   wait: true
-
-
 # ###############  run queries ################
 - section_start: query_fts_indexes
 - image: sequoiatools/ftsindexmanager
-  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a run_queries -t 7200 --print_interval 600"
-- command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a run_queries -t 7200 --print_interval 600"
-- command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -a run_queries -t 7200 --print_interval 600"
+  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a run_queries -t 7200 -nq 20 --print_interval 600"
+- command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a run_queries -t 7200 -nq 20 --print_interval 600"
+- command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -a run_queries -t 7200 -nq 20 --print_interval 600"
   wait: true
 
 - section_end: query_fts_indexes
 
+
+############### Stop Data loading to cool down system for item count check ###############
+-
+  client:
+    op: rm
+    container: collection_bucket_doc_ops
+-
+  client:
+    op: rm
+    container: collection_bucket1_doc_ops
+-
+  client:
+    op: rm
+    container: collection_bucket2_doc_ops
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "1200"
+  wait: true
+
+################ Check for item count #####################################
+- section_start: fts_indexes_item_count_check
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a item_count_check -vt 1200"
+  wait: true
+
+- section_end: fts_indexes_item_count_check
 
 ###############  Drop all Indexes ################
 - section_start: drop_all_indexes
