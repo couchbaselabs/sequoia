@@ -245,8 +245,8 @@
 # run sync gateway testing through mobile-testkit - versions supplied are placeholders - they will be replaced with actual values during the run
 - 
   image: sequoiatools/sgw
-  command: "COUCHBASE_SERVER_VERSION=7.0.0-3814 SYNC_GATEWAY_VERSION=2.8.0-374 CBLITE_VERSIONS=2.8.0-153 CBLITE_PLATFORM=net-msft CBLITE_HOSTS=10.100.161.31 NUM_OF_DOCS=1000 NUM_OF_DOC_UPDATES=10 NUM_OF_DOCS_TO_UPDATE=10 NUM_OF_DOCS_TO_DELETE=1 NUM_OF_DOCS_IN_ITR=40 NUM_OF_DOCS_TO_ADD=5 REPL_STATUS_CHECK_SLEEP_TIME=20 UP_TIME=1 LITESERV_USER=Administrator LITESERV_PWD=couchbase SSH_USER=root SSH_PWD=couchbase USE_LOCAL_TESTSERVER=true MOBILE_TESTKIT_BRANCH=sequoia/sgw-component-testing CBS_HOSTS={{.Orchestrator}} SGW_HOSTS=172.23.104.254 MODE=cc"
-  wait: true
+  command: "CBS_HOSTS={{.Orchestrator}} SGW_HOSTS={{.SyncGatewayAll}} SSH_USER={{.SSHUsername}} SSH_PWD={{.SSHPassword}}"
+  wait: false
 
 # replica data loading for 30 minutes with docs that will expire after 1 hour
 - image: sequoiatools/gideon

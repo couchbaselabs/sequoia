@@ -55,4 +55,5 @@ servers: # each server tag represents a cluster
 syncgateways:
   -
       name: sg
-      servers: local
+      cluster: local
+      count: 1

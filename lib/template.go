@@ -208,8 +208,8 @@ func (t *TemplateResolver) EventingPort() string {
 
 // Shortcut: {{.ClusterNodes | .Attr `backup_port`}}
 func (t *TemplateResolver) BackupPort() string {
-        nodes := t.ClusterNodes()
-        return t.Attr("backup_port", nodes)
+	nodes := t.ClusterNodes()
+	return t.Attr("backup_port", nodes)
 }
 
 // Shortcut: {{.ClusterNodes | .Attr `analytics_port`}}
@@ -309,9 +309,9 @@ func (t *TemplateResolver) EventingNode() string {
 
 // Shortcut: .BackupNode | .Service `backup` | net 0
 func (t *TemplateResolver) BackupNode() string {
-        nodes := t.ClusterNodes()
-        serviceNodes := t.Service("backup", nodes)
-        return t.Address(0, serviceNodes)
+	nodes := t.ClusterNodes()
+	serviceNodes := t.Service("backup", nodes)
+	return t.Address(0, serviceNodes)
 }
 
 // Shortcut: {{.EventingNode | noport}}:{{.EventingPort}}
@@ -321,7 +321,7 @@ func (t *TemplateResolver) EventingNodePort() string {
 
 // Shortcut: {{.BackupNode | noport}}:{{.BackupPort}}
 func (t *TemplateResolver) BackupNodePort() string {
-        return fmt.Sprintf("%s:%s", t.NoPort(t.BackupNode()), t.BackupPort())
+	return fmt.Sprintf("%s:%s", t.NoPort(t.BackupNode()), t.BackupPort())
 }
 
 // Shortcut: .ClusterNodes | .Service `eventing` | active n
@@ -333,9 +333,9 @@ func (t *TemplateResolver) ActiveEventingNode(eventing int) string {
 
 // Shortcut: .ClusterNodes | .Service `backup` | active n
 func (t *TemplateResolver) ActiveBackupNode(backup int) string {
-        nodes := t.ClusterNodes()
-        serviceNodes := t.Service("backup", nodes)
-        return t.ActiveFilter(backup, serviceNodes)
+	nodes := t.ClusterNodes()
+	serviceNodes := t.Service("backup", nodes)
+	return t.ActiveFilter(backup, serviceNodes)
 }
 
 // Shortcut: .ClusterNodes | .Service `eventing` | net N
@@ -347,9 +347,9 @@ func (t *TemplateResolver) NthEventingNode(n int) string {
 
 // Shortcut: .ClusterNodes | .Service `backup` | net N
 func (t *TemplateResolver) NthBackupNode(n int) string {
-        nodes := t.ClusterNodes()
-        serviceNodes := t.Service("backup", nodes)
-        return t.Address(n, serviceNodes)
+	nodes := t.ClusterNodes()
+	serviceNodes := t.Service("backup", nodes)
+	return t.Address(n, serviceNodes)
 }
 
 // Shortcut: .AnalyticsNode | .Service `analytics` | net 0
@@ -458,7 +458,7 @@ func (t *TemplateResolver) NodesByAvailability(servers []ServerSpec, isActive bo
 	ips := []string{}
 	for _, spec := range servers {
 		for _, name := range spec.Names {
-		    ip := t.Scope.Provider.GetHostAddress(name)
+			ip := t.Scope.Provider.GetHostAddress(name)
 			active := t.Scope.Rest.IsNodeActive(ip)
 			if active == isActive {
 				ips = append(ips, ip)
@@ -777,6 +777,28 @@ func (t *TemplateResolver) SyncGateway() string {
 	fmt.Println(name)
 	if name != "" {
 		val = t.Scope.Provider.GetHostAddress(name)
+	}
+	return val
+}
+
+// returns sync gateway ip list
+func (t *TemplateResolver) SyncGatewayAll() string {
+	val := ""
+
+	syncSpecs := t.SyncGateways()
+	if len(syncSpecs) <= 0 {
+		return val
+	}
+
+	for _, sgw := range syncSpecs[0:len(syncSpecs)] {
+		name := sgw.Names[0]
+		if name != "" {
+			if val == "" {
+				val = t.Scope.Provider.GetHostAddress(name)
+			} else {
+				val = val + "," + t.Scope.Provider.GetHostAddress(name)
+			}
+		}
 	}
 	return val
 }

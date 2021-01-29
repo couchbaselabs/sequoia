@@ -166,4 +166,5 @@ views:
 syncgateways:
   -
     name: sg
+    cluster: local
     count: 1

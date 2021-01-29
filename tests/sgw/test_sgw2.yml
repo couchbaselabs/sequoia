@@ -68,7 +68,7 @@
 - 
   image: sequoiatools/sgw
   command: "CBS_HOSTS={{.Orchestrator}} SGW_HOSTS={{.SyncGatewayAll}} SSH_USER={{.SSHUsername}} SSH_PWD={{.SSHPassword}}"
-  wait: true
+  wait: false
 
 ###############  Rebalance-in single node ################
 - template: rebalance_in
