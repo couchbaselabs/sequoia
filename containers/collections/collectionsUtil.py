@@ -36,6 +36,9 @@ class CollectionOperations():
         parser.add_option("--crud_interval", dest="crud_interval",
                           help="Interval between operations in CRUD mode (in secs). Default = 2 secs", type="int",
                           default=5)
+        parser.add_option("--ignore_scope", dest="ignore_scope",help="ignore scope from delete",action="append",default=[])
+        parser.add_option("--ignore_collection", dest="ignore_coll",help="ignore scope from delete",action="append",default=[])
+
 
         # parser.add_option("--list",dest="list",type="string",help="list of collections/scope to be deleted")
 
@@ -89,7 +92,7 @@ class CollectionOperations():
                                                  options.collection_distribution)
         elif options.operations == "crud_mode":
             self.crud_on_scope_collections(options.bucket, options.max_scopes, options.max_collections,
-                                           options.crud_timeout, options.crud_interval)
+                                           options.crud_timeout, options.crud_interval,options.ignore_scope,options.ignore_coll)
 
     def getallcollections(self, bucket):
         url = bucket + "/scopes"
@@ -213,7 +216,8 @@ class CollectionOperations():
             passed, response, content = self.api_call(url, "DELETE")
             print(response, content)
 
-    def crud_on_scope_collections(self, bucket, max_scopes=10, max_collections=100, timeout=3600, interval=60):
+    def crud_on_scope_collections(self, bucket, max_scopes=10, max_collections=100, timeout=3600, interval=60,ignore_scope=[],
+                                  ignore_coll=[]):
         # Establish timeout. If timeout > 0, run in infinite loop
         end_time = 0
         if timeout > 0:
@@ -258,8 +262,11 @@ class CollectionOperations():
                     self.create_scope(bucket, scope_name)
                 else:
                     scope_name = random.choice([x for x in curr_scope_list if x != "_default"])
-                    print("Deleting Scope : %s" % scope_name)
-                    self.delete_scope(bucket, scope_name)
+                    if scope_name not in ignore_scope:
+                        print("Deleting Scope : %s" % scope_name)
+                        self.delete_scope(bucket, scope_name)
+                    else:
+                        print("Ignoring Scope Deletion : %s" % scope_name)
 
             # Create / Drop single collection
             else:
@@ -289,8 +296,11 @@ class CollectionOperations():
                             pass
                     if (scope == "_default" and len(coll_list) > 1) or (scope != "_default" and len(coll_list) > 0):
                         coll_name = random.choice([x for x in coll_list if x != "_default"])
-                        print("Deleting Collection : %s in scope %s" % (coll_name, scope))
-                        self.delete_collection(bucket, scope, coll_name)
+                        if scope not in ignore_scope and coll_name not in ignore_coll:
+                            print("Deleting Collection : %s in scope %s" % (coll_name, scope))
+                            self.delete_collection(bucket, scope, coll_name)
+                        else:
+                            print("Ignoring Collection : %s in scope %s" % (coll_name, scope))
                     else:
                         pass
 

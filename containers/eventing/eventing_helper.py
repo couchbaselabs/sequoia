@@ -165,14 +165,17 @@ class EventingHelper:
         authorization = base64.encodestring('%s:%s' % (self.username, self.password))
         headers = {'Content-type': 'application/json', 'Authorization': 'Basic %s' % authorization}
         url = "http://" + self.hostname + ":8096" + "/api/v1/functions/" + name + "/" + operation
-        if body !=None:
-            body = json.dumps(body).encode("ascii", "ignore")
-            response, content = httplib2.Http(timeout=120).request(uri=url, method="POST", headers=headers, body=body)
-        else:
-            response, content = httplib2.Http(timeout=120).request(uri=url, method="POST", headers=headers)
-        print content, response
-        if response.status !=200:
-            raise Exception(content)
+        try:
+            if body !=None:
+                body = json.dumps(body).encode("ascii", "ignore")
+                response, content = httplib2.Http(timeout=120).request(uri=url, method="POST", headers=headers, body=body)
+            else:
+                response, content = httplib2.Http(timeout=120).request(uri=url, method="POST", headers=headers)
+            print content, response
+            if response.status !=200:
+                raise Exception(content)
+        except Exception as e:
+            raise e
 
     def create_handler(self,appname,options,dcp_stream_boundary="everything"):
         appcode=self.handler_map[options.type]
