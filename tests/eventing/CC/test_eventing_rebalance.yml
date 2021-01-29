@@ -20,11 +20,11 @@
 ####### load data into all collections #######
 -
   image: sequoiatools/gideon2
-  command: "kv --ops {{.Scale 1000}} --create 100  --hosts {{.Orchestrator}} --bucket bucket_op --scope scope_0 --collection coll-0,coll-1,coll-2"
-- command: "kv --ops {{.Scale 1000}} --create 100  --hosts {{.Orchestrator}} --bucket timer_op --scope scope_0 --collection coll-0,coll-1,coll-2"
-- command: "kv --ops {{.Scale 1000}} --create 100  --hosts {{.Orchestrator}} --bucket n1ql_op --scope scope_0 --collection coll-0,coll-1,coll-2"
-- command: "kv --ops {{.Scale 1000}} --create 100  --hosts {{.Orchestrator}} --bucket source_op --scope scope_0 --collection coll-0,coll-1,coll-2"
-- command: "kv --ops {{.Scale 1000}} --create 100  --hosts {{.Orchestrator}} --bucket curl_op --scope scope_0 --collection coll-0,coll-1,coll-2"
+  command: "kv --ops {{.Scale 500}} --create 100  --hosts {{.Orchestrator}} --bucket bucket_op --scope scope_0 --collection coll-0,coll-1,coll-2"
+- command: "kv --ops {{.Scale 500}} --create 100  --hosts {{.Orchestrator}} --bucket timer_op --scope scope_0 --collection coll-0,coll-1,coll-2"
+- command: "kv --ops {{.Scale 500}} --create 100  --hosts {{.Orchestrator}} --bucket n1ql_op --scope scope_0 --collection coll-0,coll-1,coll-2"
+- command: "kv --ops {{.Scale 500}} --create 100  --hosts {{.Orchestrator}} --bucket source_op --scope scope_0 --collection coll-0,coll-1,coll-2"
+- command: "kv --ops {{.Scale 500}} --create 100  --hosts {{.Orchestrator}} --bucket curl_op --scope scope_0 --collection coll-0,coll-1,coll-2"
 
 #### create handlers #####
 - foreach: "{{range $i, $sc := mkrange 0 2}}"
@@ -161,11 +161,11 @@
 ####### load data into source of new collections #######
 -
   image: sequoiatools/gideon2
-  command: "kv --ops {{.Scale 1000}} --create 100  --hosts {{.Orchestrator}} --bucket bucket_op --scope scope_0 --collection coll-3,coll-4"
-- command: "kv --ops {{.Scale 1000}} --create 100  --hosts {{.Orchestrator}} --bucket timer_op --scope scope_0 --collection coll-3,coll-4"
-- command: "kv --ops {{.Scale 1000}} --create 100  --hosts {{.Orchestrator}} --bucket n1ql_op --scope scope_0 --collection coll-3,coll-4"
-- command: "kv --ops {{.Scale 1000}} --create 100  --hosts {{.Orchestrator}} --bucket source_op --scope scope_0 --collection coll-3,coll-4"
-- command: "kv --ops {{.Scale 1000}} --create 100  --hosts {{.Orchestrator}} --bucket curl_op --scope scope_0 --collection coll-3,coll-4"
+  command: "kv --ops {{.Scale 500}} --create 100  --hosts {{.Orchestrator}} --bucket bucket_op --scope scope_0 --collection coll-3,coll-4"
+- command: "kv --ops {{.Scale 500}} --create 100  --hosts {{.Orchestrator}} --bucket timer_op --scope scope_0 --collection coll-3,coll-4"
+- command: "kv --ops {{.Scale 500}} --create 100  --hosts {{.Orchestrator}} --bucket n1ql_op --scope scope_0 --collection coll-3,coll-4"
+- command: "kv --ops {{.Scale 500}} --create 100  --hosts {{.Orchestrator}} --bucket source_op --scope scope_0 --collection coll-3,coll-4"
+- command: "kv --ops {{.Scale 500}} --create 100  --hosts {{.Orchestrator}} --bucket curl_op --scope scope_0 --collection coll-3,coll-4"
 
 #### deploy new handlers #####
 - image: sequoiatools/eventing:7.0
