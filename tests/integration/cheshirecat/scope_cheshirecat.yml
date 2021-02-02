@@ -74,6 +74,8 @@ servers: # each server tag represents a cluster
         analytics: 3
       rest_username: Administrator
       rest_password: password
+      ssh_username: root
+      ssh_password: couchbase
       data_path: "/data/couchbase"
       index_path: "/data/couchbase"
       analytics_path: "/data/couchbase"

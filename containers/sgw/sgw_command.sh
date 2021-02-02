@@ -89,9 +89,9 @@ python libraries/utilities/generate_clusters_from_pool.py
 python libraries/utilities/install_keys.py --public-key-path=~/.ssh/id_rsa.pub --ssh-user=${SSH_USER} --ssh-password=${SSH_PWD}
 
 if [ "$COLLECT_LOGS" == "true" ]; then
-	COLLECT_LOGS_FLAG = "--collect-logs"  
+	COLLECT_LOGS_FLAG="--collect-logs"  
 else
-	COLLECT_LOGS_FLAG = ""
+	COLLECT_LOGS_FLAG=""
 fi
 
 echo "Running system test"
