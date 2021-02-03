@@ -1,4 +1,4 @@
-- include: tests/templates/kv.yml, tests/templates/rebalance.yml
+- include: tests/templates/kv.yml, tests/templates/rebalance.yml, tests/templates/fts.yml
 
 
 ############### Set FTS bleveMaxResultWindow to 100000 ################
