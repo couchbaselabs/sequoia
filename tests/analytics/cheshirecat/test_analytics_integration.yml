@@ -1,0 +1,100 @@
+-
+  include: tests/templates/kv.yml, tests/templates/vegeta.yml, tests/templates/analytics.yml,  tests/templates/rebalance.yml
+
+###############  create dataverses, datasets, indexes and synonyms################
+- section_start: analytics_setup
+###############  create analytics datasets  ################
+-
+  image: sequoiatools/analyticsmanager:1.0
+  command: "-i {{.ActiveAnalyticsNode 0 | noport}} -b {{.Bucket}},{{.NthBucket 1}},{{.NthBucket 2}},{{.NthBucket 3}}
+  -o create_cbas_infra --dataverse_count 50 --dataset_count 200 --index_count 0 --indexed_data_source catapult
+  --synonym_count 100 --thread_count 20 --api_timeout 3600"
+  wait: true
+
+# Sleep for some time to allow data ingestion to start before running the queries
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "60"
+   wait: true
+- section_end: analytics_setup
+
+############### run queries ################
+- section_start: analytics_query
+-
+  image: sequoiatools/queryapp
+  command: "-J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.5.6/* /AnalyticsQueryApp/Query/load_queries.py
+    --server_ip {{.ActiveAnalyticsNode 0}} --port {{.AnalyticsPort}} --duration 86400 --bucket {{.Bucket}}
+    --querycount 240 -B [{{.Bucket}},{{.NthBucket 1}},{{.NthBucket 2}},{{.NthBucket 3}}] -a True
+    --analytics_queries catapult_queries"
+
+# ###############sleep for 30secs###############
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "30"
+  wait: true
+- section_end: analytics_query
+
+- section_start: analytics_topology_change
+
+###############  Rebalance-in analytics ################
+- template: rebalance_in
+  args: "{{.InActiveNode}}, analytics"
+  wait: true
+
+# ###############sleep for 30secs###############
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "30"
+  wait: true
+
+###############  Rebalance-out single node ################
+- template: rebalance_out
+  args: "{{.ActiveAnalyticsNode 1}}"
+  wait: true
+
+
+# ###############sleep for 30secs###############
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "30"
+  wait: true
+
+
+###############  Swap Rebalance ################
+- template: rebalance_swap
+  args: "{{.InActiveNode}},{{.ActiveAnalyticsNode 1}}, analytics"
+  wait: true
+
+# ###############sleep for 300secs###############
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+- section_end: analytics_topology_change
+
+- section_start: analytics_teardown
+############### Drop CBAS infra ###############
+-
+  image: sequoiatools/analyticsmanager:1.0
+  command: "-i {{.ActiveAnalyticsNode 0 | noport}} -b {{.Bucket}},{{.NthBucket 1}},{{.NthBucket 2}},{{.NthBucket 3}}
+  -o drop_cbas_infra --thread_count 20 --api_timeout 3600"
+  wait: true
+
+###############  Swap Rebalance ################
+- template: rebalance_swap
+  args: "{{.InActiveNode}},{{.ActiveAnalyticsNode 1}}, analytics"
+  wait: true
+
+# ###############sleep for 300secs###############
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+- section_end: analytics_teardown
