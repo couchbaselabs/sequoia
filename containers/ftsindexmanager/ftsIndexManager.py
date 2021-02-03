@@ -852,6 +852,8 @@ class FTSIndexManager:
     def set_max_num_replica(self):
         nodelist = self.find_nodes_with_service(self.get_services_map(), "fts")
         self.max_num_replica = len(nodelist) - 1  # Max num replica = number of fts nodes in cluster - 1
+        if self.max_num_replica > 3:
+            self.max_num_replica = 3
         self.log.info("Setting Max Replica for this test to : {0}".format(self.max_num_replica))
 
     """

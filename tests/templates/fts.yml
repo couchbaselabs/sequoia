@@ -330,4 +330,4 @@
   actions:
     -
       image:  appropriate/curl
-      command: "-X POST -u {{.RestUsername}}:{{.RestPassword}} -H Content-Type:application/json http://$0:8094/settings -d {{`{$1}` | to_double_quote}}"
+      command: "-X POST -u {{.RestUsername}}:{{.RestPassword}} -H Content-Type:application/json http://$0:8094/api/managerOptions -d '{{`{$1}` | to_double_quote}}'"
