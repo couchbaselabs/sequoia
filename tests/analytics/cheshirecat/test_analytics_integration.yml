@@ -8,7 +8,7 @@
   image: sequoiatools/analyticsmanager:1.0
   command: "-i {{.ActiveAnalyticsNode 0 | noport}} -b {{.Bucket}},{{.NthBucket 1}},{{.NthBucket 2}},{{.NthBucket 3}}
   -o create_cbas_infra --dataverse_count 50 --dataset_count 200 --index_count 0 --indexed_data_source catapult
-  --synonym_count 100 --thread_count 20 --api_timeout 3600"
+  --synonym_count 100 --wait_for_ingestion false --api_timeout 3600"
   wait: true
 
 # Sleep for some time to allow data ingestion to start before running the queries
@@ -83,7 +83,7 @@
 -
   image: sequoiatools/analyticsmanager:1.0
   command: "-i {{.ActiveAnalyticsNode 0 | noport}} -b {{.Bucket}},{{.NthBucket 1}},{{.NthBucket 2}},{{.NthBucket 3}}
-  -o drop_cbas_infra --thread_count 20 --api_timeout 3600"
+  -o drop_cbas_infra --api_timeout 3600"
   wait: true
 
 ###############  Swap Rebalance ################
