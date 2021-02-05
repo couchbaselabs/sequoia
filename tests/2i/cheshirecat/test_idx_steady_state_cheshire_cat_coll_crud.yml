@@ -38,10 +38,10 @@
 ############### Start Collections CRUD on bucket 4 & bucket5 ###############
 -
   image: sequoiatools/collections:1.0
-  command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 3}} -o crud_mode --crud_interval=10 --max_scopes={{.Scale 5}} --max_collections={{.Scale 50}}"
+  command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 3}} -o crud_mode --crud_interval=30 --max_scopes={{.Scale 5}} --max_collections={{.Scale 50}}"
   alias: collection_crud1
 -
-  command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 4}} -o crud_mode --crud_interval=10 --max_scopes={{.Scale 5}} --max_collections={{.Scale 50}}"
+  command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 4}} -o crud_mode --crud_interval=30 --max_scopes={{.Scale 5}} --max_collections={{.Scale 50}}"
   alias: collection_crud2
 
 
@@ -88,10 +88,10 @@
 
 ############### Start creating indexes in a loop on bucket4 & bucket5 (Collection CRUD workload) ###############
 - image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 3}} -d hotel -a create_index_loop --interval 20"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 3}} -d hotel -a create_index_loop --interval 120"
   alias: index_loop1
 -
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}} -d hotel -a create_index_loop --interval 20"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}} -d hotel -a create_index_loop --interval 120"
   alias: index_loop2
 
 # Sleep for some time to allow some indexes to be created on bucket4 & bucket5
