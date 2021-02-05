@@ -655,11 +655,12 @@ class IndexManager:
         while True:
             random.seed(datetime.now())
 
-            drop_random_index_query_gen = "SELECT RAW 'DROP INDEX `' || name || '` on `' || bucket_id || '`.`' || scope_id || '`.`' || keyspace_id || '`;'  FROM system:all_indexes where bucket_id='$0' limit 1".format(self.bucket_name)
+            drop_random_index_query_gen = "SELECT RAW 'DROP INDEX `' || name || '` on `' || bucket_id || '`.`' || scope_id || '`.`' || keyspace_id || '`;'  FROM system:all_indexes where bucket_id='{0}' limit 1".format(self.bucket_name)
 
             status, results, queryResult = self._execute_query(drop_random_index_query_gen)
             if status is not None and len(results) > 0:
                 for result in results:
+                    self.log.info("Running query : {0}".format(result))
                     drop_status, _, _ = self._execute_query(result)
 
                     # Sleep for 2 secs after dropping an index
