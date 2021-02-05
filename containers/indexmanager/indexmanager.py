@@ -150,7 +150,11 @@ class IndexManager:
             for coll in scope.collections:
                 keyspace_name_list.append("`" + self.bucket_name + "`.`" + scope.name + "`.`" + coll.name + "`")
         self.log.info(str(keyspace_name_list))
-        return (keyspace_name_list)
+
+        # Shuffle the list twice so that the indexes on collections can be more spread out.
+        random.shuffle(keyspace_name_list)
+        random.shuffle(keyspace_name_list)
+        return keyspace_name_list
 
     def create_indexes_on_bucket_in_a_loop(self, timeout, interval):
         # Establish timeout. If timeout > 0, run in infinite loop

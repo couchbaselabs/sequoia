@@ -47,24 +47,24 @@
 
 ############### data loading ################
 - image: sequoiatools/catapult
-  command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -n {{.Scale 25000}} -pc 100 -pu 5 -pd 10
+  command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -n {{.Scale 50000}} -pc 100 -pu 5 -pd 10
     -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 60 -fu price,free_parking -ac True"
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 1}} -n {{.Scale 25000}} -pc 100 -pu 5
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 1}} -n {{.Scale 50000}} -pc 100 -pu 5
     -pd 10 -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 60 -fu price,free_parking -ac True"
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 2}} -n {{.Scale 25000}} -pc 100 -pu 5
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 2}} -n {{.Scale 50000}} -pc 100 -pu 5
     -pd 10 -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 60 -fu price,free_parking -ac True"
 
 
 ###############  create indexes ################
 - section_start: create_replica_indexes
 - image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -i {{.Scale 1}} -a create_index"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -i {{.Scale 3}} -a create_index"
   wait: true
 
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -i {{.Scale 1}} -a create_index"
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -i {{.Scale 3}} -a create_index"
   wait: true
 
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -i {{.Scale 1}} -a create_index"
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -i {{.Scale 3}} -a create_index"
   wait: true
 
 ###############  build all deferred indexes ################
@@ -103,10 +103,10 @@
 
 # Start dropping indexes in a loop on bucket4 & bucket5 (Collection CRUD workload)
 - image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 3}} -d hotel -a drop_index_loop"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 3}} -d hotel -a drop_index_loop --interval 180"
   alias: index_drop_loop1
 -
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}} -d hotel -a drop_index_loop"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}} -d hotel -a drop_index_loop --interval 180"
   alias: index_drop_loop2
 
 
