@@ -10,7 +10,7 @@ from concurrent.futures.thread import ThreadPoolExecutor
 from datetime import datetime
 from http.client import RemoteDisconnected
 
-from couchbase.cluster import Cluster, ClusterOptions, QueryOptions
+from couchbase.cluster import Cluster, ClusterOptions, QueryOptions, ClusterTimeoutOptions
 from couchbase.exceptions import QueryException, QueryIndexAlreadyExistsException, TimeoutException
 from couchbase_core.cluster import PasswordAuthenticator
 from couchbase_core.bucketmanager import BucketManager
@@ -37,13 +37,13 @@ HOTEL_DS_FIELDS = [
         "queries": [{
             "match": "Moldova",
             "field": "country",
-            "fuzziness": 2,
+            "fuzziness": 1,
             "operator": "and"
         },
             {
                 "match": "Cape Verde",
                 "field": "country",
-                "fuzziness": 2,
+                "fuzziness": 1,
                 "operator": "or"
             },
             {
@@ -186,7 +186,7 @@ class FTSIndexManager:
                             help="Timeout for item_count_check")
         parser.add_argument("-a", "--action",
                             choices=["create_index", "run_queries", "delete_all_indexes", "create_index_loop",
-                                     "item_count_check"],
+                                     "item_count_check", "active_queries_check"],
                             help="Choose an action to be performed. Valid actions : create_index, run_queries, "
                                  "delete_all_indexes, create_index_loop, item_count_check",
                             default="create_index")
@@ -217,8 +217,10 @@ class FTSIndexManager:
         # Initialize connections to the cluster
         self.cb_admin = Admin(self.username, self.password, self.node_addr, self.node_port)
         self.cb_coll_mgr = CollectionManager(self.cb_admin, self.bucket_name)
+        timeout_options = ClusterTimeoutOptions(kv_timeout=timedelta(seconds=120), query_timeout=timedelta(seconds=10))
+        options = ClusterOptions(PasswordAuthenticator(self.username, self.password), timeout_options=timeout_options)
         self.cluster = Cluster('couchbase://{0}'.format(self.node_addr),
-                               ClusterOptions(PasswordAuthenticator(self.username, self.password)))
+                               options)
         self.cb = self.cluster.bucket(self.bucket_name)
         self.cluster.search_indexes()
 
@@ -274,6 +276,20 @@ class FTSIndexManager:
                 multi_coll_scopes.append(scope_obj)
         return multi_coll_scopes
 
+    def active_queries_check(self):
+        while True:
+            index_list = self.get_fts_index_list()
+            for index_name in index_list:
+                self.log_active_queries(index_name)
+
+    def log_active_queries(self, index_name):
+        try:
+            status, content, response = self.http_request(self.node_addr, FTS_PORT,
+                                                          "/api/query/index/{0}".format(index_name))
+            self.log.info("status {0}, content {1}".format(status, content))
+        except Exception as e:
+            self.log.info(str(e))
+
     """
     Item Count Check
     1. Get all fts index names
@@ -288,6 +304,7 @@ class FTSIndexManager:
         stat_time = time.time()
         end_time = stat_time + self.validation_timeout
         indexes_validated = []
+        errors = []
         while time.time() < end_time:
             index_list = self.get_fts_index_list()
             if len(index_list) == len(indexes_validated):
@@ -307,9 +324,14 @@ class FTSIndexManager:
                         indexes_validated.append(index_name)
 
             if len(errors) > 0:
-                self.log.error("There were errors in the item count check phase - \n{0}".format(errors))
+                self.log.info("There were errors in the item count check phase - \n{0}".format(errors))
             else:
                 self.log.info("Item check count passed. No discrepancies seen.")
+
+        if len(errors) > 0:
+            raise Exception("There were errors in the item count check phase - \n{0}".format(errors))
+        else:
+            self.log.info("Item check count passed. No discrepancies seen.")
 
     """
     Create n number of indexes for the specified bucket. These indexes could be on a single or multiple collections
@@ -338,7 +360,7 @@ class FTSIndexManager:
                 collections = random.sample(population=scope_obj[scope_name], k=random.randint(1, num_coll))
 
             self.log.info("===== Creating {1} FTS index on {0} =====".format(collections, index_type))
-            status, content, response = self.create_fts_index_on_collections(collections)
+            status, content, response, idx_name = self.create_fts_index_on_collections(collections)
 
             if not status:
                 self.log.info("Content = {0} \nResponse = {1}".format(content, response))
@@ -368,6 +390,9 @@ class FTSIndexManager:
             coll_list = self.get_all_collections()
             multi_coll_scopes = self.get_all_scopes_with_multiple_collections()
 
+            coll_list = list(filter(lambda a: "_default" not in a, coll_list))
+            multi_coll_scopes = list(filter(lambda a: "_default" not in a, multi_coll_scopes))
+
             collections = []
             random.seed(datetime.now())
             if len(multi_coll_scopes) > 0:
@@ -387,11 +412,19 @@ class FTSIndexManager:
                 collections = random.sample(population=scope_obj[scope_name], k=random.randint(1, num_coll))
 
             self.log.info("===== Creating {1} FTS index on {0} =====".format(collections, index_type))
-            status, content, response = self.create_fts_index_on_collections(collections)
+            status, content, response, idx_name = self.create_fts_index_on_collections(collections)
 
             if not status:
                 self.log.info("Content = {0} \nResponse = {1}".format(content, response))
                 self.log.info("Index creation on {0} did not succeed. Pls check logs.".format(collections))
+            else:
+                time.sleep(240)
+                self.log.info(f'Deleting index {idx_name}')
+                uri = "/api/index/" + idx_name
+                status, content, response = self.http_request(self.node_addr, FTS_PORT, uri, method="DELETE")
+                if not status:
+                    self.log.info("Status : {0} \nResponse : {1} \nContent : {2}".format(status, response, content))
+                    self.log.info("Index {0} not deleted".format(idx_name))
 
             # Exit if timed out
             if timeout > 0 and time.time() > end_time:
@@ -418,7 +451,7 @@ class FTSIndexManager:
     """
 
     def create_fts_index_on_collections(self, collections):
-
+        random.seed(datetime.now())
         # Randomly select fields to create the index on
         ds_fields = copy.deepcopy(HOTEL_DS_FIELDS)
         if self.dataset == "hotel":
@@ -438,9 +471,14 @@ class FTSIndexManager:
         num_replica = random.randint(0, self.max_num_replica)
 
         # Generate index name. Index names will also have field codes so that the query runner can decode the fields used in the index.
-        idx_name = "idx_" + ''.join(random.choice(string.ascii_lowercase) for i in range(5))
-        for field in index_fields:
-            idx_name += "-" + field["field_code"]
+        for i in range(5):
+            idx_name = "bucket_"+self.bucket_name+"_idx_" + ''.join(random.choice(string.ascii_lowercase) for i in range(5))
+            for field in index_fields:
+                idx_name += "-" + field["field_code"]
+
+            cur_indexes = self.get_fts_index_list()
+            if idx_name not in cur_indexes:
+                break
 
         self.log.info("Creating FTS index {0} on {1} with {2} replicas and {3} partitions".format(idx_name, collections,
                                                                                                   num_replica,
@@ -559,22 +597,35 @@ class FTSIndexManager:
 
         # Create FTS index via REST
         index_definition = json.dumps(index_def_dict)
+
+        #check if collections exists
+        all_collections = self.get_all_collections()
+        for collection in collections:
+            if collection not in all_collections:
+                return False, "Seems like collections did not exist. So did not try to create index", "None"
+
         status, content, response = self.http_request(self.node_addr, FTS_PORT, "/api/index/{0}".format(idx_name),
                                                       method="PUT", body=index_definition)
 
-        return status, content, response
+        return status, content, response, idx_name
 
     """
     Retrieve list of FTS indexes in the cluster
     """
 
-    def get_fts_index_list(self):
+    def get_fts_index_list(self, bucket=None):
         index_names = []
         status, content, response = self.http_request(self.node_addr, FTS_PORT, "/api/index")
         if status:
-            index_names = list(content["indexDefs"]["indexDefs"].keys())
+            try:
+                index_names = list(content["indexDefs"]["indexDefs"].keys())
             # self.log.info("FTS indexes in cluster - \n : ".format(list(content["indexDefs"]["indexDefs"].keys())))
-            self.log.debug("FTS indexes in cluster - : \n{0}".format(index_names))
+                if bucket:
+                    index_names = list(filter(lambda a: bucket in a, index_names))
+                self.log.info("FTS indexes in cluster - : \n{0}".format(index_names))
+            except TypeError as err:
+                self.log.info(str(err))
+                index_names = []
 
         return index_names
 
@@ -662,11 +713,19 @@ class FTSIndexManager:
     def delete_all_indexes(self):
         index_names = self.get_fts_index_list()
         for index in index_names:
-            uri = "/api/index/" + index
-            status, content, response = self.http_request(self.node_addr, FTS_PORT, uri, method="DELETE")
-            if not status:
-                self.log.info("Status : {0} \nResponse : {1} \nContent : {2}".format(status, response, content))
-                self.log.info("Index {0} not deleted".format(index))
+            if "bucket_" + self.bucket_name + "_idx" in index:
+                self.log.info(f'Deleting index {index}')
+                uri = "/api/index/" + index
+                status, content, response = self.http_request(self.node_addr, FTS_PORT, uri, method="DELETE")
+                if not status:
+                    self.log.info("Status : {0} \nResponse : {1} \nContent : {2}".format(status, response, content))
+                    self.log.info("Index {0} not deleted".format(index))
+
+        index_names = self.get_fts_index_list()
+
+        for index in index_names:
+            if "bucket_" + self.bucket_name + "_idx" in index:
+                raise Exception("Indexes for the bucket {0} not deleted".format(self.bucket_name))
 
     """
     Retrieve fields for a given index
@@ -743,7 +802,7 @@ class FTSIndexManager:
     """
 
     def generate_and_run_fts_query(self):
-        index_names = self.get_fts_index_list()
+        index_names = self.get_fts_index_list(self.bucket_name)
 
         try:
             index_name = random.choice(index_names)
@@ -772,10 +831,12 @@ class FTSIndexManager:
 
         try:
             if status:
-                self.log.debug("Status : {0} \nResponse : {1} \nTotal Hits : {2}".format(status, response["status"],
-                                                                                        content["total_hits"]))
+                self.log.info(f'Index name: {index_name}, Query: {query}, Status: {status}, '
+                              f'Response: {response["status"]}, '
+                              f'Total Hits: {content["total_hits"]}, '
+                              f'Result Status: {content["status"]}')
         except TypeError as terr:
-            self.log.debug("terr")
+            self.log.debug(str(terr))
             self.log.info("Content does not have total hits = {0}".format(content))
         except:
             self.log.error("Unexpected error :", sys.exc_info()[0])
@@ -791,23 +852,30 @@ class FTSIndexManager:
 
         body = {}
         body["explain"] = True
-        body["fields"] = ["*"]
-        body["highlight"] = {}
+        #body["fields"] = ["*"]
+        #body["highlight"] = {}
         body["query"] = query
         body["explain"] = random.choice([True, False])
+
         if score_none:
             body["score"] = "none"
 
         # Randomize size (not more than 1000)
-        size = random.randint(100, 1000)
+        size = random.randint(10, 20)
 
         # Randomize offset (from)
         offset = random.randint(0, 10000)
 
         body["size"] = size
         body["from"] = offset
+        body["ctl"] = {"timeout": 120000}
+        consistency_level = random.choice([True, False])
+        if consistency_level:
+            body["ctl"]["consistency"] = {
+                "level": "at_plus"
+            }
 
-        self.log.debug("URI : {0} body : {1}".format(uri, body))
+        self.log.info("URI : {0} body : {1}".format(uri, body))
 
         # Randomize FTS host on which the query has to be run for load distribution
         fts_node_list = self.find_nodes_with_service(self.get_services_map(), "fts")
@@ -830,14 +898,13 @@ class FTSIndexManager:
                    'Accept': '*/*'}
 
         url = "http://" + host + ":" + str(port) + uri
-        http = httplib2.Http(timeout=120)
+        http = httplib2.Http(timeout=600)
         http.add_credentials(self.username, self.password)
         try:
             response, content = http.request(uri=url, method=method, headers=headers, body=body)
 
         except (RemoteDisconnected, httplib2.HttpLib2Error, socket.error) as ex:
-            self.log.info(ex)
-            self.log.info("Request timed out")
+            self.log.info(f'{url}, {body}, {ex}')
             return False, None, None
 
         if response['status'] in ['200', '201', '202']:
@@ -917,6 +984,8 @@ if __name__ == '__main__':
         ftsIndexMgr.create_fts_indexes_in_a_loop(ftsIndexMgr.timeout, ftsIndexMgr.interval)
     elif ftsIndexMgr.action == "item_count_check":
         ftsIndexMgr.item_count_check()
+    elif ftsIndexMgr.action == "active_queries_check":
+        ftsIndexMgr.active_queries_check()
     else:
         print(
             "Invalid choice for action. Choose from the following - create_index | build_deferred_index | drop_all_indexes")
