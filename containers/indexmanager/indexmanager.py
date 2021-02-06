@@ -228,6 +228,7 @@ class IndexManager:
         # max_num_idx = TOTAL_SCOPES * TOTAL_COLL_PER_SCOPE * self.num_index_per_coll
         max_num_idx = len(keyspace_name_list) * self.num_index_per_coll
         total_idx_created = 0
+        total_idx = 0
         create_index_statements = []
         self.log.info("Starting to create indexes ")
         while total_idx_created < max_num_idx:
@@ -239,6 +240,7 @@ class IndexManager:
                     is_partitioned_idx = bool(random.getrandbits(1))
                     is_defer_idx = bool(random.getrandbits(1))
                     idx_instances = 1
+                    num_idx = 1
                     with_clause_list = []
 
                     if is_partitioned_idx:
@@ -251,6 +253,7 @@ class IndexManager:
                         num_replica = random.randint(1, self.max_num_replica)
                         with_clause_list.append("\'num_replica\':%s" % num_replica)
                         idx_instances *= num_replica + 1
+                        num_idx += num_replica
 
                     if is_defer_idx:
                         with_clause_list.append("\'defer_build\':true")
@@ -264,13 +267,14 @@ class IndexManager:
                     create_index_statements.append(idx_statement)
 
                     total_idx_created += idx_instances
+                    total_idx += num_idx
                     if total_idx_created >= max_num_idx:
                         break
                 if total_idx_created >= max_num_idx:
                     break
 
         self.log.info("**************************************************")
-        self.log.info("Total Indexes : %s" % total_idx_created)
+        self.log.info("Total Index instances : {0}, Total Indexes : {1}".format(total_idx_created, total_idx))
         self.log.debug("Keyspaces used : ")
         self.log.debug(keyspaceused)
 
@@ -507,7 +511,10 @@ class IndexManager:
 
     def set_max_num_replica(self):
         nodelist = self.find_nodes_with_service(self.get_services_map(), "index")
-        self.max_num_replica = len(nodelist) - 1  # Max num replica = number of idx nodes in cluster - 1
+        if len(nodelist) > 4:
+            self.max_num_replica = 3
+        else:
+            self.max_num_replica = len(nodelist) - 1  # Max num replica = number of idx nodes in cluster - 1
         self.log.info("Setting Max Replica for this test to : {0}".format(self.max_num_replica))
 
     """
