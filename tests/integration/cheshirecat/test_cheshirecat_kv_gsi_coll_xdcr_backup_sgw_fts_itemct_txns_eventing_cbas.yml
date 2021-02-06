@@ -10,11 +10,11 @@
   wait: true
 
 ###### enable audit logging ######
--
-  image: sequoiatools/couchbase-cli
-  requires:  "{{eq true .DoOnce }}"
-  command: "setting-audit -c {{.Orchestrator}}:8091 -u {{.RestUsername}} -p {{.RestPassword}} --set --audit-enabled 1 --audit-log-path /data --audit-log-rotate-interval 604800"
-  wait: true
+#-
+#  image: sequoiatools/couchbase-cli
+#  requires:  "{{eq true .DoOnce }}"
+#  command: "setting-audit -c {{.Orchestrator}}:8091 -u {{.RestUsername}} -p {{.RestPassword}} --set --audit-enabled 1 --audit-log-path /data --audit-log-rotate-interval 604800"
+#  wait: true
 
 ###### enable n2n encryption ######
 -
