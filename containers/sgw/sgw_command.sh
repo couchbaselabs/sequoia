@@ -96,8 +96,7 @@ fi
 
 echo "Running system test"
 pytest -s -rsx \
-  --timeout 864000 \
-  --collect-logs=${COLLECT_LOGS} \
+  --timeout 864000 ${COLLECT_LOGS_FLAG}\
   --cbs-endpoints=${CBS_HOSTS} \
   --server-version=${COUCHBASE_SERVER_VERSION} \
   --sgw-endpoints=${SGW_HOSTS} \
