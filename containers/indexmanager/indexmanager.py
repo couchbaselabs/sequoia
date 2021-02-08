@@ -13,10 +13,12 @@ import argparse
 import logging
 import requests
 import time
+import httplib2
 
 ## Constants
 
 # In test mode, how many scopes to be created
+
 TOTAL_SCOPES = 1
 
 # In test mode, how many collections to be created per scope
@@ -30,11 +32,11 @@ SCOPENAME_SUFFIX = "_scope"
 # Hotel DS
 HOTEL_DS_INDEX_TEMPLATES = [
     {"indexname": "idx1",
-     "statement": "CREATE INDEX idx1 ON keyspacenameplaceholder(country, DISTINCT ARRAY `r`.`ratings`.`Check in / front desk` FOR r in `reviews` END,array_count((`public_likes`)),array_count((`reviews`)) DESC,`type`,`phone`,`price`,`email`,`address`,`name`,`url`) "},
+     "statement": "CREATE INDEX idx1_idxprefix ON keyspacenameplaceholder(country, DISTINCT ARRAY `r`.`ratings`.`Check in / front desk` FOR r in `reviews` END,array_count((`public_likes`)),array_count((`reviews`)) DESC,`type`,`phone`,`price`,`email`,`address`,`name`,`url`) "},
     {"indexname": "idx2",
-     "statement": "CREATE INDEX idx2 ON keyspacenameplaceholder(`free_breakfast`,`type`,`free_parking`,array_count((`public_likes`)),`price`,`country`)"},
+     "statement": "CREATE INDEX idx2_idxprefix ON keyspacenameplaceholder(`free_breakfast`,`type`,`free_parking`,array_count((`public_likes`)),`price`,`country`)"},
     {"indexname": "idx3",
-     "statement": "CREATE INDEX idx3 ON keyspacenameplaceholder(`free_breakfast`,`free_parking`,`country`,`city`) "}
+     "statement": "CREATE INDEX idx3_idxprefix ON keyspacenameplaceholder(`free_breakfast`,`free_parking`,`country`,`city`) "}
 ]
 
 HOTEL_DS_CBO_FIELDS = "`country`, DISTINCT ARRAY `r`.`ratings`.`Check in / front desk`, array_count((`public_likes`)),array_count((`reviews`)) DESC,`type`,`phone`,`price`,`email`,`address`,`name`,`url`,`free_breakfast`,`free_parking`,`city`"
@@ -70,6 +72,7 @@ class IndexManager:
                             help="Specify on how many % of collections should CBO be enabled. Range = 1-100")
         parser.add_argument("--sample_size", type=int, default=5,
                             help="Specify how many indexes to be sampled for item count check. Default = 5")
+        parser.add_argument("-v", "--validate", help="Validation required for create_index and drop_all_indexes action", action='store_true')
         parser.add_argument("-t", "--test_mode", help="Test Mode : Create Scopes/Collections", action='store_true')
         args = parser.parse_args()
 
@@ -84,14 +87,14 @@ class IndexManager:
         self.interval = args.interval
         self.timeout = args.timeout
         self.test_mode = args.test_mode
+        self.validate = args.validate
         self.max_num_collections = args.build_max_collections
         self.cbo_enable_ratio = args.cbo_enable_ratio
         if self.cbo_enable_ratio > 100:
             self.cbo_enable_ratio = 25
         self.sample_size = args.sample_size
-
+        self.index_baseUrl = f"http://{self.node_addr}:9102/"
         self.idx_def_templates = HOTEL_DS_INDEX_TEMPLATES
-
         # If there are more datasets supported, this can be expanded.
         if self.dataset == "hotel":
             self.idx_def_templates = HOTEL_DS_INDEX_TEMPLATES
@@ -103,6 +106,7 @@ class IndexManager:
         self.cluster = Cluster('couchbase://{0}'.format(self.node_addr),
                                ClusterOptions(PasswordAuthenticator(self.username, self.password)))
         self.cb = self.cluster.bucket(self.bucket_name)
+        self.index_nodes = self.find_nodes_with_service(self.get_services_map(), "index")
 
         # Logging configuration
 
@@ -154,7 +158,8 @@ class IndexManager:
         # Shuffle the list twice so that the indexes on collections can be more spread out.
         random.shuffle(keyspace_name_list)
         random.shuffle(keyspace_name_list)
-        return keyspace_name_list
+
+        return (keyspace_name_list)
 
     def create_indexes_on_bucket_in_a_loop(self, timeout, interval):
         # Establish timeout. If timeout > 0, run in infinite loop
@@ -210,7 +215,7 @@ class IndexManager:
                 break
 
             # Wait for the interval before doing the next CRUD operation
-            time.sleep(interval)
+            sleep(interval)
 
     """
     Create indexes on the given bucket.
@@ -224,36 +229,54 @@ class IndexManager:
     7. Create the indexes serially.
     """
 
-    def create_indexes_on_bucket(self, keyspace_name_list):
+    def create_indexes_on_bucket(self, keyspace_name_list, validate=True):
         # max_num_idx = TOTAL_SCOPES * TOTAL_COLL_PER_SCOPE * self.num_index_per_coll
         max_num_idx = len(keyspace_name_list) * self.num_index_per_coll
         total_idx_created = 0
         total_idx = 0
         create_index_statements = []
         self.log.info("Starting to create indexes ")
+        reference_index_map = NestedDict()
+        keyspaceused = []
         while total_idx_created < max_num_idx:
-            keyspaceused = []
-            for keyspacename in keyspace_name_list:
-                keyspaceused.append(keyspacename)
+            for keyspace_name in keyspace_name_list:
+                bucket, scope, collection = keyspace_name.split('.')
+                keyspaceused.append(keyspace_name)
                 for idx_template in self.idx_def_templates:
                     idx_statement = idx_template['statement']
+
+                    idx_prefix = ''.join(random.choices(string.ascii_letters + string.digits, k=random.randint(4, 8)))
+                    idx_name = f"{idx_template['indexname']}_{idx_prefix}"
+
                     is_partitioned_idx = bool(random.getrandbits(1))
                     is_defer_idx = bool(random.getrandbits(1))
                     idx_instances = 1
                     num_idx = 1
                     with_clause_list = []
+                    idx_statement = idx_statement.replace("keyspacenameplaceholder", keyspace_name)
+                    idx_statement = idx_statement.replace('idxprefix', idx_prefix)
+
+                    keyspace_name = keyspace_name.replace('`', '')
+                    reference_index_map[keyspace_name][idx_name]['bucket'] = bucket
+                    reference_index_map[keyspace_name][idx_name]['scope'] = scope
+                    reference_index_map[keyspace_name][idx_name]['collection'] = collection
+                    reference_index_map[keyspace_name][idx_name]['defer'] = is_defer_idx
+                    reference_index_map[keyspace_name][idx_name]['partition'] = is_partitioned_idx
 
                     if is_partitioned_idx:
                         idx_statement = idx_statement + " partition by hash(meta().id) "
                         num_partition = random.randint(2, self.max_num_partitions + 1)
                         with_clause_list.append("\'num_partition\':%s" % num_partition)
                         idx_instances *= num_partition
+                        reference_index_map[keyspace_name][idx_name]['num_partition'] = num_partition
+                    else:
+                        reference_index_map[keyspace_name][idx_name]['num_partition'] = 1
 
                     if self.max_num_replica > 0:
                         num_replica = random.randint(1, self.max_num_replica)
                         with_clause_list.append("\'num_replica\':%s" % num_replica)
                         idx_instances *= num_replica + 1
-                        num_idx += num_replica
+                        reference_index_map[keyspace_name][idx_name]['replica_count'] = num_replica + 1
 
                     if is_defer_idx:
                         with_clause_list.append("\'defer_build\':true")
@@ -262,10 +285,7 @@ class IndexManager:
                         idx_statement = idx_statement + " with {"
                         idx_statement = idx_statement + ','.join(with_clause_list) + "}"
 
-                    idx_statement = idx_statement.replace("keyspacenameplaceholder", keyspacename)
-
                     create_index_statements.append(idx_statement)
-
                     total_idx_created += idx_instances
                     total_idx += num_idx
                     if total_idx_created >= max_num_idx:
@@ -275,14 +295,62 @@ class IndexManager:
 
         self.log.info("**************************************************")
         self.log.info("Total Index instances : {0}, Total Indexes : {1}".format(total_idx_created, total_idx))
+
         self.log.debug("Keyspaces used : ")
         self.log.debug(keyspaceused)
 
         for create_index_statement in create_index_statements:
             self.log.info("Creating index : %s" % create_index_statement)
-
-            status, results, queryResult = self._execute_query(create_index_statement)
+            try:
+                self._execute_query(create_index_statement)
+                sleep(10)
+            except Exception as err:
+                self.log.error(f"Index creation failed for statement: {create_index_statement}")
+                self.log.error(err)
         self.log.info("Create indexes completed")
+        if validate:
+            self.wait_until_indexes_online(defer_build=False)
+            index_map_from_system_indexes = self.get_index_map_from_system_indexes()
+            for keyspace_name in reference_index_map.keys():
+                ref_keyspace_dict = reference_index_map[keyspace_name]
+                actual_keyspace_dict = index_map_from_system_indexes[keyspace_name]
+
+                if sorted(ref_keyspace_dict.keys()) != sorted(actual_keyspace_dict.keys()):
+                    self.log.error(f"Indexes are not matching with expected value.")
+                    self.log.error(f" Expected: {ref_keyspace_dict}, Actual: {actual_keyspace_dict}")
+                for index in ref_keyspace_dict.keys():
+                    if ref_keyspace_dict[index]['defer']:
+                        if actual_keyspace_dict[index]['state'] != 'deferred':
+                            self.log.error(f"Index state is not matching with expected value."
+                                           f" Expected 'deferred', Actual {actual_keyspace_dict[index]['state']} ")
+                    else:
+                        if actual_keyspace_dict[index]['state'] != 'online':
+                            self.log.error(f"Index state is not matching with expected value."
+                                           f" Expected 'online', Actual {actual_keyspace_dict[index]['state']} ")
+                    if ref_keyspace_dict[index]['partition'] != actual_keyspace_dict[index]['partition']:
+                        self.log.error(f"Index state is not matching with expected value."
+                                       f"Expected: {ref_keyspace_dict}, Actual: {actual_keyspace_dict}")
+            index_metadata = self.get_indexer_metadata()['status']
+            for index in index_metadata:
+                keyspace_name = f'{index["bucket"]}.{index["scope"]}.{index["collection"]}'
+                index_name = index['indexName']
+                if reference_index_map[keyspace_name][index_name]['replica_count'] != index['numReplica'] + 1:
+                    self.log.error(f"Replica count is not matching with expected value."
+                                   f"Expected: {index['numReplica'] + 1},"
+                                   f" Actual: {reference_index_map[keyspace_name][index_name]['replica_count']}")
+                if reference_index_map[keyspace_name][index_name]['num_partition'] != index['numPartition']:
+                    self.log.error(f"Index Partition no. is not matching with expected value"
+                                   f"Expected: {index['numPartition']},"
+                                   f" Actual: {reference_index_map[keyspace_name][index_name]['numPartition']}")
+                if reference_index_map[keyspace_name][index_name]['defer']:
+                    if index['status'] != 'Created':
+                        self.log.error(f"Index status is not matching with expected value"
+                                       f"Expected: Created, Actual: {index['status']}")
+                else:
+                    if index['status'] != 'Ready':
+                        self.log.error(f"Index status is not matching with expected value"
+                                       f"Expected: Created, Actual: {index['status']}")
+            self.log.info("Validation completed")
 
     """
     Alter indexes
@@ -387,7 +455,39 @@ class IndexManager:
                 break
 
             # Sleep for interval
-            time.sleep(interval)
+            sleep(interval)
+
+    def get_index_map_from_system_indexes(self):
+        query = "Select * from system:indexes"
+        status, result, _ = self._execute_query(query)
+        index_map = NestedDict()
+        for item in result:
+            index = item['indexes']
+            if 'scope_id' not in index:
+                collection = '_default'
+                scope = '_default'
+                bucket = index['keyspace_id']
+            else:
+                bucket = index['bucket_id']
+                scope = index['scope_id']
+                collection = index['keyspace_id']
+            state = index['state']
+            index_key = index['index_key']
+            index_name = index['name']
+            keyspace = f"{bucket}.{scope}.{collection}"
+            if 'is_primary' in index:
+                index_map[keyspace][index_name]['is_primary'] = True
+            else:
+                index_map[keyspace][index_name]['is_primary'] = False
+            if 'partition' in index:
+                index_map[keyspace][index_name]['partition'] = True
+                index_map[keyspace][index_name]['partition_key'] = index['partition']
+            else:
+                index_map[keyspace][index_name]['partition'] = False
+                index_map[keyspace][index_name]['partition_key'] = None
+            index_map[keyspace][index_name]['state'] = state
+            index_map[keyspace][index_name]['index_key'] = index_key
+        return index_map
 
     """
     Enable CBO on some collections randomly
@@ -407,7 +507,7 @@ class IndexManager:
         for coll in cbo_collections_list:
             update_stats_query = "UPDATE STATISTICS FOR {0}({1};".format(coll, self.cbo_fields)
             status, results, queryResult = self._execute_query(update_stats_query)
-            time.sleep(2)
+            sleep(2)
 
         # TBD : Periodically update statistics in a loop for these collections
 
@@ -640,7 +740,7 @@ class IndexManager:
     Drop all indexes in the cluster
     """
 
-    def drop_all_indexes(self, keyspace_name_list):
+    def drop_all_indexes(self, keyspace_name_list, validate=True):
         drop_idx_query_gen_template = "SELECT RAW 'DROP INDEX `' || name || '` on keyspacename;'  " \
                                       "FROM system:all_indexes WHERE '`' || `bucket_id` || '`.`' || `scope_id` " \
                                       "|| '`.`' || `keyspace_id` || '`' = 'keyspacename';"
@@ -657,6 +757,13 @@ class IndexManager:
                     # Sleep for 2 secs after dropping an index
                     sleep(2)
         self.log.info("Drop all indexes completed")
+        if validate:
+            index_map_from_system_indexes = self.get_index_map_from_system_indexes()
+            for keyspace in keyspace_name_list:
+                keyspace = keyspace.replace('`', '')
+                if keyspace in index_map_from_system_indexes:
+                    self.log.error(f"All indexes not dropped for keyspace:{keyspace}")
+            self.log.info("Validation completed")
 
     """
     Drop random indexes in a loop
@@ -675,7 +782,6 @@ class IndexManager:
             status, results, queryResult = self._execute_query(drop_random_index_query_gen)
             if status is not None and len(results) > 0:
                 for result in results:
-                    self.log.info("Running query : {0}".format(result))
                     drop_status, _, _ = self._execute_query(result)
 
                     # Sleep for 2 secs after dropping an index
@@ -688,7 +794,7 @@ class IndexManager:
                 break
 
             # Wait for the interval before doing the next CRUD operation
-            time.sleep(interval)
+            sleep(interval)
 
     def wait_for_indexes_to_be_built(self, keyspace_name_list, timeout=3600, sleep_interval=15):
 
@@ -757,6 +863,60 @@ class IndexManager:
 
         return status, results, queryResult
 
+    def get_indexer_metadata(self, timeout=120):
+        api = self.index_baseUrl + 'getIndexStatus'
+        auth = (self.username, self.password)
+        response = requests.get(url=api, auth=auth, timeout=timeout)
+        if response.status_code == 200:
+            return response.json()
+
+    def wait_until_indexes_online(self, timeout=60, defer_build=False, check_paused_index=False):
+        init_time = time.time()
+        check = False
+        while not check:
+            index_metadata = self.get_indexer_metadata()
+            if 'status' not in index_metadata:
+                return True
+            index_status = index_metadata['status']
+            next_time = time.time()
+            for index_state in index_status:
+                if defer_build:
+                    if index_state["status"] == "Ready" or index_state["status"] == "Created":
+                        check = True
+                    else:
+                        check = False
+                        sleep(1)
+                        break
+                elif check_paused_index:
+                    if index_state["status"] == "Paused":
+                        check = True
+                    else:
+                        check = False
+                        sleep(1)
+                        break
+                else:
+                    if index_state["status"] == "Ready":
+                        check = True
+                    else:
+                        check = False
+                        sleep(1)
+                        break
+            if next_time - init_time > timeout:
+                check = False
+                break
+        return check
+
+
+class NestedDict(dict):
+    """Implementation of perl's autovivification feature."""
+
+    def __getitem__(self, item):
+        try:
+            return dict.__getitem__(self, item)
+        except KeyError:
+            value = self[item] = type(self)()
+            return value
+
 
 """
 Main method
@@ -769,20 +929,19 @@ if __name__ == '__main__':
     indexMgr = IndexManager()
     if indexMgr.test_mode:
         indexMgr.create_scopes_collections()
-
     sleep(10)
 
     # Get list of all collections for the bucket
     keyspace_name_list = indexMgr.get_all_collections()
 
     if indexMgr.action == "create_index":
-        indexMgr.create_indexes_on_bucket(keyspace_name_list)
+        indexMgr.create_indexes_on_bucket(keyspace_name_list, indexMgr.validate)
     elif indexMgr.action == "build_deferred_index":
         indexMgr.build_all_deferred_indexes(keyspace_name_list, indexMgr.max_num_collections)
         # The SDK way to build all deferred indexes is not yet working in Python SDK 3.0.4. To revisit once implemented.
         # indexMgr.build_all_deferred_indexes_sdk(keyspace_name_list)
     elif indexMgr.action == "drop_all_indexes":
-        indexMgr.drop_all_indexes(keyspace_name_list)
+        indexMgr.drop_all_indexes(keyspace_name_list, indexMgr.validate)
     elif indexMgr.action == "create_index_loop":
         indexMgr.create_indexes_on_bucket_in_a_loop(indexMgr.timeout, indexMgr.interval)
     elif indexMgr.action == "alter_indexes":
@@ -794,5 +953,5 @@ if __name__ == '__main__':
     elif indexMgr.action == "item_count_check":
         indexMgr.item_count_check(indexMgr.sample_size)
     else:
-        print(
-            "Invalid choice for action. Choose from the following - create_index | build_deferred_index | drop_all_indexes")
+        print("Invalid choice for action. Choose from the following - "
+              "create_index | build_deferred_index | drop_all_indexes | create_index_loop | alter_indexes | enable_cbo | drop_index_loop | item_count_check")
