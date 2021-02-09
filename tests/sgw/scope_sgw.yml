@@ -46,6 +46,8 @@ servers: # each server tag represents a cluster
         query_start: 11
       rest_username: Administrator
       rest_password: password
+      ssh_username: root
+      ssh_password: couchbase
       data_path: "/data"
       index_path: "/data"
       init_nodes: 12

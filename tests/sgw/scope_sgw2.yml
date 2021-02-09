@@ -54,42 +54,42 @@ buckets:
 servers: # each server tag represents a cluster
   -
       name: c1local
-      count: 3
+      count: 6
       ram: 80%
       index_ram: 80%
       index_storage: default
       ssh_username: root
       ssh_password: couchbase
       services:
-        index: 1
-        index_start: 2
+        index: 2
+        index_start: 4
         query: 1
-        query_start: 3
+        query_start: 6
       rest_username: Administrator
       rest_password: password
       data_path: "/data"
       index_path: "/data"
-      init_nodes: 3
+      init_nodes: 6
       buckets: c1default,c1other
       users: c1default,c1other-1,c1other-2
   -
       name: c2local
-      count: 3
+      count: 6
       ram: 80%
       index_ram: 80%
       index_storage: default
       ssh_username: root
       ssh_password: couchbase
       services:
-        index: 1
-        index_start: 2
+        index: 2
+        index_start: 4
         query: 1
-        query_start: 3
+        query_start: 6
       rest_username: Administrator
       rest_password: password
       data_path: "/data"
       index_path: "/data"
-      init_nodes: 3
+      init_nodes: 6
       buckets: c2default,c2other
       users: c2default,c2other-1,c2other-2
 
