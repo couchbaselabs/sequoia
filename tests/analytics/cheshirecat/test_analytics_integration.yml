@@ -7,7 +7,7 @@
 -
   image: sequoiatools/analyticsmanager:1.0
   command: "-i {{.ActiveAnalyticsNode 0 | noport}} -b {{.Bucket}},{{.NthBucket 1}},{{.NthBucket 2}},{{.NthBucket 3}}
-  -o create_cbas_infra --dataverse_count 50 --dataset_count 200 --index_count 0 --indexed_data_source catapult
+  -o create_cbas_infra --dataverse_count 10 --dataset_count 100 --index_count 0 --indexed_data_source catapult
   --synonym_count 100 --wait_for_ingestion false --api_timeout 3600"
   wait: true
 
