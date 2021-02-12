@@ -15,14 +15,31 @@ from datetime import datetime
 
 # Hotel DS
 CATAPULT_INDEX_TEMPLATES = [
-    "(`country`:string,`city`:string,`avg_rating`:bigint,`price`:bigint)",
-    "(`free_breakfast`:string,`type`:string,`free_parking`:string,`price`:double,`country`:string)",
-    "(`free_breakfast`:string,`free_parking`:string,`country`:string,`city`:string)",
+    "(`type`:string, `price`:bigint)",
+    "(`avg_rating`:bigint, `free_breakfast`:string)",
+    "(`free_breakfast`:string, `free_parking`:string)",
+    "(`country`:string, `price`:bigint)",
+    "(`type`:string, `free_breakfast`:string, `free_parking`:string)"
 ]
 GIDEON_INDEX_TEMPLATES = [
-    "(`type`:string,`bucket`:string,`scope`:string,`collection`:string)",
-    "(`profile`.`likes`:bigint,`profile`.`online`:string,`rating`:double)",
-    "(`ops_sec`:double,`totalCount`:bigint,`failCount`:bigint,`duration`:int,`build_id`:bigint)",
+    "(`profile`.`likes`:bigint, `rating`:double)",
+    "(`totalCount`:bigint, `failCount`:bigint)",
+    "(`duration`:bigint)",
+    "(`rating`:double, `city`:string, `build`:bigint)"
+]
+
+CATAPULT_WHERE_CLAUSE_TEMPLATES = [
+    "`type` in [\"Inn\", \"Motels\", \"Suites\"] and price between 300 and 1000",
+    "avg_rating > 3.5 and free_breakfast = False",
+    "free_breakfast = True or free_parking = True",
+    "country like \"S%\" and price < 1500",
+    "`type`=\"Hotel\" and free_breakfast = True and free_parking = True"
+]
+GIDEON_WHERE_CLAUSE_TEMPLATES = [
+    "rating > 50 and profile.likes > 3000 or len(profile.friends) > 3",
+    "rating > 67 and city like \"G%\" or city like \"M%\" and build > 100",
+    "failCount between 0 and 10 or totalCount > 10",
+    "duration > 500"
 ]
 
 DATAVERSE_PREFIX_1 = "dv_{0}"
@@ -58,36 +75,42 @@ class AnalyticsOperations():
         parser.add_option("-p", dest="password", default="password", help="password default=password")
 
         # Required if only KV scopes or collections specified are to be considered during dataset creation
-        parser.add_option("-s", dest="scopes", default="",
+        parser.add_option("--inc_scp", dest="include_scopes", default="",
                           help="name of the scopes(seperated by comma) to be considered for creating dataset, "
                                "default is empty string")
-        parser.add_option("-c", dest="collections", default="",
+        parser.add_option("--inc_coll", dest="include_collections", default="",
+                          help="name of the collections(seperated by comma) to be considered for creating dataset, "
+                               "default is empty string")
+        parser.add_option("--exc_scp", dest="exclude_scopes", default="",
+                          help="name of the scopes(seperated by comma) not to be considered for creating dataset, "
+                               "default is empty string")
+        parser.add_option("--exc_coll", dest="exclude_collections", default="",
                           help="name of the collections(seperated by comma) to be considered for creating dataset, "
                                "default is empty string")
 
         # Required if operation type is 'create_cbas_infra'
-        parser.add_option("--dataverse_count", dest="dataverse_count", type="int", default=1,
+        parser.add_option("--dv_cnt", dest="dataverse_count", type="int", default=1,
                           help="no of dataverses to be created, if count is 1 then no dataverse "
                                "will be created and Default dataverse will be used")
-        parser.add_option("--dataset_count", dest="dataset_count", type="int", default=1,
+        parser.add_option("--ds_cnt", dest="dataset_count", type="int", default=1,
                           help="no of dataset to be created, default=1")
-        parser.add_option("--dataset_distribution", dest="dataset_distribution", choices=["uniform", "random"],
+        parser.add_option("--ds_dist", dest="dataset_distribution", choices=["uniform", "random"],
                           default="uniform", help="Number of datasets per dataverse to be created uniformly/randomly")
-        parser.add_option("--index_count", dest="index_count", type="int", default=0,
+        parser.add_option("--idx_cnt", dest="index_count", type="int", default=0,
                           help="no of indexes to be created on datasets, default=0")
-        parser.add_option("--indexed_data_source", dest="indexed_data_source", default="gideon",
-                          help="name of the data loader that was used to load data. Values - gideon, catapult")
-        parser.add_option("--synonym_count", dest="synonym_count", type="int", default=0,
+        parser.add_option("--syn_cnt", dest="synonym_count", type="int", default=0,
                           help="no of synonyms to be created, default=0")
+        parser.add_option("--data_src", dest="data_source", default="gideon",
+                          help="name of the data loader that was used to load data. Values - gideon, catapult")
 
         # Required if remote datasets need to be created or recreated
-        parser.add_option("--remote_link_count", dest="remote_link_count", type="int", default=0,
+        parser.add_option("--rlink_cnt", dest="remote_link_count", type="int", default=0,
                           help="no of links to be created, default=0")
         parser.add_option("--remote_host", dest="remote_host", default="",
                           help="remote server ip with port <ip>:<port>")
-        parser.add_option("--remote_username", dest="remote_username", default="Administrator",
+        parser.add_option("--remote_usr", dest="remote_username", default="Administrator",
                           help="user name default=Administrator")
-        parser.add_option("--remote_password", dest="remote_password", default="password",
+        parser.add_option("--remote_pwd", dest="remote_password", default="password",
                           help="password default=password")
 
         # Required if operation type is drop_cbas_infra
@@ -103,22 +126,22 @@ class AnalyticsOperations():
                           help="Percentage of synonyms to be dropped")
 
         # Required if operation type is recreate_cbas_infra
-        parser.add_option("--recreate_dataverse_percentage", dest="recreate_dataverse_percentage", type="int", default=100,
+        parser.add_option("--recreate_dv", dest="recreate_dataverse_percentage", type="int", default=100,
                           help="Percentage of dataverses to be recreated")
-        parser.add_option("--recreate_dataset_percentage", dest="recreate_dataset_percentage", type="int", default=100,
+        parser.add_option("--recreate_ds", dest="recreate_dataset_percentage", type="int", default=100,
                           help="Percentage of datasets to be recreated")
-        parser.add_option("--recreate_link_percentage", dest="recreate_link_percentage", type="int", default=100,
+        parser.add_option("--recreate_lnk", dest="recreate_link_percentage", type="int", default=100,
                           help="Percentage of links to be recreated")
-        parser.add_option("--recreate_index_percentage", dest="recreate_index_percentage", type="int", default=100,
+        parser.add_option("--recreate_idx", dest="recreate_index_percentage", type="int", default=100,
                           help="Percentage of indexes to be recreated")
-        parser.add_option("--recreate_synonym_percentage", dest="recreate_synonym_percentage", type="int", default=100,
+        parser.add_option("--recreate_syn", dest="recreate_synonym_percentage", type="int", default=100,
                           help="Percentage of synonyms to be recreated")
 
         # Required if operation type is 'create_drop_dataverse_dataset_in_loop',
         # 'create_drop_dataverse_remote_dataset_in_loop'
         parser.add_option("--interval", dest="interval", type=int, default=60,
                           help="Interval between 2 create/drop dataverse/dataset statements when running in a loop")
-        parser.add_option("--timeout", dest="timeout", type=int, default=0,
+        parser.add_option("-t", dest="timeout", type=int, default=0,
                           help="Timeout for create/drop dataverse/dataset loop. 0 (default) is infinite")
 
         parser.add_option("--api_timeout", dest="api_timeout", type=int, default=300,
@@ -126,10 +149,15 @@ class AnalyticsOperations():
 
         # Optionally required for operations - create_drop_dataverse_dataset_in_loop, create_cbas_infra,
         # recreate_cbas_infra. Not required for drop_cbas_infra.
-        parser.add_option("--wait_for_ingestion", dest="wait_for_ingestion", choices=["true", "false"],
+        parser.add_option("-w", dest="wait_for_ingestion", choices=["true", "false"],
                           default="true", help="wait for data ingestion to complete in dataset, default=true")
         parser.add_option("--ingestion_timeout", dest="ingestion_timeout", type="int", default=3600,
                           help="time to wait for ingestion to finish for all datasets, default=3600")
+
+        # Optionally required for operations - create_drop_dataverse_dataset_in_loop, create_cbas_infra,
+        # recreate_cbas_infra. Not required for drop_cbas_infra.
+        parser.add_option("--ds_without_where", dest="dataset_without_where_clause_percentage",
+                          type="int", default=0, help="Percentage of datasets to be created without any where clause")
 
         self.options, args = parser.parse_args()
 
@@ -139,13 +167,25 @@ class AnalyticsOperations():
             exit(1)
 
         self.buckets = self.options.buckets.split(",")
-        self.scopes = []
-        self.collections = []
+        self.include_scopes = []
+        self.exclude_scopes = []
+        self.include_collections = []
+        self.exclude_collections = []
 
-        if self.options.scopes:
-            self.scopes = self.options.scopes.split(",")
-        if self.options.collections:
-            self.collections = self.options.collections.split(",")
+        if self.options.include_scopes:
+            self.include_scopes = self.options.include_scopes.split(",")
+        if self.options.exclude_scopes:
+            self.exclude_scopes = self.options.exclude_scopes.split(",")
+        if self.options.include_collections:
+            self.include_collections = self.options.include_collections.split(",")
+        if self.options.exclude_collections:
+            self.exclude_collections = self.options.exclude_collections.split(",")
+
+        # If both include and exclude lists contains same entities, then assign empty list to exclude.
+        if set(self.include_scopes) == set(self.exclude_scopes):
+            self.exclude_scopes = []
+        if set(self.include_collections) == set(self.exclude_collections):
+            self.exclude_collections = []
 
         self.log = logging.getLogger("analyticsmanager")
         self.log.setLevel(logging.INFO)
@@ -194,9 +234,9 @@ class AnalyticsOperations():
         SYNONYM_MAX_COUNTER = inner_func(self.get_all_synonyms)
         LINK_MAX_COUNTER = inner_func(self.get_all_links)
 
-    def get_all_collection_names(self, buckets, scopes=[], collections=[], use_remote_host=False):
+    def get_all_collection_names(self, use_remote_host=False):
         collection_names = list()
-        for bucket in buckets:
+        for bucket in self.buckets:
             self.log.info("Fetching collections in bucket {0}".format(bucket))
             bucket = bucket.strip("`")
             url = bucket + "/collections"
@@ -211,10 +251,14 @@ class AnalyticsOperations():
                 time.sleep(10)
             scopes_dict = content["scopes"]
             for scope in scopes_dict:
-                if scopes and scope["name"] not in scopes:
+                if self.include_scopes and scope["name"] not in self.include_scopes:
+                    continue
+                if self.exclude_scopes and scope["name"] in self.exclude_scopes:
                     continue
                 for collection in scope["collections"]:
-                    if collections and collection["name"] not in collections:
+                    if self.include_collections and collection["name"] not in self.include_collections:
+                        continue
+                    if self.exclude_collections and collection["name"] in self.exclude_collections:
                         continue
                     name = ".".join([bucket,scope["name"],collection["name"]])
                     collection_names.append(self.format_name(name))
@@ -260,14 +304,20 @@ class AnalyticsOperations():
             self.log.error(str(response))
         return result
 
-    def create_dataset(self, dataset, collection_name, compress_dataset=False, link=None):
-        self.log.info("Creating dataset {0} on {1}".format(dataset,collection_name))
+    def create_dataset(self, dataset, collection_name, compress_dataset=False, link=None, where_clause=True):
+        self.log.info("Creating dataset {0} on {1}".format(dataset, collection_name))
         cmd = "create dataset {0}".format(dataset)
         if compress_dataset:
             cmd += " with {'storage-block-compression': {'scheme': 'snappy'}}"
         cmd += " on {0}".format(collection_name)
         if link:
             cmd += " at {0}".format(link)
+        if where_clause:
+            if self.options.data_source == "gideon":
+                where = GIDEON_WHERE_CLAUSE_TEMPLATES
+            else:
+                where = CATAPULT_WHERE_CLAUSE_TEMPLATES
+            cmd += " where {0}".format(random.choice(where))
         cmd += ";"
         result, content, response = self.cbas_api_call(statement=cmd)
         if result:
@@ -291,7 +341,7 @@ class AnalyticsOperations():
         return result
 
     def create_index_on_dataset(self, dataset, index_name):
-        if self.options.indexed_data_source == "gideon":
+        if self.options.data_source == "gideon":
             index_templates = GIDEON_INDEX_TEMPLATES
         else:
             index_templates = CATAPULT_INDEX_TEMPLATES
@@ -507,10 +557,9 @@ class AnalyticsOperations():
         remote_links = list()
         global DATAVERSE_MAX_COUNTER, DATASET_MAX_COUNTER, INDEX_MAX_COUNTER, SYNONYM_MAX_COUNTER, LINK_MAX_COUNTER
 
-        local_collection_names = self.get_all_collection_names(self.buckets,self.scopes,self.collections)
+        local_collection_names = self.get_all_collection_names()
         if remote_datasets:
-            remote_collection_names = self.get_all_collection_names(self.buckets, self.scopes, self.collections,
-                                                                    use_remote_host=True)
+            remote_collection_names = self.get_all_collection_names(use_remote_host=True)
         while True:
             if remote_datasets and not remote_links:
                 dataverse_name = random.choice(dataverses)
@@ -526,7 +575,7 @@ class AnalyticsOperations():
                 DATASET_MAX_COUNTER += 1
                 datasets.append(".".join([dataverse_name, DATASET_PREFIX.format(DATASET_MAX_COUNTER)]))
                 if not self.create_dataset(datasets[-1], random.choice(local_collection_names),
-                                           random.choice([True,False,False,False]), None):
+                                           random.choice([True,False,False,False]), None, True):
                     datasets.pop()
                 if self.options.wait_for_ingestion == "true":
                     self.wait_for_ingestion_complete(datasets)
@@ -559,7 +608,7 @@ class AnalyticsOperations():
                         DATASET_MAX_COUNTER += 1
                         datasets.append(".".join([dataverse_name, DATASET_PREFIX.format(DATASET_MAX_COUNTER)]))
                         if not self.create_dataset(datasets[-1], collection_name,
-                                                   random.choice([True,False,False,False]), link):
+                                                   random.choice([True,False,False,False]), link, True):
                             datasets.pop()
                         if self.options.wait_for_ingestion == "true":
                             self.wait_for_ingestion_complete(datasets)
@@ -623,10 +672,9 @@ class AnalyticsOperations():
         synonyms = list()
         remote_links = list()
 
-        local_collection_names = self.get_all_collection_names(self.buckets, self.scopes, self.collections)
+        local_collection_names = self.get_all_collection_names()
         if remote_datasets:
-            remote_collection_names = self.get_all_collection_names(self.buckets, self.scopes, self.collections,
-                                                                    use_remote_host=True)
+            remote_collection_names = self.get_all_collection_names(use_remote_host=True)
         if self.options.dataverse_count > 1:
             for i in range(DATAVERSE_MAX_COUNTER + 1, DATAVERSE_MAX_COUNTER + self.options.dataverse_count + 1):
                 name = random.choice([DATAVERSE_PREFIX_1, DATAVERSE_PREFIX_2]).format(i)
@@ -648,6 +696,9 @@ class AnalyticsOperations():
         ds_per_dv = 0
         if self.options.dataset_distribution == "uniform":
             ds_per_dv = -(self.options.dataset_count // -self.options.dataverse_count)
+
+        num_of_dataset_without_where_clause = (self.options.dataset_count *
+                                               self.options.dataset_without_where_clause_percentage) * 100
 
         for i in range(DATASET_MAX_COUNTER + 1, DATASET_MAX_COUNTER + self.options.dataset_count + 1):
             if remote_datasets:
@@ -671,9 +722,15 @@ class AnalyticsOperations():
 
             datasets.append(".".join([dataverse_name, DATASET_PREFIX.format(i)]))
 
+            if num_of_dataset_without_where_clause > 0:
+                where = True
+                num_of_dataset_without_where_clause -= 1
+            else:
+                where = False
+
             if not self.create_dataset(
                     datasets[-1], collection_name,
-                    random.choice([True, False, False, False]), link):
+                    random.choice([True, False, False, False]), link, where):
                 self.log.error("FAILED : Creating Dataset {0}".format(datasets[-1]))
                 datasets.pop()
         if self.options.wait_for_ingestion == "true":
@@ -832,10 +889,9 @@ class AnalyticsOperations():
             dropped_items = get_dropped_items(datasets)
             counter = (self.options.recreate_dataset_percentage * len(dropped_items)) / 100
 
-            local_collection_names = self.get_all_collection_names(self.buckets, self.scopes, self.collections)
+            local_collection_names = self.get_all_collection_names()
             if links:
-                remote_collection_names = self.get_all_collection_names(self.buckets, self.scopes, self.collections,
-                                                                        use_remote_host=True)
+                remote_collection_names = self.get_all_collection_names(use_remote_host=True)
             while dropped_items:
                 if counter == 0:
                     break
@@ -857,7 +913,7 @@ class AnalyticsOperations():
 
                 if not self.create_dataset(
                         datasets[-1], collection_name,
-                        random.choice([True, False, False, False]), link):
+                        random.choice([True, False, False, False]), link, True):
                     self.log.error("FAILED : Creating Link {0}".format(datasets[-1]))
                     datasets.pop()
                     dropped_items.append(item)

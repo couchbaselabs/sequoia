@@ -6,9 +6,13 @@
 ###############  create analytics datasets  ################
 -
   image: sequoiatools/analyticsmanager:1.0
-  command: "-i {{.ActiveAnalyticsNode 0 | noport}} -b {{.Bucket}},{{.NthBucket 1}},{{.NthBucket 2}},{{.NthBucket 3}}
-  -o create_cbas_infra --dataverse_count 10 --dataset_count 100 --index_count 0 --indexed_data_source catapult
-  --synonym_count 100 --wait_for_ingestion false --api_timeout 3600"
+  command: "-i {{.ActiveAnalyticsNode 0 | noport}} -b {{.NthBucket 4}},{{.NthBucket 5}},{{.NthBucket 6}},{{.NthBucket 7}}
+  -o create_cbas_infra --dv_cnt 7 --ds_cnt 70 --idx_cnt 23 --data_src catapult --syn_cnt 70 -w false
+  --ingestion_timeout 3600 --ds_without_where 5 --api_timeout 3600"
+  wait: true
+- command: "-i {{.ActiveAnalyticsNode 0 | noport}} -b {{.Bucket}},{{.NthBucket 1}} -o create_cbas_infra
+  --exc_coll _default --dv_cnt 3 --ds_cnt 30 --idx_cnt 10 --data_src gideon --syn_cnt 30 -w false
+  --ingestion_timeout 3600 --ds_without_where 5 --api_timeout 3600"
   wait: true
 
 # Sleep for some time to allow data ingestion to start before running the queries
@@ -24,9 +28,12 @@
 -
   image: sequoiatools/queryapp
   command: "-J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.5.6/* /AnalyticsQueryApp/Query/load_queries.py
-    --server_ip {{.ActiveAnalyticsNode 0}} --port {{.AnalyticsPort}} --duration 86400 --bucket {{.Bucket}}
-    --querycount 100 -B [{{.Bucket}},{{.NthBucket 1}},{{.NthBucket 2}},{{.NthBucket 3}}] -a True
-    --analytics_queries catapult_queries"
+    --server_ip {{.ActiveAnalyticsNode 0}} --port {{.AnalyticsPort}} --duration 86400 --bucket {{.NthBucket 4}}
+    --querycount 100 -a True --analytics_queries catapult_queries --query_timeout 3600
+    -B [{{.NthBucket 4}},{{.NthBucket 5}},{{.NthBucket 6}},{{.NthBucket 7}}]"
+- command: "-J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.5.6/* /AnalyticsQueryApp/Query/load_queries.py
+      --server_ip {{.ActiveAnalyticsNode 0}} --port {{.AnalyticsPort}} --duration 86400 --bucket {{.Bucket}}
+      --querycount 100 -a True --analytics_queries gideon_queries --query_timeout 3600 -B [{{.Bucket}},{{.NthBucket 1}}]"
 
 # ###############sleep for 30secs###############
 -
