@@ -319,6 +319,7 @@ class AnalyticsOperations():
                 where = CATAPULT_WHERE_CLAUSE_TEMPLATES
             cmd += " where {0}".format(random.choice(where))
         cmd += ";"
+        self.log.info(cmd)
         result, content, response = self.cbas_api_call(statement=cmd)
         if result:
             self.log.info("Created dataset {0} on {1}".format(dataset,collection_name))
@@ -698,7 +699,7 @@ class AnalyticsOperations():
             ds_per_dv = -(self.options.dataset_count // -self.options.dataverse_count)
 
         num_of_dataset_without_where_clause = (self.options.dataset_count *
-                                               self.options.dataset_without_where_clause_percentage) * 100
+                                               self.options.dataset_without_where_clause_percentage) / 100
 
         for i in range(DATASET_MAX_COUNTER + 1, DATASET_MAX_COUNTER + self.options.dataset_count + 1):
             if remote_datasets:
@@ -723,10 +724,10 @@ class AnalyticsOperations():
             datasets.append(".".join([dataverse_name, DATASET_PREFIX.format(i)]))
 
             if num_of_dataset_without_where_clause > 0:
-                where = True
+                where = False
                 num_of_dataset_without_where_clause -= 1
             else:
-                where = False
+                where = True
 
             if not self.create_dataset(
                     datasets[-1], collection_name,
