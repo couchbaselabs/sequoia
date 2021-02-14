@@ -25,6 +25,11 @@
 - command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -s {{.NthBucket 1}}.event_0.coll-0 -m {{.NthBucket 3}}.event_0.coll-3 -d dst_bucket.{{.NthBucket 2}}.event_0.coll-2.rw -t curl -o create --name curl"
   wait: true
 
+
+#### deploy handlers #####
+- image: sequoiatools/eventing:7.0
+  command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o deploy"
+
 #### wait for handler to be deployed ####
 - image: sequoiatools/eventing:7.0
   command: "eventing_helper.py -i {{.EventingNode}} -u {{.RestUsername}} -p {{.RestPassword}} -o wait_for_state --state deployed"
