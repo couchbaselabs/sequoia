@@ -68,6 +68,13 @@
    image: sequoiatools/wait_for_idx_build_complete
    command: "{{.ActiveIndexNode 0}} {{.RestUsername}} {{.RestPassword}}"
    wait: true
+
+# Sleep for some time to allow the index to process all pending items
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "300"
+   wait: true
 - section_end: rbac_query
 
 ### until 100M items ######
