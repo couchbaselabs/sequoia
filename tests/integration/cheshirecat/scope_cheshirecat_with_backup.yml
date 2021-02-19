@@ -5,6 +5,7 @@ users:
     password: password
     roles: admin
     auth_domain: local
+    ttl: 3600
   -
     name: WAREHOUSE
     password: password
