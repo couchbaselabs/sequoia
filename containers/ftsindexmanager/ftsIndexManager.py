@@ -385,6 +385,7 @@ class FTSIndexManager:
         end_time = 0
         if timeout > 0:
             end_time = time.time() + timeout
+        count = 0
         while True:
 
             coll_list = self.get_all_collections()
@@ -412,7 +413,7 @@ class FTSIndexManager:
                 collections = random.sample(population=scope_obj[scope_name], k=random.randint(1, num_coll))
 
             self.log.info("===== Creating {1} FTS index on {0} =====".format(collections, index_type))
-            status, content, response, idx_name = self.create_fts_index_on_collections(collections)
+            status, content, response, idx_name = self.create_fts_index_on_collections(collections, count)
 
             if not status:
                 self.log.info("Content = {0} \nResponse = {1}".format(content, response))
@@ -429,6 +430,7 @@ class FTSIndexManager:
             # Exit if timed out
             if timeout > 0 and time.time() > end_time:
                 break
+            count += 1
 
         # Wait for the interval before doing the next CRUD operation
         time.sleep(interval)
@@ -450,7 +452,7 @@ class FTSIndexManager:
     
     """
 
-    def create_fts_index_on_collections(self, collections):
+    def create_fts_index_on_collections(self, collections, count=None):
         random.seed(datetime.now())
         # Randomly select fields to create the index on
         ds_fields = copy.deepcopy(HOTEL_DS_FIELDS)
@@ -475,7 +477,8 @@ class FTSIndexManager:
             idx_name = "bucket_"+self.bucket_name+"_idx_" + ''.join(random.choice(string.ascii_lowercase) for i in range(5))
             for field in index_fields:
                 idx_name += "-" + field["field_code"]
-
+            if count:
+                idx_name += "_" + str(count)
             cur_indexes = self.get_fts_index_list()
             if idx_name not in cur_indexes:
                 break
