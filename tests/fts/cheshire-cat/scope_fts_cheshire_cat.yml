@@ -54,7 +54,7 @@ servers: # each server tag represents a cluster
       name: local
       count: 12
       ram: 90%
-      fts_ram: 85%
+      fts_ram: 70%
       services:
         fts: 6
         fts_start: 7
