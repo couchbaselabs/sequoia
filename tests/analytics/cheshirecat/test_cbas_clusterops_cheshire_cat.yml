@@ -112,7 +112,7 @@
 ############### Kill cbas ################
 -
   template: kill_process
-  args: "{{.ActiveAnalyticsNode 0}}, cbas"
+  args: "{{.ActiveAnalyticsNode 1}}, cbas"
 
 # Sleep for some more time after cbas-kill completes (10 minutes)
 -
@@ -242,7 +242,7 @@
 ############### Kill cbas ################
 -
   template: kill_process
-  args: "{{.ActiveAnalyticsNode 0}}, cbas"
+  args: "{{.ActiveAnalyticsNode 1}}, cbas"
 
 # Sleep for some more time after cbas-kill completes (10 minutes)
 -
