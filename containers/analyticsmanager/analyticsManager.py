@@ -551,11 +551,11 @@ class AnalyticsOperations():
         if timeout > 0:
             end_time = time.time() + timeout
 
-        dataverses = ["Default"]
-        datasets = list()
-        indexes = list()
-        synonyms = list()
-        remote_links = list()
+        dataverses = self.get_all_dataverses()
+        datasets = self.get_all_datasets()
+        indexes = self.get_all_indexes()
+        synonyms = self.get_all_synonyms()
+        remote_links = self.get_all_links()
         global DATAVERSE_MAX_COUNTER, DATASET_MAX_COUNTER, INDEX_MAX_COUNTER, SYNONYM_MAX_COUNTER, LINK_MAX_COUNTER
 
         local_collection_names = self.get_all_collection_names()
