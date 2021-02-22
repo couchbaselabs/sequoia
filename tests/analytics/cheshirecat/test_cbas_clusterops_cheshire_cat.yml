@@ -1,0 +1,312 @@
+- include: tests/templates/rebalance.yml
+
+############### create n scopes and n collections across n buckets as scope_1,scope_2 ... ###############
+- section_start: create_KV_infra
+-
+  image: sequoiatools/collections:1.0
+  command: "-i {{.Orchestrator}}:8091 -b {{.Bucket}} -o create_multi_scope_collection -s scope_ -c coll_
+  --scope_count={{.Scale 3}} --collection_count={{.Scale 10}} --collection_distribution=random"
+  wait: true
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 1}} -o create_multi_scope_collection -s scope_ -c coll_
+  --scope_count={{.Scale 3}} --collection_count={{.Scale 10}} --collection_distribution=random"
+  wait: true
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 2}} -o create_multi_scope_collection -s scope_ -c coll_
+  --scope_count={{.Scale 3}} --collection_count={{.Scale 10}} --collection_distribution=random"
+  wait: true
+
+############### Sleep for some time to allow collections manifest to sync ###############
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "300"
+   wait: true
+- section_end: create_KV_infra
+
+############### Start Collections CRUD on bucket 4 & bucket5 ###############
+-
+  image: sequoiatools/collections:1.0
+  command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 3}} -o crud_mode --crud_interval=10 --max_scopes=10 --max_collections=100"
+  alias: collection_crud1
+-
+  command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 4}} -o crud_mode --crud_interval=10 --max_scopes=10 --max_collections=100"
+  alias: collection_crud2
+
+
+############### data loading ################
+- image: sequoiatools/catapult
+  command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -n {{.Scale 50000}} -pc 100 -pu 25 -pd 25
+    -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 60 -fu price,free_parking -ac True"
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 1}} -n {{.Scale 50000}} -pc 100 -pu 25
+    -pd 25 -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 60 -fu price,free_parking -ac True"
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 2}} -n {{.Scale 50000}} -pc 100 -pu 25
+    -pd 25 -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 60 -fu price,free_parking -ac True"
+
+############### Create CBAS infra ###############
+- section_start: create_CBAS_infra
+-
+  image: sequoiatools/analyticsmanager:1.0
+  command: "-i {{.ActiveAnalyticsNode 0 | noport}} -b {{.Bucket}},{{.NthBucket 1}},{{.NthBucket 2}}
+  -o create_cbas_infra --dv_cnt {{.Scale 3}} --ds_cnt {{.Scale 20}}
+  --idx_cnt {{.Scale 6}} --data_src catapult --syn_cnt {{.Scale 20}}
+  -w false --ingestion_timeout 3600 --ds_without_where 5 --api_timeout 3600"
+  wait: true
+- section_end: create_CBAS_infra
+
+# Wait for data ingestion into datasets to start
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "60"
+   wait: true
+
+############### Start creating and dropping CBAS infra in a loop on bucket4 and bucket5###############
+- image: sequoiatools/analyticsmanager:1.0
+  command: "-i {{.ActiveAnalyticsNode 0 | noport}} -b {{.NthBucket 4}},{{.NthBucket 3}}
+  -o create_drop_dataverse_dataset_in_loop -w false --interval 60 -t 0 --api_timeout 3600"
+  alias: cbas_loop1
+
+# Sleep for some time to allow some cbas infra to be created on bucket4 & bucket5
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "300"
+   wait: true
+
+# ###############  run queries ################
+- section_start: run_cbas_query
+-
+  image: sequoiatools/queryapp
+  command: "-J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.5.6/* /AnalyticsQueryApp/Query/load_queries.py
+  --server_ip {{.ActiveAnalyticsNode 0}} --port {{.AnalyticsPort}}
+  --duration 0 --bucket {{.Bucket}} --querycount 100
+  -B [{{.Bucket}},{{.NthBucket 1}},{{.NthBucket 2}}] -a True
+  --analytics_queries catapult_queries --query_timeout 3600"
+- section_end: run_cbas_query
+
+- section_start: change_cbas_topologies
+
+###############  Rebalance-in single CBAS node ################
+- template: rebalance_in
+  args: "{{.InActiveNode}}, analytics"
+  wait: true
+
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "300"
+   wait: true
+
+###############  Rebalance-out single CBAS node ################
+- template: rebalance_out
+  args: "{{.ActiveAnalyticsNode 1}}"
+  wait: true
+
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "300"
+   wait: true
+
+############### Kill cbas ################
+-
+  template: kill_process
+  args: "{{.ActiveAnalyticsNode 0}}, cbas"
+
+# Sleep for some more time after cbas-kill completes (10 minutes)
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "600"
+   wait: true
+
+###############  Swap single cbas node ################
+- template: rebalance_swap
+  args: "{{.InActiveNode}}, {{.ActiveAnalyticsNode 1}}, analytics"
+  wait: true
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "300"
+   wait: true
+
+############### Kill memcached ################
+-
+  template: kill_process
+  args: "{{.NthDataNode 1}}, memcached"
+
+# Sleep for some more time after memcached-kill completes (10 minutes)
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "600"
+   wait: true
+
+###############  Rebalance-in two CBAS nodes ################
+- template: add_node
+  args: "{{.NthInActiveNode 0}}, analytics"
+- args: "{{.NthInActiveNode 1}}, analytics"
+- template: rebalance
+  wait: true
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "300"
+   wait: true
+
+############### Kill cbas ################
+-
+  template: kill_process
+  args: "{{.ActiveAnalyticsNode 1}}, cbas"
+
+# Sleep for some more time after cbas-kill completes (10 minutes)
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "600"
+   wait: true
+
+###############  Rebalance-out two CBAS nodes ################
+- template: rebalance_out
+  args: "({{.ActiveAnalyticsNode 1}},{{.ActiveAnalyticsNode 2}})"
+  wait: true
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "300"
+   wait: true
+
+###############  Rebalance-IN data node ################
+- template: rebalance_in
+  args: "{{.InActiveNode}}"
+  wait: true
+
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "300"
+   wait: true
+
+############### Kill memcached ################
+-
+  template: kill_process
+  args: "{{.NthDataNode 1}}, memcached"
+
+# Sleep for some more time after memcached-kill completes (10 minutes)
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "600"
+   wait: true
+
+###############  Rebalance out data node ################
+- template: rebalance_out
+  args: "({{.NthDataNode 1}})"
+  wait: true
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "300"
+   wait: true
+
+############### Kill cbas ################
+-
+  template: kill_process
+  args: "{{.ActiveAnalyticsNode 1}}, cbas"
+
+# Sleep for some more time after cbas-kill completes (10 minutes)
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "600"
+   wait: true
+
+###############  Failover and addback ################
+- template: failover_force_and_recover
+  args: "{{.ActiveAnalyticsNode 1}}, full"
+  wait: true
+
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "300"
+   wait: true
+
+############### Kill cbas ################
+-
+  template: kill_process
+  args: "{{.ActiveAnalyticsNode 0}}, cbas"
+
+# Sleep for some more time after cbas-kill completes (10 minutes)
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "600"
+   wait: true
+
+###############  Failover and rebalance out ################
+- template: failover_node_forced
+  args: "{{.ActiveAnalyticsNode 1}}"
+- template: rebalance
+  wait: true
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "600"
+   wait: true
+
+###############  Add back cbas node  ################
+- template: add_node
+  args: "{{.NthInActiveNode 0}}, analytics"
+- template: rebalance
+  wait: true
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "300"
+   wait: true
+- section_end: change_cbas_topologies
+
+############### Stop Collections CRUD and cbas creation on bucket4 & bucket5 ###############
+-
+  client:
+    op: rm
+    container: collection_crud1
+-
+  client:
+    op: rm
+    container: collection_crud2
+-
+  client:
+    op: rm
+    container: cbas_loop1
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "600"
+   wait: true
+
+############### Drop CBAS infra ###############
+- section_start: drop_CBAS_infra
+-
+  image: sequoiatools/analyticsmanager:1.0
+  command: "-i {{.ActiveAnalyticsNode 0 | noport}} -b {{.Bucket}},{{.NthBucket 1}},{{.NthBucket 2}},{{.NthBucket 3}},{{.NthBucket 4}}
+  -o drop_cbas_infra --api_timeout 3600"
+  wait: true
+
+# Sleep for some time to allow DDL to complete in the background
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "600"
+   wait: true
+- section_end: drop_CBAS_infra
