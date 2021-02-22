@@ -551,11 +551,11 @@ class AnalyticsOperations():
         if timeout > 0:
             end_time = time.time() + timeout
 
-        dataverses = self.get_all_dataverses()
-        datasets = self.get_all_datasets()
-        indexes = self.get_all_indexes()
-        synonyms = self.get_all_synonyms()
-        remote_links = self.get_all_links()
+        dataverses = ["Default"]
+        datasets = list()
+        indexes = list()
+        synonyms = list()
+        remote_links = list()
         global DATAVERSE_MAX_COUNTER, DATASET_MAX_COUNTER, INDEX_MAX_COUNTER, SYNONYM_MAX_COUNTER, LINK_MAX_COUNTER
 
         local_collection_names = self.get_all_collection_names()
@@ -639,8 +639,11 @@ class AnalyticsOperations():
                     if cbas_entity == "dataverse":
                         dataverse_name = random.choice(dataverses)
                         for dataset in self.get_all_datasets([dataverse_name]):
-                            self.drop_dataset(dataset)
-                            datasets.remove(dataset)
+                            # Only drop those datasets which were created by
+                            # this method.
+                            if dataset in datasets:
+                                self.drop_dataset(dataset)
+                                datasets.remove(dataset)
                         if dataverse_name != "Default":
                             self.drop_dataverse(dataverse_name)
                             dataverses.remove(dataverse_name)
