@@ -429,8 +429,12 @@ class IndexManager:
         # Get Index Map for indexes in the bucket
         index_map = self.get_index_map(self.bucket_name, idx_node_list[0])
 
+        if len(index_map) == 0:
+            self.log.info("Item check count not possible, no indexes present for the given bucket.")
+            return
+
         # Randomly choose indexes on which item count check has to be performed
-        item_count_check_indexes = random.sample(index_map, sample_size)
+        item_count_check_indexes = random.sample(index_map, min(sample_size, len(index_map)))
 
         errors = []
 
