@@ -66,7 +66,7 @@
 #============ Cluster Ops ============
 # swap failover
 - template: add_node
-  args: "{{.NthDataNode 6}}"
+  args: "{{.NthDataNode 5}}"
   wait: true
 - template: failover_node_forced
   args: "{{.NthDataNode 1}}"
