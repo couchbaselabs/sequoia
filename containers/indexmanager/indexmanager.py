@@ -93,7 +93,6 @@ class IndexManager:
         if self.cbo_enable_ratio > 100:
             self.cbo_enable_ratio = 25
         self.sample_size = args.sample_size
-        self.index_baseUrl = f"http://{self.node_addr}:9102/"
         self.idx_def_templates = HOTEL_DS_INDEX_TEMPLATES
         # If there are more datasets supported, this can be expanded.
         if self.dataset == "hotel":
@@ -865,7 +864,8 @@ class IndexManager:
 
     def get_indexer_metadata(self, timeout=120):
         self.log.info("polling /getIndexStatus")
-        api = self.index_baseUrl + 'getIndexStatus'
+        idx_node = self.find_nodes_with_service(self.get_services_map(), "index")[0]
+        api = idx_node + ':9102/getIndexStatus'
         auth = (self.username, self.password)
         response = requests.get(url=api, auth=auth, timeout=timeout)
         if response.status_code == 200:
