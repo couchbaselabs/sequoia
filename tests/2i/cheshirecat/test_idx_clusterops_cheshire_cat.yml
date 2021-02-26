@@ -4,11 +4,12 @@
 - template: set_gsi_config
   args: "{{.ActiveIndexNode 0}}, 'indexer.plasma.backIndex.enablePageBloomFilter':true"
 
+# Temporarily disabling In-memory compression
 ############### Enable Plasma In memory compression ################
-- template: set_gsi_config
-  args: "{{.ActiveIndexNode 0}}, 'indexer.plasma.mainIndex.enableInMemoryCompression':true"
-- template: set_gsi_config
-  args: "{{.ActiveIndexNode 0}}, 'indexer.plasma.backIndex.enableInMemoryCompression':true"
+#- template: set_gsi_config
+#  args: "{{.ActiveIndexNode 0}}, 'indexer.plasma.mainIndex.enableInMemoryCompression':true"
+#- template: set_gsi_config
+#  args: "{{.ActiveIndexNode 0}}, 'indexer.plasma.backIndex.enableInMemoryCompression':true"
 
 ############### Enable GSI OSO mode ################
 # Temporarily not enabling OSO mode as per MB-43725

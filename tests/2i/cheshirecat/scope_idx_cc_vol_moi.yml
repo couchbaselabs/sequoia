@@ -52,7 +52,7 @@ buckets:
 servers: # each server tag represents a cluster
   -
       name: local
-      count: 12
+      count: 11
       ram: 80%
       index_ram: 80%
       index_storage: memory_optimized

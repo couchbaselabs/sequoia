@@ -32,11 +32,11 @@ SCOPENAME_SUFFIX = "_scope"
 # Hotel DS
 HOTEL_DS_INDEX_TEMPLATES = [
     {"indexname": "idx1",
-     "statement": "CREATE INDEX idx1_idxprefix ON keyspacenameplaceholder(country, DISTINCT ARRAY `r`.`ratings`.`Check in / front desk` FOR r in `reviews` END,array_count((`public_likes`)),array_count((`reviews`)) DESC,`type`,`phone`,`price`,`email`,`address`,`name`,`url`) "},
+     "statement": "CREATE INDEX `idx1_idxprefix` ON keyspacenameplaceholder(country, DISTINCT ARRAY `r`.`ratings`.`Check in / front desk` FOR r in `reviews` END,array_count((`public_likes`)),array_count((`reviews`)) DESC,`type`,`phone`,`price`,`email`,`address`,`name`,`url`) "},
     {"indexname": "idx2",
-     "statement": "CREATE INDEX idx2_idxprefix ON keyspacenameplaceholder(`free_breakfast`,`type`,`free_parking`,array_count((`public_likes`)),`price`,`country`)"},
+     "statement": "CREATE INDEX `idx2_idxprefix` ON keyspacenameplaceholder(`free_breakfast`,`type`,`free_parking`,array_count((`public_likes`)),`price`,`country`)"},
     {"indexname": "idx3",
-     "statement": "CREATE INDEX idx3_idxprefix ON keyspacenameplaceholder(`free_breakfast`,`free_parking`,`country`,`city`) "}
+     "statement": "CREATE INDEX `idx3_idxprefix` ON keyspacenameplaceholder(`free_breakfast`,`free_parking`,`country`,`city`) "}
 ]
 
 HOTEL_DS_CBO_FIELDS = "`country`, DISTINCT ARRAY `r`.`ratings`.`Check in / front desk`, array_count((`public_likes`)),array_count((`reviews`)) DESC,`type`,`phone`,`price`,`email`,`address`,`name`,`url`,`free_breakfast`,`free_parking`,`city`"
@@ -864,6 +864,7 @@ class IndexManager:
         return status, results, queryResult
 
     def get_indexer_metadata(self, timeout=120):
+        self.log.info("polling /getIndexStatus")
         api = self.index_baseUrl + 'getIndexStatus'
         auth = (self.username, self.password)
         response = requests.get(url=api, auth=auth, timeout=timeout)

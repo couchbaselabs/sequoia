@@ -188,7 +188,7 @@ class CollectionOperations():
 
     def create_multiple_collection(self, bucket, scope, collection, count):
         for i in range(count):
-            self.create_collection(bucket, scope, collection + "-" + str(i))
+            self.create_collection(bucket, scope, collection + str(i))
 
     def delete_scope(self, bucket, scope):
         scope_list = scope.split(",")
