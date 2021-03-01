@@ -72,7 +72,7 @@
 ###### Start Collections CRUD on bucket_op ignore scope_1 and scope_2
 -
   image: sequoiatools/collections:1.0
-  command: "-i {{.Orchestrator}}:8091 -b {{.Bucket}} -o crud_mode --crud_interval=10 --max_scopes=10 --max_collections=100 --ignore_scope scope_0 --ignore_scope scope_1 --ignore_collection coll-0 --ignore_collection coll-1 --ignore_collection coll-2 --ignore_collection coll-3 --ignore_collection coll-4"
+  command: "-i {{.Orchestrator}}:8091 -b {{.Bucket}} -o crud_mode --crud_interval=10 --max_scopes=10 --max_collections=100 --ignore_scope scope_0 --ignore_scope scope_1 --ignore_collection coll0 --ignore_collection coll1 --ignore_collection coll2 --ignore_collection coll3 --ignore_collection coll4"
   alias: collection_crud1
 
 -
@@ -161,11 +161,11 @@
 ####### load data into source of new collections #######
 -
   image: sequoiatools/gideon2
-  command: "kv --ops {{.Scale 500}} --create 100  --hosts {{.Orchestrator}} --bucket bucket_op --scope scope_0 --collection coll-3,coll-4"
-- command: "kv --ops {{.Scale 500}} --create 100  --hosts {{.Orchestrator}} --bucket timer_op --scope scope_0 --collection coll-3,coll-4"
-- command: "kv --ops {{.Scale 500}} --create 100  --hosts {{.Orchestrator}} --bucket n1ql_op --scope scope_0 --collection coll-3,coll-4"
-- command: "kv --ops {{.Scale 500}} --create 100  --hosts {{.Orchestrator}} --bucket source_op --scope scope_0 --collection coll-3,coll-4"
-- command: "kv --ops {{.Scale 500}} --create 100  --hosts {{.Orchestrator}} --bucket curl_op --scope scope_0 --collection coll-3,coll-4"
+  command: "kv --ops {{.Scale 500}} --create 100  --hosts {{.Orchestrator}} --bucket bucket_op --scope scope_0 --collection coll3,coll4"
+- command: "kv --ops {{.Scale 500}} --create 100  --hosts {{.Orchestrator}} --bucket timer_op --scope scope_0 --collection coll3,coll4"
+- command: "kv --ops {{.Scale 500}} --create 100  --hosts {{.Orchestrator}} --bucket n1ql_op --scope scope_0 --collection coll3,coll4"
+- command: "kv --ops {{.Scale 500}} --create 100  --hosts {{.Orchestrator}} --bucket source_op --scope scope_0 --collection coll3,coll4"
+- command: "kv --ops {{.Scale 500}} --create 100  --hosts {{.Orchestrator}} --bucket curl_op --scope scope_0 --collection coll3,coll4"
 
 #### deploy new handlers #####
 - image: sequoiatools/eventing:7.0
