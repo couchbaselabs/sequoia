@@ -9,7 +9,7 @@ import httplib2
 
 
 class EventingHelper:
-    handler_map={"bucket_op":"CC/bucket_op.js","timers":"CC/timers.js","n1ql":"CC/n1ql.js","sbm":"CC/sbm.js","curl":"CC/curl.js"}
+    handler_map={"bucket_op":"CC/bucket_op.js","timers":"CC/timers.js","n1ql":"CC/n1ql.js","sbm":"CC/sbm.js","curl":"CC/curl.js","bucket_op_sbm":"CC/bucket_op_sbm.js"}
 
     def run(self):
         usage = '''%prog -i hostname:port -u username -p password -s source_collection -m metadata_colletcion -d bindings -t type -n number'''
@@ -27,6 +27,9 @@ class EventingHelper:
         parser.add_option("--wait",dest="wait",default=False)
         parser.add_option("--state",dest="state")
         parser.add_option("-l",dest="log_level",default="INFO",choices=['INFO','ERROR','WARNING','DEBUG','TRACE'])
+        parser.add_option("--timeout",dest="timeout",type="int", default=1200)
+        parser.add_option("--sleep",dest="sleep",type="int", default=60)
+        parser.add_option("--sbm",dest="sbm",default=False)
         options, args = parser.parse_args()
         print(options)
         self.username = options.username
@@ -271,9 +274,10 @@ class EventingHelper:
         url = "http://" + self.hostname + ":8093/query/service"
         body="statement="+query
         response, content = httplib2.Http(timeout=120).request(uri=url, method="POST", headers=headers,body=body)
-        print content, response
         if response.status != 200:
+            print content, response
             raise Exception(content)
+        return json.loads(content)
 
     def fillter_handler(self,handlers,prefix):
         return [str for str in handlers if prefix in str]
@@ -281,9 +285,33 @@ class EventingHelper:
     def verify_doc(self, options):
         source_collection=options.source
         destination_collection=options.bindings
-        source_query="select raw count(*) from "+source_collection
-        dst_query = "select raw count(*) from " + destination_collection
-
+        source_query="select raw count(*) from "+str(source_collection)
+        dst_query = "select raw count(*) from "+str(destination_collection[0])
+        source_count=self.execute_n1ql_query(source_query)
+        binding_count=self.execute_n1ql_query(dst_query)
+        curr_count = 0
+        expected_count = (options.timeout / options.sleep)
+        while curr_count < expected_count:
+            if source_count["results"][0] == binding_count["results"][0] and not options.sbm:
+                break
+            elif 2*source_count["results"][0] == binding_count["results"][0] and options.sbm:
+                break
+            print("No of docs in source and destination : Source Bucket({0}) : {1}, Destination Bucket({2}) : {3}".format(
+                    source_collection, source_count["results"][0], destination_collection, binding_count["results"][0]))
+            time.sleep(options.sleep)
+            curr_count += 1
+            source_count = self.execute_n1ql_query(source_query)
+            binding_count = self.execute_n1ql_query(dst_query)
+        if source_count["results"][0] == binding_count["results"][0]:
+            print("No of docs in source and destination match: Source Bucket({0}) : {1}, Destination Bucket({2}) : {3}".
+                  format(source_collection, source_count["results"][0], destination_collection, binding_count["results"][0]))
+        if options.sbm and binding_count["results"][0] == 2*source_count["results"][0]:
+            print(
+                "No of docs for source bucket mutation match for sbm: Source Bucket({0}) : {1}, Destination Bucket({2}) : {3}".format(
+                    source_collection, source_count["results"][0], destination_collection, binding_count["results"][0]))
+        elif curr_count >= expected_count:
+            raise Exception("No of docs in source and destination don't match: Source Bucket({0}) : {1}, Destination Bucket({2}): {3}".
+            format(source_collection, source_count["results"][0], destination_collection, binding_count["results"][0]))
 
 if __name__ == "__main__":
     EventingHelper().run()

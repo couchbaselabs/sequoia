@@ -1,0 +1,74 @@
+---
+users:
+  -
+      name: bucket_op
+      password: password
+      roles: admin
+      auth_domain: local
+  -
+      name: curl_op
+      password: password
+      roles: admin
+      auth_domain: local
+  -
+      name: timer_op
+      password: password
+      roles: admin
+      auth_domain: local
+  -
+      name: source_op
+      password: password
+      roles: admin
+      auth_domain: local
+  -
+      name: n1ql_op
+      password: password
+      roles: admin
+      auth_domain: local
+  -
+      name: metadata
+      password: password
+      roles: admin
+      auth_domain: local
+
+
+buckets:
+  -
+      name: bucket_op
+      ram: 17%
+  -
+      name: timer_op
+      ram: 17%
+  -
+      name: source_op
+      ram: 17%
+  -
+      name: n1ql_op
+      ram: 17%
+  -
+      name: curl_op
+      ram: 17%
+  -
+      name: metadata
+      ram: 3%
+
+
+servers: # each server tag represents a cluster
+  -
+      name: local
+      count: 12
+      ram: 90%
+      eventing_ram: 90%
+      index_ram: 90%
+      init_nodes: 9
+      services:
+        eventing: 3
+        index: 1
+        query: 1
+      rest_port: 8091
+      data_path: "/data"
+      index_path: "/data"
+      rest_username: Administrator
+      rest_password: password
+      buckets: bucket_op,source_op,timer_op,curl_op,n1ql_op,metadata
+      users: bucket_op,source_op,timer_op,curl_op,n1ql_op,metadata

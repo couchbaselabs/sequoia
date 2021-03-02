@@ -667,7 +667,12 @@ func (cm *ContainerManager) WaitContainer(container *docker.Container, c chan Ta
 	}
 
 	// wait for container
-	rc, _ := client.WaitContainer(container.ID)
+	rc, cerr := client.WaitContainer(container.ID)
+	if cerr != nil {
+		msg := fmt.Sprintf("Error while waiting for container:",
+			cerr)
+		ecolorsay(msg)
+	}
 
 	// create task result
 	tResult := TaskResult{
