@@ -251,8 +251,8 @@
 
 # replica data loading for eventing source with docs that will expire after 1 hour
 - image: sequoiatools/gideon2
-  command: "kv --ops {{.Scale 500}} --create 80 --delete 20 --get 82 --sizes 64 96  --expire 100 --ttl 3600  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --scope event_0 --collection coll-0"
-- command: "kv --ops {{.Scale 500}} --create 80 --delete 20 --get 82 --sizes 64 96  --expire 100 --ttl 3600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}} --scope event_0 --collection coll-0"
+  command: "kv --ops {{.Scale 500}} --create 80 --delete 20 --get 82 --sizes 64 96  --expire 100 --ttl 3600  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --scope event_0 --collection coll0"
+- command: "kv --ops {{.Scale 500}} --create 80 --delete 20 --get 82 --sizes 64 96  --expire 100 --ttl 3600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}} --scope event_0 --collection coll0"
 
 ############### data loading to collections ################
 - image: sequoiatools/catapult
