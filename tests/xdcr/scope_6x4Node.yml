@@ -33,7 +33,7 @@ buckets:
 servers:
   -
       name: local
-      count: 6
+      count: 7
       ram: 95%
       rest_username: Administrator
       rest_password: password
@@ -43,7 +43,7 @@ servers:
       users: bucket0, bucket1, bucket2
   -
       name: remote
-      count: 4
+      count: 5
       ram: 95%
       rest_username: Administrator
       rest_password: password

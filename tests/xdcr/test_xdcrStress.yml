@@ -20,8 +20,12 @@
 - image: sequoiatools/catapult
   command: "-i {{.Orchestrator}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -n {{.Scale 5000}} -pc 100
   -dt Hotel -ac True"
+  wait: true
 - command: "-i {{.Orchestrator}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -n {{.Scale 5000}} -pc 100
   -dt Person -ac True"
+  wait: true
+- image: sequoiatools/gideon:3.0.0a4
+  command: "kv --ops {{.Scale 1000}} --create 50 --get 10 --delete 40  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}} --durability majority"
 
 #============ Create replications ============
 - image: sequoiatools/couchbase-cli:7.0
@@ -64,34 +68,48 @@
   wait: true
 
 #============ Cluster Ops ============
-# swap failover
-- template: add_node
-  args: "{{.NthDataNode 5}}"
+# Graceful Failover and rebalance out 1 KV
+-
+  template: failover_node
+  args: "{{.ActiveDataNode 1}}"
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
   wait: true
-- template: failover_node_forced
-  args: "{{.NthDataNode 1}}"
+-
+  template: rebalance
   wait: true
-- template: failover_node_forced
-  args: "{{.NthDataNode 2}}"
+
+# Rebalance-in failed over node
+-
+  template: add_node
+  args: "{{.NthInActiveNode 0}}"
   wait: true
-- template: rebalance
+-
+  template: rebalance
+  wait: true
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
   wait: true
 
 # start continuous crud
 - image: sequoiatools/catapult
   command: "-i {{.Orchestrator}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}}
-            -n {{.Scale 1000}} -pc 80 -pu 40 -pd 60 -dt Hotel
-            -ac True -sd True -lf True -li 300"
+            -n {{.Scale 10000}} -pc 80 -pu 40 -pd 60 -dt Hotel
+            -ac True -sd True -lf True -li 300 -fu price,free_parking"
 - command: "-i {{.Orchestrator}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}}
-            -n {{.Scale 2000}} -pc 80 -pu 40 -pd 60 -dt Person -de 200
+            -n {{.Scale 20000}} -pc 80 -pu 40 -pd 60 -dt Person -de 200
             -ac True -sd True -lf True -li 400"
 - command: "-i {{.Orchestrator}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}}
-            -n {{.Scale 3000}} -pc 80 -pu 40 -pd 60 -dt Employee -de 400
+            -n {{.Scale 30000}} -pc 80 -pu 40 -pd 60 -dt Employee -de 400
             -ac True -sd True -lf True -li 500"
   alias: CatapultBucket2
 - image: sequoiatools/catapult
   command: "-i {{.Nodes | .Cluster 1 | net 0}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}}
-            -n {{.Scale 4000}} -pc 80 -pu 60 -pd 40 -dt Employee -de 600
+            -n {{.Scale 40000}} -pc 80 -pu 60 -pd 40 -dt Employee -de 600
             -ac True -sd True -lf True -li 600"
 
 #============  Swap Rebalance ################
@@ -153,6 +171,9 @@
   command: "-u {{.RestUsername}}:{{.RestPassword}} http://{{.Orchestrator}}:{{.RestPort}}/pools/default/remoteClusters"
   alias: ReplId
   wait: true
+- command: "-u {{.RestUsername}}:{{.RestPassword}} http://{{.Nodes | .Cluster 1 | net 0}}:{{.RestPort}}/pools/default/remoteClusters"
+  alias: RemoteReplId
+  wait: true
 
 # delete scope_0 to scope_4 in bucket0 to bucket2 on local and remote
 - foreach: "{{range $i, $offset := mkrange 0 2}}"
@@ -163,6 +184,19 @@
   image: sequoiatools/collections:1.0
   command: "-i {{$.Nodes | $.Cluster 1 | net 0}}:{{$.RestPort}} -b bucket{{$offset}} -o delete -s scope --count 5"
   wait: true
+
+#============ Kill projector ============
+-
+  template: kill_process
+  args: "{{.NthDataNode 1}}, projector"
+
+# Sleep for some more time after projector-kill completes (10 minutes)
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "600"
+   wait: true
+
 # recreate scope_0 to scope_4 in bucket_0 to bucket_2 on local and remote
 - foreach: "{{range $i, $offset := mkrange 0 2}}"
   image: sequoiatools/collections:1.0
@@ -212,10 +246,19 @@
 - image: sequoiatools/couchbase-cli:7.0
   command: "xdcr-replicate -c {{.Orchestrator}}:{{.RestPort}} --pause -u {{.RestUsername}} -p {{.RestPassword}}
             --xdcr-replicator={{(index (.AllLogs `ReplId` | json) 0).uuid}}/{{.Bucket}}/{{.Bucket}}"
-# sleep
+  wait: true
+# kill memcached
+- template: memcached_kill
+  args: "{{.ActiveDataNode 1}}"
+  wait: true
 - image: sequoiatools/cmd
   entrypoint: sleep
   command: "300"
+  wait: true
+- template: start_memcached
+  args: "{{.ActiveDataNode 1}}"
+  wait: true
+- template: rebalance
   wait: true
 # resume
 - image: sequoiatools/couchbase-cli:7.0
@@ -303,30 +346,6 @@
             -d collectionsOSOMode=true"
   wait: true
 
-#============ More Cluster Ops ============
-- template: memcached_kill
-  args: "{{.ActiveDataNode 1}}"
-  wait: true
-
-- image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "300"
-  wait: true
-
-- template: start_memcached
-  args: "{{.ActiveDataNode 1}}"
-  wait: true
-
-# hard failover remote node when remote finished rebalance-in
-#- before: "{{.Status `RemoteRebalance` | eq `exited`}}"
-#  image: sequoiatools/couchbase-cli:7.0
-#  command: "failover -c {{.Nodes | .Cluster 1 | net 0}}:{{.RestPort}}
-#       --server-failover http://{{.Nodes | .Cluster 1 | net 3}}:{{.RestPort}}
-#       -u  {{.RestUsername}} -p  {{.RestPassword}} --force --hard"
-#  wait: true
-#- command:  "rebalance -c  {{.Nodes | .Cluster 1 | net 0}}:{{.RestPort}} -u  {{.RestUsername}} -p  {{.RestPassword}}"
-#  wait: true
-
 #============ item count check for bucket1 ============
 - image: sequoiatools/xdcrmanager
   command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}}
@@ -348,9 +367,16 @@
             http://{{$.Orchestrator}}:{{$.RestPort}}/controller/cancelXDCR/{{(index (.AllLogs `ReplId` | json) 0).uuid}}%2F{{.NthBucket 2}}%2F{{.NthBucket 2}}
             -X DELETE"
   wait: true
+- command: "-u {{.RestUsername}}:{{.RestPassword}} -X POST
+            http://{{.Nodes | .Cluster 1 | net 0}}:{{$.RestPort}}/controller/cancelXDCR/{{(index (.AllLogs `RemoteReplId` | json) 0).uuid}}%2F{{.NthBucket 2}}%2F{{.NthBucket 2}}
+            -X DELETE"
+  wait: true
 
 #============ delete xdcr remotes ============
 - image: sequoiatools/couchbase-cli:7.0
   command:  "xdcr-setup -c {{$.Orchestrator}}:{{$.RestPort}} --delete --xdcr-cluster-name remote
+             -u {{$.RestUsername}} -p {{$.RestPassword}}"
+  wait: true
+- command:  "xdcr-setup -c {{.Nodes | .Cluster 1 | net 0}} --delete --xdcr-cluster-name remote
              -u {{$.RestUsername}} -p {{$.RestPassword}}"
   wait: true
