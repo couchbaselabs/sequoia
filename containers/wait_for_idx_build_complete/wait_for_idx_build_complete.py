@@ -15,9 +15,9 @@ class WaitForAllIndexBuildComplete():
         cluster_password = sys.argv[3]
         # Buckets to be skipped for checking build status
         excluded_buckets = []
-        if sys.argv[4]:
-            excluded_buckets = sys.argv[4].split(",")
 
+        if len(sys.argv) > 4:
+            excluded_buckets = sys.argv[4].split(",")
 
         # Get status for all indexes
         response = requests.get(index_status_endpoint, auth=(cluster_username, cluster_password), verify=True)
@@ -26,16 +26,21 @@ class WaitForAllIndexBuildComplete():
             response = json.loads(response.content)
 
             if "status" in response:
-                all_indexes_built = True
                 # Check the status field for all indexes. status should be ready for all indexes.
+                all_indexes_built = True
+
                 for index in response["status"]:
-                    if (index["bucket"] not in excluded_buckets):
-                        if index["status"] != "Ready":
-                            all_indexes_built &= False
-                        else:
-                            all_indexes_built &= True
+                    print (index["name"] + "," + index["status"] )
+                    if index["status"] == "Ready":
+                        all_indexes_built &= True
                     else:
-                        pass
+                        if excluded_buckets :
+                            if index["bucket"] not in excluded_buckets:
+                                all_indexes_built &= False
+                            else:
+                                all_indexes_built &= True
+                        else:
+                            all_indexes_built &= False
 
                 return all_indexes_built
             else:
@@ -157,6 +162,7 @@ if __name__ == '__main__':
             try:
                 all_indexes_built = WaitForAllIndexBuildComplete().check_index_status()
             except Exception as e:
+                print str(e)
                 print "Error getting index status"
                 break
 
