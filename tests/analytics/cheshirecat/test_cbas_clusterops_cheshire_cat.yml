@@ -61,7 +61,7 @@
 
 ############### Start creating and dropping CBAS infra in a loop on bucket4 and bucket5###############
 - image: sequoiatools/analyticsmanager:1.0
-  command: "-i {{.ActiveAnalyticsNode 0 | noport}} -b {{.NthBucket 4}},{{.NthBucket 3}}
+  command: "-i {{.ActiveAnalyticsNode 0 | noport}} -b {{.Bucket}},{{.NthBucket 1}},{{.NthBucket 2}}
   -o create_drop_dataverse_dataset_in_loop -w false --interval 60 -t 0 --api_timeout 3600"
   alias: cbas_loop1
 
