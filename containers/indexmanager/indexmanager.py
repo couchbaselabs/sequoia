@@ -3,7 +3,7 @@ import string
 import sys
 from datetime import datetime
 from couchbase.cluster import Cluster, ClusterOptions, QueryOptions
-from couchbase.exceptions import QueryException, QueryIndexAlreadyExistsException, TimeoutException, HTTPException
+import couchbase.exceptions
 from couchbase_core.cluster import PasswordAuthenticator
 from couchbase_core.bucketmanager import BucketManager
 from couchbase.management.collections import *
@@ -329,8 +329,12 @@ class IndexManager:
                     if ref_keyspace_dict[index]['partition'] != actual_keyspace_dict[index]['partition']:
                         self.log.error(f"Index state is not matching with expected value."
                                        f"Expected: {ref_keyspace_dict}, Actual: {actual_keyspace_dict}")
-            index_metadata = self.get_indexer_metadata()['status']
-            for index in index_metadata:
+            index_metadata = self.get_indexer_metadata()
+            if 'status' not in index_metadata:
+                self.log.error("Index metadata not correct : {0}".format(index_metadata))
+                return
+            index_status = index_metadata['status']
+            for index in index_status:
                 keyspace_name = f'{index["bucket"]}.{index["scope"]}.{index["collection"]}'
                 index_name = index['indexName']
                 if reference_index_map[keyspace_name][index_name]['replica_count'] != index['numReplica'] + 1:
@@ -593,20 +597,33 @@ class IndexManager:
 
     def get_stats(self, stat_key, index_node_addr, index_node_port=9102):
         endpoint = "http://" + index_node_addr + ":" + str(index_node_port) + "/stats?consumerFilter=planner"
-        # Get index stats from the indexer node
-        response = requests.get(endpoint, auth=(
-            self.username, self.password), verify=True, )
 
-        if (response.ok):
-            response = json.loads(response.text)
-            if stat_key in response:
-                return int(response[stat_key])
+        try:
+            # Get index stats from the indexer node
+            response = requests.get(endpoint, auth=(
+                self.username, self.password), verify=True, )
+
+            if response.ok:
+                response = json.loads(response.text)
+                if stat_key in response:
+                    return int(response[stat_key])
+                else:
+                    self.log.info("Stat {0} not found in stats output for host {1}".format(stat_key, index_node_addr))
+                    return -1
             else:
-                self.log.info("Stat {0} not found in stats output for host {1}".format(stat_key, index_node_addr))
+                self.log.info("Stat endpoint request status was not 200 : {0}".format(response))
                 return -1
-        else:
-            self.log.info("Stat endpoint request status was not 200 : {0}".format(response))
-            return -1
+
+        except requests.exceptions.HTTPError as errh:
+            self.log.error("HTTPError getting response from /stats : {0}".format(str(errh)))
+        except requests.exceptions.ConnectionError as errc:
+            self.log.error("ConnectionError getting response from /stats : {0}".format(str(errc)))
+        except requests.exceptions.Timeout as errt:
+            self.log.error("Timeout getting response from /stats : {0}".format(str(errt)))
+        except requests.exceptions.RequestException as err:
+            self.log.error("Error getting response from /stats : {0}".format(str(err)))
+
+
 
     """
     Determine number of index nodes in the cluster and set max num replica accordingly.
@@ -648,26 +665,36 @@ class IndexManager:
         cluster_url = "http://" + self.node_addr + ":" + self.node_port + "/pools/default"
         node_map = []
 
-        # Get map of nodes in the cluster
-        response = requests.get(cluster_url, auth=(
-            self.username, self.password), verify=True, )
+        try:
+            # Get map of nodes in the cluster
+            response = requests.get(cluster_url, auth=(
+                self.username, self.password), verify=True, )
 
-        if (response.ok):
-            response = json.loads(response.text)
+            if (response.ok):
+                response = json.loads(response.text)
 
-            for node in response["nodes"]:
-                clusternode = {}
-                clusternode["hostname"] = node["hostname"].replace(":8091", "")
-                clusternode["services"] = node["services"]
-                mem_used = int(node["memoryTotal"]) - int(node["memoryFree"])
-                clusternode["memUsage"] = round(
-                    float(mem_used / float(node["memoryTotal"]) * 100), 2)
-                clusternode["cpuUsage"] = round(
-                    node["systemStats"]["cpu_utilization_rate"], 2)
-                clusternode["status"] = node["status"]
-                node_map.append(clusternode)
-        else:
-            response.raise_for_status()
+                for node in response["nodes"]:
+                    clusternode = {}
+                    clusternode["hostname"] = node["hostname"].replace(":8091", "")
+                    clusternode["services"] = node["services"]
+                    mem_used = int(node["memoryTotal"]) - int(node["memoryFree"])
+                    clusternode["memUsage"] = round(
+                        float(mem_used / float(node["memoryTotal"]) * 100), 2)
+                    clusternode["cpuUsage"] = round(
+                        node["systemStats"]["cpu_utilization_rate"], 2)
+                    clusternode["status"] = node["status"]
+                    node_map.append(clusternode)
+            else:
+                response.raise_for_status()
+
+        except requests.exceptions.HTTPError as errh:
+            self.log.error("HTTPError getting response from {1} : {0}".format(str(errh),cluster_url))
+        except requests.exceptions.ConnectionError as errc:
+            self.log.error("ConnectionError getting response from {1} : {0}".format(str(errc),cluster_url))
+        except requests.exceptions.Timeout as errt:
+            self.log.error("Timeout getting response from {1} : {0}".format(str(errt),cluster_url))
+        except requests.exceptions.RequestException as err:
+            self.log.error("Error getting response from {1} : {0}".format(str(err),cluster_url))
 
         return node_map
 
@@ -840,21 +867,20 @@ class IndexManager:
                 status = queryResult.metadata().status()
                 results = queryResult.rows()
             except:
-                self.log.error("Unexpected error :", sys.exc_info()[0])
                 self.log.info("Query didnt return status or results")
+                self.log.error("Unexpected error :", sys.exc_info()[0])
                 pass
 
-
-        except QueryException as qerr:
+        except couchbase.exceptions.QueryException as qerr:
             self.log.debug("qerr")
             self.log.error(qerr)
-        except HTTPException as herr:
+        except couchbase.exceptions.HTTPException as herr:
             self.log.debug("herr")
             self.log.error(herr)
-        except QueryIndexAlreadyExistsException as qiaeerr:
+        except couchbase.exceptions.QueryIndexAlreadyExistsException as qiaeerr:
             self.log.debug("qiaeerr")
             self.log.error(qiaeerr)
-        except TimeoutException as terr:
+        except couchbase.exceptions.TimeoutException as terr:
             self.log.debug("terr")
             self.log.error(terr)
         except:
@@ -865,11 +891,22 @@ class IndexManager:
     def get_indexer_metadata(self, timeout=120):
         self.log.info("polling /getIndexStatus")
         idx_node = self.find_nodes_with_service(self.get_services_map(), "index")[0]
-        api = idx_node + ':9102/getIndexStatus'
+        api = "http://" + idx_node + ':9102/getIndexStatus'
         auth = (self.username, self.password)
-        response = requests.get(url=api, auth=auth, timeout=timeout)
-        if response.status_code == 200:
-            return response.json()
+        try:
+            response = requests.get(url=api, auth=auth, timeout=timeout)
+            if response.status_code == 200:
+                return response.json()
+
+        except requests.exceptions.HTTPError as errh:
+            self.log.error("HTTPError getting response from /getIndexStatus : {0}".format(str(errh)))
+        except requests.exceptions.ConnectionError as errc:
+            self.log.error("ConnectionError getting response from /getIndexStatus : {0}".format(str(errc)))
+        except requests.exceptions.Timeout as errt:
+            self.log.error("Timeout getting response from /getIndexStatus : {0}".format(str(errt)))
+        except requests.exceptions.RequestException as err:
+            self.log.error("Error getting response from /getIndexStatus : {0}".format(str(err)))
+
 
     def wait_until_indexes_online(self, timeout=60, defer_build=False, check_paused_index=False):
         init_time = time.time()
