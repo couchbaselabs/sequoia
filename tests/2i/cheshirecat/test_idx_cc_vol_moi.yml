@@ -48,19 +48,19 @@
 
 ############### initial data loading ################
 - image: sequoiatools/catapult
-  command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -n {{.Scale 15000}} --num_threads 4 -pc 100
+  command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -n {{.Scale 10000}} --num_threads 4 -pc 100
     -dt Hotel -ds 1000 -ac True"
   alias: collection_bucket1_doc_ops1
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 1}} -n {{.Scale 15000}} --num_threads 4 -pc 100
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 1}} -n {{.Scale 10000}} --num_threads 4 -pc 100
     -dt Hotel  -ds 1000 -ac True"
   alias: collection_bucket2_doc_ops1
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 2}} -n {{.Scale 15000}} --num_threads 4 -pc 100
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 2}} -n {{.Scale 10000}} --num_threads 4 -pc 100
     -dt Hotel -ds 1000 -ac True"
   alias: collection_bucket3_doc_ops1
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 3}} -n {{.Scale 15000}} --num_threads 4 -pc 100
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 3}} -n {{.Scale 10000}} --num_threads 4 -pc 100
     -dt Hotel -ds 1000 -ac True"
   alias: collection_bucket4_doc_ops1
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 4}} -n {{.Scale 15000}} --num_threads 4 -pc 100
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 4}} -n {{.Scale 10000}} --num_threads 4 -pc 100
     -dt Hotel -ds 1000 -ac True"
   alias: collection_bucket5_doc_ops1
 
@@ -109,19 +109,19 @@
 
 ############### incremental data loading ################
 - image: sequoiatools/catapult
-  command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -n {{.Scale 5000}} --num_threads 4 -pc 100 -pu 5 -pd 10
+  command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -n {{.Scale 3000}} --num_threads 4 -pc 100 -pu 5 -pd 10
     -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 120 -fu price,free_parking -ac True"
   alias: collection_bucket1_doc_ops2
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 1}} -n {{.Scale 5000}} --num_threads 4 -pc 100 -pu 5 -pd 10
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 1}} -n {{.Scale 3000}} --num_threads 4 -pc 100 -pu 5 -pd 10
     -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 120 -fu price,free_parking -ac True"
   alias: collection_bucket2_doc_ops2
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 2}} -n {{.Scale 5000}} --num_threads 4 -pc 100 -pu 5 -pd 10
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 2}} -n {{.Scale 3000}} --num_threads 4 -pc 100 -pu 5 -pd 10
     -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 120 -fu price,free_parking -ac True"
   alias: collection_bucket3_doc_ops2
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 3}} -n {{.Scale 5000}} --num_threads 4 -pc 100 -pu 5 -pd 10
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 3}} -n {{.Scale 3000}} --num_threads 4 -pc 100 -pu 5 -pd 10
     -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 120 -fu price,free_parking -ac True"
   alias: collection_bucket4_doc_ops2
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 4}} -n {{.Scale 5000}} --num_threads 4 -pc 100 -pu 5 -pd 10
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 4}} -n {{.Scale 3000}} --num_threads 4 -pc 100 -pu 5 -pd 10
     -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 120 -fu price,free_parking -ac True"
   alias: collection_bucket5_doc_ops2
 
