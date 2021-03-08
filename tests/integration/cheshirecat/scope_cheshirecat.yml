@@ -107,6 +107,7 @@ buckets:
       eviction: fullEviction
       ddocs: scale
       compression: active
+      ttl: 3600
   -
       name: WAREHOUSE
       ram: 5%

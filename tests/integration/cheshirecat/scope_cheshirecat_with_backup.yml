@@ -5,7 +5,6 @@ users:
     password: password
     roles: admin
     auth_domain: local
-    ttl: 3600
   -
     name: WAREHOUSE
     password: password
@@ -109,6 +108,7 @@ buckets:
       eviction: fullEviction
       ddocs: scale
       compression: active
+      ttl: 3600
   -
       name: WAREHOUSE
       ram: 5%
