@@ -811,8 +811,13 @@ class FTSIndexManager:
         collection_list = list(types.keys())
         tot_index_col_count = 0
         for col in collection_list:
-            scope, collection = col.split(".")
-            keyspace_name_for_query = "`" + bucket_name + "`.`" + scope + "`.`" + collection + "`"
+            try:
+                scope, collection = col.split(".")
+                keyspace_name_for_query = "`" + bucket_name + "`.`" + scope + "`.`" + collection + "`"
+            except Exception as e:
+                self.log.info(f'Could not get scope and collection for {col}')
+                break
+
             # Get Collection item count from KV via N1QL
             kv_item_count_query = "select raw count(*) from {0};".format(keyspace_name_for_query)
             try:
