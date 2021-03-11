@@ -77,6 +77,8 @@ type SyncGatewaySpec struct {
 	Names       []string
 	Count       uint8  `yaml:"count"`
 	ClusterName string `yaml:"cluster"`
+	Bucket      string `yaml:"bucket"`
+	BucketUser  string `yaml:"bucketuser"`
 	Server      ServerSpec
 	CountOffset uint8
 }
@@ -283,11 +285,21 @@ func (s *ScopeSpec) ApplyToSyncGateway(operation func(string, string, string, []
 			cbs := sgw.Server.Names
 			sshUser := sgw.Server.SSHUsername
 			sshPwd := sgw.Server.SSHPassword
-			bucketName := sgw.Server.BucketSpecs[0].Names[0]
+			bucketName := ""
+			if sgw.Bucket == "" {
+				bucketName = sgw.Server.BucketSpecs[0].Names[0]
+			} else {
+				bucketName = sgw.Bucket
+			}
 
 			// processing bucket username and password
-			busers := strings.Split(sgw.Server.Users, ",")
-			username := busers[0]
+			username := ""
+			if sgw.BucketUser == "" {
+				busers := strings.Split(sgw.Server.Users, ",")
+				username = busers[0]
+			} else {
+				username = sgw.BucketUser
+			}
 			var password string
 
 			for _, user := range s.Users {

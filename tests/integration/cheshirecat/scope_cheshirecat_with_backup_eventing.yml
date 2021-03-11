@@ -169,3 +169,6 @@ syncgateways:
   -
     name: sg
     count: 1
+    cluster: local
+    bucket: bucket7
+    bucketuser: bucket7
