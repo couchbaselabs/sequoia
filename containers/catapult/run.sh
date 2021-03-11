@@ -1,7 +1,7 @@
 #!/bin/bash
 
-echo java -jar javaclient.jar $@
-java -jar javaclient.jar $@
+echo java -Xms2G -Xmx2G -jar javaclient.jar $@
+java -Xms2G -Xmx2G -jar javaclient.jar $@
 if [[ $? -eq 1 ]]
 then
     echo "Catapult exiting because: "
