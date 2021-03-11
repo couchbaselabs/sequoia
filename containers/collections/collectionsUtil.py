@@ -4,6 +4,7 @@ import time
 from datetime import datetime
 import httplib2
 import json
+import socket
 from optparse import OptionParser
 
 
@@ -311,20 +312,35 @@ class CollectionOperations():
             # Wait for the interval before doing the next CRUD operation
             time.sleep(interval)
 
-    def api_call(self, url, method="GET", body=None):
+    def api_call(self, url, method="GET", body=None, timeout=120, retry_timeout=20):
         # authorization = base64.encodestring(self.username+":"+self.password)
 
         headers = {'content-type': 'application/x-www-form-urlencoded'}
 
         url = "http://" + self.host + "/pools/default/buckets/" + url
-        http = httplib2.Http(timeout=120)
+        end_time = time.time() + timeout + retry_timeout # Threshold before raising exceptions
+        http = httplib2.Http(timeout=timeout)
         http.add_credentials(self.username, self.password)
-        response, content = http.request(uri=url, method=method, headers=headers, body=body)
-        if response['status'] in ['200', '201', '202']:
-            return True, json.loads(content), response
-        else:
-            return False, content, response
-
+        while True:
+            try:
+                response, content = http.request(uri=url, method=method, headers=headers, body=body)
+                if response['status'] in ['200', '201', '202']:
+                    return True, json.loads(content), response
+                else:
+                    return False, content, response
+            except ConnectionError as e:
+                if time.time() > end_time:
+                    raise e
+                print("Retrying because Connection error connecting to", self.host)
+            except socket.error as e:
+                if time.time() > end_time:
+                    raise e
+                print("Retrying because Socket error connecting to ", self.host)
+            except httplib2.ServerNotFoundError as e:
+                if time.time() > end_time:
+                    raise e
+                print("Retrying because ServerNotFoundError with ", self.host)
+            time.sleep(3) # sleep before retry
 
 if __name__ == "__main__":
     CollectionOperations().run()
