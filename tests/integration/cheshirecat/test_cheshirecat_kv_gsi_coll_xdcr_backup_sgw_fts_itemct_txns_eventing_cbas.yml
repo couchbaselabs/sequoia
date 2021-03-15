@@ -349,11 +349,13 @@
 
 # create fts index with custom child field using result key as type
 - template: create_index_with_child_field
+  requires:  "{{eq true .DoOnce }}"
   args: "{{.FTSNodePort}}, good_state, default, SUCCESS, state, false, result, scorch"
   wait: true
 
 # create fts index with nested type mappings and store results
 - template: create_index_with_child_field_nested_type_mapping
+  requires:  "{{eq true .DoOnce }}"
   args: "{{.FTSNodePort}}, social, default, gideon, description, profile, status, true, , scorch"
 
 # get replication id
@@ -589,7 +591,7 @@
 ################ Check for item count #####################################
 - section_start: fts_indexes_item_count_check
 - image: sequoiatools/ftsindexmanager
-  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a item_count_check -vt 1200"
+  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a item_count_check -vt 2400"
   wait: true
 
 - section_end: fts_indexes_item_count_check

@@ -816,7 +816,8 @@ class FTSIndexManager:
                 keyspace_name_for_query = "`" + bucket_name + "`.`" + scope + "`.`" + collection + "`"
             except Exception as e:
                 self.log.info(f'Could not get scope and collection for {col}')
-                break
+                keyspace_name_for_query = "`" + bucket_name + "`.`_default`.`_default`"
+
 
             # Get Collection item count from KV via N1QL
             kv_item_count_query = "select raw count(*) from {0};".format(keyspace_name_for_query)
