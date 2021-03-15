@@ -192,6 +192,7 @@
   image: sequoiatools/sgw
   command: "CBS_HOSTS={{.Orchestrator}} SGW_HOSTS={{.SyncGatewayAll}} SSH_USER={{.SSHUsername}} SSH_PWD={{.SSHPassword}}"
   wait: false
+  requires:  "{{eq true .DoOnce }}"
 
 # Start creating indexes in a loop on bucket4 & bucket5 (Collection CRUD workload)
 - image: sequoiatools/indexmanager
