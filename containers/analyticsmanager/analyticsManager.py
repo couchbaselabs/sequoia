@@ -444,6 +444,7 @@ class AnalyticsOperations():
         except Exception as err:
             self.log.error(str(err))
             time.sleep(10)
+            return False
 
     def drop_link(self, link):
         cmd = "drop link {0} if exists;".format(link)
@@ -476,6 +477,7 @@ class AnalyticsOperations():
             except Exception as err:
                 self.log.error(str(err))
                 time.sleep(10)
+                return False, "", ""
 
     def wait_for_ingestion_complete(self, datasets):
         datasets = datasets[:]
@@ -983,6 +985,7 @@ class AnalyticsOperations():
         except Exception as err:
             self.log.error(str(err))
             time.sleep(10)
+            return False, "", ""
 
     def api_call(self, url, method="GET", body=None, use_remote_host=False):
 
@@ -1004,6 +1007,7 @@ class AnalyticsOperations():
         except Exception as err:
             self.log.error(str(err))
             time.sleep(10)
+            return False, "", ""
 
 if __name__ == "__main__":
     AnalyticsOperations().run()
