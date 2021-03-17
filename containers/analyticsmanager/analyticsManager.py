@@ -431,15 +431,19 @@ class AnalyticsOperations():
         url = "http://" + self.options.host + ":8095/analytics/link"
         http = httplib2.Http(timeout=self.options.api_timeout)
         http.add_credentials(self.options.username, self.options.password)
-        response, content = http.request(uri=url, method="POST", headers=headers, params=params)
-        if response['status'] in ['200', '201', '202']:
-            self.log.info("Created remote link {0}".format(link_name))
-            return True
-        else:
-            self.log.error("Failed to Create remote link {0}".format(link_name))
-            self.log.error(str(content))
-            self.log.error(str(response))
-            return False
+        try:
+            response, content = http.request(uri=url, method="POST", headers=headers, params=params)
+            if response['status'] in ['200', '201', '202']:
+                self.log.info("Created remote link {0}".format(link_name))
+                return True
+            else:
+                self.log.error("Failed to Create remote link {0}".format(link_name))
+                self.log.error(str(content))
+                self.log.error(str(response))
+                return False
+        except Exception as err:
+            self.log.error(str(err))
+            time.sleep(10)
 
     def drop_link(self, link):
         cmd = "drop link {0} if exists;".format(link)
@@ -459,15 +463,19 @@ class AnalyticsOperations():
         http = httplib2.Http(timeout=self.options.api_timeout)
         http.add_credentials(self.options.username, self.options.password)
         while True:
-            response, content = http.request(uri=url, method="GET", headers=headers)
-            if response['status'] in ['200', '201', '202']:
-                content = json.loads(content)
-                return True, content, response
-            else:
-                self.error.log("Error while fetching pending mutations for all datasets")
-                self.log.error(str(content))
-                self.log.error(str(response))
-                return False, content, response
+            try:
+                response, content = http.request(uri=url, method="GET", headers=headers)
+                if response['status'] in ['200', '201', '202']:
+                    content = json.loads(content)
+                    return True, content, response
+                else:
+                    self.error.log("Error while fetching pending mutations for all datasets")
+                    self.log.error(str(content))
+                    self.log.error(str(response))
+                    return False, content, response
+            except Exception as err:
+                self.log.error(str(err))
+                time.sleep(10)
 
     def wait_for_ingestion_complete(self, datasets):
         datasets = datasets[:]
@@ -966,11 +974,15 @@ class AnalyticsOperations():
         params = {'statement': statement, 'pretty': "true",
                   'client_context_id': None, 'timeout': "{0}s".format(self.options.api_timeout)}
         params = json.dumps(params)
-        response, content = http.request(uri=url, method="POST", headers=headers, body=params)
-        if response['status'] in ['200', '201', '202']:
-            return True, json.loads(content, encoding="UTF-8"), response
-        else:
-            return False, content, response
+        try:
+            response, content = http.request(uri=url, method="POST", headers=headers, body=params)
+            if response['status'] in ['200', '201', '202']:
+                return True, json.loads(content, encoding="UTF-8"), response
+            else:
+                return False, content, response
+        except Exception as err:
+            self.log.error(str(err))
+            time.sleep(10)
 
     def api_call(self, url, method="GET", body=None, use_remote_host=False):
 
@@ -983,11 +995,15 @@ class AnalyticsOperations():
         else:
             url = "http://" + self.options.host + ":8091/pools/default/buckets/" + url
             http.add_credentials(self.options.username, self.options.password)
-        response, content = http.request(uri=url, method=method, headers=headers, body=body)
-        if response['status'] in ['200', '201', '202']:
-            return True, json.loads(content), response
-        else:
-            return False, content, response
+        try:
+            response, content = http.request(uri=url, method=method, headers=headers, body=body)
+            if response['status'] in ['200', '201', '202']:
+                return True, json.loads(content), response
+            else:
+                return False, content, response
+        except Exception as err:
+            self.log.error(str(err))
+            time.sleep(10)
 
 if __name__ == "__main__":
     AnalyticsOperations().run()
