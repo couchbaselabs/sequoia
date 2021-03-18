@@ -8,13 +8,14 @@
   image: sequoiatools/analyticsmanager:1.0
   command: "-i {{.ActiveAnalyticsNode 0 | noport}} -b {{.NthBucket 4}},{{
   .NthBucket 5}},{{.NthBucket 6}},{{.NthBucket 7}} -o create_cbas_infra
-  --dv_cnt 7 --ds_cnt 35 --idx_cnt 11 --data_src catapult --syn_cnt 70 -w
-  false --ingestion_timeout 3600 --ds_without_where 2 --api_timeout 3600"
+  --dv_cnt {{.Scale 5}} --ds_cnt {{.Scale 15}} --idx_cnt {{.Scale 5}}
+  --data_src catapult --syn_cnt {{.Scale 15}} -w false --ingestion_timeout
+  3600 --ds_without_where 2 --api_timeout 3600"
   wait: true
 - command: "-i {{.ActiveAnalyticsNode 0 | noport}} -b {{.Bucket}},{{.NthBucket 1}} -o create_cbas_infra
-  --exc_coll _default --dv_cnt 3 --ds_cnt 15 --idx_cnt 3 --data_src gideon
-  --syn_cnt 30 -w false --ingestion_timeout 3600 --ds_without_where 2
-  --api_timeout 3600"
+  --exc_coll _default --dv_cnt {{.Scale 5}} --ds_cnt {{.Scale 15}} --idx_cnt
+   {{.Scale 5}} --data_src gideon --syn_cnt {{.Scale 15}} -w false
+   --ingestion_timeout 3600 --ds_without_where 2 --api_timeout 3600"
   wait: true
 
 # Sleep for some time to allow data ingestion to start before running the queries
