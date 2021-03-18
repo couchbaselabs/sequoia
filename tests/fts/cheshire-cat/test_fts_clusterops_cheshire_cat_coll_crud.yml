@@ -150,15 +150,15 @@
   #client:
     #op: rm
     #container: collection_crud1
--
-  client:
-    op: rm
-    container: index_loop1
+#-
+  #client:
+    #op: rm
+    #container: index_loop1
 
--
-  client:
-    op: rm
-    container: index_loop2
+#-
+  #client:
+    #op: rm
+    #container: index_loop2
 
 
 -
