@@ -26,6 +26,7 @@ class EventingHelper:
         parser.add_option("-o",dest="operation",choices=['create', 'deploy', 'pause', 'resume', 'undeploy', 'delete', 'wait_for_state','verify'])
         parser.add_option("--wait",dest="wait",default=False)
         parser.add_option("--state",dest="state")
+        parser.add_option("-l",dest="log_level",default="INFO",choices=['INFO','ERROR','WARNING','DEBUG','TRACE'])
         options, args = parser.parse_args()
         print(options)
         self.username = options.username
@@ -217,6 +218,7 @@ class EventingHelper:
         body['settings']['deployment_status'] = False
         body['settings']['processing_status'] = False
         body['settings']['worker_count'] = 1
+        body['settings']['log_level'] = options.log_level
         if options.type=='curl':
             body['depcfg']['curl'].append({"hostname": "http://qa.sc.couchbase.com/", "value": "server","auth_type":'no-auth',
                                           "allow_cookies": True, "validate_ssl_certificate": True})

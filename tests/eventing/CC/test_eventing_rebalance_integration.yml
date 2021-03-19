@@ -16,13 +16,13 @@
   wait: true
 
 - image: sequoiatools/eventing:7.0
-  command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -s {{.Bucket}}.event_0.coll0 -m {{.NthBucket 3}}.event_0.coll0 -d dst_bucket.{{.NthBucket 2}}.event_0.coll0.rw -t timers -o create --name timers"
+  command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -s {{.Bucket}}.event_0.coll0 -m {{.NthBucket 3}}.event_0.coll0 -d dst_bucket.{{.NthBucket 2}}.event_0.coll0.rw -t timers -o create --name timers -l DEBUG"
   wait: true
-- command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -s {{.Bucket}}.event_0.coll0 -m {{.NthBucket 3}}.event_0.coll1 -d dst_bucket.{{.NthBucket 2}}.event_0.coll1.rw -t n1ql -o create --name n1ql"
+- command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -s {{.Bucket}}.event_0.coll0 -m {{.NthBucket 3}}.event_0.coll1 -d dst_bucket.{{.NthBucket 2}}.event_0.coll1.rw -t n1ql -o create --name n1ql -l DEBUG"
   wait: true
-- command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -s {{.NthBucket 1}}.event_0.coll0 -m {{.NthBucket 3}}.event_0.coll2 -d dst_bucket.{{.NthBucket 1}}.event_0.coll0.rw -t sbm -o create --name sbm"
+- command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -s {{.NthBucket 1}}.event_0.coll0 -m {{.NthBucket 3}}.event_0.coll2 -d dst_bucket.{{.NthBucket 1}}.event_0.coll0.rw -t sbm -o create --name sbm -l DEBUG"
   wait: true
-- command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -s {{.NthBucket 1}}.event_0.coll0 -m {{.NthBucket 3}}.event_0.coll3 -d dst_bucket.{{.NthBucket 2}}.event_0.coll2.rw -t curl -o create --name curl"
+- command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -s {{.NthBucket 1}}.event_0.coll0 -m {{.NthBucket 3}}.event_0.coll3 -d dst_bucket.{{.NthBucket 2}}.event_0.coll2.rw -t curl -o create --name curl -l DEBUG"
   wait: true
 
 
