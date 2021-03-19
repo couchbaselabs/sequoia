@@ -145,10 +145,10 @@
 # Start Collections CRUD on bucket 4 & bucket5
 -
   image: sequoiatools/collections:1.0
-  command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 8}} -o crud_mode --crud_interval=10 --max_scopes=10 --max_collections=100"
+  command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 8}} -o crud_mode --crud_interval=120 --max_scopes=10 --max_collections=100"
   alias: collection_crud1
 -
-  command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 9}} -o crud_mode --crud_interval=10 --max_scopes=10 --max_collections=100"
+  command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 9}} -o crud_mode --crud_interval=120 --max_scopes=10 --max_collections=100"
   alias: collection_crud2
 
 # continous kv loading
@@ -252,8 +252,8 @@
 
 # replica data loading for eventing source with docs that will expire after 1 hour
 - image: sequoiatools/gideon2
-  command: "kv --ops {{.Scale 500}} --create 80 --delete 20 --get 82 --sizes 64 96  --expire 100 --ttl 3600  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --scope event_0 --collection coll0"
-- command: "kv --ops {{.Scale 500}} --create 80 --delete 20 --get 82 --sizes 64 96  --expire 100 --ttl 3600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}} --scope event_0 --collection coll0"
+  command: "kv --ops {{.Scale 250}} --create 80 --delete 20 --get 82 --sizes 64 96  --expire 100 --ttl 3600  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --scope event_0 --collection coll0"
+- command: "kv --ops {{.Scale 250}} --create 80 --delete 20 --get 82 --sizes 64 96  --expire 100 --ttl 3600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}} --scope event_0 --collection coll0"
 
 ############### data loading to collections ################
 - image: sequoiatools/catapult
