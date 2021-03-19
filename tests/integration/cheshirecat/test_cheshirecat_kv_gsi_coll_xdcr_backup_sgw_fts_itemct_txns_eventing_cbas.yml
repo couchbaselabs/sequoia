@@ -136,6 +136,18 @@
         --enable-compression 1"
   wait: true
 
+############### Initial data loading to collections - no doc expiry, only creates ################
+- image: sequoiatools/catapult
+  command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 4}} -n {{.Scale 30000}} -pc 100 -dt Hotel -ds 1000 -ac True"
+  alias: catapult_bucket4_doc_ops1
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 5}} -n {{.Scale 30000}} -pc 100 -dt Hotel -ds 1000 -ac True"
+  alias: catapult_bucket5_doc_ops1
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 6}} -n {{.Scale 30000}} -pc 100 -dt Hotel -ds 1000 -ac True"
+  alias: catapult_bucket6_doc_ops1
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 7}} -n {{.Scale 30000}} -pc 100 -dt Hotel -ds 1000 -ac True"
+  alias: catapult_bucket7_doc_ops1
+
+
 # Start transactions workload on default bucket
 -
   image: sequoiatools/transactions
@@ -255,16 +267,16 @@
   command: "kv --ops {{.Scale 250}} --create 80 --delete 20 --get 82 --sizes 64 96  --expire 100 --ttl 3600  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --scope event_0 --collection coll0"
 - command: "kv --ops {{.Scale 250}} --create 80 --delete 20 --get 82 --sizes 64 96  --expire 100 --ttl 3600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}} --scope event_0 --collection coll0"
 
-############### data loading to collections ################
+############### incremental data loading to collections ################
 - image: sequoiatools/catapult
-  command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 4}} -n {{.Scale 40000}} -pc 100 -pu 25 -pd 25 -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 60 -fu price,free_parking -ac True"
-  alias: catapult_bucket4
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 5}} -n {{.Scale 40000}} -pc 100 -pu 25 -pd 25 -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 60 -fu price,free_parking -ac True"
-  alias: catapult_bucket5
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 6}} -n {{.Scale 40000}} -pc 100 -pu 25 -pd 25 -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 60 -fu price,free_parking -ac True"
-  alias: catapult_bucket6
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 7}} -n {{.Scale 40000}} -pc 100 -pu 25 -pd 25 -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 60 -fu price,free_parking -ac True"
-  alias: catapult_bucket7
+  command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 4}} -n {{.Scale 10000}} -pc 100 -pu 25 -pd 25 -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 60 -fu price,free_parking -ac True"
+  alias: catapult_bucket4_doc_ops2
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 5}} -n {{.Scale 10000}} -pc 100 -pu 25 -pd 25 -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 60 -fu price,free_parking -ac True"
+  alias: catapult_bucket5_doc_ops2
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 6}} -n {{.Scale 10000}} -pc 100 -pu 25 -pd 25 -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 60 -fu price,free_parking -ac True"
+  alias: catapult_bucket6_doc_ops2
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 7}} -n {{.Scale 10000}} -pc 100 -pu 25 -pd 25 -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 60 -fu price,free_parking -ac True"
+  alias: catapult_bucket7_doc_ops2
 
 
 # query replica indexes
@@ -519,19 +531,35 @@
 -
   client:
     op: rm
-    container: catapult_bucket4
+    container: catapult_bucket4_doc_ops2
 -
   client:
     op: rm
-    container: catapult_bucket5
+    container: catapult_bucket5_doc_ops2
 -
   client:
     op: rm
-    container: catapult_bucket6
+    container: catapult_bucket6_doc_ops2
 -
   client:
     op: rm
-    container: catapult_bucket7
+    container: catapult_bucket7_doc_ops2
+-
+  client:
+    op: rm
+    container: catapult_bucket4_doc_ops1
+-
+  client:
+    op: rm
+    container: catapult_bucket5_doc_ops1
+-
+  client:
+    op: rm
+    container: catapult_bucket6_doc_ops1
+-
+  client:
+    op: rm
+    container: catapult_bucket7_doc_ops1
 -
   client:
     op: rm
