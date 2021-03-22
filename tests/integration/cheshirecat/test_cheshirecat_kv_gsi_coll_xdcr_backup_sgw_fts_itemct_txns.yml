@@ -415,7 +415,7 @@
 # swap failover
 - template: add_node
   args: "{{.InActiveNode}}"
-- template: failover_node_forced
+- template: hard_failover_node
   args: "{{.ActiveDataNode 1}}"
 - template: rebalance
   wait: true
@@ -460,7 +460,7 @@
   args: "{{.InActiveNode}}"
 - template: failover_node
   args: "{{.ActiveDataNode 2}}"
-- template: failover_node_forced
+- template: hard_failover_node
   args: "{{.ActiveDataNode 3}}"
 - template: rebalance
   wait: true

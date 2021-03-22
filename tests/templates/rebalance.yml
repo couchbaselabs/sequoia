@@ -130,7 +130,7 @@
       until: "{{if .AllLogs `__self__`}}{{eq `none` (.TailLogs `__self__` 1 | json).status}}{{else}}{{false}}{{end}}"
       wait: true
 
-# failover node
+# graceful failover node
 -
   name: failover_node
   actions:
@@ -150,6 +150,17 @@
       command: "failover -c {{.Orchestrator}}:{{.RestPort}}
           --server-failover $0:{{.RestPort}}
           -u  {{.RestUsername}} -p  {{.RestPassword}} --force --hard"
+      wait: true
+
+# hard failover node
+-
+  name: hard_failover_node
+  actions:
+    -
+      image: sequoiatools/couchbase-cli:7.0
+      command: "failover -c {{.Orchestrator}}:{{.RestPort}}
+          --server-failover $0:{{.RestPort}}
+          -u  {{.RestUsername}} -p  {{.RestPassword}} --hard"
       wait: true
 
 # recover a node
