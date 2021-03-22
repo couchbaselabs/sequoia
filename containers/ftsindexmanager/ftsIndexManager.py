@@ -329,14 +329,17 @@ class FTSIndexManager:
                 for i in range(self.num_queries_per_worker):
                     threads.append(executor.submit(self.generate_and_run_flex_query))
                     time.sleep(5)
-
-                for task in as_completed(threads):
-                    result = task.result()
-                    queries_run += 1
-                    if result:
-                        queries_passed += 1
-                    else:
-                        queries_failed += 1
+                try:
+                    for task in as_completed(threads):
+                        result = task.result()
+                        queries_run += 1
+                        if result:
+                            queries_passed += 1
+                        else:
+                            queries_failed += 1
+                except Exception as e:
+                    self.log.info(str(e))
+                    queries_failed += 1
 
                 # Print result summary if the print interval has passed
                 if self.print_interval > 0 and time.time() > print_time:
@@ -1136,7 +1139,8 @@ class FTSIndexManager:
 
         headers = {'Content-Type': 'application/json',
                    'Authorization': 'Basic %s' % authorization,
-                   'Accept': '*/*'}
+                   'Accept': '*/*',
+                   'Cache-Control': 'no-cache'}
 
         url = "http://" + host + ":" + str(port) + uri
         http = httplib2.Http(timeout=600)

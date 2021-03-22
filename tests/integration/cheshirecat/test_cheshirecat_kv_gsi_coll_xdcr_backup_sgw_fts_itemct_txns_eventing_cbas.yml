@@ -498,6 +498,47 @@
 - template: pillowfight_htp
   wait: true
 
+# ###############  Rebalance in an FTS node ################
+- template: rebalance_in
+  args: "{{.InActiveNode}}, fts"
+  wait: true
+
+# Sleep for 15 mins
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "900"
+  wait: true
+
+###############  Failover and addback ################
+- template: failover_node_forced
+  args: "{{.NthFTSNode 1}}"
+- template: readd_node
+  args: "{{.NthFTSNode 1}}"
+- template: recover_node
+  args: "{{.NthFTSNode 1}}, full"
+- template: rebalance
+  wait: true
+# Sleep for some more time after rebalance completes
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "900"
+  wait: true
+
+###############  Failover and rebalance out FTS node ################
+- template: failover_node_forced
+  args: "{{.NthFTSNode 1}}"
+- template: rebalance
+  wait: true
+
+# Sleep for some more time after rebalance completes
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "900"
+  wait: true
+
 - template: add_node
   args: "{{.NthInActiveNode 0}}"
 - args: "{{.NthInActiveNode 1}}"
