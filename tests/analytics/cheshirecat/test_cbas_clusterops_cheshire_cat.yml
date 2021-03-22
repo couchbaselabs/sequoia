@@ -228,8 +228,11 @@
    wait: true
 
 ###############  Failover and addback ################
-- template: failover_force_and_recover
+- template: hard_failover_node
+  args: "{{.ActiveAnalyticsNode 1}}"
+- template: recover_node
   args: "{{.ActiveAnalyticsNode 1}}, full"
+- template: rebalance
   wait: true
 
 # Sleep for some more time after rebalance completes
@@ -252,7 +255,7 @@
    wait: true
 
 ###############  Failover and rebalance out ################
-- template: failover_node_forced
+- template: hard_failover_node
   args: "{{.ActiveAnalyticsNode 1}}"
 - template: rebalance
   wait: true
