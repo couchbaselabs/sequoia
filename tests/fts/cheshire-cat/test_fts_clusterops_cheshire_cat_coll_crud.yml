@@ -334,7 +334,7 @@
   wait: true
 
 ###############  Failover and rebalance out FTS node ################
-- template: failover_node_forced
+- template: hard_failover_node
   args: "{{.Nodes | .Service `fts` | net 2}}"
 - template: rebalance
   wait: true
@@ -370,7 +370,7 @@
    wait: true
 
 ###############  Failover and addback ################
-- template: failover_node_forced
+- template: hard_failover_node
   args: "{{.NthFTSNode 1}}"
 - template: readd_node
   args: "{{.NthFTSNode 1}}"
