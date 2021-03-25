@@ -200,7 +200,7 @@
   name: failover_force_and_recover
   actions:
     -
-      template: failover_node_forced
+      template: hard_failover_node
       args: "$0"
       wait: true
     -

@@ -217,7 +217,7 @@
    wait: true
 
 ###############  Failover and rebalance out ################
-- template: failover_node_forced
+- template: hard_failover_node
   args: "{{.ActiveIndexNode 1}}"
 - template: rebalance
   wait: true

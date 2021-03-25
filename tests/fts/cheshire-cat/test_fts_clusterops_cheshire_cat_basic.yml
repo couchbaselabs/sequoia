@@ -255,7 +255,7 @@
 
 
 ###############  Failover and rebalance out FTS node ################
-- template: failover_node_forced
+- template: hard_failover_node
   args: "{{.Nodes | .Service `fts` | net 3}}"
 - template: rebalance
   wait: true
@@ -291,7 +291,7 @@
    wait: true
 
 ###############  Failover and addback FTS node ################
-- template: failover_node
+- template: hard_failover_node
   args: "{{.ActiveDataNode 2}}"
 
 # Sleep for 5 mins
