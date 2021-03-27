@@ -34,10 +34,12 @@
     --server_ip {{.ActiveAnalyticsNode 0}} --port {{.AnalyticsPort}} --duration 0 --bucket {{.NthBucket 4}}
     --querycount 50 -a True --analytics_queries catapult_queries --query_timeout 3600
     -B [{{.NthBucket 4}},{{.NthBucket 5}},{{.NthBucket 6}},{{.NthBucket 7}}]"
+  alias: cbas_queries_1
 - command: "-J-Xms256m -J-Xmx512m -J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.5.6/* /AnalyticsQueryApp/Query/load_queries.py
       --server_ip {{.ActiveAnalyticsNode 0}} --port {{.AnalyticsPort}} --duration 0 --bucket {{.Bucket}}
       --querycount 50 -a True --analytics_queries gideon_queries
       --query_timeout 3600 -B [{{.Bucket}},{{.NthBucket 1}}]"
+  alias: cbas_queries_2
 
 # ###############sleep for 10 mins###############
 -
@@ -91,6 +93,14 @@
 
 - section_start: analytics_teardown
 ############### Drop CBAS infra ###############
+-
+  client:
+    op: rm
+    container: cbas_queries_1
+-
+  client:
+    op: rm
+    container: cbas_queries_2
 -
   image: sequoiatools/analyticsmanager:1.0
   command: "-i {{.ActiveAnalyticsNode 0 | noport}} -b {{.Bucket}},{{
