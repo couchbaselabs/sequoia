@@ -62,7 +62,7 @@ servers: # each server tag represents a cluster
       count: 31
       ram: 90%
       index_ram: 90%
-      fts_ram: 85%
+      fts_ram: 70%
       eventing_ram: 90%
       analytics_ram: 90%
       index_storage: default

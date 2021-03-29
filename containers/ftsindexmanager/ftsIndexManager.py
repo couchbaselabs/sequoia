@@ -393,6 +393,9 @@ class FTSIndexManager:
                     index_item_count = self.get_fts_index_doc_count(index_name)
                     all_index_col_count = self.get_fts_index_collections_count(index_name)
                     self.log.info(f'{index_name} : index_count : {index_item_count}, all_index_col_count : {all_index_col_count}')
+                    if all_index_col_count is None:
+                        indexes_validated.append(index_name)
+                        break
                     if int(index_item_count) != int(all_index_col_count):
                         errors_obj = {"type": "item_count_check_failed", "index_name": index_name,
                                       "index_item_count": index_item_count, "all_index_col_count": all_index_col_count}
@@ -544,7 +547,10 @@ class FTSIndexManager:
                 #self.execute_command(command, self.node_addr, "root", "couchbase")
             else:
                 self.log.info(f'Index creation on {idx_name} succeeded. Content = {content}, Response = {response}')
-                time.sleep(240)
+
+            time.sleep(240)
+            cur_indexes = self.get_fts_index_list()
+            if idx_name in cur_indexes:
                 self.log.info(f'Deleting index {idx_name}')
                 uri = "/api/index/" + idx_name
                 status, content, response = self.http_request(self.node_addr, FTS_PORT, uri, method="DELETE")
@@ -819,7 +825,8 @@ class FTSIndexManager:
                 keyspace_name_for_query = "`" + bucket_name + "`.`" + scope + "`.`" + collection + "`"
             except Exception as e:
                 self.log.info(f'Could not get scope and collection for {col}')
-                keyspace_name_for_query = "`" + bucket_name + "`.`_default`.`_default`"
+                #keyspace_name_for_query = "`" + bucket_name + "`.`_default`.`_default`"
+                return None
 
 
             # Get Collection item count from KV via N1QL

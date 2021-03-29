@@ -245,13 +245,31 @@
 - image: sequoiatools/ftsindexmanager
   command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}} -m 1:0:10,1:1:2 -s {{.Scale 1}} -a create_index_from_map"
   wait: true
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
 
+- image: sequoiatools/ftsindexmanager
 - command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 5}} -m 1:0:5 -s {{.Scale 1}} -a create_index_from_map"
   wait: true
-
-- command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 6}} -m 1:1:1,1:1:2 -s {{.Scale 1}} -a create_index_from_map"
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
   wait: true
 
+- image: sequoiatools/ftsindexmanager
+- command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 6}} -m 1:1:1,1:1:2 -s {{.Scale 1}} -a create_index_from_map"
+  wait: true
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+- image: sequoiatools/ftsindexmanager
 - command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 7}} -m 1:0:5,1:0:2 -s {{.Scale 1}} -a create_index_from_map"
   wait: true
 

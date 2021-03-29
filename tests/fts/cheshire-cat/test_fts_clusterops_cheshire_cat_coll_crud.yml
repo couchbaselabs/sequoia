@@ -181,13 +181,13 @@
 ############### data loading ################
 - image: sequoiatools/catapult
   command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -n {{.Scale 100000}} -pc 50 -pu 25 -pd 25
-    -dt Hotel -de {{.Scale 14400}} -ds 1000 -lf True -li 60 -fu price,free_parking -ac True"
+    -dt Hotel -de {{.Scale 14400}} -nt 1 -ds 1000 -lf True -li 60 -fu price,free_parking -ac True"
   alias: collection_bucket_doc_ops1
 - command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 1}} -n {{.Scale 100000}} -pc 50 -pu 25
-    -pd 25 -dt Hotel -de {{.Scale 14400}} -ds 1000 -lf True -li 60 -fu price,free_parking -ac True"
+    -pd 25 -dt Hotel -de {{.Scale 14400}} -nt 1 -ds 1000 -lf True -li 60 -fu price,free_parking -ac True"
   alias: collection_bucket1_doc_ops1
 - command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 2}} -n {{.Scale 100000}} -pc 50 -pu 25
-    -pd 25 -dt Hotel -de {{.Scale 14400}} -ds 1000 -lf True -li 60 -fu price,free_parking -ac True"
+    -pd 25 -dt Hotel -de {{.Scale 14400}} -nt 1 -ds 1000 -lf True -li 60 -fu price,free_parking -ac True"
   alias: collection_bucket2_doc_ops1
 
 # Sleep for 2 mins
