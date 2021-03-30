@@ -99,7 +99,11 @@ syncgateways:
       name: sg-1
       cluster: c1local
       count: 1
+      bucket: c1default
+      bucketuser: c1default
   -
       name: sg-2
       cluster: c2local
-      count: 1 
+      count: 1
+      bucket: c2default
+      bucketuser: c2default
