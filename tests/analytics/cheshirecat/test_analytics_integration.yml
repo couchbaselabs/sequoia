@@ -13,7 +13,7 @@
   3600 --ds_without_where 2 --api_timeout 3600"
   wait: true
 - command: "-i {{.ActiveAnalyticsNode 0 | noport}} -b {{.Bucket}},{{.NthBucket 1}} -o create_cbas_infra
-  --exc_coll _default --dv_cnt {{.Scale 5}} --ds_cnt {{.Scale 15}} --idx_cnt
+  --dv_cnt {{.Scale 5}} --ds_cnt {{.Scale 15}} --idx_cnt
    {{.Scale 5}} --data_src gideon --syn_cnt {{.Scale 15}} -w false
    --ingestion_timeout 3600 --ds_without_where 2 --api_timeout 3600"
   wait: true
