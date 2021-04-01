@@ -239,7 +239,7 @@ class AnalyticsOperations():
         for bucket in self.buckets:
             self.log.info("Fetching collections in bucket {0}".format(bucket))
             bucket = bucket.strip("`")
-            url = bucket + "/collections"
+            url = bucket + "/scopes"
             retry_attempt = 0
             while True:
                 passed, content, response = self.api_call(url, "GET", use_remote_host=use_remote_host)
