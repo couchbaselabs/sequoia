@@ -67,7 +67,7 @@
 # run sync gateway testing through mobile-testkit
 - 
   image: sequoiatools/sgw
-  command: "CBS_HOSTS={{.Orchestrator}} SGW_HOSTS={{.SyncGatewayAll}} SSH_USER={{.SSHUsername}} SSH_PWD={{.SSHPassword}}"
+  command: "CBS_HOSTS={{.Orchestrator}} SGW_HOSTS={{.SyncGatewayAll}} SSH_USER={{.SSHUsername}} SSH_PWD={{.SSHPassword}} UP_TIME=259200"
   wait: true
   requires:  "{{eq true .DoOnce }}"
 
