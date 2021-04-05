@@ -83,6 +83,7 @@
   --duration 0 --bucket {{.Bucket}} --querycount {{.Scale 20}}
   -B [{{.Bucket}},{{.NthBucket 1}},{{.NthBucket 2}}] -a True
   --analytics_queries catapult_queries --query_timeout 3600"
+  alias: cbas_query
 - section_end: run_cbas_query
 
 - section_start: change_cbas_topologies
@@ -294,6 +295,10 @@
   client:
     op: rm
     container: cbas_loop1
+-
+  client:
+    op: rm
+    container: cbas_query
 -
    image: sequoiatools/cmd
    entrypoint: sleep
