@@ -23,13 +23,13 @@
 ############### create scopes and collections across 3 buckets as scope_1,scope_2 ... ###############
 -
   image: sequoiatools/collections:1.0
-  command: "-i {{.Orchestrator}}:8091 -b {{.Bucket}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count={{.Scale 2}} --collection_count={{.Scale 20}} --collection_distribution=random"
+  command: "-i {{.Orchestrator}}:8091 -b {{.Bucket}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count={{.Scale 2}} --collection_count={{.Scale 25}} --collection_distribution=random"
   requires:  "{{eq true .DoOnce }}"
   wait: true
-- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 1}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count={{.Scale 2}} --collection_count={{.Scale 20}} --collection_distribution=random"
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 1}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count={{.Scale 2}} --collection_count={{.Scale 25}} --collection_distribution=random"
   requires:  "{{eq true .DoOnce }}"
   wait: true
-- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 2}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count={{.Scale 2}} --collection_count={{.Scale 20}} --collection_distribution=random"
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 2}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count={{.Scale 2}} --collection_count={{.Scale 25}} --collection_distribution=random"
   requires:  "{{eq true .DoOnce }}"
   wait: true
 
@@ -42,13 +42,13 @@
 
 ############### initial data loading ################
 - image: sequoiatools/catapult
-  command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -n {{.Scale 200000}} -pc 100
+  command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -n {{.Scale 300000}} -pc 100
     -dt Hotel -ds 1000 -ac True"
   alias: collection_bucket1_doc_ops1
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 1}} -n {{.Scale 200000}} -pc 100
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 1}} -n {{.Scale 300000}} -pc 100
     -dt Hotel -ds 1000 -ac True"
   alias: collection_bucket2_doc_ops1
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 2}} -n {{.Scale 200000}} -pc 100
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 2}} -n {{.Scale 300000}} -pc 100
     -dt Hotel -ds 1000 -ac True"
   alias: collection_bucket3_doc_ops1
 
