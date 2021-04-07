@@ -10,6 +10,7 @@ import httplib2
 import json
 from optparse import OptionParser
 from datetime import datetime
+import copy
 
 ##Templates for data-set specific index statements
 
@@ -242,7 +243,8 @@ class AnalyticsOperations():
             url = bucket + "/scopes"
             retry_attempt = 0
             while True:
-                passed, content, response = self.api_call(url, "GET", use_remote_host=use_remote_host)
+                passed, content, response = self.api_call(
+                    url, "GET", use_remote_host=use_remote_host)
                 retry_attempt += 1
                 if passed:
                     break
@@ -251,16 +253,21 @@ class AnalyticsOperations():
                 time.sleep(10)
             scopes_dict = content["scopes"]
             for scope in scopes_dict:
-                if self.include_scopes and scope["name"] not in self.include_scopes:
+                if self.include_scopes and scope["name"] not in \
+                        self.include_scopes:
                     continue
-                if self.exclude_scopes and scope["name"] in self.exclude_scopes:
+                if self.exclude_scopes and scope["name"] in \
+                        self.exclude_scopes:
                     continue
                 for collection in scope["collections"]:
-                    if self.include_collections and collection["name"] not in self.include_collections:
+                    if self.include_collections and collection["name"] not \
+                            in self.include_collections:
                         continue
-                    if self.exclude_collections and collection["name"] in self.exclude_collections:
+                    if self.exclude_collections and collection["name"] in \
+                            self.exclude_collections:
                         continue
-                    name = ".".join([bucket,scope["name"],collection["name"]])
+                    name = ".".join([bucket, scope["name"], collection[
+                        "name"]])
                     collection_names.append(self.format_name(name))
         self.log.info(str(collection_names))
         return collection_names
@@ -347,19 +354,23 @@ class AnalyticsOperations():
         else:
             index_templates = CATAPULT_INDEX_TEMPLATES
 
-        indexed_fields = index_templates[random.randrange(len(index_templates))]
-        self.log.info("Creating index {0} on {1} with indexed fields as {2};".format(
-            index_name, dataset, indexed_fields))
+        indexed_fields = index_templates[random.randrange(
+            len(index_templates))]
+        self.log.info(
+            "Creating index {0} on {1} with indexed fields as {2};".format(
+                index_name, dataset, indexed_fields))
 
         cmd = "create index {0} on {1}{2};".format(
             index_name, dataset, indexed_fields)
         result, content, response = self.cbas_api_call(statement=cmd)
         if result:
-            self.log.info("Created index {0} on {1} with indexed fields as {2};".format(
-                index_name, dataset, indexed_fields))
+            self.log.info(
+                "Created index {0} on {1} with indexed fields as {2};".format(
+                    index_name, dataset, indexed_fields))
         else:
-            self.log.error("Failed to Create index {0} on {1} with indexed fields as {2};".format(
-                index_name, dataset, indexed_fields))
+            self.log.error(
+                "Failed to Create index {0} on {1} with indexed fields as {"
+                "2};".format(index_name, dataset, indexed_fields))
             self.log.error(str(content))
             self.log.error(str(response))
         return result
@@ -379,7 +390,8 @@ class AnalyticsOperations():
     def create_synonym(self, synonym_full_name, cbas_entity_full_name):
         self.log.info("Creating synonym {0} on {1}".format(
                 synonym_full_name, cbas_entity_full_name))
-        cmd = "create analytics synonym {0} If Not Exists for {1};".format(synonym_full_name,cbas_entity_full_name)
+        cmd = "create analytics synonym {0} If Not Exists for {1};".format(
+            synonym_full_name, cbas_entity_full_name)
         result, content, response = self.cbas_api_call(statement=cmd)
         if result:
             self.log.info("Created synonym {0} on {1}".format(
@@ -391,14 +403,15 @@ class AnalyticsOperations():
             self.log.error(str(response))
         return result
 
-    def drop_synonym(self,synonym_full_name):
+    def drop_synonym(self, synonym_full_name):
         self.log.info("Dropping Synonym -- {0}".format(synonym_full_name))
         cmd = "drop analytics synonym {0} If Exists;".format(synonym_full_name)
         result, content, response = self.cbas_api_call(statement=cmd)
         if result:
             self.log.info("Dropped Synonym -- {0}".format(synonym_full_name))
         else:
-            self.log.error("Failed to drop Synonym -- {0}".format(synonym_full_name))
+            self.log.error("Failed to drop Synonym -- {0}".format(
+                synonym_full_name))
             self.log.error(str(content))
             self.log.error(str(response))
         return result
@@ -406,7 +419,8 @@ class AnalyticsOperations():
     def get_certs(self):
         pass
 
-    def create_remote_link(self, link_name, dataverse, remote_host, remote_username, remote_password,
+    def create_remote_link(self, link_name, dataverse, remote_host,
+                           remote_username, remote_password,
                            encryption="none"):
         params = dict()
         params["name"] = link_name
@@ -420,7 +434,8 @@ class AnalyticsOperations():
         if encryption.lower() == "full":
             all_certs = random.choice([True,False])
             if all_certs:
-                params["certificate"],params["clientCertificate"],params["clientKey"] = self.get_certs()
+                params["certificate"], params["clientCertificate"], params[
+                    "clientKey"] = self.get_certs()
                 del params["username"]
                 del params["password"]
             else:
@@ -432,12 +447,14 @@ class AnalyticsOperations():
         http = httplib2.Http(timeout=self.options.api_timeout)
         http.add_credentials(self.options.username, self.options.password)
         try:
-            response, content = http.request(uri=url, method="POST", headers=headers, params=params)
+            response, content = http.request(
+                uri=url, method="POST", headers=headers, params=params)
             if response['status'] in ['200', '201', '202']:
                 self.log.info("Created remote link {0}".format(link_name))
                 return True
             else:
-                self.log.error("Failed to Create remote link {0}".format(link_name))
+                self.log.error("Failed to Create remote link {0}".format(
+                    link_name))
                 self.log.error(str(content))
                 self.log.error(str(response))
                 return False
@@ -460,17 +477,20 @@ class AnalyticsOperations():
     def get_pending_mutation_stats(self):
         self.log.info("Fetching pending mutations for all Analytics datasets")
         headers = {'content-type': 'application/x-www-form-urlencoded'}
-        url = "http://" + self.options.host + ":8095/analytics/node/agg/stats/remaining"
+        url = "http://" + self.options.host + \
+              ":8095/analytics/node/agg/stats/remaining"
         http = httplib2.Http(timeout=self.options.api_timeout)
         http.add_credentials(self.options.username, self.options.password)
         while True:
             try:
-                response, content = http.request(uri=url, method="GET", headers=headers)
+                response, content = http.request(
+                    uri=url, method="GET", headers=headers)
                 if response['status'] in ['200', '201', '202']:
                     content = json.loads(content)
                     return True, content, response
                 else:
-                    self.error.log("Error while fetching pending mutations for all datasets")
+                    self.error.log(
+                        "Error while fetching pending mutations for all datasets")
                     self.log.error(str(content))
                     self.log.error(str(response))
                     return False, content, response
@@ -492,31 +512,45 @@ class AnalyticsOperations():
                 retry += 1
             if result:
                 for dataset in datasets:
-                    self.log.info("Waiting for data ingestion to complete for dataset {0}".format(dataset))
+                    self.log.info(
+                        "Waiting for data ingestion to complete for dataset "
+                        "{0}".format(dataset))
                     split_dataset_name = dataset.split(".")
                     dataverse_name = ".".join(split_dataset_name[:-1])
                     dataset_name = split_dataset_name[-1]
                     try:
                         if content[dataverse_name][dataset_name]["seqnoLag"] == 0:
-                            self.log.info("Data ingestion completed for dataset {0}".format(dataset))
+                            self.log.info("Data ingestion completed for "
+                                          "dataset {0}".format(dataset))
                             datasets.remove(dataset)
                     except KeyError:
                         pass
         if datasets:
-            self.error.log("Error while fetching pending mutation for dataset - {0}".format(datasets))
+            self.error.log("Error while fetching pending mutation for "
+                           "dataset - {0}".format(datasets))
 
-    def get_all_dataverses(self):
-        cmd = "select value dv.DataverseName from Metadata.`Dataverse` as dv where dv.DataverseName != \"Metadata\";"
+    def get_all_dataverses(self, display_form=True):
+        if display_form:
+            cmd = "select value regexp_replace(dv.DataverseName,\"/\"," \
+                  "\".\") from Metadata.`Dataverse` as dv where " \
+                  "dv.DataverseName != \"Metadata\";"
+        else:
+            cmd = "select value dv.DataverseName from Metadata.`Dataverse` " \
+                  "as dv where dv.DataverseName != \"Metadata\";"
         status, content, _ = self.cbas_api_call(cmd)
         if status:
             return content["results"]
 
     def get_all_datasets(self, dataverses=[]):
         if not dataverses:
-            dataverses = self.get_all_dataverses()
-        dataverses = json.dumps(dataverses,encoding="utf-8").replace("\'", "\"")
-        cmd = "select value ds.DataverseName || \".\" || ds.DatasetName from Metadata.`Dataset` as ds " \
-              "where ds.DataverseName in {0};".format(dataverses)
+            dvs = self.get_all_dataverses(False)
+        else:
+            dvs = copy.deepcopy(dataverses)
+            dvs = self.convert_name_to_non_display_form(dvs)
+        dvs = json.dumps(dvs, encoding="utf-8").replace("\'", "\"")
+        cmd = "select value regexp_replace(ds.DataverseName,\"/\",\".\") || " \
+              "\".\" || ds.DatasetName from Metadata.`Dataset` as ds " \
+              "where ds.DataverseName in {0};".format(dvs)
         status, content, _ = self.cbas_api_call(cmd)
         if status:
             return content["results"]
@@ -525,10 +559,14 @@ class AnalyticsOperations():
 
     def get_all_links(self, dataverses=[]):
         if not dataverses:
-            dataverses = self.get_all_dataverses()
-        dataverses = json.dumps(dataverses, encoding="utf-8").replace("\'", "\"")
-        cmd = "select value ln.DataverseName || \".\" || ln.Name from Metadata.`Link` as ln " \
-              "where ln.DataverseName in {0} and ln.Name != \"Local\";".format(dataverses)
+            dvs = self.get_all_dataverses(False)
+        else:
+            dvs = copy.deepcopy(dataverses)
+            dvs = self.convert_name_to_non_display_form(dvs)
+        dvs = json.dumps(dvs, encoding="utf-8").replace("\'", "\"")
+        cmd = "select value regexp_replace(ln.DataverseName,\"/\",\".\") || " \
+              "\".\" || ln.Name from Metadata.`Link` as ln where " \
+              "ln.DataverseName in {0} and ln.Name != \"Local\";".format(dvs)
         status, content, _ = self.cbas_api_call(cmd)
         if status:
             return content["results"]
@@ -537,10 +575,14 @@ class AnalyticsOperations():
 
     def get_all_synonyms(self, dataverses=[]):
         if not dataverses:
-            dataverses = self.get_all_dataverses()
-        dataverses = json.dumps(dataverses, encoding="utf-8").replace("\'", "\"")
-        cmd = "select value syn.DataverseName || \".\" || syn.SynonymName from Metadata.`Synonym` as syn " \
-              "where syn.DataverseName in {0};".format(dataverses)
+            dvs = self.get_all_dataverses(False)
+        else:
+            dvs = copy.deepcopy(dataverses)
+            dvs = self.convert_name_to_non_display_form(dvs)
+        dvs = json.dumps(dvs, encoding="utf-8").replace("\'", "\"")
+        cmd = "select value regexp_replace(syn.DataverseName,\"/\",\".\") " \
+              "|| \".\" || syn.SynonymName from Metadata.`Synonym` as syn " \
+              "where syn.DataverseName in {0};".format(dvs)
         status, content, _ = self.cbas_api_call(cmd)
         if status:
             return content["results"]
@@ -548,7 +590,8 @@ class AnalyticsOperations():
             return None
 
     def get_all_indexes(self):
-        cmd = "select value idx.DataverseName || \".\" || idx.DatasetName || \".\" || idx.IndexName " \
+        cmd = "select value regexp_replace(idx.DataverseName,\"/\",\".\") " \
+              "|| \".\" || idx.DatasetName || \".\" || idx.IndexName " \
               "from Metadata.`Index` as idx where IsPrimary=False;"
         status, content, _ = self.cbas_api_call(cmd)
         if status:
@@ -556,7 +599,8 @@ class AnalyticsOperations():
         else:
             return None
 
-    def create_drop_dataverse_dataset_in_loop(self, remote_datasets=False, timeout=3600, interval=60):
+    def create_drop_dataverse_dataset_in_loop(
+            self, remote_datasets=False, timeout=3600, interval=60):
         end_time = 0
         if timeout > 0:
             end_time = time.time() + timeout
@@ -566,83 +610,112 @@ class AnalyticsOperations():
         indexes = list()
         synonyms = list()
         remote_links = list()
-        global DATAVERSE_MAX_COUNTER, DATASET_MAX_COUNTER, INDEX_MAX_COUNTER, SYNONYM_MAX_COUNTER, LINK_MAX_COUNTER
+        global DATAVERSE_MAX_COUNTER, DATASET_MAX_COUNTER, \
+            INDEX_MAX_COUNTER, SYNONYM_MAX_COUNTER, LINK_MAX_COUNTER
 
         local_collection_names = self.get_all_collection_names()
         if remote_datasets:
-            remote_collection_names = self.get_all_collection_names(use_remote_host=True)
+            remote_collection_names = self.get_all_collection_names(
+                use_remote_host=True)
         while True:
             if remote_datasets and not remote_links:
                 dataverse_name = random.choice(dataverses)
                 LINK_MAX_COUNTER += 1
-                remote_links.append(".".join([dataverse_name, REMOTE_LINK_PREFIX.format(LINK_MAX_COUNTER)]))
+                remote_links.append(".".join(
+                    [dataverse_name, REMOTE_LINK_PREFIX.format(
+                        LINK_MAX_COUNTER)]))
                 if not self.create_remote_link(
-                        REMOTE_LINK_PREFIX.format(LINK_MAX_COUNTER), dataverse_name, self.options.remote_host,
-                        self.options.remote_username, self.options.remote_password,
+                        REMOTE_LINK_PREFIX.format(LINK_MAX_COUNTER),
+                        dataverse_name, self.options.remote_host,
+                        self.options.remote_username,
+                        self.options.remote_password,
                         random.choice(["none", "half"])):
                     remote_links.pop()
             elif not datasets:
                 dataverse_name = random.choice(dataverses)
                 DATASET_MAX_COUNTER += 1
-                datasets.append(".".join([dataverse_name, DATASET_PREFIX.format(DATASET_MAX_COUNTER)]))
-                if not self.create_dataset(datasets[-1], random.choice(local_collection_names),
-                                           random.choice([True,False,False,False]), None, True):
+                datasets.append(".".join(
+                    [dataverse_name,
+                     DATASET_PREFIX.format(DATASET_MAX_COUNTER)]))
+                if not self.create_dataset(
+                        datasets[-1], random.choice(local_collection_names),
+                        random.choice([True, False, False, False]), None,
+                        True):
                     datasets.pop()
                 if self.options.wait_for_ingestion == "true":
                     self.wait_for_ingestion_complete(datasets)
             else:
                 action = random.choice(["create", "create", "drop", "create"])
                 if remote_datasets:
-                    cbas_entity = random.choice(["dataverse", "dataset", "index", "dataset", "link", "dataset",
-                                                 "index", "dataset", "synonym"])
-                    create_remote_dataset = random.choice([True,False])
+                    cbas_entity = random.choice(
+                        ["dataverse", "dataset", "index", "dataset", "link",
+                         "dataset", "index", "dataset", "synonym"])
+                    create_remote_dataset = random.choice([True, False])
                 else:
-                    cbas_entity = random.choice(["dataverse", "dataset", "dataset", "dataset", "index", "dataset",
-                                                 "synonym"])
+                    cbas_entity = random.choice(
+                        ["dataverse", "dataset", "dataset", "dataset",
+                         "index", "dataset", "synonym"])
                     create_remote_dataset = False
 
                 if action == "create":
                     if cbas_entity == "dataverse":
                         DATAVERSE_MAX_COUNTER += 1
-                        dataverses.append(random.choice([DATAVERSE_PREFIX_1,DATAVERSE_PREFIX_2]).format(
+                        dataverses.append(random.choice(
+                            [DATAVERSE_PREFIX_1,DATAVERSE_PREFIX_2]).format(
                             DATAVERSE_MAX_COUNTER))
                         if not self.create_dataverse(dataverses[-1]):
                             dataverses.pop()
                     elif cbas_entity == "dataset":
                         if create_remote_dataset:
-                            collection_name = random.choice(remote_collection_names)
+                            collection_name = random.choice(
+                                remote_collection_names)
                             link = random.choice(remote_links)
                         else:
-                            collection_name = random.choice(local_collection_names)
+                            collection_name = random.choice(
+                                local_collection_names)
                             link = None
                         dataverse_name = random.choice(dataverses)
                         DATASET_MAX_COUNTER += 1
-                        datasets.append(".".join([dataverse_name, DATASET_PREFIX.format(DATASET_MAX_COUNTER)]))
-                        if not self.create_dataset(datasets[-1], collection_name,
-                                                   random.choice([True,False,False,False]), link, True):
+                        datasets.append(".".join(
+                            [dataverse_name,
+                             DATASET_PREFIX.format(DATASET_MAX_COUNTER)]))
+                        if not self.create_dataset(
+                                datasets[-1], collection_name,
+                                random.choice([True, False, False, False]),
+                                link, True):
                             datasets.pop()
                         if self.options.wait_for_ingestion == "true":
                             self.wait_for_ingestion_complete(datasets)
                     elif cbas_entity == "link":
                         dataverse_name = random.choice(dataverses)
                         LINK_MAX_COUNTER += 1
-                        remote_links.append(".".join([dataverse_name, REMOTE_LINK_PREFIX.format(LINK_MAX_COUNTER)]))
+                        remote_links.append(".".join(
+                            [dataverse_name,
+                             REMOTE_LINK_PREFIX.format(LINK_MAX_COUNTER)]))
                         if not self.create_remote_link(
-                                REMOTE_LINK_PREFIX.format(LINK_MAX_COUNTER), dataverse_name, self.options.remote_host,
-                                self.options.remote_username, self.options.remote_password,
+                                REMOTE_LINK_PREFIX.format(LINK_MAX_COUNTER),
+                                dataverse_name, self.options.remote_host,
+                                self.options.remote_username,
+                                self.options.remote_password,
                                 random.choice(["none", "half"])):
                             remote_links.pop()
                     elif cbas_entity == "index":
                         dataset_name = random.choice(datasets)
                         INDEX_MAX_COUNTER += 1
-                        indexes.append(".".join([dataset_name, INDEX_PREFIX.format(INDEX_MAX_COUNTER)]))
-                        if not self.create_index_on_dataset(dataset_name, INDEX_PREFIX.format(INDEX_MAX_COUNTER)):
+                        indexes.append(".".join(
+                            [dataset_name, INDEX_PREFIX.format(
+                                INDEX_MAX_COUNTER)]))
+                        if not self.create_index_on_dataset(
+                                dataset_name,
+                                INDEX_PREFIX.format(INDEX_MAX_COUNTER)):
                             indexes.pop()
                     elif cbas_entity == "synonym":
                         dataverse_name = random.choice(dataverses)
                         dataset_name = random.choice(datasets+synonyms)
                         SYNONYM_MAX_COUNTER += 1
-                        synonyms.append(".".join([dataverse_name,SYNONYM_PREFIX.format(SYNONYM_MAX_COUNTER)]))
+                        synonyms.append(".".join(
+                            [dataverse_name, SYNONYM_PREFIX.format(
+                                SYNONYM_MAX_COUNTER)]))
                         if not self.create_synonym(synonyms[-1], dataset_name):
                             synonyms.pop()
                 else:
@@ -688,33 +761,47 @@ class AnalyticsOperations():
 
         local_collection_names = self.get_all_collection_names()
         if remote_datasets:
-            remote_collection_names = self.get_all_collection_names(use_remote_host=True)
+            remote_collection_names = self.get_all_collection_names(
+                use_remote_host=True)
         if self.options.dataverse_count > 1:
-            for i in range(DATAVERSE_MAX_COUNTER + 1, DATAVERSE_MAX_COUNTER + self.options.dataverse_count + 1):
-                name = random.choice([DATAVERSE_PREFIX_1, DATAVERSE_PREFIX_2]).format(i)
+            for i in range(
+                    DATAVERSE_MAX_COUNTER + 1,
+                    DATAVERSE_MAX_COUNTER + self.options.dataverse_count + 1):
+                name = random.choice([DATAVERSE_PREFIX_1,
+                                      DATAVERSE_PREFIX_2]).format(i)
                 dataverses[name] = 0
                 if not self.create_dataverse(name):
-                    self.log.error("FAILED : Creating Dataverse {0}".format(name))
+                    self.log.error(
+                        "FAILED : Creating Dataverse {0}".format(name))
                     del dataverses[name]
 
-        for i in range(LINK_MAX_COUNTER + 1, LINK_MAX_COUNTER + self.options.remote_link_count + 1):
+        for i in range(
+                LINK_MAX_COUNTER + 1,
+                LINK_MAX_COUNTER + self.options.remote_link_count + 1):
             dataverse_name = random.choice(dataverses.keys())
-            remote_links.append(".".join([dataverse_name, REMOTE_LINK_PREFIX.format(i)]))
+            remote_links.append(".".join(
+                [dataverse_name, REMOTE_LINK_PREFIX.format(i)]))
             if not self.create_remote_link(
-                    REMOTE_LINK_PREFIX.format(i), dataverse_name, self.options.remote_host,
-                    self.options.remote_username, self.options.remote_password,
+                    REMOTE_LINK_PREFIX.format(i), dataverse_name,
+                    self.options.remote_host, self.options.remote_username,
+                    self.options.remote_password,
                     random.choice(["none", "half"])):
-                self.log.error("FAILED : Creating Remote Link {0}".format(remote_links[-1]))
+                self.log.error(
+                    "FAILED : Creating Remote Link {0}".format(
+                        remote_links[-1]))
                 remote_links.pop()
 
         ds_per_dv = 0
         if self.options.dataset_distribution == "uniform":
-            ds_per_dv = -(self.options.dataset_count // -self.options.dataverse_count)
+            ds_per_dv = -(
+                    self.options.dataset_count // -self.options.dataverse_count)
 
         num_of_dataset_without_where_clause = (self.options.dataset_count *
                                                self.options.dataset_without_where_clause_percentage) / 100
 
-        for i in range(DATASET_MAX_COUNTER + 1, DATASET_MAX_COUNTER + self.options.dataset_count + 1):
+        for i in range(
+                DATASET_MAX_COUNTER + 1,
+                DATASET_MAX_COUNTER + self.options.dataset_count + 1):
             if remote_datasets:
                 create_remote_dataset = random.choice([True, False])
             else:
@@ -750,18 +837,25 @@ class AnalyticsOperations():
         if self.options.wait_for_ingestion == "true":
             self.wait_for_ingestion_complete(datasets)
 
-        for i in range(INDEX_MAX_COUNTER + 1, INDEX_MAX_COUNTER + self.options.index_count + 1):
+        for i in range(
+                INDEX_MAX_COUNTER + 1,
+                INDEX_MAX_COUNTER + self.options.index_count + 1):
             dataset_name = random.choice(datasets)
-            if not self.create_index_on_dataset(dataset_name, INDEX_PREFIX.format(i)):
-                self.log.error("FAILED : Creating Index {0} on Dataset {1}".format(
+            if not self.create_index_on_dataset(dataset_name,
+                                                INDEX_PREFIX.format(i)):
+                self.log.error(
+                    "FAILED : Creating Index {0} on Dataset {1}".format(
                     INDEX_PREFIX.format(i), dataset_name))
 
-        for i in range(SYNONYM_MAX_COUNTER + 1, SYNONYM_MAX_COUNTER + self.options.synonym_count + 1):
+        for i in range(
+                SYNONYM_MAX_COUNTER + 1,
+                SYNONYM_MAX_COUNTER + self.options.synonym_count + 1):
             dataverse_name = random.choice(dataverses.keys())
             dataset_name = random.choice(datasets + synonyms)
             synonyms.append(".".join([dataverse_name, SYNONYM_PREFIX.format(i)]))
             if not self.create_synonym(synonyms[-1], dataset_name):
-                self.log.error("FAILED : Creating Synonym {0}".format(synonyms[-1]))
+                self.log.error(
+                    "FAILED : Creating Synonym {0}".format(synonyms[-1]))
                 synonyms.pop()
 
     def drop_cbas_infra(self):
@@ -789,7 +883,8 @@ class AnalyticsOperations():
                     no_of_items_to_be_dropped -= 1
             return dataverse_to_be_deleted
 
-        def inner_func(get_func, drop_percentage, drop_func, max_counter, dataverses=[]):
+        def inner_func(get_func, drop_percentage, drop_func, max_counter,
+                       dataverses=[]):
 
             if drop_percentage == 100:
                 max_counter = 0
@@ -828,17 +923,22 @@ class AnalyticsOperations():
         dataverses = dataverses_to_be_deleted()
 
         if self.options.drop_index_percentage > 0:
-            inner_func(self.get_all_indexes, self.options.drop_index_percentage, self.drop_index, INDEX_MAX_COUNTER)
+            inner_func(
+                self.get_all_indexes, self.options.drop_index_percentage,
+                self.drop_index, INDEX_MAX_COUNTER)
 
         if self.options.drop_synonym_percentage > 0:
-            inner_func(self.get_all_synonyms, self.options.drop_synonym_percentage, self.drop_synonym,
-                       SYNONYM_MAX_COUNTER, dataverses)
+            inner_func(
+                self.get_all_synonyms, self.options.drop_synonym_percentage,
+                self.drop_synonym, SYNONYM_MAX_COUNTER, dataverses)
         if self.options.drop_dataset_percentage > 0:
-            inner_func(self.get_all_datasets, self.options.drop_dataset_percentage, self.drop_dataset,
-                       DATASET_MAX_COUNTER, dataverses)
+            inner_func(
+                self.get_all_datasets, self.options.drop_dataset_percentage,
+                self.drop_dataset, DATASET_MAX_COUNTER, dataverses)
         if self.options.drop_link_percentage > 0:
-            inner_func(self.get_all_links, self.options.drop_link_percentage, self.drop_link,
-                       LINK_MAX_COUNTER, dataverses)
+            inner_func(
+                self.get_all_links, self.options.drop_link_percentage,
+                self.drop_link, LINK_MAX_COUNTER, dataverses)
 
         while dataverses:
             dataverse = dataverses.pop()
@@ -855,12 +955,13 @@ class AnalyticsOperations():
                 low = 0
             if len(list_of_items) == low:
                 # If no items are present then create 10 items of that type
-                return [x for x in range(1,11)]
+                return [x for x in range(1, 11)]
             else:
                 items_present = list()
                 for item in list_of_items:
                     items_present.append(int(item.split("_")[-1]))
-                return set([x for x in range(1, max(items_present))]) - set(items_present)
+                return set(
+                    [x for x in range(1, max(items_present))]) - set(items_present)
 
         dataverses = self.get_all_dataverses()
         if self.options.recreate_dataverse_percentage > 0:
@@ -870,9 +971,13 @@ class AnalyticsOperations():
                 if counter == 0:
                     break
                 item = dropped_items.pop()
-                dataverses.append(random.choice([DATAVERSE_PREFIX_1, DATAVERSE_PREFIX_2]).format(item))
+                dataverses.append(
+                    random.choice([DATAVERSE_PREFIX_1,
+                                   DATAVERSE_PREFIX_2]).format(item))
                 if not self.create_dataverse(dataverses[-1]):
-                    self.log.error("FAILED : Creating Dataverse {0}".format(dataverses[-1]))
+                    self.log.error(
+                        "FAILED : Creating Dataverse {0}".format(
+                            dataverses[-1]))
                     dataverses.pop()
                     dropped_items.append(item)
                 else:
@@ -887,11 +992,12 @@ class AnalyticsOperations():
                     break
                 item = dropped_items.pop()
                 dataverse_name = random.choice(dataverses)
-                links.append(".".join([dataverse_name,REMOTE_LINK_PREFIX.format(item)]))
+                links.append(".".join(
+                    [dataverse_name, REMOTE_LINK_PREFIX.format(item)]))
                 if not self.create_remote_link(
-                        REMOTE_LINK_PREFIX.format(item), dataverse_name, self.options.remote_host,
-                        self.options.remote_username, self.options.remote_password,
-                        random.choice(["none", "half"])):
+                        REMOTE_LINK_PREFIX.format(item), dataverse_name,
+                        self.options.remote_host, self.options.remote_username,
+                        self.options.remote_password, random.choice(["none", "half"])):
                     self.log.error("FAILED : Creating Link {0}".format(links[-1]))
                     links.pop()
                     dropped_items.append(item)
@@ -1008,6 +1114,21 @@ class AnalyticsOperations():
             self.log.error(str(err))
             time.sleep(10)
             return False, "", ""
+
+    def convert_name_to_non_display_form(self, name):
+
+        def inner_func(inner_name):
+            inner_name = inner_name.split(".")
+            inner_name = "/".join(inner_name)
+            return inner_name
+
+        if isinstance(name, str):
+            return inner_func(name)
+
+        elif isinstance(name, list):
+            for i in range(0,len(name)):
+                name[i] = inner_func(name[i])
+            return name
 
 if __name__ == "__main__":
     AnalyticsOperations().run()
