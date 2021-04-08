@@ -20,6 +20,15 @@
 - template: set_gsi_config
   args: "{{.ActiveIndexNode 0}}, 'indexer.settings.rebalance.redistribute_indexes':true"
 
+##### create a backup plan which backups up every 6 hours and merges every 2 days at 12:00noon to filesystem repo
+-
+  image:  appropriate/curl
+  command: "-X POST -u {{.RestUsername}}:{{.RestPassword}} -H Content-Type:application/json http://{{.Orchestrator}}:8091/_p/backup/api/v1/plan/my_plan -d '{\"name\":\"my_plan\",\"description\":\"This plan does backups every 2 day\",\"services\":[\"data\"],\"default\":false,\"tasks\":[{\"name\":\"backup-1\",\"task_type\":\"BACKUP\",\"schedule\":{\"job_type\":\"BACKUP\",\"frequency\":6,\"period\":\"HOURS\",\"start_now\":false},\"full_backup\":true},{\"name\":\"merge\",\"task_type\":\"MERGE\",\"schedule\":{\"job_type\":\"MERGE\",\"frequency\":2,\"period\":\"DAYS\",\"time\":\"12:00\",\"start_now\":false},\"merge_options\":{\"offset_start\":0,\"offset_end\":2},\"full_backup\":true}]}'"
+  wait: true
+-
+  command: "-u {{.RestUsername}}:{{.RestPassword}} -X POST http://{{.Orchestrator}}:8091/_p/backup/api/v1/cluster/self/repository/active/my_repo -H Content-Type:application/json -d '{\"plan\": \"my_plan\", \"archive\": \"/data/archive\"}'"
+  wait: true
+
 ############### create scopes and collections across 3 buckets as scope_1,scope_2 ... ###############
 -
   image: sequoiatools/collections:1.0
