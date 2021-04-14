@@ -42,33 +42,15 @@
 
 ############### initial data loading ################
 - image: sequoiatools/catapult
-  command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -n {{.Scale 100000}} -pc 100
-    -dt Hotel -ds 1000 -ac True -dpx test1"
+  command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -n {{.Scale 50000}} -pc 100
+    -dt Hotel -ds 1000 -ac True"
   alias: collection_bucket1_doc_ops1
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -n {{.Scale 100000}} -pc 100
-    -dt Hotel -ds 1000 -ac True -dpx test2"
-  alias: collection_bucket1_doc_ops3
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -n {{.Scale 100000}} -pc 100
-    -dt Hotel -ds 1000 -ac True -dpx test3"
-  alias: collection_bucket1_doc_ops4
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 1}} -n {{.Scale 100000}} -pc 100
-    -dt Hotel -ds 1000 -ac True -dpx test1"
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 1}} -n {{.Scale 50000}} -pc 100
+    -dt Hotel -ds 1000 -ac True"
   alias: collection_bucket2_doc_ops1
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 1}} -n {{.Scale 100000}} -pc 100
-    -dt Hotel -ds 1000 -ac True -dpx test2"
-  alias: collection_bucket2_doc_ops3
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 1}} -n {{.Scale 100000}} -pc 100
-    -dt Hotel -ds 1000 -ac True -dpx test3"
-  alias: collection_bucket2_doc_ops4
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 2}} -n {{.Scale 100000}} -pc 100
-    -dt Hotel -ds 1000 -ac True -dpx test1"
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 2}} -n {{.Scale 50000}} -pc 100
+    -dt Hotel -ds 1000 -ac True"
   alias: collection_bucket3_doc_ops1
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 2}} -n {{.Scale 100000}} -pc 100
-    -dt Hotel -ds 1000 -ac True -dpx test2"
-  alias: collection_bucket3_doc_ops3
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 2}} -n {{.Scale 100000}} -pc 100
-    -dt Hotel -ds 1000 -ac True -dpx test3"
-  alias: collection_bucket3_doc_ops4
 
 ############### Start Collections CRUD on bucket 4 & bucket5 ###############
 -
@@ -474,30 +456,6 @@
   client:
     op: rm
     container: collection_bucket3_doc_ops2
--
-  client:
-    op: rm
-    container: collection_bucket1_doc_ops3
--
-  client:
-    op: rm
-    container: collection_bucket2_doc_ops3
--
-  client:
-    op: rm
-    container: collection_bucket3_doc_ops3
--
-  client:
-    op: rm
-    container: collection_bucket1_doc_ops4
--
-  client:
-    op: rm
-    container: collection_bucket2_doc_ops4
--
-  client:
-    op: rm
-    container: collection_bucket3_doc_ops4
 -
    image: sequoiatools/cmd
    entrypoint: sleep
