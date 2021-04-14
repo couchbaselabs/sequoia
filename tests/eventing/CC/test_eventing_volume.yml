@@ -51,33 +51,33 @@
 ####### load data into all collections #######
 -
   image: sequoiatools/gideon2
-  command: "kv --ops {{.Scale 5000}} --create 100  --hosts {{.Orchestrator}} --bucket bucket_op --scope scope_0 --collection coll0,coll1,coll2"
+  command: "kv --ops {{.Scale 1000}} --create 60 --get 40  --hosts {{.Orchestrator}} --bucket bucket_op --scope scope_0 --collection coll0,coll1"
   duration: 1000
-- command: "kv --ops {{.Scale 5000}} --create 100  --hosts {{.Orchestrator}} --bucket timer_op --scope scope_0 --collection coll0,coll1,coll2"
+- command: "kv --ops {{.Scale 1000}} --create 60 --get 40  --hosts {{.Orchestrator}} --bucket timer_op --scope scope_0 --collection coll0,coll"
   duration: 1000
-- command: "kv --ops {{.Scale 5000}} --create 100  --hosts {{.Orchestrator}} --bucket n1ql_op --scope scope_0 --collection coll0,coll1,coll2"
+- command: "kv --ops {{.Scale 1000}} --create 60 --get 40  --hosts {{.Orchestrator}} --bucket n1ql_op --scope scope_0 --collection coll0,coll1"
   duration: 1000
-- command: "kv --ops {{.Scale 5000}} --create 100  --hosts {{.Orchestrator}} --bucket curl_op --scope scope_0 --collection coll0,coll1,coll2"
+- command: "kv --ops {{.Scale 1000}} --create 60 --get 40  --hosts {{.Orchestrator}} --bucket curl_op --scope scope_0 --collection coll0,coll1"
   duration: 1000
 
 #### create handlers #####
-- foreach: "{{range $i, $sc := mkrange 0 2}}"
+- foreach: "{{range $i, $sc := mkrange 0 1}}"
   image: sequoiatools/eventing:7.0
   command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -s bucket_op.scope_0.coll{{$sc}} -m metadata.scope_0.coll{{$sc}} -d dst_bucket.bucket_op.scope_1.coll{{$sc}}.rw -d dst_bucket2.source_op.scope_0.coll{{$sc}}.rw  -t bucket_op_sbm -o create --name bucket_op{{$sc}}"
   wait: true
-- foreach: "{{range $i, $sc := mkrange 0 2}}"
+- foreach: "{{range $i, $sc := mkrange 0 1}}"
   image: sequoiatools/eventing:7.0
   command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -s timer_op.scope_0.coll{{$sc}} -m metadata.scope_1.coll{{$sc}} -d dst_bucket.timer_op.scope_1.coll{{$sc}}.rw -t timers -o create --name timers{{$sc}}"
   wait: true
-- foreach: "{{range $i, $sc := mkrange 0 2}}"
+- foreach: "{{range $i, $sc := mkrange 0 1}}"
   image: sequoiatools/eventing:7.0
   command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -s curl_op.scope_0.coll{{$sc}} -m metadata.scope_2.coll{{$sc}} -d dst_bucket.curl_op.scope_1.coll{{$sc}}.rw -t curl -o create --name curl{{$sc}}"
   wait: true
-- foreach: "{{range $i, $sc := mkrange 0 2}}"
+- foreach: "{{range $i, $sc := mkrange 0 1}}"
   image: sequoiatools/eventing:7.0
   command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -s n1ql_op.scope_0.coll{{$sc}} -m metadata.scope_3.coll{{$sc}} -d dst_bucket.n1ql_op.scope_1.coll{{$sc}}.rw -t n1ql -o create --name n1ql{{$sc}}"
   wait: true
-- foreach: "{{range $i, $sc := mkrange 0 2}}"
+- foreach: "{{range $i, $sc := mkrange 0 1}}"
   image: sequoiatools/eventing:7.0
   command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -s source_op.scope_0.coll{{$sc}} -m metadata.scope_4.coll{{$sc}} -d dst_bucket.source_op.scope_0.coll{{$sc}}.rw -t sbm -o create --name sbm{{$sc}}"
   wait: true
@@ -114,19 +114,19 @@
   wait: true
 
 ############### verify bucket op, n1ql and timers #############
-- foreach: "{{range $i, $sc := mkrange 0 2}}"
+- foreach: "{{range $i, $sc := mkrange 0 1}}"
   image: sequoiatools/eventing:7.0
   command: "eventing_helper.py -i {{$.QueryNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o verify -s bucket_op.scope_0.coll{{$sc}} -d bucket_op.scope_1.coll{{$sc}}"
   wait: true
-- foreach: "{{range $i, $sc := mkrange 0 2}}"
+- foreach: "{{range $i, $sc := mkrange 0 1}}"
   image: sequoiatools/eventing:7.0
   command: "eventing_helper.py -i {{$.QueryNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o verify -s bucket_op.scope_0.coll{{$sc}} -d source_op.scope_0.coll{{$sc}}"
   wait: true
-- foreach: "{{range $i, $sc := mkrange 0 2}}"
+- foreach: "{{range $i, $sc := mkrange 0 1}}"
   image: sequoiatools/eventing:7.0
   command: "eventing_helper.py -i {{$.QueryNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o verify -s timer_op.scope_0.coll{{$sc}} -d timer_op.scope_1.coll{{$sc}}"
   wait: true
-- foreach: "{{range $i, $sc := mkrange 0 2}}"
+- foreach: "{{range $i, $sc := mkrange 0 1}}"
   image: sequoiatools/eventing:7.0
   command: "eventing_helper.py -i {{$.QueryNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o verify -s n1ql_op.scope_0.coll{{$sc}} -d n1ql_op.scope_1.coll{{$sc}}"
   wait: true
@@ -135,13 +135,13 @@
 ####### load data into all collections #######
 -
   image: sequoiatools/gideon2
-  command: "kv --ops {{.Scale 5000}} --create 100  --hosts {{.Orchestrator}} --bucket bucket_op --scope scope_0 --collection coll0,coll1,coll2"
+  command: "kv --ops {{.Scale 1000}} --create 60 --get 40  --hosts {{.Orchestrator}} --bucket bucket_op --scope scope_0 --collection coll0,coll1"
   duration: 1000
-- command: "kv --ops {{.Scale 5000}} --create 100  --hosts {{.Orchestrator}} --bucket timer_op --scope scope_0 --collection coll0,coll1,coll2"
+- command: "kv --ops {{.Scale 1000}} --create 60 --get 40  --hosts {{.Orchestrator}} --bucket timer_op --scope scope_0 --collection coll0,coll1"
   duration: 1000
-- command: "kv --ops {{.Scale 5000}} --create 100  --hosts {{.Orchestrator}} --bucket n1ql_op --scope scope_0 --collection coll0,coll1,coll2"
+- command: "kv --ops {{.Scale 1000}} --create 60 --get 40  --hosts {{.Orchestrator}} --bucket n1ql_op --scope scope_0 --collection coll0,coll1"
   duration: 1000
-- command: "kv --ops {{.Scale 5000}} --create 100  --hosts {{.Orchestrator}} --bucket curl_op --scope scope_0 --collection coll0,coll1,coll2"
+- command: "kv --ops {{.Scale 1000}} --create 60 --get 40  --hosts {{.Orchestrator}} --bucket curl_op --scope scope_0 --collection coll0,coll1"
   duration: 1000
 
 ###############  Rebalance-in multiple kv nodes################
@@ -174,23 +174,23 @@
 
 
 ############### verify all #############
-- foreach: "{{range $i, $sc := mkrange 0 2}}"
+- foreach: "{{range $i, $sc := mkrange 0 1}}"
   image: sequoiatools/eventing:7.0
   command: "eventing_helper.py -i {{$.QueryNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o verify -s curl_op.scope_0.coll{{$sc}} -d curl_op.scope_1.coll{{$sc}}"
   wait: true
-- foreach: "{{range $i, $sc := mkrange 0 2}}"
+- foreach: "{{range $i, $sc := mkrange 0 1}}"
   image: sequoiatools/eventing:7.0
   command: "eventing_helper.py -i {{$.QueryNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o verify -s bucket_op.scope_0.coll{{$sc}} -d source_op.scope_0.coll{{$sc}} --sbm True"
   wait: true
-- foreach: "{{range $i, $sc := mkrange 0 2}}"
+- foreach: "{{range $i, $sc := mkrange 0 1}}"
   image: sequoiatools/eventing:7.0
   command: "eventing_helper.py -i {{$.QueryNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o verify -s bucket_op.scope_0.coll{{$sc}} -d bucket_op.scope_1.coll{{$sc}}"
   wait: true
-- foreach: "{{range $i, $sc := mkrange 0 2}}"
+- foreach: "{{range $i, $sc := mkrange 0 1}}"
   image: sequoiatools/eventing:7.0
   command: "eventing_helper.py -i {{$.QueryNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o verify -s timer_op.scope_0.coll{{$sc}} -d timer_op.scope_1.coll{{$sc}}"
   wait: true
-- foreach: "{{range $i, $sc := mkrange 0 2}}"
+- foreach: "{{range $i, $sc := mkrange 0 1}}"
   image: sequoiatools/eventing:7.0
   command: "eventing_helper.py -i {{$.QueryNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o verify -s n1ql_op.scope_0.coll{{$sc}} -d n1ql_op.scope_1.coll{{$sc}}"
   wait: true
@@ -224,13 +224,13 @@
 ####### load data into all collections #######
 -
   image: sequoiatools/gideon2
-  command: "kv --ops {{.Scale 5000}} --create 100  --hosts {{.Orchestrator}} --bucket bucket_op --scope scope_0 --collection coll0,coll1,coll2"
+  command: "kv --ops {{.Scale 1000}} --create 60 --get 40  --hosts {{.Orchestrator}} --bucket bucket_op --scope scope_0 --collection coll0,coll1"
   duration: 1000
-- command: "kv --ops {{.Scale 5000}} --create 100  --hosts {{.Orchestrator}} --bucket timer_op --scope scope_0 --collection coll0,coll1,coll2"
+- command: "kv --ops {{.Scale 1000}} --create 60 --get 40  --hosts {{.Orchestrator}} --bucket timer_op --scope scope_0 --collection coll0,coll1"
   duration: 1000
-- command: "kv --ops {{.Scale 5000}} --create 100  --hosts {{.Orchestrator}} --bucket n1ql_op --scope scope_0 --collection coll0,coll1,coll2"
+- command: "kv --ops {{.Scale 1000}} --create 60 --get 40  --hosts {{.Orchestrator}} --bucket n1ql_op --scope scope_0 --collection coll0,coll1"
   duration: 1000
-- command: "kv --ops {{.Scale 5000}} --create 100  --hosts {{.Orchestrator}} --bucket curl_op --scope scope_0 --collection coll0,coll1,coll2"
+- command: "kv --ops {{.Scale 1000}} --create 60 --get 40  --hosts {{.Orchestrator}} --bucket curl_op --scope scope_0 --collection coll0,coll1"
   duration: 1000
 
 
@@ -260,23 +260,23 @@
   wait: true
 
 ############### verify all handlers #############
-- foreach: "{{range $i, $sc := mkrange 0 2}}"
+- foreach: "{{range $i, $sc := mkrange 0 1}}"
   image: sequoiatools/eventing:7.0
   command: "eventing_helper.py -i {{$.QueryNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o verify -s curl_op.scope_0.coll{{$sc}} -d curl_op.scope_1.coll{{$sc}}"
   wait: true
-- foreach: "{{range $i, $sc := mkrange 0 2}}"
+- foreach: "{{range $i, $sc := mkrange 0 1}}"
   image: sequoiatools/eventing:7.0
   command: "eventing_helper.py -i {{$.QueryNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o verify -s bucket_op.scope_0.coll{{$sc}} -d source_op.scope_0.coll{{$sc}} --sbm True"
   wait: true
-- foreach: "{{range $i, $sc := mkrange 0 2}}"
+- foreach: "{{range $i, $sc := mkrange 0 1}}"
   image: sequoiatools/eventing:7.0
   command: "eventing_helper.py -i {{$.QueryNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o verify -s bucket_op.scope_0.coll{{$sc}} -d bucket_op.scope_1.coll{{$sc}}"
   wait: true
-- foreach: "{{range $i, $sc := mkrange 0 2}}"
+- foreach: "{{range $i, $sc := mkrange 0 1}}"
   image: sequoiatools/eventing:7.0
   command: "eventing_helper.py -i {{$.QueryNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o verify -s timer_op.scope_0.coll{{$sc}} -d timer_op.scope_1.coll{{$sc}}"
   wait: true
-- foreach: "{{range $i, $sc := mkrange 0 2}}"
+- foreach: "{{range $i, $sc := mkrange 0 1}}"
   image: sequoiatools/eventing:7.0
   command: "eventing_helper.py -i {{$.QueryNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o verify -s n1ql_op.scope_0.coll{{$sc}} -d n1ql_op.scope_1.coll{{$sc}}"
   wait: true
@@ -284,13 +284,13 @@
 ####### load data into all collections #######
 -
   image: sequoiatools/gideon2
-  command: "kv --ops {{.Scale 5000}} --create 100  --hosts {{.Orchestrator}} --bucket bucket_op --scope scope_0 --collection coll0,coll1,coll2"
+  command: "kv --ops {{.Scale 1000}} --create 60 --get 40  --hosts {{.Orchestrator}} --bucket bucket_op --scope scope_0 --collection coll0,coll1"
   duration: 1000
-- command: "kv --ops {{.Scale 5000}} --create 100  --hosts {{.Orchestrator}} --bucket timer_op --scope scope_0 --collection coll0,coll1,coll2"
+- command: "kv --ops {{.Scale 1000}} --create 60 --get 40  --hosts {{.Orchestrator}} --bucket timer_op --scope scope_0 --collection coll0,coll1"
   duration: 1000
-- command: "kv --ops {{.Scale 5000}} --create 100  --hosts {{.Orchestrator}} --bucket n1ql_op --scope scope_0 --collection coll0,coll1,coll2"
+- command: "kv --ops {{.Scale 1000}} --create 60 --get 40  --hosts {{.Orchestrator}} --bucket n1ql_op --scope scope_0 --collection coll0,coll1"
   duration: 1000
-- command: "kv --ops {{.Scale 5000}} --create 100  --hosts {{.Orchestrator}} --bucket curl_op --scope scope_0 --collection coll0,coll1,coll2"
+- command: "kv --ops {{.Scale 1000}} --create 60 --get 40  --hosts {{.Orchestrator}} --bucket curl_op --scope scope_0 --collection coll0,coll1"
   duration: 1000
 
 ###############  Rebalance-out multiple eventing nodes ################
@@ -301,23 +301,23 @@
 
 
 ############### verify all #############
-- foreach: "{{range $i, $sc := mkrange 0 2}}"
+- foreach: "{{range $i, $sc := mkrange 0 1}}"
   image: sequoiatools/eventing:7.0
   command: "eventing_helper.py -i {{$.QueryNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o verify -s curl_op.scope_0.coll{{$sc}} -d curl_op.scope_1.coll{{$sc}}"
   wait: true
-- foreach: "{{range $i, $sc := mkrange 0 2}}"
+- foreach: "{{range $i, $sc := mkrange 0 1}}"
   image: sequoiatools/eventing:7.0
   command: "eventing_helper.py -i {{$.QueryNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o verify -s bucket_op.scope_0.coll{{$sc}} -d source_op.scope_0.coll{{$sc}} --sbm True"
   wait: true
-- foreach: "{{range $i, $sc := mkrange 0 2}}"
+- foreach: "{{range $i, $sc := mkrange 0 1}}"
   image: sequoiatools/eventing:7.0
   command: "eventing_helper.py -i {{$.QueryNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o verify -s bucket_op.scope_0.coll{{$sc}} -d bucket_op.scope_1.coll{{$sc}}"
   wait: true
-- foreach: "{{range $i, $sc := mkrange 0 2}}"
+- foreach: "{{range $i, $sc := mkrange 0 1}}"
   image: sequoiatools/eventing:7.0
   command: "eventing_helper.py -i {{$.QueryNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o verify -s timer_op.scope_0.coll{{$sc}} -d timer_op.scope_1.coll{{$sc}}"
   wait: true
-- foreach: "{{range $i, $sc := mkrange 0 2}}"
+- foreach: "{{range $i, $sc := mkrange 0 1}}"
   image: sequoiatools/eventing:7.0
   command: "eventing_helper.py -i {{$.QueryNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o verify -s n1ql_op.scope_0.coll{{$sc}} -d n1ql_op.scope_1.coll{{$sc}}"
   wait: true
@@ -326,13 +326,13 @@
 ####### load data into all collections #######
 -
   image: sequoiatools/gideon2
-  command: "kv --ops {{.Scale 5000}} --create 100  --hosts {{.Orchestrator}} --bucket bucket_op --scope scope_0 --collection coll0,coll1,coll2"
+  command: "kv --ops {{.Scale 1000}} --create 60 --get 40  --hosts {{.Orchestrator}} --bucket bucket_op --scope scope_0 --collection coll0,coll1"
   duration: 1000
-- command: "kv --ops {{.Scale 5000}} --create 100  --hosts {{.Orchestrator}} --bucket timer_op --scope scope_0 --collection coll0,coll1,coll2"
+- command: "kv --ops {{.Scale 1000}} --create 60 --get 40  --hosts {{.Orchestrator}} --bucket timer_op --scope scope_0 --collection coll0,coll1"
   duration: 1000
-- command: "kv --ops {{.Scale 5000}} --create 100  --hosts {{.Orchestrator}} --bucket n1ql_op --scope scope_0 --collection coll0,coll1,coll2"
+- command: "kv --ops {{.Scale 1000}} --create 60 --get 40  --hosts {{.Orchestrator}} --bucket n1ql_op --scope scope_0 --collection coll0,coll1"
   duration: 1000
-- command: "kv --ops {{.Scale 5000}} --create 100  --hosts {{.Orchestrator}} --bucket curl_op --scope scope_0 --collection coll0,coll1,coll2"
+- command: "kv --ops {{.Scale 1000}} --create 60 --get 40  --hosts {{.Orchestrator}} --bucket curl_op --scope scope_0 --collection coll0,coll1"
   duration: 1000
 
 ###############  Swap Rebalance ################
@@ -346,23 +346,23 @@
 
 
 ############### verify all #############
-- foreach: "{{range $i, $sc := mkrange 0 2}}"
+- foreach: "{{range $i, $sc := mkrange 0 1}}"
   image: sequoiatools/eventing:7.0
   command: "eventing_helper.py -i {{$.QueryNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o verify -s curl_op.scope_0.coll{{$sc}} -d curl_op.scope_1.coll{{$sc}}"
   wait: true
-- foreach: "{{range $i, $sc := mkrange 0 2}}"
+- foreach: "{{range $i, $sc := mkrange 0 1}}"
   image: sequoiatools/eventing:7.0
   command: "eventing_helper.py -i {{$.QueryNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o verify -s bucket_op.scope_0.coll{{$sc}} -d source_op.scope_0.coll{{$sc}} --sbm True"
   wait: true
-- foreach: "{{range $i, $sc := mkrange 0 2}}"
+- foreach: "{{range $i, $sc := mkrange 0 1}}"
   image: sequoiatools/eventing:7.0
   command: "eventing_helper.py -i {{$.QueryNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o verify -s bucket_op.scope_0.coll{{$sc}} -d bucket_op.scope_1.coll{{$sc}}"
   wait: true
-- foreach: "{{range $i, $sc := mkrange 0 2}}"
+- foreach: "{{range $i, $sc := mkrange 0 1}}"
   image: sequoiatools/eventing:7.0
   command: "eventing_helper.py -i {{$.QueryNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o verify -s timer_op.scope_0.coll{{$sc}} -d timer_op.scope_1.coll{{$sc}}"
   wait: true
-- foreach: "{{range $i, $sc := mkrange 0 2}}"
+- foreach: "{{range $i, $sc := mkrange 0 1}}"
   image: sequoiatools/eventing:7.0
   command: "eventing_helper.py -i {{$.QueryNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o verify -s n1ql_op.scope_0.coll{{$sc}} -d n1ql_op.scope_1.coll{{$sc}}"
   wait: true
@@ -370,13 +370,13 @@
 ####### load data into all collections #######
 -
   image: sequoiatools/gideon2
-  command: "kv --ops {{.Scale 5000}} --create 100  --hosts {{.Orchestrator}} --bucket bucket_op --scope scope_0 --collection coll0,coll1,coll2"
+  command: "kv --ops {{.Scale 1000}} --create 60 --get 40  --hosts {{.Orchestrator}} --bucket bucket_op --scope scope_0 --collection coll0,coll1"
   duration: 1000
-- command: "kv --ops {{.Scale 5000}} --create 100  --hosts {{.Orchestrator}} --bucket timer_op --scope scope_0 --collection coll0,coll1,coll2"
+- command: "kv --ops {{.Scale 1000}} --create 60 --get 40  --hosts {{.Orchestrator}} --bucket timer_op --scope scope_0 --collection coll0,coll1"
   duration: 1000
-- command: "kv --ops {{.Scale 5000}} --create 100  --hosts {{.Orchestrator}} --bucket n1ql_op --scope scope_0 --collection coll0,coll1,coll2"
+- command: "kv --ops {{.Scale 1000}} --create 60 --get 40  --hosts {{.Orchestrator}} --bucket n1ql_op --scope scope_0 --collection coll0,coll1"
   duration: 1000
-- command: "kv --ops {{.Scale 5000}} --create 100  --hosts {{.Orchestrator}} --bucket curl_op --scope scope_0 --collection coll0,coll1,coll2"
+- command: "kv --ops {{.Scale 1000}} --create 60 --get 40  --hosts {{.Orchestrator}} --bucket curl_op --scope scope_0 --collection coll0,coll1"
   duration: 1000
 
 ###############  Rebalance-in kv+eventing nodes ################
@@ -387,23 +387,23 @@
 
 
 ############### verify all #############
-- foreach: "{{range $i, $sc := mkrange 0 2}}"
+- foreach: "{{range $i, $sc := mkrange 0 1}}"
   image: sequoiatools/eventing:7.0
   command: "eventing_helper.py -i {{$.QueryNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o verify -s curl_op.scope_0.coll{{$sc}} -d curl_op.scope_1.coll{{$sc}}"
   wait: true
-- foreach: "{{range $i, $sc := mkrange 0 2}}"
+- foreach: "{{range $i, $sc := mkrange 0 1}}"
   image: sequoiatools/eventing:7.0
   command: "eventing_helper.py -i {{$.QueryNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o verify -s bucket_op.scope_0.coll{{$sc}} -d source_op.scope_0.coll{{$sc}} --sbm True"
   wait: true
-- foreach: "{{range $i, $sc := mkrange 0 2}}"
+- foreach: "{{range $i, $sc := mkrange 0 1}}"
   image: sequoiatools/eventing:7.0
   command: "eventing_helper.py -i {{$.QueryNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o verify -s bucket_op.scope_0.coll{{$sc}} -d bucket_op.scope_1.coll{{$sc}}"
   wait: true
-- foreach: "{{range $i, $sc := mkrange 0 2}}"
+- foreach: "{{range $i, $sc := mkrange 0 1}}"
   image: sequoiatools/eventing:7.0
   command: "eventing_helper.py -i {{$.QueryNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o verify -s timer_op.scope_0.coll{{$sc}} -d timer_op.scope_1.coll{{$sc}}"
   wait: true
-- foreach: "{{range $i, $sc := mkrange 0 2}}"
+- foreach: "{{range $i, $sc := mkrange 0 1}}"
   image: sequoiatools/eventing:7.0
   command: "eventing_helper.py -i {{$.QueryNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o verify -s n1ql_op.scope_0.coll{{$sc}} -d n1ql_op.scope_1.coll{{$sc}}"
   wait: true
@@ -411,13 +411,13 @@
 ####### load data into all collections #######
 -
   image: sequoiatools/gideon2
-  command: "kv --ops {{.Scale 5000}} --create 100  --hosts {{.Orchestrator}} --bucket bucket_op --scope scope_0 --collection coll0,coll1,coll2"
+  command: "kv --ops {{.Scale 1000}} --create 60 --get 40  --hosts {{.Orchestrator}} --bucket bucket_op --scope scope_0 --collection coll0,coll1"
   duration: 1000
-- command: "kv --ops {{.Scale 5000}} --create 100  --hosts {{.Orchestrator}} --bucket timer_op --scope scope_0 --collection coll0,coll1,coll2"
+- command: "kv --ops {{.Scale 1000}} --create 60 --get 40  --hosts {{.Orchestrator}} --bucket timer_op --scope scope_0 --collection coll0,coll1"
   duration: 1000
-- command: "kv --ops {{.Scale 5000}} --create 100  --hosts {{.Orchestrator}} --bucket n1ql_op --scope scope_0 --collection coll0,coll1,coll2"
+- command: "kv --ops {{.Scale 1000}} --create 60 --get 40  --hosts {{.Orchestrator}} --bucket n1ql_op --scope scope_0 --collection coll0,coll1"
   duration: 1000
-- command: "kv --ops {{.Scale 5000}} --create 100  --hosts {{.Orchestrator}} --bucket curl_op --scope scope_0 --collection coll0,coll1,coll2"
+- command: "kv --ops {{.Scale 1000}} --create 60 --get 40  --hosts {{.Orchestrator}} --bucket curl_op --scope scope_0 --collection coll0,coll1"
   duration: 1000
 
 ###############  Rebalance-out  kv+eventing nodes ################
@@ -427,23 +427,23 @@
 
 
 ############### verify all #############
-- foreach: "{{range $i, $sc := mkrange 0 2}}"
+- foreach: "{{range $i, $sc := mkrange 0 1}}"
   image: sequoiatools/eventing:7.0
   command: "eventing_helper.py -i {{$.QueryNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o verify -s curl_op.scope_0.coll{{$sc}} -d curl_op.scope_1.coll{{$sc}}"
   wait: true
-- foreach: "{{range $i, $sc := mkrange 0 2}}"
+- foreach: "{{range $i, $sc := mkrange 0 1}}"
   image: sequoiatools/eventing:7.0
   command: "eventing_helper.py -i {{$.QueryNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o verify -s bucket_op.scope_0.coll{{$sc}} -d source_op.scope_0.coll{{$sc}} --sbm True"
   wait: true
-- foreach: "{{range $i, $sc := mkrange 0 2}}"
+- foreach: "{{range $i, $sc := mkrange 0 1}}"
   image: sequoiatools/eventing:7.0
   command: "eventing_helper.py -i {{$.QueryNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o verify -s bucket_op.scope_0.coll{{$sc}} -d bucket_op.scope_1.coll{{$sc}}"
   wait: true
-- foreach: "{{range $i, $sc := mkrange 0 2}}"
+- foreach: "{{range $i, $sc := mkrange 0 1}}"
   image: sequoiatools/eventing:7.0
   command: "eventing_helper.py -i {{$.QueryNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o verify -s timer_op.scope_0.coll{{$sc}} -d timer_op.scope_1.coll{{$sc}}"
   wait: true
-- foreach: "{{range $i, $sc := mkrange 0 2}}"
+- foreach: "{{range $i, $sc := mkrange 0 1}}"
   image: sequoiatools/eventing:7.0
   command: "eventing_helper.py -i {{$.QueryNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o verify -s n1ql_op.scope_0.coll{{$sc}} -d n1ql_op.scope_1.coll{{$sc}}"
   wait: true
@@ -459,23 +459,27 @@
   wait: true
 
 ############### verify all #############
-- foreach: "{{range $i, $sc := mkrange 0 2}}"
+- foreach: "{{range $i, $sc := mkrange 0 1}}"
   image: sequoiatools/eventing:7.0
   command: "eventing_helper.py -i {{$.QueryNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o verify -s curl_op.scope_0.coll{{$sc}} -d curl_op.scope_1.coll{{$sc}}"
   wait: true
-- foreach: "{{range $i, $sc := mkrange 0 2}}"
+- foreach: "{{range $i, $sc := mkrange 0 1}}"
   image: sequoiatools/eventing:7.0
   command: "eventing_helper.py -i {{$.QueryNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o verify -s bucket_op.scope_0.coll{{$sc}} -d source_op.scope_0.coll{{$sc}} --sbm True"
   wait: true
-- foreach: "{{range $i, $sc := mkrange 0 2}}"
+- foreach: "{{range $i, $sc := mkrange 0 1}}"
   image: sequoiatools/eventing:7.0
   command: "eventing_helper.py -i {{$.QueryNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o verify -s bucket_op.scope_0.coll{{$sc}} -d bucket_op.scope_1.coll{{$sc}}"
   wait: true
-- foreach: "{{range $i, $sc := mkrange 0 2}}"
+- foreach: "{{range $i, $sc := mkrange 0 1}}"
   image: sequoiatools/eventing:7.0
   command: "eventing_helper.py -i {{$.QueryNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o verify -s timer_op.scope_0.coll{{$sc}} -d timer_op.scope_1.coll{{$sc}}"
   wait: true
-- foreach: "{{range $i, $sc := mkrange 0 2}}"
+- foreach: "{{range $i, $sc := mkrange 0 1}}"
   image: sequoiatools/eventing:7.0
   command: "eventing_helper.py -i {{$.QueryNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o verify -s n1ql_op.scope_0.coll{{$sc}} -d n1ql_op.scope_1.coll{{$sc}}"
   wait: true
+
+###### Undeploy sbm handler ######
+- image: sequoiatools/eventing:7.0
+  command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o undeploy --name sbm --wait True"
