@@ -112,6 +112,7 @@ buckets:
   -
       name: WAREHOUSE
       ram: 5%
+      ttl: 3600
   -
       name: NEW_ORDER
       ram: 5%
