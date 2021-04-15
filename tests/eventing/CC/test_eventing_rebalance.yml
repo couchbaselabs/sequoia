@@ -20,11 +20,11 @@
 ####### load data into all collections #######
 -
   image: sequoiatools/gideon2
-  command: "kv --ops {{.Scale 500}} --create 100  --hosts {{.Orchestrator}} --bucket bucket_op --scope scope_0 --collection coll0,coll1,coll2"
-- command: "kv --ops {{.Scale 500}} --create 100  --hosts {{.Orchestrator}} --bucket timer_op --scope scope_0 --collection coll0,coll1,coll2"
-- command: "kv --ops {{.Scale 500}} --create 100  --hosts {{.Orchestrator}} --bucket n1ql_op --scope scope_0 --collection coll0,coll1,coll2"
-- command: "kv --ops {{.Scale 500}} --create 100  --hosts {{.Orchestrator}} --bucket source_op --scope scope_0 --collection coll0,coll1,coll2"
-- command: "kv --ops {{.Scale 500}} --create 100  --hosts {{.Orchestrator}} --bucket curl_op --scope scope_0 --collection coll0,coll1,coll2"
+  command: "kv --ops {{.Scale 500}} --create 30 --get 70  --hosts {{.Orchestrator}} --bucket bucket_op --scope scope_0 --collection coll0,coll1,coll2"
+- command: "kv --ops {{.Scale 500}} --create 30 --get 70  --hosts {{.Orchestrator}} --bucket timer_op --scope scope_0 --collection coll0,coll1,coll2"
+- command: "kv --ops {{.Scale 500}} --create 30 --get 70  --hosts {{.Orchestrator}} --bucket n1ql_op --scope scope_0 --collection coll0,coll1,coll2"
+- command: "kv --ops {{.Scale 500}} --create 30 --get 70  --hosts {{.Orchestrator}} --bucket source_op --scope scope_0 --collection coll0,coll1,coll2"
+- command: "kv --ops {{.Scale 500}} --create 30 --get 70  --hosts {{.Orchestrator}} --bucket curl_op --scope scope_0 --collection coll0,coll1,coll2"
 
 #### create handlers #####
 - foreach: "{{range $i, $sc := mkrange 0 2}}"
@@ -161,11 +161,11 @@
 ####### load data into source of new collections #######
 -
   image: sequoiatools/gideon2
-  command: "kv --ops {{.Scale 500}} --create 100  --hosts {{.Orchestrator}} --bucket bucket_op --scope scope_0 --collection coll3,coll4"
-- command: "kv --ops {{.Scale 500}} --create 100  --hosts {{.Orchestrator}} --bucket timer_op --scope scope_0 --collection coll3,coll4"
-- command: "kv --ops {{.Scale 500}} --create 100  --hosts {{.Orchestrator}} --bucket n1ql_op --scope scope_0 --collection coll3,coll4"
-- command: "kv --ops {{.Scale 500}} --create 100  --hosts {{.Orchestrator}} --bucket source_op --scope scope_0 --collection coll3,coll4"
-- command: "kv --ops {{.Scale 500}} --create 100  --hosts {{.Orchestrator}} --bucket curl_op --scope scope_0 --collection coll3,coll4"
+  command: "kv --ops {{.Scale 500}} --create 30 --get 70  --hosts {{.Orchestrator}} --bucket bucket_op --scope scope_0 --collection coll3,coll4"
+- command: "kv --ops {{.Scale 500}} --create 30 --get 70  --hosts {{.Orchestrator}} --bucket timer_op --scope scope_0 --collection coll3,coll4"
+- command: "kv --ops {{.Scale 500}} --create 30 --get 70  --hosts {{.Orchestrator}} --bucket n1ql_op --scope scope_0 --collection coll3,coll4"
+- command: "kv --ops {{.Scale 500}} --create 30 --get 70  --hosts {{.Orchestrator}} --bucket source_op --scope scope_0 --collection coll3,coll4"
+- command: "kv --ops {{.Scale 500}} --create 30 --get 70  --hosts {{.Orchestrator}} --bucket curl_op --scope scope_0 --collection coll3,coll4"
 
 #### deploy new handlers #####
 - image: sequoiatools/eventing:7.0
@@ -302,10 +302,15 @@
 ###############  Failover and rebalance out eventing ################
 - template: failover_node_forced
   args: "{{.ActiveEventingNode 1}}"
+
+############### Wait for failover to complete ###############
+- image: sequoiatools/eventing:7.0
+  command: "eventing_helper.py -i {{.ActiveEventingNode 1}} -u {{.RestUsername}} -p {{.RestPassword}} -o wait_for_failover"
+  wait: true
 - template: rebalance
   wait: true
 
-
+  
 #============ hard failover KV node ============
 -
   template: failover_force_and_recover

@@ -23,7 +23,7 @@ class EventingHelper:
         parser.add_option("-t",dest="type")
         parser.add_option("--name",dest="name")
         parser.add_option("-n",dest="number",type="int", default=1)
-        parser.add_option("-o",dest="operation",choices=['create', 'deploy', 'pause', 'resume', 'undeploy', 'delete', 'wait_for_state','verify'])
+        parser.add_option("-o",dest="operation",choices=['create', 'deploy', 'pause', 'resume', 'undeploy', 'delete', 'wait_for_state','verify','wait_for_failover'])
         parser.add_option("--wait",dest="wait",default=False)
         parser.add_option("--state",dest="state")
         parser.add_option("-l",dest="log_level",default="INFO",choices=['INFO','ERROR','WARNING','DEBUG','TRACE'])
@@ -65,6 +65,8 @@ class EventingHelper:
                 self.check_handler_status(app,options.state)
         elif options.operation == "verify":
             self.verify_doc(options)
+        elif options.operation == "wait_for_failover":
+            self.wait_for_failover_complete()
 
     def deploy_handlers(self,options,handler_name=None):
         wait_for_state=options.wait
@@ -312,6 +314,40 @@ class EventingHelper:
         elif curr_count >= expected_count:
             raise Exception("No of docs in source and destination don't match: Source Bucket({0}) : {1}, Destination Bucket({2}): {3}".
             format(source_collection, source_count["results"][0], destination_collection, binding_count["results"][0]))
+            
+    def wait_for_failover_complete(self):
+        status, content, header = self.failover_rebalance_status()
+        count = 0
+        ### wait for 5 min max
+        while not content:
+            status, content, header = self.failover_rebalance_status()
+            count = count + 1
+            time.sleep(1)
+            if count >= 300:
+                raise Exception("Failover not started even after waiting for long")
+        print("##### Failover started ######")
+        while content:
+            status, content, header = self.failover_rebalance_status()
+            count = count + 1
+            time.sleep(1)
+            print("waiting for failover to complete....")
+        print("##### Failover Completed #####")
+
+    def failover_rebalance_status(self):
+        authorization = base64.encodestring('%s:%s' % (self.username, self.password))
+
+        headers = {'Content-type': 'application/json', 'Authorization': 'Basic %s' % authorization}
+
+        url = "http://" + self.hostname + ":" + self.port + "/getAggRebalanceStatus"
+        response, content = httplib2.Http(timeout=120).request(uri=url, method="GET", headers=headers)
+
+        if response['status'] in ['200', '201', '202']:
+            if content == "true":
+                return True, True, response
+            else:
+                return True, False , response
+        else:
+            return False, content, response
 
 if __name__ == "__main__":
     EventingHelper().run()

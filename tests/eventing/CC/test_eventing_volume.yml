@@ -51,13 +51,13 @@
 ####### load data into all collections #######
 -
   image: sequoiatools/gideon2
-  command: "kv --ops {{.Scale 1000}} --create 60 --get 40  --hosts {{.Orchestrator}} --bucket bucket_op --scope scope_0 --collection coll0,coll1"
+  command: "kv --ops {{.Scale 1000}} --create 30 --get 70  --hosts {{.Orchestrator}} --bucket bucket_op --scope scope_0 --collection coll0,coll1"
   duration: 1000
-- command: "kv --ops {{.Scale 1000}} --create 60 --get 40  --hosts {{.Orchestrator}} --bucket timer_op --scope scope_0 --collection coll0,coll"
+- command: "kv --ops {{.Scale 1000}} --create 30 --get 70  --hosts {{.Orchestrator}} --bucket timer_op --scope scope_0 --collection coll0,coll"
   duration: 1000
-- command: "kv --ops {{.Scale 1000}} --create 60 --get 40  --hosts {{.Orchestrator}} --bucket n1ql_op --scope scope_0 --collection coll0,coll1"
+- command: "kv --ops {{.Scale 1000}} --create 30 --get 70  --hosts {{.Orchestrator}} --bucket n1ql_op --scope scope_0 --collection coll0,coll1"
   duration: 1000
-- command: "kv --ops {{.Scale 1000}} --create 60 --get 40  --hosts {{.Orchestrator}} --bucket curl_op --scope scope_0 --collection coll0,coll1"
+- command: "kv --ops {{.Scale 1000}} --create 30 --get 70  --hosts {{.Orchestrator}} --bucket curl_op --scope scope_0 --collection coll0,coll1"
   duration: 1000
 
 #### create handlers #####
@@ -135,13 +135,13 @@
 ####### load data into all collections #######
 -
   image: sequoiatools/gideon2
-  command: "kv --ops {{.Scale 1000}} --create 60 --get 40  --hosts {{.Orchestrator}} --bucket bucket_op --scope scope_0 --collection coll0,coll1"
+  command: "kv --ops {{.Scale 1000}} --create 30 --get 70  --hosts {{.Orchestrator}} --bucket bucket_op --scope scope_0 --collection coll0,coll1"
   duration: 1000
-- command: "kv --ops {{.Scale 1000}} --create 60 --get 40  --hosts {{.Orchestrator}} --bucket timer_op --scope scope_0 --collection coll0,coll1"
+- command: "kv --ops {{.Scale 1000}} --create 30 --get 70  --hosts {{.Orchestrator}} --bucket timer_op --scope scope_0 --collection coll0,coll1"
   duration: 1000
-- command: "kv --ops {{.Scale 1000}} --create 60 --get 40  --hosts {{.Orchestrator}} --bucket n1ql_op --scope scope_0 --collection coll0,coll1"
+- command: "kv --ops {{.Scale 1000}} --create 30 --get 70  --hosts {{.Orchestrator}} --bucket n1ql_op --scope scope_0 --collection coll0,coll1"
   duration: 1000
-- command: "kv --ops {{.Scale 1000}} --create 60 --get 40  --hosts {{.Orchestrator}} --bucket curl_op --scope scope_0 --collection coll0,coll1"
+- command: "kv --ops {{.Scale 1000}} --create 30 --get 70  --hosts {{.Orchestrator}} --bucket curl_op --scope scope_0 --collection coll0,coll1"
   duration: 1000
 
 ###############  Rebalance-in multiple kv nodes################
@@ -224,13 +224,13 @@
 ####### load data into all collections #######
 -
   image: sequoiatools/gideon2
-  command: "kv --ops {{.Scale 1000}} --create 60 --get 40  --hosts {{.Orchestrator}} --bucket bucket_op --scope scope_0 --collection coll0,coll1"
+  command: "kv --ops {{.Scale 1000}} --create 30 --get 70  --hosts {{.Orchestrator}} --bucket bucket_op --scope scope_0 --collection coll0,coll1"
   duration: 1000
-- command: "kv --ops {{.Scale 1000}} --create 60 --get 40  --hosts {{.Orchestrator}} --bucket timer_op --scope scope_0 --collection coll0,coll1"
+- command: "kv --ops {{.Scale 1000}} --create 30 --get 70  --hosts {{.Orchestrator}} --bucket timer_op --scope scope_0 --collection coll0,coll1"
   duration: 1000
-- command: "kv --ops {{.Scale 1000}} --create 60 --get 40  --hosts {{.Orchestrator}} --bucket n1ql_op --scope scope_0 --collection coll0,coll1"
+- command: "kv --ops {{.Scale 1000}} --create 30 --get 70  --hosts {{.Orchestrator}} --bucket n1ql_op --scope scope_0 --collection coll0,coll1"
   duration: 1000
-- command: "kv --ops {{.Scale 1000}} --create 60 --get 40  --hosts {{.Orchestrator}} --bucket curl_op --scope scope_0 --collection coll0,coll1"
+- command: "kv --ops {{.Scale 1000}} --create 30 --get 70  --hosts {{.Orchestrator}} --bucket curl_op --scope scope_0 --collection coll0,coll1"
   duration: 1000
 
 
@@ -284,13 +284,13 @@
 ####### load data into all collections #######
 -
   image: sequoiatools/gideon2
-  command: "kv --ops {{.Scale 1000}} --create 60 --get 40  --hosts {{.Orchestrator}} --bucket bucket_op --scope scope_0 --collection coll0,coll1"
+  command: "kv --ops {{.Scale 1000}} --create 30 --get 70  --hosts {{.Orchestrator}} --bucket bucket_op --scope scope_0 --collection coll0,coll1"
   duration: 1000
-- command: "kv --ops {{.Scale 1000}} --create 60 --get 40  --hosts {{.Orchestrator}} --bucket timer_op --scope scope_0 --collection coll0,coll1"
+- command: "kv --ops {{.Scale 1000}} --create 30 --get 70  --hosts {{.Orchestrator}} --bucket timer_op --scope scope_0 --collection coll0,coll1"
   duration: 1000
-- command: "kv --ops {{.Scale 1000}} --create 60 --get 40  --hosts {{.Orchestrator}} --bucket n1ql_op --scope scope_0 --collection coll0,coll1"
+- command: "kv --ops {{.Scale 1000}} --create 30 --get 70  --hosts {{.Orchestrator}} --bucket n1ql_op --scope scope_0 --collection coll0,coll1"
   duration: 1000
-- command: "kv --ops {{.Scale 1000}} --create 60 --get 40  --hosts {{.Orchestrator}} --bucket curl_op --scope scope_0 --collection coll0,coll1"
+- command: "kv --ops {{.Scale 1000}} --create 30 --get 70  --hosts {{.Orchestrator}} --bucket curl_op --scope scope_0 --collection coll0,coll1"
   duration: 1000
 
 ###############  Rebalance-out multiple eventing nodes ################
@@ -326,13 +326,13 @@
 ####### load data into all collections #######
 -
   image: sequoiatools/gideon2
-  command: "kv --ops {{.Scale 1000}} --create 60 --get 40  --hosts {{.Orchestrator}} --bucket bucket_op --scope scope_0 --collection coll0,coll1"
+  command: "kv --ops {{.Scale 1000}} --create 30 --get 70  --hosts {{.Orchestrator}} --bucket bucket_op --scope scope_0 --collection coll0,coll1"
   duration: 1000
-- command: "kv --ops {{.Scale 1000}} --create 60 --get 40  --hosts {{.Orchestrator}} --bucket timer_op --scope scope_0 --collection coll0,coll1"
+- command: "kv --ops {{.Scale 1000}} --create 30 --get 70  --hosts {{.Orchestrator}} --bucket timer_op --scope scope_0 --collection coll0,coll1"
   duration: 1000
-- command: "kv --ops {{.Scale 1000}} --create 60 --get 40  --hosts {{.Orchestrator}} --bucket n1ql_op --scope scope_0 --collection coll0,coll1"
+- command: "kv --ops {{.Scale 1000}} --create 30 --get 70  --hosts {{.Orchestrator}} --bucket n1ql_op --scope scope_0 --collection coll0,coll1"
   duration: 1000
-- command: "kv --ops {{.Scale 1000}} --create 60 --get 40  --hosts {{.Orchestrator}} --bucket curl_op --scope scope_0 --collection coll0,coll1"
+- command: "kv --ops {{.Scale 1000}} --create 30 --get 70  --hosts {{.Orchestrator}} --bucket curl_op --scope scope_0 --collection coll0,coll1"
   duration: 1000
 
 ###############  Swap Rebalance ################
@@ -370,13 +370,13 @@
 ####### load data into all collections #######
 -
   image: sequoiatools/gideon2
-  command: "kv --ops {{.Scale 1000}} --create 60 --get 40  --hosts {{.Orchestrator}} --bucket bucket_op --scope scope_0 --collection coll0,coll1"
+  command: "kv --ops {{.Scale 1000}} --create 30 --get 70  --hosts {{.Orchestrator}} --bucket bucket_op --scope scope_0 --collection coll0,coll1"
   duration: 1000
-- command: "kv --ops {{.Scale 1000}} --create 60 --get 40  --hosts {{.Orchestrator}} --bucket timer_op --scope scope_0 --collection coll0,coll1"
+- command: "kv --ops {{.Scale 1000}} --create 30 --get 70  --hosts {{.Orchestrator}} --bucket timer_op --scope scope_0 --collection coll0,coll1"
   duration: 1000
-- command: "kv --ops {{.Scale 1000}} --create 60 --get 40  --hosts {{.Orchestrator}} --bucket n1ql_op --scope scope_0 --collection coll0,coll1"
+- command: "kv --ops {{.Scale 1000}} --create 30 --get 70  --hosts {{.Orchestrator}} --bucket n1ql_op --scope scope_0 --collection coll0,coll1"
   duration: 1000
-- command: "kv --ops {{.Scale 1000}} --create 60 --get 40  --hosts {{.Orchestrator}} --bucket curl_op --scope scope_0 --collection coll0,coll1"
+- command: "kv --ops {{.Scale 1000}} --create 30 --get 70  --hosts {{.Orchestrator}} --bucket curl_op --scope scope_0 --collection coll0,coll1"
   duration: 1000
 
 ###############  Rebalance-in kv+eventing nodes ################
@@ -411,13 +411,13 @@
 ####### load data into all collections #######
 -
   image: sequoiatools/gideon2
-  command: "kv --ops {{.Scale 1000}} --create 60 --get 40  --hosts {{.Orchestrator}} --bucket bucket_op --scope scope_0 --collection coll0,coll1"
+  command: "kv --ops {{.Scale 1000}} --create 30 --get 70  --hosts {{.Orchestrator}} --bucket bucket_op --scope scope_0 --collection coll0,coll1"
   duration: 1000
-- command: "kv --ops {{.Scale 1000}} --create 60 --get 40  --hosts {{.Orchestrator}} --bucket timer_op --scope scope_0 --collection coll0,coll1"
+- command: "kv --ops {{.Scale 1000}} --create 30 --get 70  --hosts {{.Orchestrator}} --bucket timer_op --scope scope_0 --collection coll0,coll1"
   duration: 1000
-- command: "kv --ops {{.Scale 1000}} --create 60 --get 40  --hosts {{.Orchestrator}} --bucket n1ql_op --scope scope_0 --collection coll0,coll1"
+- command: "kv --ops {{.Scale 1000}} --create 30 --get 70  --hosts {{.Orchestrator}} --bucket n1ql_op --scope scope_0 --collection coll0,coll1"
   duration: 1000
-- command: "kv --ops {{.Scale 1000}} --create 60 --get 40  --hosts {{.Orchestrator}} --bucket curl_op --scope scope_0 --collection coll0,coll1"
+- command: "kv --ops {{.Scale 1000}} --create 30 --get 70  --hosts {{.Orchestrator}} --bucket curl_op --scope scope_0 --collection coll0,coll1"
   duration: 1000
 
 ###############  Rebalance-out  kv+eventing nodes ################
