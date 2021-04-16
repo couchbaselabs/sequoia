@@ -300,13 +300,8 @@
 
 
 ###############  Failover and rebalance out eventing ################
-- template: failover_node_forced
+- template: hard_failover_node
   args: "{{.ActiveEventingNode 1}}"
-
-############### Wait for failover to complete ###############
-- image: sequoiatools/eventing:7.0
-  command: "eventing_helper.py -i {{.ActiveEventingNode 1}} -u {{.RestUsername}} -p {{.RestPassword}} -o wait_for_failover"
-  wait: true
 - template: rebalance
   wait: true
 
@@ -318,7 +313,7 @@
   wait: true
 
 ###############  Failover and rebalance out 2 KV ################
-- template: failover_node_forced
+- template: hard_failover_node
   args: "{{.ActiveDataNode 1}}"
 - args: "{{.ActiveDataNode 2}}"
 - template: rebalance
