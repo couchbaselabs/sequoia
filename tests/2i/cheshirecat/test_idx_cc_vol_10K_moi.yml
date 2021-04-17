@@ -20,6 +20,21 @@
 - template: set_gsi_config
   args: "{{.ActiveIndexNode 0}}, 'indexer.settings.rebalance.redistribute_indexes':true"
 
+############### GSI Planner Setting ################
+- template: set_gsi_config
+  args: "{{.ActiveIndexNode 0}}, 'indexer.planner.timeout':900"
+
+############### GSI Planner Setting ################
+- template: set_gsi_config
+  args: "{{.ActiveIndexNode 0}}, 'indexer.planner.variationThreshold':0.1"
+
+############### Extend Rebalance Inactivity Timeout to 20 mins ################
+-
+  image:  appropriate/curl
+  command: "-X POST -u {{.RestUsername}}:{{.RestPassword}} http://{{.Orchestrator}}:8091/diag/eval -d 'ns_config:set({service_rebalancer,{rebalance, index}}, 1200000)'"
+  wait: true
+
+
 ##### create a backup plan which backups up every 6 hours and merges every 2 days at 12:00noon to filesystem repo
 -
   image:  appropriate/curl
