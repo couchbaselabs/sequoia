@@ -28,7 +28,7 @@
 -
   image: sequoiatools/couchbase-cli
   requires:  "{{eq true .DoOnce }}"
-  command: "setting-security -c {{.Orchestrator}}:8091 -u {{.RestUsername}} -p {{.RestPassword}} --set --cluster-encryption-level all"
+  command: "setting-security -c {{.Orchestrator}}:8091 -u {{.RestUsername}} -p {{.RestPassword}} --set --cluster-encryption-level control"
   wait: true
 -
   template: enable_autofailover
