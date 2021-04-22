@@ -694,9 +694,6 @@ func (s *Scope) CreateBuckets() {
 					"--bucket-replica", strconv.Itoa(int(replica)),
 					"--enable-flush", "1", "--wait",
 				}
-				if bucket.Sasl != "" {
-					command = append(command, "--password", bucket.Sasl)
-				}
 				if bucket.Eviction != "" {
 					command = append(command, "--bucket-eviction-policy", bucket.Eviction)
 				}

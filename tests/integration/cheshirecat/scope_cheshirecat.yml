@@ -102,7 +102,6 @@ servers: # each server tag represents a cluster
 buckets:
   -
       name: default
-      sasl: password
       ram: 35%
       eviction: fullEviction
       ddocs: scale

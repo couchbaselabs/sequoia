@@ -19,7 +19,6 @@ type BucketSpec struct {
 	Ram             string
 	Replica         *uint8
 	Type            string
-	Sasl            string
 	Eviction        string
 	DDocs           string
 	DDocSpecs       []DDocSpec
