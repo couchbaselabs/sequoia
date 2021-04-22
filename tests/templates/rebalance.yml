@@ -211,6 +211,26 @@
       template: rebalance
 
 -
+  name: failover_force_and_recover_wait
+  actions:
+    -
+      template: hard_failover_node
+      args: "$0"
+      wait: true
+    -
+      template: recover_node
+      args: "$0, $1"
+      wait: true
+    -
+      template: rebalance
+      wait: true
+    -
+      image: sequoiatools/cmd
+      entrypoint: sleep
+      command: "900"
+      wait: true
+
+-
   name: rebalance_stop
   actions:
     -
