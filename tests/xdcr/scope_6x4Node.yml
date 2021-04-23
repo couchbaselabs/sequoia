@@ -15,6 +15,17 @@ users:
       password: password
       roles: admin
       auth_domain: local
+  -
+      name: bucket3
+      password: password
+      roles: admin
+      auth_domain: local
+  -
+      name: bucket4
+      password: password
+      roles: admin
+      auth_domain: local
+
 
 buckets:
   -
@@ -29,6 +40,14 @@ buckets:
       name: bucket2
       ram: 15%
       eviction: fullEviction
+  -
+      name: bucket3
+      ram: 15%
+      eviction: fullEviction
+  -
+      name: bucket4
+      ram: 15%
+      eviction: fullEviction
 
 servers:
   -
@@ -39,8 +58,9 @@ servers:
       rest_password: password
       init_nodes: 5
       data_path: "/data"
-      buckets: bucket0, bucket1, bucket2
-      users: bucket0, bucket1, bucket2
+      index_path: "/data"
+      buckets: bucket0, bucket1, bucket2, bucket3, bucket4
+      users: bucket0, bucket1, bucket2, bucket3, bucket4
   -
       name: remote
       count: 5
@@ -49,5 +69,6 @@ servers:
       rest_password: password
       init_nodes: 3
       data_path: "/data"
-      buckets: bucket0, bucket1, bucket2
-      users: bucket0, bucket1, bucket2
+      index_path: "/data"
+      buckets: bucket0, bucket1, bucket2, bucket3, bucket4
+      users: bucket0, bucket1, bucket2, bucket3, bucket4
