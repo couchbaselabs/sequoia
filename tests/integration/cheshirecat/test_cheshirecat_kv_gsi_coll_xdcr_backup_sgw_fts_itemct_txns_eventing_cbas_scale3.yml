@@ -59,6 +59,10 @@
 - template: set_fts_manager_options
   args: "{{.Nodes | .Service `fts` | net 0}}, 'bleveMaxResultWindow':'100000'"
 
+############### Set FTS bleveMaxClauseCount to 2500 ################
+- template: set_fts_manager_options
+  args: "{{.Nodes | .Service `fts` | net 0}}, 'bleveMaxClauseCount':'2500'"
+
 ##### create a backup plan which backups up every 6 hours and merges every 2 days at 12:00noon to filesystem repo
 -
   image:  appropriate/curl
@@ -308,8 +312,6 @@
 - image: sequoiatools/ftsindexmanager
   command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}} --print_interval 600 -a run_queries -t 0 -nq 1"
 - command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 5}} --print_interval 600 -a run_flex_queries -t 0 -nq 1"
-- command: "-n {{.Nodes | .Service `fts` | net 1}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 6}} --print_interval 600 -a run_queries -t 0 -nq 1"
-- command: "-n {{.Nodes | .Service `fts` | net 1}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 7}} --print_interval 600 -a run_flex_queries -t 0 -nq 1"
 
 # Sleep for some time to allow some queries to be run against the collections
 -
