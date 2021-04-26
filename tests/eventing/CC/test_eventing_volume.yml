@@ -479,7 +479,3 @@
   image: sequoiatools/eventing:7.0
   command: "eventing_helper.py -i {{$.QueryNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o verify -s n1ql_op.scope_0.coll{{$sc}} -d n1ql_op.scope_1.coll{{$sc}}"
   wait: true
-
-###### Undeploy sbm handler ######
-- image: sequoiatools/eventing:7.0
-  command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o undeploy --name sbm --wait True"
