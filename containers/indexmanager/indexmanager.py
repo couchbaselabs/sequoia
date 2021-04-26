@@ -74,6 +74,7 @@ class IndexManager:
                             help="Specify how many indexes to be sampled for item count check. Default = 5")
         parser.add_argument("-v", "--validate", help="Validation required for create_index and drop_all_indexes action", action='store_true')
         parser.add_argument("-t", "--test_mode", help="Test Mode : Create Scopes/Collections", action='store_true')
+        parser.add_argument("-im", "--install_mode", help="install mode: ce or ee", default="ee")
         args = parser.parse_args()
 
         self.node_addr = args.node
@@ -88,6 +89,7 @@ class IndexManager:
         self.timeout = args.timeout
         self.test_mode = args.test_mode
         self.validate = args.validate
+        self.install_mode = args.install_mode
         self.max_num_collections = args.build_max_collections
         self.cbo_enable_ratio = args.cbo_enable_ratio
         if self.cbo_enable_ratio > 100:
@@ -262,7 +264,7 @@ class IndexManager:
                     reference_index_map[keyspace_name][idx_name]['defer'] = is_defer_idx
                     reference_index_map[keyspace_name][idx_name]['partition'] = is_partitioned_idx
 
-                    if is_partitioned_idx:
+                    if self.install_mode == "ee" and is_partitioned_idx:
                         idx_statement = idx_statement + " partition by hash(meta().id) "
                         num_partition = random.randint(2, self.max_num_partitions + 1)
                         with_clause_list.append("\'num_partition\':%s" % num_partition)
@@ -271,7 +273,7 @@ class IndexManager:
                     else:
                         reference_index_map[keyspace_name][idx_name]['num_partition'] = 1
 
-                    if self.max_num_replica > 0:
+                    if self.install_mode == "ee" and self.max_num_replica > 0:
                         num_replica = random.randint(1, self.max_num_replica)
                         with_clause_list.append("\'num_replica\':%s" % num_replica)
                         idx_instances *= num_replica + 1

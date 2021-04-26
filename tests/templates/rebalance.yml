@@ -66,6 +66,35 @@
            {{if ge .Version 4.0}}--services {{if gt (len `$1`) 2}}$1{{else}}data{{end}}{{end}}"
       wait: true
 
+# rebalance in a single node without https
+# $0 = server to add
+# $1 = optional services (default data)
+-
+  name: rebalance_in_wo_https
+  actions:
+    -
+      template: add_node_wo_https
+      args: "$0, ($1)"
+    -
+      template: rebalance
+
+# add a node to cluster
+# $0 server to add without https
+# $1 node services
+# $2 optional orchestrator
+-
+  name: add_node_wo_https
+  actions:
+    -
+      image: sequoiatools/couchbase-cli:7.0
+      command: "server-add
+           -c {{if gt (len `$2`) 2}}$2{{else}}{{.Orchestrator}}{{end}}:{{.RestPort}}
+           --server-add $0
+           -u {{.RestUsername}} -p {{.RestPassword}}
+           --server-add-username {{.RestUsername}} --server-add-password {{.RestPassword}}
+           {{if ge .Version 4.0}}--services {{if gt (len `$1`) 2}}$1{{else}}data{{end}}{{end}}"
+      wait: true
+
 # readd a failover node to server
 # $0 node to add back
 # $1 optional orchestrator
@@ -86,6 +115,20 @@
   actions:
     -
       template: add_node
+      args: "$0, ($2)"
+    -
+      template: rebalance_out
+      args: "$1"
+
+# swap rebalance 1x1 node
+# $0 server to add without https
+# $1 server to remove
+# $2 optional services (default data)
+-
+  name: rebalance_swap_wo_https
+  actions:
+    -
+      template: add_node_wo_https
       args: "$0, ($2)"
     -
       template: rebalance_out
