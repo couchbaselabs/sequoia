@@ -708,7 +708,7 @@ func (cm *ContainerManager) StartContainer(id string, hostConfig *docker.HostCon
 }
 
 func (cm *ContainerManager) RunContainer(opts docker.CreateContainerOptions) (chan TaskResult, *docker.Container) {
-
+	//fmt.Println("Running container for :", opts.Config.Image)
 	// If we have defined a network, use that network in host config
 	if cm.Network != "" {
 		opts.HostConfig.NetworkMode = cm.Network
@@ -933,6 +933,8 @@ func (cm *ContainerManager) RunRestContainer(cmd []string) (string, string) {
 	var rest_container_id string
 	rest_container_svc_id := ""
 	image := "appropriate/curl"
+	// Pull image if it does not exist
+	cm.PullImage(image)
 
 	if cm.ProviderType == "swarm" {
 
