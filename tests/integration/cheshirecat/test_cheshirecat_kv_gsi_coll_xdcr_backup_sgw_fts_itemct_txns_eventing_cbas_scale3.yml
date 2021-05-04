@@ -697,7 +697,7 @@
 ###############  Drop all Indexes ################
 - section_start: drop_all_indexes
 - image: sequoiatools/ftsindexmanager
-  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a delete_all_indexes"
+  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}} -a delete_all_indexes"
   wait: true
 -
   image: sequoiatools/cmd
@@ -706,7 +706,7 @@
   wait: true
 
 - image: sequoiatools/ftsindexmanager
-  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a delete_all_indexes"
+  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 5}} -a delete_all_indexes"
   wait: true
 -
   image: sequoiatools/cmd
@@ -715,7 +715,7 @@
   wait: true
 
 - image: sequoiatools/ftsindexmanager
-  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -a delete_all_indexes"
+  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 6}} -a delete_all_indexes"
   wait: true
 -
   image: sequoiatools/cmd
@@ -724,7 +724,7 @@
   wait: true
 
 - image: sequoiatools/ftsindexmanager
-  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 3}} -a delete_all_indexes"
+  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 7}} -a delete_all_indexes"
   wait: true
 -
   image: sequoiatools/cmd
