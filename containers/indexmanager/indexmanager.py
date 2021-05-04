@@ -545,7 +545,7 @@ class IndexManager:
 
         for index in item_count_check_indexes:
             stat_key = index["bucket"] + ":" + index["scope"] + ":" + index["collection"] + ":" + index[
-                "name"] + ":items_count"
+                "name"] + ":docid_count"
             keyspace_name_for_query = "`" + index["bucket"] + "`.`" + index["scope"] + "`.`" + index["collection"] + "`"
 
             index_item_count = 0
@@ -593,7 +593,7 @@ class IndexManager:
                 errors.append(errors_obj)
 
         if len(errors) > 0:
-            self.log.error("There were errors in the item count check phase - \n{0}".format(errors))
+            raise Exception("There were errors in the item count check phase - \n{0}".format(errors))
         else:
             self.log.info("Item check count passed. No discrepancies seen.")
 
