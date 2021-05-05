@@ -115,7 +115,7 @@ buckets:
   -
       name: NEW_ORDER
       ram: 5%
-      ttl: 600
+      ttl: 3600
   -
       name: ITEM
       ram: 5%
@@ -129,7 +129,7 @@ buckets:
   -
       name: bucket6
       ram: 10%
-      ttl: 300
+      ttl: 3600
   -
       name: bucket7
       ram: 10%
