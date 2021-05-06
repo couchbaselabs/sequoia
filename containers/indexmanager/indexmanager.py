@@ -14,6 +14,7 @@ import logging
 import requests
 import time
 import httplib2
+import paramiko
 
 ## Constants
 
@@ -58,9 +59,9 @@ class IndexManager:
                             default="hotel")
         parser.add_argument("-a", "--action",
                             choices=["create_index", "build_deferred_index", "drop_all_indexes", "create_index_loop",
-                                     "drop_index_loop", "alter_indexes", "enable_cbo", "item_count_check"],
+                                     "drop_index_loop", "alter_indexes", "enable_cbo", "item_count_check", "random_recovery"],
                             help="Choose an action to be performed. Valid actions : create_index | build_deferred_index | drop_all_indexes | create_index_loop | "
-                                 "drop_index_loop | alter_indexes | enable_cbo | item_count_check",
+                                 "drop_index_loop | alter_indexes | enable_cbo | item_count_check | random_recovery",
                             default="create_index")
         parser.add_argument("-m", "--build_max_collections", type=int, default=0,
                             help="Build Indexes on max number of collections")
@@ -128,6 +129,10 @@ class IndexManager:
         self.max_num_replica = 0
         self.max_num_partitions = 4
         self.set_max_num_replica()
+
+        # Node SSH default credentials
+        self.ssh_username = "root"
+        self.ssh_password = "couchbase"
 
     """
     Create scope and collections in the cluster for the given bucket when the test mode is on.
@@ -460,6 +465,40 @@ class IndexManager:
                 break
 
             # Sleep for interval
+            sleep(interval)
+
+    def random_recovery(self, timeout=3600, min_frequency=120):
+        # Establish timeout. If timeout = 0, run in infinite loop
+        end_time = 0
+        if timeout > 0:
+            end_time = time.time() + timeout
+        while True:
+
+            # Get list of index nodes
+            index_nodes = self.find_nodes_with_service(self.get_services_map(), "index")
+            # Randomly choose one index node
+            index_node_for_recovery = random.choice(index_nodes)
+            # Kill indexer process on this node
+            try:
+                self.log.info("Killing indexer process on {0}".format(index_node_for_recovery))
+                ssh = paramiko.SSHClient()
+                ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                ssh.connect(index_node_for_recovery, username=self.ssh_username, password=self.ssh_password, timeout=10)
+                ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command("pkill -f indexer")
+                out = ssh_stdout.read()
+                err = ssh_stderr.read()
+                self.log.error("Unable to kill indexer process on {0}. Error: {1}".format(index_node_for_recovery, str(err)))
+            except Exception as e:
+                self.log.error(str(e))
+            finally:
+                ssh.close()
+
+            # Exit if timed out
+            if timeout > 0 and time.time() > end_time:
+                break
+            # Sleep for random duration before the next recovery
+            interval = random.randint(min_frequency, 1800)
+            self.log.info("Sleeping for %s seconds" % str(interval))
             sleep(interval)
 
     def get_index_map_from_system_indexes(self):
@@ -992,6 +1031,8 @@ if __name__ == '__main__':
         indexMgr.drop_indexes_in_a_loop(indexMgr.timeout, indexMgr.interval)
     elif indexMgr.action == "item_count_check":
         indexMgr.item_count_check(indexMgr.sample_size)
+    elif indexMgr.action == "random_recovery":
+        indexMgr.random_recovery(indexMgr.timeout, indexMgr.interval)
     else:
         print("Invalid choice for action. Choose from the following - "
               "create_index | build_deferred_index | drop_all_indexes | create_index_loop | alter_indexes | enable_cbo | drop_index_loop | item_count_check")
