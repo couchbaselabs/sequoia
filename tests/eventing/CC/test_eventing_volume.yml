@@ -45,7 +45,7 @@
   wait: true
 - command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 4}} -o create_multi_scope_collection -s scope_ -c coll --scope_count=2 --collection_count=10 --collection_distribution=uniform"
   wait: true
-- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 5}} -o create_multi_scope_collection -s scope_ -c coll --scope_count=5 --collection_count=25 --collection_distribution=uniform"
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 5}} -o create_multi_scope_collection -s scope_ -c coll --scope_count=7 --collection_count=25 --collection_distribution=uniform"
   wait: true
 
 ####### load data into all collections #######
@@ -81,12 +81,20 @@
   image: sequoiatools/eventing:7.0
   command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -s source_op.scope_0.coll{{$sc}} -m metadata.scope_4.coll{{$sc}} -d dst_bucket.source_op.scope_0.coll{{$sc}}.rw -t sbm -o create --name sbm{{$sc}}"
   wait: true
+- image: sequoiatools/eventing:7.0
+  command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -s timer_op.scope_0.coll0 -m metadata.scope_6.coll0 -d dst_bucket.timer_op.scope_1.coll0.rw -t timers_test -o create --name timers_test"
+  wait: true
+- image: sequoiatools/eventing:7.0
+  command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -s n1ql_op.scope_0.coll0 -m metadata.scope_7.coll0 -d dst_bucket.n1ql_op.scope_1.coll0.rw -t n1ql_test -o create --name n1ql_test"
+  wait: true
 
 ##### deploy bucket op, timers, N1ql #####
 - image: sequoiatools/eventing:7.0
   command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o deploy --name bucket_op"
 - command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o deploy --name timers"
 - command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o deploy --name n1ql"
+- command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o deploy --name timers_test"
+- command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o deploy --name n1ql_test"
 
 
 #### wait for handler to be deployed ####
@@ -96,6 +104,10 @@
 - command: "eventing_helper.py -i {{.EventingNode}} -u {{.RestUsername}} -p {{.RestPassword}} -o wait_for_state --state deployed --name timers"
   wait: true
 - command: "eventing_helper.py -i {{.EventingNode}} -u {{.RestUsername}} -p {{.RestPassword}} -o wait_for_state --state deployed --name n1ql"
+  wait: true
+- command: "eventing_helper.py -i {{.EventingNode}} -u {{.RestUsername}} -p {{.RestPassword}} -o wait_for_state --state deployed --name timers_test"
+  wait: true
+- command: "eventing_helper.py -i {{.EventingNode}} -u {{.RestUsername}} -p {{.RestPassword}} -o wait_for_state --state deployed --name n1ql_test"
   wait: true
 
 ###############  Rebalance-in eventing ################

@@ -9,7 +9,7 @@ import httplib2
 
 
 class EventingHelper:
-    handler_map={"bucket_op":"CC/bucket_op.js","timers":"CC/timers.js","n1ql":"CC/n1ql.js","sbm":"CC/sbm.js","curl":"CC/curl.js","bucket_op_sbm":"CC/bucket_op_sbm.js"}
+    handler_map={"bucket_op":"CC/bucket_op.js","timers":"CC/timers.js","n1ql":"CC/n1ql.js","sbm":"CC/sbm.js","curl":"CC/curl.js","bucket_op_sbm":"CC/bucket_op_sbm.js","timers_test":"CC/timers_test.js","n1ql_test":"CC/n1ql_test.js"}
 
     def run(self):
         usage = '''%prog -i hostname:port -u username -p password -s source_collection -m metadata_colletcion -d bindings -t type -n number'''
@@ -227,6 +227,8 @@ class EventingHelper:
         if options.type=='curl':
             body['depcfg']['curl'].append({"hostname": "http://qa.sc.couchbase.com/", "value": "server","auth_type":'no-auth',
                                           "allow_cookies": True, "validate_ssl_certificate": True})
+        if options.type == "timers_test" or options.type == "n1ql_test":
+            body['settings']['app_log_max_size'] = 524288000
         print(body)
         return body
 
