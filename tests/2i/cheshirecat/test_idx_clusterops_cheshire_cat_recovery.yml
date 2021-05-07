@@ -28,7 +28,7 @@
 -
   image: sequoiatools/couchbase-cli
   requires:  "{{eq true .DoOnce }}"
-  command: "setting-rebalance -c {{.Orchestrator}}:8091 -u {{.RestUsername}} -p {{.RestPassword}} --set --enable 1 --wait-for 180 --max-attempts 3"
+  command: "setting-rebalance -c {{.Orchestrator}}:8091 -u {{.RestUsername}} -p {{.RestPassword}} --set --enable 1 --wait-for 300 --max-attempts 3"
   wait: true
 
 ############### create scopes and collections across 3 buckets as scope_1,scope_2 ... ###############
@@ -240,30 +240,11 @@
   template: kill_process
   args: "{{.ActiveIndexNode 0}}, indexer"
 
-#Sleep after killing process
--
-   image: sequoiatools/cmd
-   entrypoint: sleep
-   command: "120"
-   wait: true
-
-############### Kill indexer ################
--
-  template: kill_process
-  args: "{{.ActiveIndexNode 1}}, indexer"
-
-#Sleep after killing process
--
-   image: sequoiatools/cmd
-   entrypoint: sleep
-   command: "120"
-   wait: true
-
 # Sleep before starting to poll for rebalance progress
 -
    image: sequoiatools/cmd
    entrypoint: sleep
-   command: "300"
+   command: "420"
    wait: true
 
 # Wait for rebalance to complete
@@ -294,30 +275,11 @@
   template: kill_process
   args: "{{.ActiveIndexNode 0}}, indexer"
 
-#Sleep after killing process
--
-   image: sequoiatools/cmd
-   entrypoint: sleep
-   command: "120"
-   wait: true
-
-############### Kill indexer ################
--
-  template: kill_process
-  args: "{{.ActiveIndexNode 1}}, indexer"
-
-#Sleep after killing process
--
-   image: sequoiatools/cmd
-   entrypoint: sleep
-   command: "120"
-   wait: true
-
 # Sleep before starting to poll for rebalance progress
 -
    image: sequoiatools/cmd
    entrypoint: sleep
-   command: "300"
+   command: "420"
    wait: true
 
 # Wait for rebalance to complete
@@ -348,30 +310,11 @@
   template: kill_process
   args: "{{.ActiveIndexNode 0}}, indexer"
 
-#Sleep after killing process
--
-   image: sequoiatools/cmd
-   entrypoint: sleep
-   command: "120"
-   wait: true
-
-############### Kill indexer ################
--
-  template: kill_process
-  args: "{{.ActiveIndexNode 1}}, indexer"
-
-#Sleep after killing process
--
-   image: sequoiatools/cmd
-   entrypoint: sleep
-   command: "120"
-   wait: true
-
 # Sleep before starting to poll for rebalance progress
 -
    image: sequoiatools/cmd
    entrypoint: sleep
-   command: "300"
+   command: "420"
    wait: true
 
 # Wait for rebalance to complete

@@ -467,7 +467,7 @@ class IndexManager:
             # Sleep for interval
             sleep(interval)
 
-    def random_recovery(self, timeout=3600, min_frequency=120):
+    def random_recovery(self, timeout=3600, min_frequency=120, max_frequency=300):
         # Establish timeout. If timeout = 0, run in infinite loop
         end_time = 0
         if timeout > 0:
@@ -497,7 +497,7 @@ class IndexManager:
             if timeout > 0 and time.time() > end_time:
                 break
             # Sleep for random duration before the next recovery
-            interval = random.randint(min_frequency, 1800)
+            interval = random.randint(min_frequency, max_frequency)
             self.log.info("Sleeping for %s seconds" % str(interval))
             sleep(interval)
 
