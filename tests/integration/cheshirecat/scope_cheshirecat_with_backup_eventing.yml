@@ -62,7 +62,7 @@ servers: # each server tag represents a cluster
       count: 31
       ram: 80%
       index_ram: 50%
-      fts_ram: 85%
+      fts_ram: 80%
       eventing_ram: 90%
       analytics_ram: 90%
       index_storage: default
@@ -126,10 +126,10 @@ buckets:
   -
       name: bucket6
       ram: 10%
-      ttl: 300
   -
       name: bucket7
       ram: 10%
+      ttl: 3600
   -
       name: bucket8
       ram: 5%

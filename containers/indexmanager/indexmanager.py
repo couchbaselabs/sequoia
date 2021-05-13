@@ -59,7 +59,8 @@ class IndexManager:
                             default="hotel")
         parser.add_argument("-a", "--action",
                             choices=["create_index", "build_deferred_index", "drop_all_indexes", "create_index_loop",
-                                     "drop_index_loop", "alter_indexes", "enable_cbo", "item_count_check", "random_recovery"],
+                                     "drop_index_loop", "alter_indexes", "enable_cbo", "item_count_check",
+                                     "random_recovery"],
                             help="Choose an action to be performed. Valid actions : create_index | build_deferred_index | drop_all_indexes | create_index_loop | "
                                  "drop_index_loop | alter_indexes | enable_cbo | item_count_check | random_recovery",
                             default="create_index")
@@ -73,7 +74,8 @@ class IndexManager:
                             help="Specify on how many % of collections should CBO be enabled. Range = 1-100")
         parser.add_argument("--sample_size", type=int, default=5,
                             help="Specify how many indexes to be sampled for item count check. Default = 5")
-        parser.add_argument("-v", "--validate", help="Validation required for create_index and drop_all_indexes action", action='store_true')
+        parser.add_argument("-v", "--validate", help="Validation required for create_index and drop_all_indexes action",
+                            action='store_true')
         parser.add_argument("-t", "--test_mode", help="Test Mode : Create Scopes/Collections", action='store_true')
         parser.add_argument("-im", "--install_mode", help="install mode: ce or ee", default="ee")
         args = parser.parse_args()
@@ -487,7 +489,8 @@ class IndexManager:
                 ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command("pkill -f indexer")
                 out = ssh_stdout.read()
                 err = ssh_stderr.read()
-                self.log.error("Unable to kill indexer process on {0}. Error: {1}".format(index_node_for_recovery, str(err)))
+                self.log.error(
+                    "Unable to kill indexer process on {0}. Error: {1}".format(index_node_for_recovery, str(err)))
             except Exception as e:
                 self.log.error(str(e))
             finally:
@@ -585,15 +588,18 @@ class IndexManager:
         for index in item_count_check_indexes:
             stat_key = index["bucket"] + ":" + index["scope"] + ":" + index["collection"] + ":" + index[
                 "name"] + ":docid_count"
+            alt_stat_key = index["bucket"] + ":" + index["scope"] + ":" + index["collection"] + ":" + index[
+                "name"] + ":items_count"
             keyspace_name_for_query = "`" + index["bucket"] + "`.`" + index["scope"] + "`.`" + index["collection"] + "`"
 
             index_item_count = 0
             for host in index["hosts"]:
-                item_count = self.get_stats(stat_key, host.split(":")[0])
+                item_count = self.get_stats(stat_key, alt_stat_key, host.split(":")[0])
                 if item_count >= 0:
                     index_item_count += item_count
                 else:
-                    self.log.info("Got an error retrieving stat {0} from {1}".format(stat_key, host.split(":")[0]))
+                    self.log.info("Got an error retrieving stat {0} or {1} from {2}".format(stat_key, alt_stat_key,
+                                                                                            host.split(":")[0]))
                     errors_obj = {}
                     errors_obj["type"] = "error_retrieving_stats"
                     errors_obj["index_name"] = index["name"]
@@ -636,8 +642,8 @@ class IndexManager:
         else:
             self.log.info("Item check count passed. No discrepancies seen.")
 
-    def get_stats(self, stat_key, index_node_addr, index_node_port=9102):
-        endpoint = "http://" + index_node_addr + ":" + str(index_node_port) + "/stats?consumerFilter=planner"
+    def get_stats(self, stat_key, alt_stat_key, index_node_addr, index_node_port=9102):
+        endpoint = "http://" + index_node_addr + ":" + str(index_node_port) + "/stats"
 
         try:
             # Get index stats from the indexer node
@@ -649,8 +655,13 @@ class IndexManager:
                 if stat_key in response:
                     return int(response[stat_key])
                 else:
-                    self.log.info("Stat {0} not found in stats output for host {1}".format(stat_key, index_node_addr))
-                    return -1
+                    if alt_stat_key in response:
+                        return int(response[alt_stat_key])
+                    else:
+                        self.log.info(
+                            "Stat {0} or {1} not found in stats output for host {2}".format(stat_key, alt_stat_key,
+                                                                                            index_node_addr))
+                        return -1
             else:
                 self.log.info("Stat endpoint request status was not 200 : {0}".format(response))
                 return -1
@@ -663,8 +674,6 @@ class IndexManager:
             self.log.error("Timeout getting response from /stats : {0}".format(str(errt)))
         except requests.exceptions.RequestException as err:
             self.log.error("Error getting response from /stats : {0}".format(str(err)))
-
-
 
     """
     Determine number of index nodes in the cluster and set max num replica accordingly.
@@ -729,13 +738,13 @@ class IndexManager:
                 response.raise_for_status()
 
         except requests.exceptions.HTTPError as errh:
-            self.log.error("HTTPError getting response from {1} : {0}".format(str(errh),cluster_url))
+            self.log.error("HTTPError getting response from {1} : {0}".format(str(errh), cluster_url))
         except requests.exceptions.ConnectionError as errc:
-            self.log.error("ConnectionError getting response from {1} : {0}".format(str(errc),cluster_url))
+            self.log.error("ConnectionError getting response from {1} : {0}".format(str(errc), cluster_url))
         except requests.exceptions.Timeout as errt:
-            self.log.error("Timeout getting response from {1} : {0}".format(str(errt),cluster_url))
+            self.log.error("Timeout getting response from {1} : {0}".format(str(errt), cluster_url))
         except requests.exceptions.RequestException as err:
-            self.log.error("Error getting response from {1} : {0}".format(str(err),cluster_url))
+            self.log.error("Error getting response from {1} : {0}".format(str(err), cluster_url))
 
         return node_map
 
@@ -844,7 +853,8 @@ class IndexManager:
         while True:
             random.seed(datetime.now())
 
-            drop_random_index_query_gen = "SELECT RAW 'DROP INDEX `' || name || '` on `' || bucket_id || '`.`' || scope_id || '`.`' || keyspace_id || '`;'  FROM system:all_indexes where bucket_id='{0}' limit 1".format(self.bucket_name)
+            drop_random_index_query_gen = "SELECT RAW 'DROP INDEX `' || name || '` on `' || bucket_id || '`.`' || scope_id || '`.`' || keyspace_id || '`;'  FROM system:all_indexes where bucket_id='{0}' limit 1".format(
+                self.bucket_name)
 
             status, results, queryResult = self._execute_query(drop_random_index_query_gen)
             if status is not None and len(results) > 0:
@@ -947,7 +957,6 @@ class IndexManager:
             self.log.error("Timeout getting response from /getIndexStatus : {0}".format(str(errt)))
         except requests.exceptions.RequestException as err:
             self.log.error("Error getting response from /getIndexStatus : {0}".format(str(err)))
-
 
     def wait_until_indexes_online(self, timeout=60, defer_build=False, check_paused_index=False):
         init_time = time.time()
