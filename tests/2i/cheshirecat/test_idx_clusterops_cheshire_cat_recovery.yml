@@ -130,13 +130,13 @@
 ############### incremental data loading ################
 - image: sequoiatools/catapult
   command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -n {{.Scale 20000}} -pc 100 -pu 5 -pd 10
-    -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 120 -fu price,free_parking -ac True"
+    -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 300 -fu price,free_parking -ac True --num_threads 2"
   alias: collection_bucket1_doc_ops2
 - command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 1}} -n {{.Scale 20000}} -pc 100 -pu 5 -pd 10
-    -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 120 -fu price,free_parking -ac True"
+    -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 300 -fu price,free_parking -ac True --num_threads 2"
   alias: collection_bucket2_doc_ops2
 - command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 2}} -n {{.Scale 20000}} -pc 100 -pu 5 -pd 10
-    -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 120 -fu price,free_parking -ac True"
+    -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 300 -fu price,free_parking -ac True --num_threads 2"
   alias: collection_bucket3_doc_ops2
 
 
