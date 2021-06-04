@@ -232,9 +232,8 @@ class EventingHelper:
 
     def check_handler_status(self,appname,app_status):
         authorization = base64.encodestring('%s:%s' % (self.username, self.password))
-
         headers = {'Content-type': 'application/json', 'Authorization': 'Basic %s' % authorization}
-        url = "http://" + self.hostname + ":8091" + "/_p/event/api/v1/status"
+        url = "http://" + self.hostname + ":8096" + "/api/v1/status/" + appname
         method="GET"
         response, content = httplib2.Http(timeout=120).request(uri=url, method=method, headers=headers)
         print("v1/status {}".format(content))
@@ -250,9 +249,7 @@ class EventingHelper:
                 time.sleep(5)
                 response, content = httplib2.Http(timeout=120).request(uri=url, method=method, headers=headers)
                 result = json.loads(content)
-                for i in range(len(result['apps'])):
-                    if result['apps'][i]['name']== appname:
-                        composite_status = result['apps'][i]['composite_status']
+                composite_status = result['app']['composite_status']
             except Exception as e:
                 print(e)
 
@@ -335,12 +332,9 @@ class EventingHelper:
 
     def failover_rebalance_status(self):
         authorization = base64.encodestring('%s:%s' % (self.username, self.password))
-
         headers = {'Content-type': 'application/json', 'Authorization': 'Basic %s' % authorization}
-
         url = "http://" + self.hostname + ":" + self.port + "/getAggRebalanceStatus"
         response, content = httplib2.Http(timeout=120).request(uri=url, method="GET", headers=headers)
-
         if response['status'] in ['200', '201', '202']:
             if content == "true":
                 return True, True, response
