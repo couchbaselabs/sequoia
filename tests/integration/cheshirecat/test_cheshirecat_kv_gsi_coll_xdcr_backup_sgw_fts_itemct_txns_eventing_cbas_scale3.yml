@@ -412,13 +412,14 @@
 - command: "-u {{.RestUsername}}:{{.RestPassword}} -X POST http://{{.Orchestrator}}:{{.RestPort}}/settings/replications/{{(index (.AllLogs `ReplId` | json) 0).uuid }}/default/{{.Bucket}} -d filterExpiration=true -d filterBypassExpiry=true -d filterDeletion=false -d filterExpression=result<>SUCCESS -d filterSkipRestream=1"
   wait: true
 
-# add some rbac users
-- test: tests/n1ql/test_n1qlRBAC.yml
-  section: add_users
-
-# start rbac queries
-- test: tests/n1ql/test_n1qlRBAC.yml
-  section: rbac_query
+# Disabling this workload at it potentially causes https://issues.couchbase.com/browse/MB-46582
+## add some rbac users
+#- test: tests/n1ql/test_n1qlRBAC.yml
+#  section: add_users
+#
+## start rbac queries
+#- test: tests/n1ql/test_n1qlRBAC.yml
+#  section: rbac_query
 
 # pause eventing handlers
 - test: tests/eventing/CC/test_eventing_rebalance_integration.yml
