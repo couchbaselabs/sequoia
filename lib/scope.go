@@ -1096,6 +1096,7 @@ func (s *Scope) enableDpIfReq() {
 					"-c", ip,
 					"-u", server.RestUsername,
 					"-p", server.RestPassword,
+					"--enable",
 				}
 
 				desc := "enable dp " + ip
