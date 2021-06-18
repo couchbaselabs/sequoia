@@ -138,6 +138,7 @@ func (s *Scope) SetupServer() {
 	s.AddNodes()
 	s.RebalanceClusters()
 	s.getClusteInfo()
+	s.enableDpIfReq()
 	s.CreateBuckets()
 	s.CreateScope()
 	s.CreateViews()
@@ -1081,4 +1082,41 @@ func (s *Scope) ConfigSyncGateway() {
 	// apply only to orchestrator
 	s.Spec.ApplyToAllSyncGateway(operation)
 
+}
+
+func (s *Scope) enableDpIfReq() {
+	var image = s.GetCliImage()
+	// configure dp enable operation for bucket type magma
+	operation := func(name string, server *ServerSpec) {
+		for _, bucket := range server.BucketSpecs {
+			if bucket.Storage == "magma" {
+				orchestrator := server.Names[0]
+				ip := s.Provider.GetHostAddress(orchestrator)
+				command := []string{"enable-developer-preview",
+					"-c", ip,
+					"-u", server.RestUsername,
+					"-p", server.RestPassword,
+				}
+
+				desc := "enable dp " + ip
+				command = cliCommandValidator(s.Version, command)
+
+				task := ContainerTask{
+					Describe: desc,
+					Image:    image,
+					Command:  command,
+					Async:    false,
+				}
+
+				if s.Provider.GetType() == "docker" {
+					task.LinksTo = orchestrator
+				}
+				s.Cm.Run(&task)
+			} else {
+				return
+			}
+		}
+	}
+	// apply only to orchestrator
+	s.Spec.ApplyToServers(operation, 0, 1)
 }
