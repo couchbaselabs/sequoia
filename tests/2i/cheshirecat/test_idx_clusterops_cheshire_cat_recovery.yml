@@ -31,7 +31,7 @@
 
 ############### Enable Retry on failed rebalance ################
 -
-  image: sequoiatools/couchbase-cli
+  image: sequoiatools/couchbase-cli:7.0
   requires:  "{{eq true .DoOnce }}"
   command: "setting-rebalance -c {{.Orchestrator}}:8091 -u {{.RestUsername}} -p {{.RestPassword}} --set --enable 1 --wait-for 300 --max-attempts 3"
   wait: true
