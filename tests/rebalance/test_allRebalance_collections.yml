@@ -6,10 +6,73 @@
 -
   foreach: "{{range $i, $sc := mkrange 1 2}}"
   image: sequoiatools/pillowfight:7.0
-  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.Bucket}} -I {{$.Scale 1000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 500}} --random-body
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.Bucket}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
   --collection scope{{$sc}}.collection1 --collection scope{{$sc}}.collection2 --collection scope{{$sc}}.collection3 --collection scope{{$sc}}.collection4 --collection scope{{$sc}}.collection5
   --collection scope{{$sc}}.collection6 --collection scope{{$sc}}.collection7 --collection scope{{$sc}}.collection8 --collection scope{{$sc}}.collection9 --collection scope{{$sc}}.collection10
   --json"
+-
+  foreach: "{{range $i, $sc := mkrange 1 2}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.NthBucket 1}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
+    --collection scope{{$sc}}.collection1 --collection scope{{$sc}}.collection2 --collection scope{{$sc}}.collection3 --collection scope{{$sc}}.collection4 --collection scope{{$sc}}.collection5
+    --collection scope{{$sc}}.collection6 --collection scope{{$sc}}.collection7 --collection scope{{$sc}}.collection8 --collection scope{{$sc}}.collection9 --collection scope{{$sc}}.collection10
+    --json"
+-
+  foreach: "{{range $i, $sc := mkrange 1 2}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.NthBucket 2}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
+    --collection scope{{$sc}}.collection1 --collection scope{{$sc}}.collection2 --collection scope{{$sc}}.collection3 --collection scope{{$sc}}.collection4 --collection scope{{$sc}}.collection5
+    --collection scope{{$sc}}.collection6 --collection scope{{$sc}}.collection7 --collection scope{{$sc}}.collection8 --collection scope{{$sc}}.collection9 --collection scope{{$sc}}.collection10
+    --json"
+-
+  foreach: "{{range $i, $sc := mkrange 1 2}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.NthBucket 3}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
+    --collection scope{{$sc}}.collection1 --collection scope{{$sc}}.collection2 --collection scope{{$sc}}.collection3 --collection scope{{$sc}}.collection4 --collection scope{{$sc}}.collection5
+    --collection scope{{$sc}}.collection6 --collection scope{{$sc}}.collection7 --collection scope{{$sc}}.collection8 --collection scope{{$sc}}.collection9 --collection scope{{$sc}}.collection10
+    --json"
+-
+  foreach: "{{range $i, $sc := mkrange 1 2}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.NthBucket 4}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
+    --collection scope{{$sc}}.collection1 --collection scope{{$sc}}.collection2 --collection scope{{$sc}}.collection3 --collection scope{{$sc}}.collection4 --collection scope{{$sc}}.collection5
+    --collection scope{{$sc}}.collection6 --collection scope{{$sc}}.collection7 --collection scope{{$sc}}.collection8 --collection scope{{$sc}}.collection9 --collection scope{{$sc}}.collection10
+    --json"
+-
+  foreach: "{{range $i, $sc := mkrange 1 2}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.NthBucket 5}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
+    --collection scope{{$sc}}.collection1 --collection scope{{$sc}}.collection2 --collection scope{{$sc}}.collection3 --collection scope{{$sc}}.collection4 --collection scope{{$sc}}.collection5
+    --collection scope{{$sc}}.collection6 --collection scope{{$sc}}.collection7 --collection scope{{$sc}}.collection8 --collection scope{{$sc}}.collection9 --collection scope{{$sc}}.collection10
+    --json"
+-
+  foreach: "{{range $i, $sc := mkrange 1 2}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.NthBucket 6}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
+    --collection scope{{$sc}}.collection1 --collection scope{{$sc}}.collection2 --collection scope{{$sc}}.collection3 --collection scope{{$sc}}.collection4 --collection scope{{$sc}}.collection5
+    --collection scope{{$sc}}.collection6 --collection scope{{$sc}}.collection7 --collection scope{{$sc}}.collection8 --collection scope{{$sc}}.collection9 --collection scope{{$sc}}.collection10
+    --json"
+-
+  foreach: "{{range $i, $sc := mkrange 1 2}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.NthBucket 7}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
+    --collection scope{{$sc}}.collection1 --collection scope{{$sc}}.collection2 --collection scope{{$sc}}.collection3 --collection scope{{$sc}}.collection4 --collection scope{{$sc}}.collection5
+    --collection scope{{$sc}}.collection6 --collection scope{{$sc}}.collection7 --collection scope{{$sc}}.collection8 --collection scope{{$sc}}.collection9 --collection scope{{$sc}}.collection10
+    --json"
+-
+  foreach: "{{range $i, $sc := mkrange 1 2}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.NthBucket 8}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
+    --collection scope{{$sc}}.collection1 --collection scope{{$sc}}.collection2 --collection scope{{$sc}}.collection3 --collection scope{{$sc}}.collection4 --collection scope{{$sc}}.collection5
+    --collection scope{{$sc}}.collection6 --collection scope{{$sc}}.collection7 --collection scope{{$sc}}.collection8 --collection scope{{$sc}}.collection9 --collection scope{{$sc}}.collection10
+    --json"
+-
+  foreach: "{{range $i, $sc := mkrange 1 2}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.NthBucket 9}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
+    --collection scope{{$sc}}.collection1 --collection scope{{$sc}}.collection2 --collection scope{{$sc}}.collection3 --collection scope{{$sc}}.collection4 --collection scope{{$sc}}.collection5
+    --collection scope{{$sc}}.collection6 --collection scope{{$sc}}.collection7 --collection scope{{$sc}}.collection8 --collection scope{{$sc}}.collection9 --collection scope{{$sc}}.collection10
+    --json"
 
 ### create 8 scope as scope-1,scope-2 ... ######
 -
@@ -35,10 +98,73 @@
 -
   foreach: "{{range $i, $sc := mkrange 0 8}}"
   image: sequoiatools/pillowfight:7.0
-  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.Bucket}} -I {{$.Scale 1000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 500}} --random-body
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.Bucket}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
   --collection scope-{{$sc}}.coll-0 --collection scope-{{$sc}}.coll-1 --collection scope-{{$sc}}.coll-2 --collection scope-{{$sc}}.coll-3 --collection scope-{{$sc}}.coll-4
   --collection scope-{{$sc}}.coll-5 --collection scope-{{$sc}}.coll-6 --collection scope-{{$sc}}.coll-7 --collection scope-{{$sc}}.coll-8 --collection scope-{{$sc}}.coll-9
   --json --populate-only"
+-
+  foreach: "{{range $i, $sc := mkrange 0 8}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.NthBucket 1}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
+    --collection scope-{{$sc}}.coll-0 --collection scope-{{$sc}}.coll-1 --collection scope-{{$sc}}.coll-2 --collection scope-{{$sc}}.coll-3 --collection scope-{{$sc}}.coll-4
+    --collection scope-{{$sc}}.coll-5 --collection scope-{{$sc}}.coll-6 --collection scope-{{$sc}}.coll-7 --collection scope-{{$sc}}.coll-8 --collection scope-{{$sc}}.coll-9
+    --json --populate-only"
+-
+  foreach: "{{range $i, $sc := mkrange 0 8}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.NthBucket 2}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
+    --collection scope-{{$sc}}.coll-0 --collection scope-{{$sc}}.coll-1 --collection scope-{{$sc}}.coll-2 --collection scope-{{$sc}}.coll-3 --collection scope-{{$sc}}.coll-4
+    --collection scope-{{$sc}}.coll-5 --collection scope-{{$sc}}.coll-6 --collection scope-{{$sc}}.coll-7 --collection scope-{{$sc}}.coll-8 --collection scope-{{$sc}}.coll-9
+    --json --populate-only"
+-
+  foreach: "{{range $i, $sc := mkrange 0 8}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.NthBucket 3}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
+    --collection scope-{{$sc}}.coll-0 --collection scope-{{$sc}}.coll-1 --collection scope-{{$sc}}.coll-2 --collection scope-{{$sc}}.coll-3 --collection scope-{{$sc}}.coll-4
+    --collection scope-{{$sc}}.coll-5 --collection scope-{{$sc}}.coll-6 --collection scope-{{$sc}}.coll-7 --collection scope-{{$sc}}.coll-8 --collection scope-{{$sc}}.coll-9
+    --json --populate-only"
+-
+  foreach: "{{range $i, $sc := mkrange 0 8}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.NthBucket 4}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
+    --collection scope-{{$sc}}.coll-0 --collection scope-{{$sc}}.coll-1 --collection scope-{{$sc}}.coll-2 --collection scope-{{$sc}}.coll-3 --collection scope-{{$sc}}.coll-4
+    --collection scope-{{$sc}}.coll-5 --collection scope-{{$sc}}.coll-6 --collection scope-{{$sc}}.coll-7 --collection scope-{{$sc}}.coll-8 --collection scope-{{$sc}}.coll-9
+    --json --populate-only"
+-
+  foreach: "{{range $i, $sc := mkrange 0 8}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.NthBucket 5}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
+    --collection scope-{{$sc}}.coll-0 --collection scope-{{$sc}}.coll-1 --collection scope-{{$sc}}.coll-2 --collection scope-{{$sc}}.coll-3 --collection scope-{{$sc}}.coll-4
+    --collection scope-{{$sc}}.coll-5 --collection scope-{{$sc}}.coll-6 --collection scope-{{$sc}}.coll-7 --collection scope-{{$sc}}.coll-8 --collection scope-{{$sc}}.coll-9
+    --json --populate-only"
+-
+  foreach: "{{range $i, $sc := mkrange 0 8}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.NthBucket 6}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
+    --collection scope-{{$sc}}.coll-0 --collection scope-{{$sc}}.coll-1 --collection scope-{{$sc}}.coll-2 --collection scope-{{$sc}}.coll-3 --collection scope-{{$sc}}.coll-4
+    --collection scope-{{$sc}}.coll-5 --collection scope-{{$sc}}.coll-6 --collection scope-{{$sc}}.coll-7 --collection scope-{{$sc}}.coll-8 --collection scope-{{$sc}}.coll-9
+    --json --populate-only"
+-
+  foreach: "{{range $i, $sc := mkrange 0 8}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.NthBucket 7}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
+    --collection scope-{{$sc}}.coll-0 --collection scope-{{$sc}}.coll-1 --collection scope-{{$sc}}.coll-2 --collection scope-{{$sc}}.coll-3 --collection scope-{{$sc}}.coll-4
+    --collection scope-{{$sc}}.coll-5 --collection scope-{{$sc}}.coll-6 --collection scope-{{$sc}}.coll-7 --collection scope-{{$sc}}.coll-8 --collection scope-{{$sc}}.coll-9
+    --json --populate-only"
+-
+  foreach: "{{range $i, $sc := mkrange 0 8}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.NthBucket 8}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
+    --collection scope-{{$sc}}.coll-0 --collection scope-{{$sc}}.coll-1 --collection scope-{{$sc}}.coll-2 --collection scope-{{$sc}}.coll-3 --collection scope-{{$sc}}.coll-4
+    --collection scope-{{$sc}}.coll-5 --collection scope-{{$sc}}.coll-6 --collection scope-{{$sc}}.coll-7 --collection scope-{{$sc}}.coll-8 --collection scope-{{$sc}}.coll-9
+    --json --populate-only"
+-
+  foreach: "{{range $i, $sc := mkrange 0 8}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.NthBucket 9}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
+    --collection scope-{{$sc}}.coll-0 --collection scope-{{$sc}}.coll-1 --collection scope-{{$sc}}.coll-2 --collection scope-{{$sc}}.coll-3 --collection scope-{{$sc}}.coll-4
+    --collection scope-{{$sc}}.coll-5 --collection scope-{{$sc}}.coll-6 --collection scope-{{$sc}}.coll-7 --collection scope-{{$sc}}.coll-8 --collection scope-{{$sc}}.coll-9
+    --json --populate-only"
 
 ### create collections delcoll-1,delcoll-2 ..and load data in parallel to the rebalance op ###
 -
@@ -77,10 +203,74 @@
 -
   foreach: "{{range $i, $sc := mkrange 0 8}}"
   image: sequoiatools/pillowfight:7.0
-  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.Bucket}} -I {{$.Scale 1000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 500}} --random-body
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.Bucket}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
   --collection scope-{{$sc}}.coll_1-0 --collection scope-{{$sc}}.coll_1-1 --collection scope-{{$sc}}.coll_1-2 --collection scope-{{$sc}}.coll_1-3 --collection scope-{{$sc}}.coll_1-4
   --collection scope-{{$sc}}.coll_1-5 --collection scope-{{$sc}}.coll_1-6 --collection scope-{{$sc}}.coll_1-7 --collection scope-{{$sc}}.coll_1-8 --collection scope-{{$sc}}.coll_1-9
   --json --populate-only"
+-
+  foreach: "{{range $i, $sc := mkrange 0 8}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.NthBucket 1}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
+    --collection scope-{{$sc}}.coll_1-0 --collection scope-{{$sc}}.coll_1-1 --collection scope-{{$sc}}.coll_1-2 --collection scope-{{$sc}}.coll_1-3 --collection scope-{{$sc}}.coll_1-4
+    --collection scope-{{$sc}}.coll_1-5 --collection scope-{{$sc}}.coll_1-6 --collection scope-{{$sc}}.coll_1-7 --collection scope-{{$sc}}.coll_1-8 --collection scope-{{$sc}}.coll_1-9
+    --json --populate-only"
+-
+  foreach: "{{range $i, $sc := mkrange 0 8}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.NthBucket 2}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
+    --collection scope-{{$sc}}.coll_1-0 --collection scope-{{$sc}}.coll_1-1 --collection scope-{{$sc}}.coll_1-2 --collection scope-{{$sc}}.coll_1-3 --collection scope-{{$sc}}.coll_1-4
+    --collection scope-{{$sc}}.coll_1-5 --collection scope-{{$sc}}.coll_1-6 --collection scope-{{$sc}}.coll_1-7 --collection scope-{{$sc}}.coll_1-8 --collection scope-{{$sc}}.coll_1-9
+    --json --populate-only"
+-
+  foreach: "{{range $i, $sc := mkrange 0 8}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.NthBucket 3}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
+    --collection scope-{{$sc}}.coll_1-0 --collection scope-{{$sc}}.coll_1-1 --collection scope-{{$sc}}.coll_1-2 --collection scope-{{$sc}}.coll_1-3 --collection scope-{{$sc}}.coll_1-4
+    --collection scope-{{$sc}}.coll_1-5 --collection scope-{{$sc}}.coll_1-6 --collection scope-{{$sc}}.coll_1-7 --collection scope-{{$sc}}.coll_1-8 --collection scope-{{$sc}}.coll_1-9
+    --json --populate-only"
+-
+  foreach: "{{range $i, $sc := mkrange 0 8}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.NthBucket 4}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
+    --collection scope-{{$sc}}.coll_1-0 --collection scope-{{$sc}}.coll_1-1 --collection scope-{{$sc}}.coll_1-2 --collection scope-{{$sc}}.coll_1-3 --collection scope-{{$sc}}.coll_1-4
+    --collection scope-{{$sc}}.coll_1-5 --collection scope-{{$sc}}.coll_1-6 --collection scope-{{$sc}}.coll_1-7 --collection scope-{{$sc}}.coll_1-8 --collection scope-{{$sc}}.coll_1-9
+    --json --populate-only"
+-
+  foreach: "{{range $i, $sc := mkrange 0 8}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.NthBucket 5}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
+    --collection scope-{{$sc}}.coll_1-0 --collection scope-{{$sc}}.coll_1-1 --collection scope-{{$sc}}.coll_1-2 --collection scope-{{$sc}}.coll_1-3 --collection scope-{{$sc}}.coll_1-4
+    --collection scope-{{$sc}}.coll_1-5 --collection scope-{{$sc}}.coll_1-6 --collection scope-{{$sc}}.coll_1-7 --collection scope-{{$sc}}.coll_1-8 --collection scope-{{$sc}}.coll_1-9
+    --json --populate-only"
+-
+  foreach: "{{range $i, $sc := mkrange 0 8}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.NthBucket 6}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
+    --collection scope-{{$sc}}.coll_1-0 --collection scope-{{$sc}}.coll_1-1 --collection scope-{{$sc}}.coll_1-2 --collection scope-{{$sc}}.coll_1-3 --collection scope-{{$sc}}.coll_1-4
+    --collection scope-{{$sc}}.coll_1-5 --collection scope-{{$sc}}.coll_1-6 --collection scope-{{$sc}}.coll_1-7 --collection scope-{{$sc}}.coll_1-8 --collection scope-{{$sc}}.coll_1-9
+    --json --populate-only"
+-
+  foreach: "{{range $i, $sc := mkrange 0 8}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.NthBucket 7}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
+    --collection scope-{{$sc}}.coll_1-0 --collection scope-{{$sc}}.coll_1-1 --collection scope-{{$sc}}.coll_1-2 --collection scope-{{$sc}}.coll_1-3 --collection scope-{{$sc}}.coll_1-4
+    --collection scope-{{$sc}}.coll_1-5 --collection scope-{{$sc}}.coll_1-6 --collection scope-{{$sc}}.coll_1-7 --collection scope-{{$sc}}.coll_1-8 --collection scope-{{$sc}}.coll_1-9
+    --json --populate-only"
+-
+  foreach: "{{range $i, $sc := mkrange 0 8}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.NthBucket 8}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
+    --collection scope-{{$sc}}.coll_1-0 --collection scope-{{$sc}}.coll_1-1 --collection scope-{{$sc}}.coll_1-2 --collection scope-{{$sc}}.coll_1-3 --collection scope-{{$sc}}.coll_1-4
+    --collection scope-{{$sc}}.coll_1-5 --collection scope-{{$sc}}.coll_1-6 --collection scope-{{$sc}}.coll_1-7 --collection scope-{{$sc}}.coll_1-8 --collection scope-{{$sc}}.coll_1-9
+    --json --populate-only"
+-
+  foreach: "{{range $i, $sc := mkrange 0 8}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.NthBucket 9}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
+    --collection scope-{{$sc}}.coll_1-0 --collection scope-{{$sc}}.coll_1-1 --collection scope-{{$sc}}.coll_1-2 --collection scope-{{$sc}}.coll_1-3 --collection scope-{{$sc}}.coll_1-4
+    --collection scope-{{$sc}}.coll_1-5 --collection scope-{{$sc}}.coll_1-6 --collection scope-{{$sc}}.coll_1-7 --collection scope-{{$sc}}.coll_1-8 --collection scope-{{$sc}}.coll_1-9
+    --json --populate-only"
+
 
 ### delete all collections in scope delscope-1,delscope2 .. in parallel to rebalance op ####
 -
@@ -118,10 +308,74 @@
 -
   foreach: "{{range $i, $sc := mkrange 0 8}}"
   image: sequoiatools/pillowfight:7.0
-  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.Bucket}} -I {{$.Scale 1000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 500}} --random-body
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.Bucket}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
   --collection scope-{{$sc}}.coll_2-0 --collection scope-{{$sc}}.coll_2-1 --collection scope-{{$sc}}.coll_2-2 --collection scope-{{$sc}}.coll_2-3 --collection scope-{{$sc}}.coll_2-4
   --collection scope-{{$sc}}.coll_2-5 --collection scope-{{$sc}}.coll_2-6 --collection scope-{{$sc}}.coll_2-7 --collection scope-{{$sc}}.coll_2-8 --collection scope-{{$sc}}.coll_2-9
   --json --populate-only"
+-
+  foreach: "{{range $i, $sc := mkrange 0 8}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.NthBucket 1}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
+    --collection scope-{{$sc}}.coll_2-0 --collection scope-{{$sc}}.coll_2-1 --collection scope-{{$sc}}.coll_2-2 --collection scope-{{$sc}}.coll_2-3 --collection scope-{{$sc}}.coll_2-4
+    --collection scope-{{$sc}}.coll_2-5 --collection scope-{{$sc}}.coll_2-6 --collection scope-{{$sc}}.coll_2-7 --collection scope-{{$sc}}.coll_2-8 --collection scope-{{$sc}}.coll_2-9
+    --json --populate-only"
+
+-
+  foreach: "{{range $i, $sc := mkrange 0 8}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.NthBucket 2}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
+    --collection scope-{{$sc}}.coll_2-0 --collection scope-{{$sc}}.coll_2-1 --collection scope-{{$sc}}.coll_2-2 --collection scope-{{$sc}}.coll_2-3 --collection scope-{{$sc}}.coll_2-4
+    --collection scope-{{$sc}}.coll_2-5 --collection scope-{{$sc}}.coll_2-6 --collection scope-{{$sc}}.coll_2-7 --collection scope-{{$sc}}.coll_2-8 --collection scope-{{$sc}}.coll_2-9
+    --json --populate-only"
+-
+  foreach: "{{range $i, $sc := mkrange 0 8}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.NthBucket 3}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
+    --collection scope-{{$sc}}.coll_2-0 --collection scope-{{$sc}}.coll_2-1 --collection scope-{{$sc}}.coll_2-2 --collection scope-{{$sc}}.coll_2-3 --collection scope-{{$sc}}.coll_2-4
+    --collection scope-{{$sc}}.coll_2-5 --collection scope-{{$sc}}.coll_2-6 --collection scope-{{$sc}}.coll_2-7 --collection scope-{{$sc}}.coll_2-8 --collection scope-{{$sc}}.coll_2-9
+    --json --populate-only"
+-
+  foreach: "{{range $i, $sc := mkrange 0 8}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.NthBucket 4}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
+    --collection scope-{{$sc}}.coll_2-0 --collection scope-{{$sc}}.coll_2-1 --collection scope-{{$sc}}.coll_2-2 --collection scope-{{$sc}}.coll_2-3 --collection scope-{{$sc}}.coll_2-4
+    --collection scope-{{$sc}}.coll_2-5 --collection scope-{{$sc}}.coll_2-6 --collection scope-{{$sc}}.coll_2-7 --collection scope-{{$sc}}.coll_2-8 --collection scope-{{$sc}}.coll_2-9
+    --json --populate-only"
+-
+  foreach: "{{range $i, $sc := mkrange 0 8}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.NthBucket 5}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
+    --collection scope-{{$sc}}.coll_2-0 --collection scope-{{$sc}}.coll_2-1 --collection scope-{{$sc}}.coll_2-2 --collection scope-{{$sc}}.coll_2-3 --collection scope-{{$sc}}.coll_2-4
+    --collection scope-{{$sc}}.coll_2-5 --collection scope-{{$sc}}.coll_2-6 --collection scope-{{$sc}}.coll_2-7 --collection scope-{{$sc}}.coll_2-8 --collection scope-{{$sc}}.coll_2-9
+    --json --populate-only"
+-
+  foreach: "{{range $i, $sc := mkrange 0 8}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.NthBucket 6}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
+    --collection scope-{{$sc}}.coll_2-0 --collection scope-{{$sc}}.coll_2-1 --collection scope-{{$sc}}.coll_2-2 --collection scope-{{$sc}}.coll_2-3 --collection scope-{{$sc}}.coll_2-4
+    --collection scope-{{$sc}}.coll_2-5 --collection scope-{{$sc}}.coll_2-6 --collection scope-{{$sc}}.coll_2-7 --collection scope-{{$sc}}.coll_2-8 --collection scope-{{$sc}}.coll_2-9
+    --json --populate-only"
+-
+  foreach: "{{range $i, $sc := mkrange 0 8}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.NthBucket 7}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
+    --collection scope-{{$sc}}.coll_2-0 --collection scope-{{$sc}}.coll_2-1 --collection scope-{{$sc}}.coll_2-2 --collection scope-{{$sc}}.coll_2-3 --collection scope-{{$sc}}.coll_2-4
+    --collection scope-{{$sc}}.coll_2-5 --collection scope-{{$sc}}.coll_2-6 --collection scope-{{$sc}}.coll_2-7 --collection scope-{{$sc}}.coll_2-8 --collection scope-{{$sc}}.coll_2-9
+    --json --populate-only"
+-
+  foreach: "{{range $i, $sc := mkrange 0 8}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.NthBucket 8}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
+    --collection scope-{{$sc}}.coll_2-0 --collection scope-{{$sc}}.coll_2-1 --collection scope-{{$sc}}.coll_2-2 --collection scope-{{$sc}}.coll_2-3 --collection scope-{{$sc}}.coll_2-4
+    --collection scope-{{$sc}}.coll_2-5 --collection scope-{{$sc}}.coll_2-6 --collection scope-{{$sc}}.coll_2-7 --collection scope-{{$sc}}.coll_2-8 --collection scope-{{$sc}}.coll_2-9
+    --json --populate-only"
+-
+  foreach: "{{range $i, $sc := mkrange 0 8}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.NthBucket 9}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
+    --collection scope-{{$sc}}.coll_2-0 --collection scope-{{$sc}}.coll_2-1 --collection scope-{{$sc}}.coll_2-2 --collection scope-{{$sc}}.coll_2-3 --collection scope-{{$sc}}.coll_2-4
+    --collection scope-{{$sc}}.coll_2-5 --collection scope-{{$sc}}.coll_2-6 --collection scope-{{$sc}}.coll_2-7 --collection scope-{{$sc}}.coll_2-8 --collection scope-{{$sc}}.coll_2-9
+    --json --populate-only"
 
 ### create collections delcoll-1,delcoll-2 ..and data load in parallel to the rebalance op ###
 -
@@ -153,10 +407,74 @@
 -
   foreach: "{{range $i, $sc := mkrange 0 9}}"
   image: sequoiatools/pillowfight:7.0
-  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.Bucket}} -I {{$.Scale 1000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 500}} --random-body
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.Bucket}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
   --collection scope-{{$sc}}.coll_3-0 --collection scope-{{$sc}}.coll_3-1 --collection scope-{{$sc}}.coll_3-2 --collection scope-{{$sc}}.coll_3-3 --collection scope-{{$sc}}.coll_3-4
   --collection scope-{{$sc}}.coll_3-5 --collection scope-{{$sc}}.coll_3-6 --collection scope-{{$sc}}.coll_3-7 --collection scope-{{$sc}}.coll_3-8
   --json --populate-only"
+-
+  foreach: "{{range $i, $sc := mkrange 0 8}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.NthBucket 1}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
+    --collection scope-{{$sc}}.coll_3-0 --collection scope-{{$sc}}.coll_3-1 --collection scope-{{$sc}}.coll_3-2 --collection scope-{{$sc}}.coll_3-3 --collection scope-{{$sc}}.coll_3-4
+    --collection scope-{{$sc}}.coll_3-5 --collection scope-{{$sc}}.coll_3-6 --collection scope-{{$sc}}.coll_3-7 --collection scope-{{$sc}}.coll_3-8
+    --json --populate-only"
+-
+  foreach: "{{range $i, $sc := mkrange 0 8}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.NthBucket 2}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
+    --collection scope-{{$sc}}.coll_3-0 --collection scope-{{$sc}}.coll_3-1 --collection scope-{{$sc}}.coll_3-2 --collection scope-{{$sc}}.coll_3-3 --collection scope-{{$sc}}.coll_3-4
+    --collection scope-{{$sc}}.coll_3-5 --collection scope-{{$sc}}.coll_3-6 --collection scope-{{$sc}}.coll_3-7 --collection scope-{{$sc}}.coll_3-8
+    --json --populate-only"
+-
+  foreach: "{{range $i, $sc := mkrange 0 8}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.NthBucket 3}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
+    --collection scope-{{$sc}}.coll_3-0 --collection scope-{{$sc}}.coll_3-1 --collection scope-{{$sc}}.coll_3-2 --collection scope-{{$sc}}.coll_3-3 --collection scope-{{$sc}}.coll_3-4
+    --collection scope-{{$sc}}.coll_3-5 --collection scope-{{$sc}}.coll_3-6 --collection scope-{{$sc}}.coll_3-7 --collection scope-{{$sc}}.coll_3-8
+    --json --populate-only"
+-
+  foreach: "{{range $i, $sc := mkrange 0 8}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.NthBucket 4}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
+    --collection scope-{{$sc}}.coll_3-0 --collection scope-{{$sc}}.coll_3-1 --collection scope-{{$sc}}.coll_3-2 --collection scope-{{$sc}}.coll_3-3 --collection scope-{{$sc}}.coll_3-4
+    --collection scope-{{$sc}}.coll_3-5 --collection scope-{{$sc}}.coll_3-6 --collection scope-{{$sc}}.coll_3-7 --collection scope-{{$sc}}.coll_3-8
+    --json --populate-only"
+-
+  foreach: "{{range $i, $sc := mkrange 0 8}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.NthBucket 5}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
+    --collection scope-{{$sc}}.coll_3-0 --collection scope-{{$sc}}.coll_3-1 --collection scope-{{$sc}}.coll_3-2 --collection scope-{{$sc}}.coll_3-3 --collection scope-{{$sc}}.coll_3-4
+    --collection scope-{{$sc}}.coll_3-5 --collection scope-{{$sc}}.coll_3-6 --collection scope-{{$sc}}.coll_3-7 --collection scope-{{$sc}}.coll_3-8
+    --json --populate-only"
+-
+  foreach: "{{range $i, $sc := mkrange 0 8}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.NthBucket 6}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
+    --collection scope-{{$sc}}.coll_3-0 --collection scope-{{$sc}}.coll_3-1 --collection scope-{{$sc}}.coll_3-2 --collection scope-{{$sc}}.coll_3-3 --collection scope-{{$sc}}.coll_3-4
+    --collection scope-{{$sc}}.coll_3-5 --collection scope-{{$sc}}.coll_3-6 --collection scope-{{$sc}}.coll_3-7 --collection scope-{{$sc}}.coll_3-8
+    --json --populate-only"
+-
+  foreach: "{{range $i, $sc := mkrange 0 8}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.NthBucket 7}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
+    --collection scope-{{$sc}}.coll_3-0 --collection scope-{{$sc}}.coll_3-1 --collection scope-{{$sc}}.coll_3-2 --collection scope-{{$sc}}.coll_3-3 --collection scope-{{$sc}}.coll_3-4
+    --collection scope-{{$sc}}.coll_3-5 --collection scope-{{$sc}}.coll_3-6 --collection scope-{{$sc}}.coll_3-7 --collection scope-{{$sc}}.coll_3-8
+    --json --populate-only"
+-
+  foreach: "{{range $i, $sc := mkrange 0 8}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.NthBucket 8}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
+    --collection scope-{{$sc}}.coll_3-0 --collection scope-{{$sc}}.coll_3-1 --collection scope-{{$sc}}.coll_3-2 --collection scope-{{$sc}}.coll_3-3 --collection scope-{{$sc}}.coll_3-4
+    --collection scope-{{$sc}}.coll_3-5 --collection scope-{{$sc}}.coll_3-6 --collection scope-{{$sc}}.coll_3-7 --collection scope-{{$sc}}.coll_3-8
+    --json --populate-only"
+-
+  foreach: "{{range $i, $sc := mkrange 0 8}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.NthBucket 9}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
+    --collection scope-{{$sc}}.coll_3-0 --collection scope-{{$sc}}.coll_3-1 --collection scope-{{$sc}}.coll_3-2 --collection scope-{{$sc}}.coll_3-3 --collection scope-{{$sc}}.coll_3-4
+    --collection scope-{{$sc}}.coll_3-5 --collection scope-{{$sc}}.coll_3-6 --collection scope-{{$sc}}.coll_3-7 --collection scope-{{$sc}}.coll_3-8
+    --json --populate-only"
+
 
 ### delete all collections in scope delscope-1,delscope2 .. in parallel to rebalance op ####
 -
@@ -188,10 +506,73 @@
 -
   foreach: "{{range $i, $sc := mkrange 0 9}}"
   image: sequoiatools/pillowfight:7.0
-  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.Bucket}} -I {{$.Scale 1000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 500}} --random-body
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.Bucket}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
   --collection scope-{{$sc}}.coll_4-0 --collection scope-{{$sc}}.coll_4-1 --collection scope-{{$sc}}.coll_4-2 --collection scope-{{$sc}}.coll_4-3 --collection scope-{{$sc}}.coll_4-4
   --collection scope-{{$sc}}.coll_4-5 --collection scope-{{$sc}}.coll_4-6 --collection scope-{{$sc}}.coll_4-7 --collection scope-{{$sc}}.coll_4-8
   --json --populate-only"
+-
+  foreach: "{{range $i, $sc := mkrange 0 9}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.NthBucket 1}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
+    --collection scope-{{$sc}}.coll_4-0 --collection scope-{{$sc}}.coll_4-1 --collection scope-{{$sc}}.coll_4-2 --collection scope-{{$sc}}.coll_4-3 --collection scope-{{$sc}}.coll_4-4
+    --collection scope-{{$sc}}.coll_4-5 --collection scope-{{$sc}}.coll_4-6 --collection scope-{{$sc}}.coll_4-7 --collection scope-{{$sc}}.coll_4-8
+    --json --populate-only"
+-
+  foreach: "{{range $i, $sc := mkrange 0 9}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.NthBucket 2}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
+    --collection scope-{{$sc}}.coll_4-0 --collection scope-{{$sc}}.coll_4-1 --collection scope-{{$sc}}.coll_4-2 --collection scope-{{$sc}}.coll_4-3 --collection scope-{{$sc}}.coll_4-4
+    --collection scope-{{$sc}}.coll_4-5 --collection scope-{{$sc}}.coll_4-6 --collection scope-{{$sc}}.coll_4-7 --collection scope-{{$sc}}.coll_4-8
+    --json --populate-only"
+-
+  foreach: "{{range $i, $sc := mkrange 0 9}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.NthBucket 3}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
+    --collection scope-{{$sc}}.coll_4-0 --collection scope-{{$sc}}.coll_4-1 --collection scope-{{$sc}}.coll_4-2 --collection scope-{{$sc}}.coll_4-3 --collection scope-{{$sc}}.coll_4-4
+    --collection scope-{{$sc}}.coll_4-5 --collection scope-{{$sc}}.coll_4-6 --collection scope-{{$sc}}.coll_4-7 --collection scope-{{$sc}}.coll_4-8
+    --json --populate-only"
+-
+  foreach: "{{range $i, $sc := mkrange 0 9}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.NthBucket 4}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
+    --collection scope-{{$sc}}.coll_4-0 --collection scope-{{$sc}}.coll_4-1 --collection scope-{{$sc}}.coll_4-2 --collection scope-{{$sc}}.coll_4-3 --collection scope-{{$sc}}.coll_4-4
+    --collection scope-{{$sc}}.coll_4-5 --collection scope-{{$sc}}.coll_4-6 --collection scope-{{$sc}}.coll_4-7 --collection scope-{{$sc}}.coll_4-8
+    --json --populate-only"
+-
+  foreach: "{{range $i, $sc := mkrange 0 9}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.NthBucket 5}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
+    --collection scope-{{$sc}}.coll_4-0 --collection scope-{{$sc}}.coll_4-1 --collection scope-{{$sc}}.coll_4-2 --collection scope-{{$sc}}.coll_4-3 --collection scope-{{$sc}}.coll_4-4
+    --collection scope-{{$sc}}.coll_4-5 --collection scope-{{$sc}}.coll_4-6 --collection scope-{{$sc}}.coll_4-7 --collection scope-{{$sc}}.coll_4-8
+    --json --populate-only"
+-
+  foreach: "{{range $i, $sc := mkrange 0 9}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.NthBucket 6}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
+    --collection scope-{{$sc}}.coll_4-0 --collection scope-{{$sc}}.coll_4-1 --collection scope-{{$sc}}.coll_4-2 --collection scope-{{$sc}}.coll_4-3 --collection scope-{{$sc}}.coll_4-4
+    --collection scope-{{$sc}}.coll_4-5 --collection scope-{{$sc}}.coll_4-6 --collection scope-{{$sc}}.coll_4-7 --collection scope-{{$sc}}.coll_4-8
+    --json --populate-only"
+-
+  foreach: "{{range $i, $sc := mkrange 0 9}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.NthBucket 7}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
+    --collection scope-{{$sc}}.coll_4-0 --collection scope-{{$sc}}.coll_4-1 --collection scope-{{$sc}}.coll_4-2 --collection scope-{{$sc}}.coll_4-3 --collection scope-{{$sc}}.coll_4-4
+    --collection scope-{{$sc}}.coll_4-5 --collection scope-{{$sc}}.coll_4-6 --collection scope-{{$sc}}.coll_4-7 --collection scope-{{$sc}}.coll_4-8
+    --json --populate-only"
+-
+  foreach: "{{range $i, $sc := mkrange 0 9}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.NthBucket 8}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
+    --collection scope-{{$sc}}.coll_4-0 --collection scope-{{$sc}}.coll_4-1 --collection scope-{{$sc}}.coll_4-2 --collection scope-{{$sc}}.coll_4-3 --collection scope-{{$sc}}.coll_4-4
+    --collection scope-{{$sc}}.coll_4-5 --collection scope-{{$sc}}.coll_4-6 --collection scope-{{$sc}}.coll_4-7 --collection scope-{{$sc}}.coll_4-8
+    --json --populate-only"
+-
+  foreach: "{{range $i, $sc := mkrange 0 9}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.NthBucket 9}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
+    --collection scope-{{$sc}}.coll_4-0 --collection scope-{{$sc}}.coll_4-1 --collection scope-{{$sc}}.coll_4-2 --collection scope-{{$sc}}.coll_4-3 --collection scope-{{$sc}}.coll_4-4
+    --collection scope-{{$sc}}.coll_4-5 --collection scope-{{$sc}}.coll_4-6 --collection scope-{{$sc}}.coll_4-7 --collection scope-{{$sc}}.coll_4-8
+    --json --populate-only"
 
 ### create collections delcoll-1,delcoll-2 ..and data load in parallel to the rebalance op ###
 -
@@ -250,10 +631,73 @@
 -
   foreach: "{{range $i, $sc := mkrange 0 9}}"
   image: sequoiatools/pillowfight:7.0
-  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.Bucket}} -I {{$.Scale 1000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 500}} --random-body
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.Bucket}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
   --collection scope-{{$sc}}.coll-0 --collection scope-{{$sc}}.coll-1 --collection scope-{{$sc}}.coll-2 --collection scope-{{$sc}}.coll-3 --collection scope-{{$sc}}.coll-4
   --collection scope-{{$sc}}.coll-5 --collection scope-{{$sc}}.coll-6 --collection scope-{{$sc}}.coll-7 --collection scope-{{$sc}}.coll-8
   --json --populate-only"
+-
+  foreach: "{{range $i, $sc := mkrange 0 9}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.NthBucket 1}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
+    --collection scope-{{$sc}}.coll-0 --collection scope-{{$sc}}.coll-1 --collection scope-{{$sc}}.coll-2 --collection scope-{{$sc}}.coll-3 --collection scope-{{$sc}}.coll-4
+    --collection scope-{{$sc}}.coll-5 --collection scope-{{$sc}}.coll-6 --collection scope-{{$sc}}.coll-7 --collection scope-{{$sc}}.coll-8
+    --json --populate-only"
+-
+  foreach: "{{range $i, $sc := mkrange 0 9}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.NthBucket 2}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
+    --collection scope-{{$sc}}.coll-0 --collection scope-{{$sc}}.coll-1 --collection scope-{{$sc}}.coll-2 --collection scope-{{$sc}}.coll-3 --collection scope-{{$sc}}.coll-4
+    --collection scope-{{$sc}}.coll-5 --collection scope-{{$sc}}.coll-6 --collection scope-{{$sc}}.coll-7 --collection scope-{{$sc}}.coll-8
+    --json --populate-only"
+-
+  foreach: "{{range $i, $sc := mkrange 0 9}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.NthBucket 3}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
+    --collection scope-{{$sc}}.coll-0 --collection scope-{{$sc}}.coll-1 --collection scope-{{$sc}}.coll-2 --collection scope-{{$sc}}.coll-3 --collection scope-{{$sc}}.coll-4
+    --collection scope-{{$sc}}.coll-5 --collection scope-{{$sc}}.coll-6 --collection scope-{{$sc}}.coll-7 --collection scope-{{$sc}}.coll-8
+    --json --populate-only"
+-
+  foreach: "{{range $i, $sc := mkrange 0 9}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.NthBucket 4}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
+    --collection scope-{{$sc}}.coll-0 --collection scope-{{$sc}}.coll-1 --collection scope-{{$sc}}.coll-2 --collection scope-{{$sc}}.coll-3 --collection scope-{{$sc}}.coll-4
+    --collection scope-{{$sc}}.coll-5 --collection scope-{{$sc}}.coll-6 --collection scope-{{$sc}}.coll-7 --collection scope-{{$sc}}.coll-8
+    --json --populate-only"
+-
+  foreach: "{{range $i, $sc := mkrange 0 9}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.NthBucket 5}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
+    --collection scope-{{$sc}}.coll-0 --collection scope-{{$sc}}.coll-1 --collection scope-{{$sc}}.coll-2 --collection scope-{{$sc}}.coll-3 --collection scope-{{$sc}}.coll-4
+    --collection scope-{{$sc}}.coll-5 --collection scope-{{$sc}}.coll-6 --collection scope-{{$sc}}.coll-7 --collection scope-{{$sc}}.coll-8
+    --json --populate-only"
+-
+  foreach: "{{range $i, $sc := mkrange 0 9}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.NthBucket 6}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
+    --collection scope-{{$sc}}.coll-0 --collection scope-{{$sc}}.coll-1 --collection scope-{{$sc}}.coll-2 --collection scope-{{$sc}}.coll-3 --collection scope-{{$sc}}.coll-4
+    --collection scope-{{$sc}}.coll-5 --collection scope-{{$sc}}.coll-6 --collection scope-{{$sc}}.coll-7 --collection scope-{{$sc}}.coll-8
+    --json --populate-only"
+-
+  foreach: "{{range $i, $sc := mkrange 0 9}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.NthBucket 7}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
+    --collection scope-{{$sc}}.coll-0 --collection scope-{{$sc}}.coll-1 --collection scope-{{$sc}}.coll-2 --collection scope-{{$sc}}.coll-3 --collection scope-{{$sc}}.coll-4
+    --collection scope-{{$sc}}.coll-5 --collection scope-{{$sc}}.coll-6 --collection scope-{{$sc}}.coll-7 --collection scope-{{$sc}}.coll-8
+    --json --populate-only"
+-
+  foreach: "{{range $i, $sc := mkrange 0 9}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.NthBucket 8}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
+    --collection scope-{{$sc}}.coll-0 --collection scope-{{$sc}}.coll-1 --collection scope-{{$sc}}.coll-2 --collection scope-{{$sc}}.coll-3 --collection scope-{{$sc}}.coll-4
+    --collection scope-{{$sc}}.coll-5 --collection scope-{{$sc}}.coll-6 --collection scope-{{$sc}}.coll-7 --collection scope-{{$sc}}.coll-8
+    --json --populate-only"
+-
+  foreach: "{{range $i, $sc := mkrange 0 9}}"
+  image: sequoiatools/pillowfight:7.0
+  command: "-u Administrator -P password -U couchbase://{{$.Orchestrator}}/{{$.NthBucket 9}} -I {{$.Scale 10000}} -M 50 -B 100 -r 90 --rate-limit {{$.Scale 5000}} --random-body
+    --collection scope-{{$sc}}.coll-0 --collection scope-{{$sc}}.coll-1 --collection scope-{{$sc}}.coll-2 --collection scope-{{$sc}}.coll-3 --collection scope-{{$sc}}.coll-4
+    --collection scope-{{$sc}}.coll-5 --collection scope-{{$sc}}.coll-6 --collection scope-{{$sc}}.coll-7 --collection scope-{{$sc}}.coll-8
+    --json --populate-only"
   wait: true
 
 ### delete all collections in scope delscope-1,delscope2 .. in parallel to rebalance op ####
