@@ -10,6 +10,11 @@
   args: "{{.ActiveIndexNode 0}}, 'indexer.settings.enable_corrupt_index_backup':true"
   requires:  "{{eq true .DoOnce }}"
 
+############### Disable workaround for MB-46650 ################
+- template: set_gsi_config
+  args: "{{.ActiveIndexNode 0}}, 'indexer.plasma.recovery.enableFullReplayOnError':false"
+  requires:  "{{eq true .DoOnce }}"
+
 # Temporarily disabling In-memory compression
 ############### Enable Plasma In memory compression ################
 #- template: set_gsi_config
