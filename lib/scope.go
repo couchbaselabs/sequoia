@@ -138,7 +138,6 @@ func (s *Scope) SetupServer() {
 	s.AddNodes()
 	s.RebalanceClusters()
 	s.getClusteInfo()
-	s.enableDpIfReq()
 	s.CreateBuckets()
 	s.CreateScope()
 	s.CreateViews()
