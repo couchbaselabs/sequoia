@@ -144,7 +144,7 @@
 # Wait till all indexes are completely built
 -
    image: sequoiatools/wait_for_idx_build_complete
-   command: "{{.ActiveIndexNode 0}} {{.RestUsername}} {{.RestPassword}}"
+   command: "{{.ActiveIndexNode 0}} {{.RestUsername}} {{.RestPassword}} {{.NthBucket 3}},{{.NthBucket 4}}"
    wait: true
 
 ############### incremental data loading ################
