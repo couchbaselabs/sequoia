@@ -60,9 +60,9 @@ class IndexManager:
         parser.add_argument("-a", "--action",
                             choices=["create_index", "build_deferred_index", "drop_all_indexes", "create_index_loop",
                                      "drop_index_loop", "alter_indexes", "enable_cbo", "item_count_check",
-                                     "random_recovery"],
+                                     "random_recovery", "create_udf", "drop_udf"],
                             help="Choose an action to be performed. Valid actions : create_index | build_deferred_index | drop_all_indexes | create_index_loop | "
-                                 "drop_index_loop | alter_indexes | enable_cbo | item_count_check | random_recovery",
+                                 "drop_index_loop | alter_indexes | enable_cbo | item_count_check | random_recovery | create_udf | drop_udf",
                             default="create_index")
         parser.add_argument("-m", "--build_max_collections", type=int, default=0,
                             help="Build Indexes on max number of collections")
@@ -74,6 +74,8 @@ class IndexManager:
                             help="Specify on how many % of collections should CBO be enabled. Range = 1-100")
         parser.add_argument("--sample_size", type=int, default=5,
                             help="Specify how many indexes to be sampled for item count check. Default = 5")
+        parser.add_argument("--num_udf_per_scope", type=int, default=10,
+                            help="Specify how many UDF to be created per scope. Default = 10")
         parser.add_argument("-v", "--validate", help="Validation required for create_index and drop_all_indexes action",
                             action='store_true')
         parser.add_argument("-t", "--test_mode", help="Test Mode : Create Scopes/Collections", action='store_true')
@@ -98,6 +100,7 @@ class IndexManager:
         if self.cbo_enable_ratio > 100:
             self.cbo_enable_ratio = 25
         self.sample_size = args.sample_size
+        self.num_udf_per_scope = args.num_udf_per_scope
         self.idx_def_templates = HOTEL_DS_INDEX_TEMPLATES
         # If there are more datasets supported, this can be expanded.
         if self.dataset == "hotel":
@@ -749,6 +752,99 @@ class IndexManager:
         return node_map
 
     """
+    Create n number of UDF on all scopes of a given bucket
+    """
+    def create_udfs(self):
+        cb_scopes = self.cb.collections().get_all_scopes()
+        scope_name_list = []
+        for scope in cb_scopes:
+            scope_name_list.append("`" + self.bucket_name + "`.`" + scope.name + "`")
+        self.log.info(str(scope_name_list))
+
+        # Create JS function
+        self.log.info("Create JS Function")
+        query_node = self.find_nodes_with_service(self.get_services_map(), "n1ql")[0]
+        api1 = "http://" + query_node + ':8093/functions/v1/libraries/math/functions/add'
+        data1 = {"name": "add", "code": "function add(a, b) { let data = a + b; return data; }"}
+
+        api2 = "http://" + query_node + ':8093/functions/v1/libraries/math/functions/sub'
+        data2 = {"name": "add", "code": "function sub(a, b) { let data = a - b; return data; }"}
+
+        api3 = "http://" + query_node + ':8093/functions/v1/libraries/math/functions/mul'
+        data3 = {"name": "add", "code": "function mul(a, b) { let data = a * b; return data; }"}
+
+        api4 = "http://" + query_node + ':8093/functions/v1/libraries/math/functions/div'
+        data4 = {"name": "add", "code": "function div(a, b) { let data = a / b; return data; }"}
+
+        auth = (self.username, self.password)
+        try:
+            response = requests.get(url=api1, auth=auth, data=data1, timeout=120)
+            if response.status_code == 200:
+                return response.json()
+
+            response = requests.get(url=api2, auth=auth, data=data2, timeout=120)
+            if response.status_code == 200:
+                return response.json()
+
+            response = requests.get(url=api3, auth=auth, data=data3, timeout=120)
+            if response.status_code == 200:
+                return response.json()
+
+            response = requests.get(url=api4, auth=auth, data=data4, timeout=120)
+            if response.status_code == 200:
+                return response.json()
+
+        except requests.exceptions.HTTPError as errh:
+            self.log.error("HTTPError getting response from /functions : {0}".format(str(errh)))
+        except requests.exceptions.ConnectionError as errc:
+            self.log.error("ConnectionError getting response from /functions : {0}".format(str(errc)))
+        except requests.exceptions.Timeout as errt:
+            self.log.error("Timeout getting response from /functions : {0}".format(str(errt)))
+        except requests.exceptions.RequestException as err:
+            self.log.error("Error getting response from /functions : {0}".format(str(err)))
+
+        udf_statement_templates = [
+
+            "CREATE FUNCTION default:keyspace_placeholder.fun1_suffix(arg1, arg2){arg1 + arg2}",
+            "CREATE FUNCTION default:keyspace_placeholder.fun2_suffix(a, b) LANGUAGE javascript AS \"add\" AT \"math\"",
+            "CREATE FUNCTION default:keyspace_placeholder.fun3_suffix(arg1, arg2){arg1 - arg2}",
+            "CREATE FUNCTION default:keyspace_placeholder.fun4_suffix(a, b) LANGUAGE javascript AS \"sub\" AT \"math\"",
+            "CREATE FUNCTION default:keyspace_placeholder.fun5_suffix(arg1, arg2){arg1 * arg2}",
+            "CREATE FUNCTION default:keyspace_placeholder.fun6_suffix(a, b) LANGUAGE javascript AS \"mul\" AT \"math\"",
+            "CREATE FUNCTION default:keyspace_placeholder.fun7_suffix(arg1, arg2){arg1 / arg2}",
+            "CREATE FUNCTION default:keyspace_placeholder.fun8_suffix(a, b) LANGUAGE javascript AS \"div\" AT \"math\""
+        ]
+        for scope in scope_name_list:
+
+            for i in range(self.num_udf_per_scope):
+                udf_stmt = random.choice(udf_statement_templates).replace("keyspace_placeholder", scope)
+                udf_stmt = udf_stmt.replace("suffix",''.join(random.choices(string.ascii_uppercase +
+                                                                   string.digits, k=6)))
+
+
+                status, results, queryResult = self._execute_query(udf_stmt)
+                self.log.info(udf_stmt + " : " + str(status))
+                sleep(0.25)
+
+    """
+    Drop all UDFs
+    """
+    def drop_all_udfs(self):
+        drop_function_gen_template = "select raw 'DROP FUNCTION default:`' || identity.`bucket`|| '`.`' || identity.`scope`|| '`.`' || identity.name || '`' from system:functions;"
+
+        self.log.info("Starting to drop all functions ")
+
+        status, results, queryResult = self._execute_query(drop_function_gen_template)
+        if status is not None:
+            for result in results:
+                drop_status, _, _ = self._execute_query(result)
+
+                # Sleep for 0.25 secs after dropping an index
+                sleep(0.25)
+        self.log.info("Drop all functions completed")
+
+
+    """
     From the service map, find all nodes running the specified service and return the node list.
     """
 
@@ -1042,6 +1138,10 @@ if __name__ == '__main__':
         indexMgr.item_count_check(indexMgr.sample_size)
     elif indexMgr.action == "random_recovery":
         indexMgr.random_recovery(indexMgr.timeout, indexMgr.interval)
+    elif indexMgr.action == "create_udf":
+        indexMgr.create_udfs()
+    elif indexMgr.action == "drop_udf":
+        indexMgr.drop_all_udfs()
     else:
         print("Invalid choice for action. Choose from the following - "
-              "create_index | build_deferred_index | drop_all_indexes | create_index_loop | alter_indexes | enable_cbo | drop_index_loop | item_count_check")
+              "create_index | build_deferred_index | drop_all_indexes | create_index_loop | alter_indexes | enable_cbo | drop_index_loop | item_count_check | random_recovery | create_udf | drop_udf")
