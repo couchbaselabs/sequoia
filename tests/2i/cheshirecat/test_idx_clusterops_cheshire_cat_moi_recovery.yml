@@ -3,26 +3,13 @@
 ############### Enable Plasma Bloom Filter ################
 - template: set_gsi_config
   args: "{{.ActiveIndexNode 0}}, 'indexer.plasma.backIndex.enablePageBloomFilter':true"
-  requires:  "{{eq true .DoOnce }}"
-
-############### Backup any corrupted index data files ################
-- template: set_gsi_config
-  args: "{{.ActiveIndexNode 0}}, 'indexer.settings.enable_corrupt_index_backup':true"
-  requires:  "{{eq true .DoOnce }}"
-
-############### Disable workaround for MB-46650 ################
-- template: set_gsi_config
-  args: "{{.ActiveIndexNode 0}}, 'indexer.plasma.recovery.enableFullReplayOnError':false"
-  requires:  "{{eq true .DoOnce }}"
 
 # Temporarily disabling In-memory compression
 ############### Enable Plasma In memory compression ################
 #- template: set_gsi_config
 #  args: "{{.ActiveIndexNode 0}}, 'indexer.plasma.mainIndex.enableInMemoryCompression':true"
-#   requires:  "{{eq true .DoOnce }}"
 #- template: set_gsi_config
 #  args: "{{.ActiveIndexNode 0}}, 'indexer.plasma.backIndex.enableInMemoryCompression':true"
-#   requires:  "{{eq true .DoOnce }}"
 
 ############### Enable GSI OSO mode ################
 # Temporarily not enabling OSO mode as per MB-43725
@@ -32,7 +19,6 @@
 ############### Enable GSI Redistribution of indexes on rebalance in ################
 - template: set_gsi_config
   args: "{{.ActiveIndexNode 0}}, 'indexer.settings.rebalance.redistribute_indexes':true"
-  requires:  "{{eq true .DoOnce }}"
 
 ############### Enable Retry on failed rebalance ################
 -
@@ -40,6 +26,7 @@
   requires:  "{{eq true .DoOnce }}"
   command: "setting-rebalance -c {{.Orchestrator}}:8091 -u {{.RestUsername}} -p {{.RestPassword}} --set --enable 1 --wait-for 300 --max-attempts 3"
   wait: true
+
 
 ############### create scopes and collections across 3 buckets as scope_1,scope_2 ... ###############
 -
@@ -59,47 +46,22 @@
    image: sequoiatools/cmd
    entrypoint: sleep
    command: "300"
-   requires:  "{{eq true .DoOnce }}"
    wait: true
 
 ############### initial data loading ################
 - image: sequoiatools/catapult
-  command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -n {{.Scale 100000}} -pc 100
-    -dt Hotel -ds 1000 -ac True -dpx test1"
+  command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -n {{.Scale 50000}} -pc 100
+    -dt Hotel -ds 1000 -ac True"
   requires:  "{{eq true .DoOnce }}"
   alias: collection_bucket1_doc_ops1
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -n {{.Scale 100000}} -pc 100
-    -dt Hotel -ds 1000 -ac True -dpx test2"
-  requires:  "{{eq true .DoOnce }}"
-  alias: collection_bucket1_doc_ops3
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -n {{.Scale 100000}} -pc 100
-    -dt Hotel -ds 1000 -ac True -dpx test3"
-  requires:  "{{eq true .DoOnce }}"
-  alias: collection_bucket1_doc_ops4
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 1}} -n {{.Scale 100000}} -pc 100
-    -dt Hotel -ds 1000 -ac True -dpx test1"
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 1}} -n {{.Scale 50000}} -pc 100
+    -dt Hotel -ds 1000 -ac True"
   requires:  "{{eq true .DoOnce }}"
   alias: collection_bucket2_doc_ops1
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 1}} -n {{.Scale 100000}} -pc 100
-    -dt Hotel -ds 1000 -ac True -dpx test2"
-  requires:  "{{eq true .DoOnce }}"
-  alias: collection_bucket2_doc_ops3
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 1}} -n {{.Scale 100000}} -pc 100
-    -dt Hotel -ds 1000 -ac True -dpx test3"
-  requires:  "{{eq true .DoOnce }}"
-  alias: collection_bucket2_doc_ops4
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 2}} -n {{.Scale 100000}} -pc 100
-    -dt Hotel -ds 1000 -ac True -dpx test1"
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 2}} -n {{.Scale 50000}} -pc 100
+    -dt Hotel -ds 1000 -ac True"
   requires:  "{{eq true .DoOnce }}"
   alias: collection_bucket3_doc_ops1
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 2}} -n {{.Scale 100000}} -pc 100
-    -dt Hotel -ds 1000 -ac True -dpx test2"
-  requires:  "{{eq true .DoOnce }}"
-  alias: collection_bucket3_doc_ops3
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 2}} -n {{.Scale 100000}} -pc 100
-    -dt Hotel -ds 1000 -ac True -dpx test3"
-  requires:  "{{eq true .DoOnce }}"
-  alias: collection_bucket3_doc_ops4
 
 ############### Start Collections CRUD on bucket 4 & bucket5 ###############
 -
@@ -128,6 +90,7 @@
   command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a random_recovery --timeout {{.Scale 3600}} --interval 120"
   alias: random_recovery
 
+
 ###############  build all deferred indexes ################
 
 - image: sequoiatools/indexmanager
@@ -144,7 +107,7 @@
 # Wait till all indexes are completely built
 -
    image: sequoiatools/wait_for_idx_build_complete
-   command: "{{.ActiveIndexNode 0}} {{.RestUsername}} {{.RestPassword}} {{.NthBucket 3}},{{.NthBucket 4}}"
+   command: "{{.ActiveIndexNode 0}} {{.RestUsername}} {{.RestPassword}}"
    wait: true
 
 ############### incremental data loading ################
@@ -163,9 +126,9 @@
 # ###############  run queries ################
 - section_start: query_replica_indexes
 - image: sequoiatools/queryapp
-  command: "-J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.5.6/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 0 --print_duration=3600 --bucket {{.Bucket}} --querycount {{.Scale 3}} --threads 5 --n1ql True --query_timeout=600 --scan_consistency REQUEST_PLUS --bucket_names [{{.Bucket}},{{.NthBucket 1}},{{.NthBucket 2}}] --collections_mode --dataset hotel"
-- command: "-J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.5.6/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 0 --print_duration=3600 --bucket {{.NthBucket 1}} --querycount {{.Scale 3}} --threads 5 --n1ql True --query_timeout=600 --scan_consistency REQUEST_PLUS --bucket_names [{{.Bucket}},{{.NthBucket 1}},{{.NthBucket 2}}] --collections_mode --dataset hotel"
-- command: "-J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.5.6/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 0 --print_duration=3600 --bucket {{.NthBucket 2}} --querycount {{.Scale 3}} --threads 5 --n1ql True --query_timeout=600 --scan_consistency REQUEST_PLUS --bucket_names [{{.Bucket}},{{.NthBucket 1}},{{.NthBucket 2}}]  --txns True --dataset hotel"
+  command: "-J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.5.6/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 0 --print_duration=3600 --bucket {{.Bucket}} --querycount {{.Scale 3}} --threads {{.Scale 3}} --n1ql True --query_timeout=600 --scan_consistency REQUEST_PLUS --bucket_names [{{.Bucket}},{{.NthBucket 1}},{{.NthBucket 2}}] --collections_mode --dataset hotel"
+- command: "-J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.5.6/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 0 --print_duration=3600 --bucket {{.NthBucket 1}} --querycount {{.Scale 3}} --threads {{.Scale 3}} --n1ql True --query_timeout=600 --scan_consistency REQUEST_PLUS --bucket_names [{{.Bucket}},{{.NthBucket 1}},{{.NthBucket 2}}] --collections_mode --dataset hotel"
+- command: "-J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.5.6/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 0 --print_duration=3600 --bucket {{.NthBucket 2}} --querycount {{.Scale 3}} --threads {{.Scale 3}} --n1ql True --query_timeout=600 --scan_consistency REQUEST_PLUS --bucket_names [{{.Bucket}},{{.NthBucket 1}},{{.NthBucket 2}}]  --txns True --dataset hotel"
 - section_end: query_replica_indexes
 
 ###############  Alter indexes throughout the iteration ################
@@ -179,10 +142,10 @@
 
 ############### Start creating indexes in a loop on bucket4 & bucket5 (Collection CRUD workload) ###############
 - image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 3}} -d hotel -a create_index_loop --interval 60 --timeout {{.Scale 3600}}"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 3}} -d hotel -a create_index_loop --interval 60 --timeout {{.Scale 1800}}"
   alias: index_loop1
 -
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}} -d hotel -a create_index_loop --interval 60 --timeout {{.Scale 3600}}"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}} -d hotel -a create_index_loop --interval 60 --timeout {{.Scale 1800}}"
   alias: index_loop2
 
 # Sleep for some time to allow some indexes to be created on bucket4 & bucket5
@@ -194,10 +157,10 @@
 
 # Start dropping indexes in a loop on bucket4 & bucket5 (Collection CRUD workload)
 - image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 3}} -d hotel -a drop_index_loop --interval 120 --timeout {{.Scale 3600}}"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 3}} -d hotel -a drop_index_loop --interval 120 --timeout {{.Scale 1800}}"
   alias: index_drop_loop1
 -
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}} -d hotel -a drop_index_loop --interval 120 --timeout {{.Scale 3600}}"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}} -d hotel -a drop_index_loop --interval 120 --timeout {{.Scale 1800}}"
   alias: index_drop_loop2
   wait: true
 
@@ -377,30 +340,6 @@
     op: rm
     container: collection_bucket3_doc_ops2
 -
-  client:
-    op: rm
-    container: collection_bucket1_doc_ops3
--
-  client:
-    op: rm
-    container: collection_bucket2_doc_ops3
--
-  client:
-    op: rm
-    container: collection_bucket3_doc_ops3
--
-  client:
-    op: rm
-    container: collection_bucket1_doc_ops4
--
-  client:
-    op: rm
-    container: collection_bucket2_doc_ops4
--
-  client:
-    op: rm
-    container: collection_bucket3_doc_ops4
--
    image: sequoiatools/cmd
    entrypoint: sleep
    command: "1200"
@@ -423,13 +362,13 @@
 ###############  Drop all Indexes ################
 - section_start: drop_all_indexes
 - image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}}  -a drop_all_indexes -v"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a drop_all_indexes"
   wait: true
 
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a drop_all_indexes -v"
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a drop_all_indexes"
   wait: true
 
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -a drop_all_indexes -v"
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -a drop_all_indexes"
   wait: true
 
 # Sleep for some time to allow DDL to complete in the background
