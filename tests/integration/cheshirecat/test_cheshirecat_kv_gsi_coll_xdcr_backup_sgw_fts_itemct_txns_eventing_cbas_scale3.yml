@@ -16,7 +16,7 @@
 #  command: "setting-audit -c {{.Orchestrator}}:8091 -u {{.RestUsername}} -p {{.RestPassword}} --set --audit-enabled 1 --audit-log-path /data --audit-log-rotate-interval 604800"
 #  wait: true
 
-###### enable n2n encryption ######
+###### enable n2n encryption & ipv4only ######
 -
   template: disable_autofailover
   requires:  "{{eq true .DoOnce }}"
@@ -29,6 +29,11 @@
   image: sequoiatools/couchbase-cli
   requires:  "{{eq true .DoOnce }}"
   command: "setting-security -c {{.Orchestrator}}:8091 -u {{.RestUsername}} -p {{.RestPassword}} --set --cluster-encryption-level control"
+  wait: true
+-
+  image: sequoiatools/couchbase-cli
+  requires:  "{{eq true .DoOnce }}"
+  command: "ip-family -c {{.Orchestrator}}:8091 -u {{.RestUsername}} -p {{.RestPassword}} --set --ipv4only"
   wait: true
 -
   template: enable_autofailover
