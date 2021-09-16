@@ -331,3 +331,16 @@
     -
       image:  appropriate/curl
       command: "-X PUT -u {{.RestUsername}}:{{.RestPassword}} -H Content-Type:application/json http://$0:8094/api/managerOptions -d {{`{$1}` | to_double_quote }}"
+
+# Create n number of indexes for given scopes
+# $0 = scope
+-
+  name: create_single_partition_index_for_scope
+  actions:
+    - image: sequoiatools/ftsindexmanager
+      command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -s {{.Scale 1}} -sc $0 -a create_index_for_each_collection"
+      wait: true
+
+    - image: sequoiatools/ftsindexmanager
+      command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a item_count_check -vt 3600"
+      wait: true

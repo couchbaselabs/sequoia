@@ -194,6 +194,7 @@ class FTSIndexManager:
                                  "If action=drop_index, number of indexes to be dropped per collection of bucket")
         parser.add_argument("-d", "--dataset", help="Dataset to be used for the test. Choices are - hotel",
                             default="hotel")
+        parser.add_argument("-sc", "--scope", help="Scope to create indexes on", default=None)
         parser.add_argument("-t", "--duration", type=int,
                             help="Duration for queries to be run for. 0 (default) is infinite",
                             default="0")
@@ -211,7 +212,8 @@ class FTSIndexManager:
                             help="Timeout for item_count_check")
         parser.add_argument("-a", "--action",
                             choices=["create_index", "create_index_from_map", "run_queries", "delete_all_indexes",
-                                     "create_index_loop", "item_count_check", "create_index_loop_on_bucket", "active_queries_check", "run_flex_queries", "create_index_from_map_on_bucket"],
+                                     "create_index_loop", "item_count_check", "active_queries_check", "run_flex_queries",
+                                     "create_index_from_map_on_bucket", "create_index_for_each_collection"],
                             help="Choose an action to be performed. Valid actions : create_index, run_queries, "
                                  "delete_all_indexes, create_index_loop, item_count_check",
                             default="create_index")
@@ -232,6 +234,7 @@ class FTSIndexManager:
         self.timeout = args.timeout
         self.index_partition_map = args.index_partition_map
         self.scale = args.scale
+        self.scope = args.scope
         self.num_queries_per_worker = args.num_queries_per_worker
         self.validation_timeout = args.validation_timeout
 
@@ -290,6 +293,7 @@ class FTSIndexManager:
 
     def get_all_scopes_with_multiple_collections(self):
         cb_scopes = self.cb.collections().get_all_scopes()
+        print(cb_scopes)
 
         multi_coll_scopes = []
 
@@ -473,6 +477,25 @@ class FTSIndexManager:
                 if not status:
                     self.log.info("Content = {0} \nResponse = {1}".format(content, response))
                     self.log.info("Index creation on {0} did not succeed. Pls check logs.".format(self.bucket_name))
+
+    def create_fts_index_for_each_collection(self):
+        coll_list = self.get_all_collections()
+        print(coll_list)
+        coll_list.remove("_default._default")
+        for coll in coll_list:
+            print(coll)
+            if self.scope:
+                if self.scope+"." not in coll:
+                    continue
+            collections = [coll]
+            self.log.info("===== Creating {1} FTS index on {0} =====".format(collections, "single"))
+            status, content, response, idx_name = self.create_fts_index_on_collections(collections,
+                                                                                       num_replica=0,
+                                                                                       num_partitions=1)
+
+            if not status:
+                self.log.info("Content = {0} \nResponse = {1}".format(content, response))
+                self.log.info("Index creation on {0} did not succeed. Pls check logs.".format(collections))
 
     """
     Create n number of indexes for the specified bucket. These indexes could be on a single or multiple collections
@@ -692,7 +715,7 @@ class FTSIndexManager:
         # Randomly choose number of partitions and replicas
         if not num_partitions:
             num_partitions = random.randint(2, self.max_num_partitions)
-        if not num_replica:
+        if not num_replica and num_replica != 0:
             num_replica = random.randint(0, self.max_num_replica)
 
         # Generate index name. Index names will also have field codes so that the query runner can decode the fields used in the index.
@@ -1431,6 +1454,8 @@ if __name__ == '__main__':
         ftsIndexMgr.create_fts_indexes_from_map_for_bucket()
     elif ftsIndexMgr.action == "create_index_from_map_on_bucket":
         ftsIndexMgr.create_fts_indexes_from_map_on_bucket()
+    elif ftsIndexMgr.action == "create_index_for_each_collection":
+        ftsIndexMgr.create_fts_index_for_each_collection()
     elif ftsIndexMgr.action == "run_queries":
         ftsIndexMgr.fts_query_runner()
     elif ftsIndexMgr.action == "delete_all_indexes":
