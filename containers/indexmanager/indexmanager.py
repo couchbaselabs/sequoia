@@ -80,6 +80,7 @@ class IndexManager:
                             action='store_true')
         parser.add_argument("-t", "--test_mode", help="Test Mode : Create Scopes/Collections", action='store_true')
         parser.add_argument("-im", "--install_mode", help="install mode: ce or ee", default="ee")
+        parser.add_argument("--no_partitioned_indexes", help="No partitioned indexes to be created", action="store_true")
         args = parser.parse_args()
 
         self.node_addr = args.node
@@ -101,6 +102,8 @@ class IndexManager:
             self.cbo_enable_ratio = 25
         self.sample_size = args.sample_size
         self.num_udf_per_scope = args.num_udf_per_scope
+        self.disable_partitioned_indexes = args.no_partitioned_indexes
+
         self.idx_def_templates = HOTEL_DS_INDEX_TEMPLATES
         # If there are more datasets supported, this can be expanded.
         if self.dataset == "hotel":
@@ -114,6 +117,7 @@ class IndexManager:
                                ClusterOptions(PasswordAuthenticator(self.username, self.password)))
         self.cb = self.cluster.bucket(self.bucket_name)
         self.index_nodes = self.find_nodes_with_service(self.get_services_map(), "index")
+
 
         # Logging configuration
 
@@ -191,7 +195,7 @@ class IndexManager:
             idx_instances = 1
             with_clause_list = []
 
-            if is_partitioned_idx:
+            if is_partitioned_idx and (not self.disable_partitioned_indexes):
                 idx_statement = idx_statement + " partition by hash(meta().id) "
                 num_partition = random.randint(2, self.max_num_partitions + 1)
                 with_clause_list.append("\'num_partition\':%s" % num_partition)
@@ -274,7 +278,7 @@ class IndexManager:
                     reference_index_map[keyspace_name][idx_name]['defer'] = is_defer_idx
                     reference_index_map[keyspace_name][idx_name]['partition'] = is_partitioned_idx
 
-                    if self.install_mode == "ee" and is_partitioned_idx:
+                    if self.install_mode == "ee" and is_partitioned_idx and (not self.disable_partitioned_indexes):
                         idx_statement = idx_statement + " partition by hash(meta().id) "
                         num_partition = random.randint(2, self.max_num_partitions + 1)
                         with_clause_list.append("\'num_partition\':%s" % num_partition)
@@ -292,7 +296,7 @@ class IndexManager:
                     if is_defer_idx:
                         with_clause_list.append("\'defer_build\':true")
 
-                    if is_partitioned_idx or (self.max_num_replica > 0) or is_defer_idx:
+                    if (is_partitioned_idx and not self.disable_partitioned_indexes) or (self.max_num_replica > 0) or is_defer_idx:
                         idx_statement = idx_statement + " with {"
                         idx_statement = idx_statement + ','.join(with_clause_list) + "}"
 
