@@ -207,16 +207,18 @@
 - test: tests/analytics/cheshirecat/test_analytics_integration_scale3.yml
   section: analytics_setup
 
+# 9/24/21 : Disabling creating indexes on default bucket to avoid issues like MB-48024 and MB-48581
+
 # GSI Index Creation
 # Create index on the default bucket so that the query workloads below in the test have indexes to work with
-- image: sequoiatools/cbq
-  command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_rating on `{{.Bucket}}`(rating) using GSI'"
-  wait: true
-- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_claims on `{{.Bucket}}`(claim) using GSI'"
-  wait: true
-- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_result on `{{.Bucket}}`(result) using GSI'"
-- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create primary index on `{{.Bucket}}` using GSI'"
-  wait: true
+#- image: sequoiatools/cbq
+#  command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_rating on `{{.Bucket}}`(rating) using GSI'"
+#  wait: true
+#- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_claims on `{{.Bucket}}`(claim) using GSI'"
+#  wait: true
+#- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_result on `{{.Bucket}}`(result) using GSI'"
+#- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create primary index on `{{.Bucket}}` using GSI'"
+#  wait: true
 
 # Create indexes on the collections
 - image: sequoiatools/indexmanager
