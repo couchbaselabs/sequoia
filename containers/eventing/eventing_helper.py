@@ -227,6 +227,7 @@ class EventingHelper:
         if options.type=='curl':
             body['depcfg']['curl'].append({"hostname": "http://qa.sc.couchbase.com/", "value": "server","auth_type":'no-auth',
                                           "allow_cookies": True, "validate_ssl_certificate": True})
+        body['function_scope'] = {"bucket": src[0], "scope": src[1]}
         print(body)
         return body
 
