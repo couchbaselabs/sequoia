@@ -338,7 +338,7 @@
   name: create_single_partition_index_for_scope
   actions:
     - image: sequoiatools/ftsindexmanager
-      command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -s {{.Scale 1}} -sc $0 -a create_index_for_each_collection"
+      command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -s {{.Scale 1}} -sc $0 -a create_index_for_each_collection -d hotel_single_field"
       wait: true
 
     - image: sequoiatools/ftsindexmanager

@@ -29,6 +29,37 @@ import paramiko
 
 ## Constants
 
+HOTEL_DS_SINGLE_FIELD = [
+    {
+        "name": "country",
+        "type": "text",
+        "is_nested_object": False,
+        "field_code": "country",
+        "queries": [
+            {
+                "disjuncts": [
+                    {
+                        "wildcard": "Jord*",
+                        "field": "country"
+                    },
+                    {
+                        "match": "Cape Verde",
+                        "field": "country",
+                        "fuzziness": 2,
+                        "operator": "or"
+                    }
+                ]
+            }],
+        "flex_queries": ["country = \"Moldova\"",
+                         "country = \"Cape Verde\"",
+                         "country like \"Jord*\"",
+                         "country like \"Jord*\" or country = \"Cape Verde\""
+                         ]
+    }
+]
+
+
+# Some constants
 HOTEL_DS_FIELDS = [
     {
         "name": "country",
@@ -171,8 +202,6 @@ HOTEL_DS_FIELDS = [
         "flex_queries": ["ANY v in reviews.date SATISFIES v > \"2001-10-09\" and v < \"2020-12-18\" END"]
     }
 ]
-
-# Some constants
 NUM_WORKERS = 2  # Max number of worker threads to execute queries
 FTS_PORT = 8094
 
@@ -213,7 +242,8 @@ class FTSIndexManager:
         parser.add_argument("-a", "--action",
                             choices=["create_index", "create_index_from_map", "run_queries", "delete_all_indexes",
                                      "create_index_loop", "item_count_check", "active_queries_check", "run_flex_queries",
-                                     "create_index_from_map_on_bucket", "create_index_for_each_collection"],
+                                     "create_index_from_map_on_bucket", "create_index_for_each_collection",
+                                     "run_queries_on_each_index"],
                             help="Choose an action to be performed. Valid actions : create_index, run_queries, "
                                  "delete_all_indexes, create_index_loop, item_count_check",
                             default="create_index")
@@ -244,7 +274,10 @@ class FTSIndexManager:
         if self.dataset == "hotel":
             self.idx_def_templates = HOTEL_DS_FIELDS
 
-        # Initialize connections to the cluster
+        if self.dataset == "hotel_single_field":
+            self.idx_def_templates = copy.deepcopy(HOTEL_DS_SINGLE_FIELD)
+
+            # Initialize connections to the cluster
         self.cb_admin = Admin(self.username, self.password, self.node_addr, self.node_port)
         self.cb_coll_mgr = CollectionManager(self.cb_admin, self.bucket_name)
         timeout_options = ClusterTimeoutOptions(kv_timeout=timedelta(seconds=120), query_timeout=timedelta(seconds=10))
@@ -482,6 +515,7 @@ class FTSIndexManager:
         coll_list = self.get_all_collections()
         print(coll_list)
         coll_list.remove("_default._default")
+        count = 0
         for coll in coll_list:
             print(coll)
             if self.scope:
@@ -491,11 +525,13 @@ class FTSIndexManager:
             self.log.info("===== Creating {1} FTS index on {0} =====".format(collections, "single"))
             status, content, response, idx_name = self.create_fts_index_on_collections(collections,
                                                                                        num_replica=0,
-                                                                                       num_partitions=1)
+                                                                                       num_partitions=1,
+                                                                                       count=count)
 
             if not status:
                 self.log.info("Content = {0} \nResponse = {1}".format(content, response))
                 self.log.info("Index creation on {0} did not succeed. Pls check logs.".format(collections))
+            count += 1
 
     """
     Create n number of indexes for the specified bucket. These indexes could be on a single or multiple collections
@@ -703,6 +739,9 @@ class FTSIndexManager:
         if self.dataset == "hotel":
             ds_fields = copy.deepcopy(HOTEL_DS_FIELDS)
 
+        if self.dataset == "hotel_single_field":
+            ds_fields = copy.deepcopy(HOTEL_DS_SINGLE_FIELD)
+
         num_fields = random.randint(1, len(ds_fields))
         index_fields = []
         for i in range(num_fields):
@@ -721,10 +760,10 @@ class FTSIndexManager:
         # Generate index name. Index names will also have field codes so that the query runner can decode the fields used in the index.
         for i in range(5):
             idx_name = "bucket_"+self.bucket_name+"_idx_" + ''.join(random.choice(string.ascii_lowercase) for i in range(5))
-            for field in index_fields:
-                idx_name += "-" + field["field_code"]
             if count:
                 idx_name += "_" + str(count)
+            for field in index_fields:
+                idx_name += "-" + field["field_code"]
             cur_indexes = self.get_fts_index_list()
             if idx_name not in cur_indexes:
                 break
@@ -1201,6 +1240,55 @@ class FTSIndexManager:
                     self.log.info("Waiting for {0} threads to complete...".format(len(threads)))
                     time.sleep(60)
 
+    def fts_query_runner_on_each_index(self):
+
+        threads = []
+        queries_run = 0
+        queries_passed = 0
+        queries_failed = 0
+        with ThreadPoolExecutor(max_workers=NUM_WORKERS) as executor:
+            # Establish timeout. If timeout > 0, run in infinite loop
+            end_time = 0
+            print_time = 0
+            if self.duration > 0:
+                end_time = time.time() + self.duration
+
+            if self.print_interval > 0:
+                print_time = time.time() + self.print_interval
+
+            index_names = self.get_fts_index_list(self.bucket_name)
+            for index_name in index_names:
+                random.seed(datetime.now())
+                for i in range(self.num_queries_per_worker):
+                    threads.append(executor.submit(self.generate_and_run_fts_query, index_name=index_name))
+                    time.sleep(5)
+
+                for task in as_completed(threads):
+                    result = task.result()
+                    queries_run += 1
+                    if result:
+                        queries_passed += 1
+                    else:
+                        queries_failed += 1
+
+                # Print result summary if the print interval has passed
+                if self.print_interval > 0 and time.time() > print_time:
+                    self.log.info(
+                        "======== Queries Run = {0} | Queries Passed = {1} | Queries Failed = {2} ========".format(
+                            queries_run, queries_passed, queries_failed))
+                    # Set next time to print result summary
+                    print_time = time.time() + self.print_interval
+
+                # Exit if timed out
+                if self.duration > 0 and time.time() > end_time:
+                    break
+
+                # Wait for 1 min before submitting next set of threads
+                alive_threads = len(threading.enumerate())
+                if alive_threads > 5:
+                    self.log.info("Waiting for {0} threads to complete...".format(len(threads)))
+                    time.sleep(60)
+
     """
     Run Flex queries on random index with random fields
     """
@@ -1243,11 +1331,12 @@ class FTSIndexManager:
     Run FTS queries on random index with random fields
     """
 
-    def generate_and_run_fts_query(self):
+    def generate_and_run_fts_query(self, index_name=None):
         index_names = self.get_fts_index_list(self.bucket_name)
 
         try:
-            index_name = random.choice(index_names)
+            if not index_name:
+                index_name = random.choice(index_names)
         except Exception as e:
             self.log.info("Exception fetching index names : {0} - {1}".format(index_names, str(e)))
             return False
@@ -1458,6 +1547,8 @@ if __name__ == '__main__':
         ftsIndexMgr.create_fts_index_for_each_collection()
     elif ftsIndexMgr.action == "run_queries":
         ftsIndexMgr.fts_query_runner()
+    elif ftsIndexMgr.action == "run_queries_on_each_index":
+        ftsIndexMgr.fts_query_runner_on_each_index()
     elif ftsIndexMgr.action == "delete_all_indexes":
         ftsIndexMgr.delete_all_indexes()
     elif ftsIndexMgr.action == "create_index_loop":
