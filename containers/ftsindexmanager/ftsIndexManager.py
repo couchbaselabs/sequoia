@@ -243,7 +243,8 @@ class FTSIndexManager:
                             choices=["create_index", "create_index_from_map", "run_queries", "delete_all_indexes",
                                      "create_index_loop", "item_count_check", "active_queries_check", "run_flex_queries",
                                      "create_index_from_map_on_bucket", "create_index_for_each_collection",
-                                     "run_queries_on_each_index"],
+                                     "run_queries_on_each_index","copy_docs_from_source_collection",
+                                     "update_docs_on_all_collections"],
                             help="Choose an action to be performed. Valid actions : create_index, run_queries, "
                                  "delete_all_indexes, create_index_loop, item_count_check",
                             default="create_index")
@@ -278,13 +279,24 @@ class FTSIndexManager:
             self.idx_def_templates = copy.deepcopy(HOTEL_DS_SINGLE_FIELD)
 
             # Initialize connections to the cluster
-        self.cb_admin = Admin(self.username, self.password, self.node_addr, self.node_port)
-        self.cb_coll_mgr = CollectionManager(self.cb_admin, self.bucket_name)
-        timeout_options = ClusterTimeoutOptions(kv_timeout=timedelta(seconds=120), query_timeout=timedelta(seconds=10))
-        options = ClusterOptions(PasswordAuthenticator(self.username, self.password), timeout_options=timeout_options)
-        self.cluster = Cluster('couchbase://{0}'.format(self.node_addr),
-                               options)
-        self.cb = self.cluster.bucket(self.bucket_name)
+        count = 0
+        while True:
+            try:
+                self.cb_admin = Admin(self.username, self.password, self.node_addr, self.node_port)
+                self.cb_coll_mgr = CollectionManager(self.cb_admin, self.bucket_name)
+                timeout_options = ClusterTimeoutOptions(kv_timeout=timedelta(seconds=120), query_timeout=timedelta(seconds=10))
+                options = ClusterOptions(PasswordAuthenticator(self.username, self.password), timeout_options=timeout_options)
+                self.cluster = Cluster('couchbase://{0}'.format(self.node_addr),
+                                       options)
+                self.cb = self.cluster.bucket(self.bucket_name)
+                break
+            except Exception as Ex:
+                print(str(Ex))
+                count+=1
+                if count == 5:
+                    raise
+
+
         self.cluster.search_indexes()
 
         # Logging configuration
@@ -1070,8 +1082,14 @@ class FTSIndexManager:
     """
     def get_fts_index_doc_count(self, name):
         """ get number of docs indexed"""
-        status, content, response = self.http_request(self.node_addr, FTS_PORT, "/api/index/{0}/count".format(name))
-        return content['count']
+        count = 0
+        content = ""
+        try:
+            status, content, response = self.http_request(self.node_addr, FTS_PORT, "/api/index/{0}/count".format(name))
+            count = content['count']
+        except TypeError as err:
+            self.log.info(f'error: {err} while retrieving count for index {name}, content : {content}')
+        return count
 
     def get_fts_index_collections_count(self, name):
         """ get number of docs indexed"""
@@ -1162,7 +1180,7 @@ class FTSIndexManager:
                 status, content, response = self.http_request(self.node_addr, FTS_PORT, uri, method="DELETE")
                 if not status:
                     self.log.info("Status : {0} \nResponse : {1} \nContent : {2}".format(status, response, content))
-                    self.log.info("Index {0} not deleted".format(index))
+                    self.log.info("Index {0} not deleted. Trying again".format(index))
 
         index_names = self.get_fts_index_list()
 
@@ -1444,7 +1462,56 @@ class FTSIndexManager:
 
         return status
 
+    def copy_docs_source_collection(self, create_primary=True):
 
+        #create primary index on bucket1.scope_0.coll_0"
+        source_keyspace = "bucket1.scope_0.coll_0"
+        if create_primary:
+            prim_index_query = f"Create primary index idx1 on {source_keyspace}"
+            try:
+                status, results, queryResult = self._execute_query(prim_index_query)
+                if status is not None:
+                    self.log.info(f'For {prim_index_query}, Status: {status}, Length of results: {len(results)}')
+                else:
+                    self.log.info("Got an error retrieving stat from query via n1ql with query - {0}. Status : {1} ".
+                                  format(prim_index_query, status))
+            except Exception as e:
+                self.log.info("Got an error retrieving stat from query via n1ql with query - {0}. Exception : {1} ".
+                              format(prim_index_query, str(e)))
+
+        coll_list = self.get_all_collections()
+        coll_list.remove("_default._default")
+        coll_list.remove("scope_0.coll_0")
+        for coll in coll_list:
+            query = f'upsert into bucket1.{coll} (key _k, value _v) select meta().id _k, _v from {source_keyspace} _v'
+            self.log.info(f'query: {query}')
+            try:
+                status, results, queryResult = self._execute_query(query)
+                if status is not None:
+                    self.log.info(f'For {query}, Status: {status}, Length of results: {len(results)}')
+                else:
+                    self.log.info("Got an error retrieving stat from query via n1ql with query - {0}. Status : {1} ".
+                                  format(query, status))
+            except Exception as e:
+                self.log.info("Got an error retrieving stat from query via n1ql with query - {0}. Exception : {1} ".
+                              format(query, str(e)))
+
+    def update_docs(self):
+        source_keyspace = "bucket1.scope_0.coll_0"
+        query = f'UPDATE {source_keyspace} set country="United States" where country="France"'
+        self.log.info(f'query: {query}')
+        try:
+            status, results, queryResult = self._execute_query(query)
+            if status is not None:
+                self.log.info(f'For {query}, Status: {status}, Length of results: {len(results)}')
+            else:
+                self.log.info("Got an error retrieving stat from query via n1ql with query - {0}. Status : {1} ".
+                              format(query, status))
+        except Exception as e:
+            self.log.info("Got an error retrieving stat from query via n1ql with query - {0}. Exception : {1} ".
+                          format(query, str(e)))
+
+        self.copy_docs_source_collection(create_primary=False)
 
     """
     Generic method to perform a REST call
@@ -1561,6 +1628,10 @@ if __name__ == '__main__':
         ftsIndexMgr.active_queries_check()
     elif ftsIndexMgr.action == "run_flex_queries":
         ftsIndexMgr.run_flex_queries()
+    elif ftsIndexMgr.action == "copy_docs_from_source_collection":
+        ftsIndexMgr.copy_docs_source_collection()
+    elif ftsIndexMgr.action == "update_docs_on_all_collections":
+        ftsIndexMgr.update_docs()
     else:
         print(
             "Invalid choice for action. Choose from the following - create_index | build_deferred_index | drop_all_indexes")

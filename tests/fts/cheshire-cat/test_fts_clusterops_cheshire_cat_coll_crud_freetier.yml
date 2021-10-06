@@ -15,7 +15,7 @@
 ############### create 20 scopes and 200 collections across 3 buckets as scope_1,scope_2 ... ###############
 -
   image: sequoiatools/collections:1.0
-  command: "-i {{.Orchestrator}}:8091 -b {{.Bucket}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count=100 --collection_count=500 --collection_distribution=uniform"
+  command: "-i {{.Orchestrator}}:8091 -b {{.Bucket}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count=100 --collection_count={{.Scale 250}} --collection_distribution=uniform"
   wait: true
 ############### Sleep for some time to allow collections manifest to sync ###############
 -
@@ -23,27 +23,6 @@
   entrypoint: sleep
   command: "300"
   wait: true
-
-############### data loading ################
-- image: sequoiatools/catapult
-  command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -n 100000 -dt Hotel -nt 1 -ds 1000 -ac True"
-  wait: true
-
-###############  create indexes ################
-- section_start: create_fts_indexes
-
-- foreach: "{{range $i, $scn := mkrange 1 100}}"
-  template: create_single_partition_index_for_scope
-  args: "scope_{{$i}}"
-  wait: true
-
-- section_end: create_fts_indexes
-
-  ############### Start Collections CRUD on bucket 4 & bucket5 ###############
-  #-
-  #image: sequoiatools/collections:1.0
-  #command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 3}} -o crud_mode --crud_interval=10 --max_scopes=10 --max_collections=100"
-  #alias: collection_crud1
 
 ###############  create indexes ################
 - section_start: create_replica_indexes
@@ -58,28 +37,38 @@
   command: "300"
   wait: true
 
-################ Check for active queries #####################################
-- section_start: monitor_active_queries
+############### data loading ################
+- image: sequoiatools/catapult
+  command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -n 100000 -dt Hotel -nt 1 -ds 1000 -s scope_0 -c coll_0"
+  wait: true
+
 - image: sequoiatools/ftsindexmanager
-  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a active_queries_check"
+  command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a copy_docs_from_source_collection"
+  wait: true
 
-- section_end: monitor_active_queries
+###############  create indexes ################
+- section_start: create_fts_indexes
 
+- foreach: "{{range $i, $scn := mkrange 1 100}}"
+  template: create_single_partition_index_for_scope
+  args: "scope_{{$i}}"
+  wait: true
+
+- section_end: create_fts_indexes
 
 # ###############  run queries ################
 - section_start: query_fts_indexes
 - image: sequoiatools/ftsindexmanager
-  command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a run_queries -nq 5 --print_interval 600"
+  command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a run_queries_on_each_index -nq 1 -d hotel_single_field --print_interval 600"
   alias: query_run_1
 
 - section_end: query_fts_indexes
 
-# Sleep for some time after starting the queries (15 mins)
 -
-   image: sequoiatools/cmd
-   entrypoint: sleep
-   command: "900"
-   wait: true
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
 
 # ############### Kill CBFT process on an FTS node ################
 -
@@ -88,16 +77,9 @@
 
 # Sleep for 15 mins
 -
-   image: sequoiatools/cmd
-   entrypoint: sleep
-   command: "900"
-   wait: true
-
-# Sleep for 10 mins
--
   image: sequoiatools/cmd
   entrypoint: sleep
-  command: "600"
+  command: "900"
   wait: true
 
 # ###############  Rebalance in an FTS node ################
@@ -105,10 +87,10 @@
   args: "{{.InActiveNode}}, fts"
 
 -
-   image: sequoiatools/cmd
-   entrypoint: sleep
-   command: "150"
-   wait: true
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "150"
+  wait: true
   
 
 -
@@ -123,10 +105,10 @@
 
 # Sleep for 15 mins
 -
-   image: sequoiatools/cmd
-   entrypoint: sleep
-   command: "900"
-   wait: true
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "900"
+  wait: true
 
 ###############  Rebalance out data node ################
 - template: rebalance_out
@@ -135,10 +117,10 @@
 
 # Sleep for some more time after rebalance completes
 -
-   image: sequoiatools/cmd
-   entrypoint: sleep
-   command: "300"
-   wait: true
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
 
 ############### Kill memcached ################
 -
@@ -147,10 +129,10 @@
 
 # Sleep for 15 mins
 -
-   image: sequoiatools/cmd
-   entrypoint: sleep
-   command: "900"
-   wait: true
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "900"
+  wait: true
 
 ###############  Add back data node ################
 - template: rebalance_in
@@ -159,10 +141,10 @@
 
 # Sleep for some more time after rebalance completes
 -
-   image: sequoiatools/cmd
-   entrypoint: sleep
-   command: "300"
-   wait: true
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
 
 
 # ############### Kill CBFT process on an FTS node ################
@@ -173,10 +155,10 @@
 
 # Sleep for 15 mins
 -
-   image: sequoiatools/cmd
-   entrypoint: sleep
-   command: "900"
-   wait: true
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "900"
+  wait: true
 
 # Rebalance out an FTS node
 - template: rebalance_out
@@ -185,10 +167,10 @@
 
 # Sleep for 15 mins
 -
-   image: sequoiatools/cmd
-   entrypoint: sleep
-   command: "900"
-   wait: true
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "900"
+  wait: true
 
 # Swap Rebalance an FTS node
 - template: rebalance_swap
@@ -198,10 +180,10 @@
 
 # Sleep for 15 mins
 -
-   image: sequoiatools/cmd
-   entrypoint: sleep
-   command: "900"
-   wait: true
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "900"
+  wait: true
 
 # Swap Rebalance a data node
 - template: rebalance_swap
@@ -210,10 +192,10 @@
 
 # Sleep for 15 mins
 -
-   image: sequoiatools/cmd
-   entrypoint: sleep
-   command: "900"
-   wait: true
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "900"
+  wait: true
 
 ############### Kill memcached ################
 -
@@ -222,10 +204,10 @@
 
 # Sleep for 15 mins
 -
-   image: sequoiatools/cmd
-   entrypoint: sleep
-   command: "900"
-   wait: true
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "900"
+  wait: true
 
 ###############  Failover and addback FTS node ################
 - template: failover_force_and_recover
@@ -234,10 +216,10 @@
 
 # Sleep for some more time after rebalance completes
 -
-   image: sequoiatools/cmd
-   entrypoint: sleep
-   command: "300"
-   wait: true
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
 
 # ############### Kill CBFT process on an FTS node ################
 -
@@ -246,10 +228,10 @@
 
 # Sleep for 15 mins
 -
-   image: sequoiatools/cmd
-   entrypoint: sleep
-   command: "900"
-   wait: true
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "900"
+  wait: true
 
 # ###############  Rebalance in an FTS node ################
 - template: rebalance_in
@@ -271,10 +253,10 @@
   wait: true
 # Sleep for some more time after rebalance completes
 -
-   image: sequoiatools/cmd
-   entrypoint: sleep
-   command: "300"
-   wait: true
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
 
 ############### Kill memcached ################
 -
@@ -283,37 +265,9 @@
 
 # Sleep for 15 mins
 -
-   image: sequoiatools/cmd
-   entrypoint: sleep
-   command: "900"
-   wait: true
-
-# ###############  Rebalance in an FTS node ################
-- template: rebalance_in
-  args: "{{.InActiveNode}}, fts"
-  wait: true
-
-# Sleep for 15 mins
--
-   image: sequoiatools/cmd
-   entrypoint: sleep
-   command: "900"
-   wait: true
-
-###############  Failover and addback ################
-- template: hard_failover_node
-  args: "{{.NthFTSNode 1}}"
-- template: readd_node
-  args: "{{.NthFTSNode 1}}"
-- template: recover_node
-  args: "{{.NthFTSNode 1}}, full"
-- template: rebalance
-  wait: true
-# Sleep for some more time after rebalance completes
--
   image: sequoiatools/cmd
   entrypoint: sleep
-  command: "300"
+  command: "900"
   wait: true
 
 -
@@ -338,10 +292,10 @@
 
 - section_end: fts_indexes_item_count_check
 -
-   image: sequoiatools/cmd
-   entrypoint: sleep
-   command: "600"
-   wait: true
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
 
 ###############  Drop all Indexes ################
 - section_start: drop_all_indexes

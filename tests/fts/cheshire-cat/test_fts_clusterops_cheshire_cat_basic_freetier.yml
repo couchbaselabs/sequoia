@@ -15,7 +15,7 @@
 ############### create 20 scopes and 200 collections across 3 buckets as scope_1,scope_2 ... ###############
 -
   image: sequoiatools/collections:1.0
-  command: "-i {{.Orchestrator}}:8091 -b {{.Bucket}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count=100 --collection_count=500 --collection_distribution=uniform"
+  command: "-i {{.Orchestrator}}:8091 -b {{.Bucket}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count=100 --collection_count={{.Scale 250}} --collection_distribution=uniform"
   wait: true
 ############### Sleep for some time to allow collections manifest to sync ###############
 -
@@ -23,27 +23,6 @@
   entrypoint: sleep
   command: "300"
   wait: true
-
-############### data loading ################
-- image: sequoiatools/catapult
-  command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -n 100000 -dt Hotel -nt 1 -ds 1000 -ac True"
-  wait: true
-
-###############  create indexes ################
-- section_start: create_fts_indexes
-
-- foreach: "{{range $i, $scn := mkrange 1 100}}"
-  template: create_single_partition_index_for_scope
-  args: "scope_{{$i}}"
-  wait: true
-
-- section_end: create_fts_indexes
-
-  ############### Start Collections CRUD on bucket 4 & bucket5 ###############
-  #-
-  #image: sequoiatools/collections:1.0
-  #command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 3}} -o crud_mode --crud_interval=10 --max_scopes=10 --max_collections=100"
-  #alias: collection_crud1
 
 ###############  create indexes ################
 - section_start: create_replica_indexes
@@ -58,33 +37,33 @@
   command: "300"
   wait: true
 
-################ Check for active queries #####################################
-- section_start: monitor_active_queries
+############### data loading ################
+- image: sequoiatools/catapult
+  command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -n 100000 -dt Hotel -nt 1 -ds 1000 -s scope_0 -c coll_0"
+  wait: true
+
 - image: sequoiatools/ftsindexmanager
-  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a active_queries_check"
+  command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a copy_docs_from_source_collection"
+  wait: true
 
-- section_end: monitor_active_queries
+###############  create indexes ################
+- section_start: create_fts_indexes
 
+- foreach: "{{range $i, $scn := mkrange 1 100}}"
+  template: create_single_partition_index_for_scope
+  args: "scope_{{$i}}"
+  wait: true
+
+- section_end: create_fts_indexes
 
 # ###############  run queries ################
 - section_start: query_fts_indexes
 - image: sequoiatools/ftsindexmanager
-  command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a run_queries_on_each_index -nq 5 -d hotel_single_field --print_interval 600"
+  command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a run_queries_on_each_index -nq 1 -d hotel_single_field --print_interval 600"
   alias: query_run_1
+  wait: true
 
 - section_end: query_fts_indexes
-
-# Sleep for some time after starting the queries (15 mins)
--
-   image: sequoiatools/cmd
-   entrypoint: sleep
-   command: "7200"
-   wait: true
-
--
-  client:
-    op: rm
-    container: query_run_1
 
 -
   image: sequoiatools/cmd
@@ -93,29 +72,26 @@
   wait: true
 
 ############### mutate data ################
-- image: sequoiatools/catapult
-  command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -n 100000 -dt Hotel -nt 1 -ds 1000 -fu country -pu 100 -ac True"
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a update_docs_on_all_collections"
   wait: true
+
+################ Check for item count #####################################
+- section_start: fts_indexes_item_count_check
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a item_count_check -vt 1200"
+  wait: true
+
+- section_end: fts_indexes_item_count_check
 
 # ###############  run queries ################
 - section_start: query_fts_indexes
 - image: sequoiatools/ftsindexmanager
-  command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a run_queries_on_each_index -nq 5 -d hotel_single_field --print_interval 600"
+  command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a run_queries_on_each_index -nq 1 -d hotel_single_field --print_interval 600"
   alias: query_run_2
-
-- section_end: query_fts_indexes
-
-# Sleep for some time after starting the queries (15 mins)
--
-  image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "7200"
   wait: true
 
--
-  client:
-    op: rm
-    container: query_run_2
+- section_end: query_fts_indexes
 
 -
   image: sequoiatools/cmd
@@ -129,11 +105,6 @@
   wait: true
 
 - section_end: fts_indexes_item_count_check
--
-   image: sequoiatools/cmd
-   entrypoint: sleep
-   command: "600"
-   wait: true
 
 ###############  Drop all Indexes ################
 - section_start: drop_all_indexes
