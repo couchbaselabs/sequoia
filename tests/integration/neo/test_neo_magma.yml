@@ -140,18 +140,29 @@
 
 ############### Initial data loading to collections - no doc expiry, only creates ################
 - image: sequoiatools/catapult_dgm
-  command: "-i {{.Orchestrator}} -r 70 -u Administrator -p password -n {{.Scale 20000}} -b {{.NthBucket 4}} -dt Hotel -pc 100 -ds 1000 -ac True --num_threads 2"
+  command: "-i {{.Orchestrator}} -r 80 -u Administrator -p password -n {{.Scale 2000}} -b {{.NthBucket 4}} -dt Hotel -pc 100 -ds 1000 -ac True --num_threads 4"
   requires:  "{{eq true .DoOnce }}"
+  wait: true
   alias: catapult_bucket4_doc_ops1
-- command: "-i {{.Orchestrator}} -r 70 -u Administrator -p password -n {{.Scale 20000}} -b {{.NthBucket 5}} -dt Hotel -pc 100 -ds 1000 -ac True --num_threads 2"
+- command: "-i {{.Orchestrator}} -r 80 -u Administrator -p password -n {{.Scale 2000}} -b {{.NthBucket 5}} -dt Hotel -pc 100 -ds 1000 -ac True --num_threads 4"
   requires:  "{{eq true .DoOnce }}"
+  wait: true
   alias: catapult_bucket5_doc_ops1
-- command: "-i {{.Orchestrator}} -r 70 -u Administrator -p password -n {{.Scale 20000}} -b {{.NthBucket 6}} -dt Hotel -pc 100 -ds 1000 -ac True --num_threads 2"
+- command: "-i {{.Orchestrator}} -r 80 -u Administrator -p password -n {{.Scale 2000}} -b {{.NthBucket 6}} -dt Hotel -pc 100 -ds 1000 -ac True --num_threads 4"
   requires:  "{{eq true .DoOnce }}"
+  wait: true
   alias: catapult_bucket6_doc_ops1
-- command: "-i {{.Orchestrator}} -r 70 -u Administrator -p password -n {{.Scale 20000}} -b {{.NthBucket 7}} -dt Hotel -pc 100 -ds 1000 -ac True --num_threads 2"
+- command: "-i {{.Orchestrator}} -r 80 -u Administrator -p password -n {{.Scale 2000}} -b {{.NthBucket 7}} -dt Hotel -pc 100 -ds 1000 -ac True --num_threads 4"
   requires:  "{{eq true .DoOnce }}"
+  wait: true
   alias: catapult_bucket7_doc_ops1
+
+###### Set bucket level TTL for bucket7 ######
+-
+  image: sequoiatools/couchbase-cli
+  requires:  "{{eq true .DoOnce }}"
+  command: "bucket-edit -c {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}} --bucket {{.NthBucket 7}} --max-ttl 3600"
+  wait: true
 
 # Start transactions workload on default bucket
 -

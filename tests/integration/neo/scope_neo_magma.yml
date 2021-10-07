@@ -141,7 +141,6 @@ buckets:
       ram: 10%
       storage: magma
       eviction: fullEviction
-      ttl: 3600
   -
       name: bucket8
       ram: 5%
