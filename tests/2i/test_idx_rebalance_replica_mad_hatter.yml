@@ -63,7 +63,7 @@
 # ###############  run queries ################
 - section_start: query_replica_indexes
 - image: sequoiatools/queryapp
-  command: "-J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.5.6/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 0 --print_duration=3600 --bucket {{.Bucket}} --querycount 10 --threads 10 --n1ql True --query_file queries.txt --query_timeout=600 --scan_consistency REQUEST_PLUS --bucket_names [default,{{.Bucket}},{{.NthBucket 1}},{{.NthBucket 2}},{{.NthBucket 3}}]"
+  command: "-J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.7.21/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 0 --print_duration=3600 --bucket {{.Bucket}} --querycount 10 --threads 10 --n1ql True --query_file queries.txt --query_timeout=600 --scan_consistency REQUEST_PLUS --bucket_names [default,{{.Bucket}},{{.NthBucket 1}},{{.NthBucket 2}},{{.NthBucket 3}}]"
 
 #- template: attack_query
 #  args: "0, 1, {{.Nodes | .Service `n1ql` | net 0}}:{{.QueryPort}}, 'select result from default where result is not null LIMIT 50000'"

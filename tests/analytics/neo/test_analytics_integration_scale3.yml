@@ -29,12 +29,12 @@
 - section_start: analytics_query
 -
   image: sequoiatools/queryapp
-  command: "-J-Xms256m -J-Xmx512m -J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.5.6/* /AnalyticsQueryApp/Query/load_queries.py
+  command: "-J-Xms256m -J-Xmx512m -J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.7.21/* /AnalyticsQueryApp/Query/load_queries.py
     --server_ip {{.ActiveAnalyticsNode 0}} --port {{.AnalyticsPort}} --duration 0 --bucket {{.NthBucket 7}}
     --querycount 50 -a True --analytics_queries catapult_queries --query_timeout 3600
     -B [{{.NthBucket 7}},{{.NthBucket 9}}]"
   alias: cbas_queries_1
-- command: "-J-Xms256m -J-Xmx512m -J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.5.6/* /AnalyticsQueryApp/Query/load_queries.py
+- command: "-J-Xms256m -J-Xmx512m -J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.7.21/* /AnalyticsQueryApp/Query/load_queries.py
       --server_ip {{.ActiveAnalyticsNode 0}} --port {{.AnalyticsPort}} --duration 0 --bucket {{.Bucket}}
       --querycount 50 -a True --analytics_queries gideon_queries
       --query_timeout 3600 -B [{{.Bucket}},{{.NthBucket 1}}]"
