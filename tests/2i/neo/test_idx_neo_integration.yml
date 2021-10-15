@@ -1,0 +1,237 @@
+- include: tests/templates/kv.yml, tests/templates/n1ql.yml, tests/templates/rebalance.yml
+
+- section_start: change_query_topologies
+###############  Rebalance-in single node ################
+- template: rebalance_in
+  args: "{{.InActiveNode}}, query"
+  wait: true
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "300"
+   wait: true
+
+###############  Rebalance-out single node ################
+- template: rebalance_out
+  args: "{{.ActiveQueryNode 0}}"
+  wait: true
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "300"
+   wait: true
+
+###############  Swap single query node ################
+- template: rebalance_swap
+  args: "{{.InActiveNode}}, {{.ActiveQueryNode 0}}, query"
+  wait: true
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "300"
+   wait: true
+
+###############  Failover and addback ################
+- template: failover_force_and_recover
+  args: "{{.ActiveQueryNode 1}}, full"
+  wait: true
+
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "300"
+   wait: true
+
+###############  Failover and rebalance out ################
+- template: hard_failover_node
+  args: "{{.ActiveQueryNode 1}}"
+- template: rebalance
+  wait: true
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "300"
+   wait: true
+
+###############  Add back query nodes  ################
+- template: add_node
+  args: "{{.NthInActiveNode 0}}, query"
+- template: rebalance
+  wait: true
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "300"
+   wait: true
+- section_end: change_query_topologies
+
+
+- section_start: change_indexer_topologies
+###############  Rebalance-in single node ################
+- template: rebalance_in
+  args: "{{.InActiveNode}}, index"
+  wait: true
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "300"
+   wait: true
+
+###############  Rebalance-out single node ################
+- template: rebalance_out
+  args: "{{.ActiveIndexNode 0}}"
+  wait: true
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "300"
+   wait: true
+
+###############  Swap single index node ################
+- template: rebalance_swap
+  args: "{{.InActiveNode}}, {{.ActiveIndexNode 0}}, index"
+  wait: true
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "300"
+   wait: true
+
+###############  Increase number of replicas for an index ################
+- image: sequoiatools/cbq
+  command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='ALTER INDEX `{{.Bucket}}`.default_claims WITH {\"action\":\"replica_count\",\"num_replica\": 3}'"
+  wait: true
+
+# Sleep for some time to allow DDL to complete if running in background.
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "300"
+   wait: true
+
+# Wait till all indexes are completely built
+-
+   image: sequoiatools/wait_for_idx_build_complete
+   command: "{{.ActiveIndexNode 0}} {{.RestUsername}} {{.RestPassword}}"
+   wait: true
+
+###############  Failover and addback ################
+- template: failover_force_and_recover
+  args: "{{.ActiveIndexNode 2}}, full"
+  wait: true
+
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "300"
+   wait: true
+
+###############  Failover and rebalance out ################
+- template: hard_failover_node
+  args: "{{.ActiveIndexNode 1}}"
+- template: rebalance
+  wait: true
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "300"
+   wait: true
+
+###############  Decrease number of replicas for an index ################
+- image: sequoiatools/cbq
+  command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='ALTER INDEX `{{.Bucket}}`.default_claims WITH {\"action\":\"replica_count\",\"num_replica\": 2}'"
+  wait: true
+
+# Sleep for some time to allow DDL to complete if running in background.
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "300"
+   wait: true
+
+# Wait till all indexes are completely built
+-
+   image: sequoiatools/wait_for_idx_build_complete
+   command: "{{.ActiveIndexNode 0}} {{.RestUsername}} {{.RestPassword}}"
+   wait: true
+
+###############  Add back index nodes  ################
+- template: add_node
+  args: "{{.NthInActiveNode 0}}, index"
+- template: rebalance
+  wait: true
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "300"
+   wait: true
+- section_end: change_indexer_topologies
+
+###############  Drop some Indexes ################
+- section_start: recreate_replica_indexes
+- template: cbq
+  args: "'drop primary index on `{{.Bucket}}` using GSI'"
+- args: "'drop index `{{.Bucket}}`.default_rating using GSI'"
+- args: "'drop index `{{.NthBucket 1}}`.o1_claims using GSI'"
+# Sleep for some time to allow DDL to complete in the background
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "600"
+   wait: true
+
+###############  Recreate some Indexes ################
+- template: cbq
+  args: "'create index default_rating on `{{.Bucket}}`\\(rating) using GSI'"
+- args: "'create primary index on `{{.Bucket}}` using GSI'"
+- args: "'create index o1_claims on `{{.NthBucket 1}}`\\(claim) using GSI'"
+
+# Sleep for some time to allow DDL to complete if running in background.
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "300"
+   wait: true
+
+# Wait till all indexes are completely built
+-
+   image: sequoiatools/wait_for_idx_build_complete
+   command: "{{.ActiveIndexNode 0}} {{.RestUsername}} {{.RestPassword}}"
+   wait: true
+
+- section_end: recreate_replica_indexes
+
+###############  Drop all Indexes ################
+- section_start: drop_all_indexes
+- template: cbq
+  args: "'drop index `{{.Bucket}}`.default_rating'"
+- args: "'drop index `{{.Bucket}}`.default_claims'"
+- args: "'drop index `{{.Bucket}}`.default_result'"
+- args: "'drop primary index on `{{.Bucket}}`'"
+- args: "'drop index `{{.NthBucket 1}}`.o1_claims'"
+- args: "'drop index `{{.NthBucket 1}}`.o1_result_rating'"
+- args: "'drop index `{{.NthBucket 2}}`.o2_claims'"
+- args: "'drop index `{{.NthBucket 3}}`.o3_claims'"
+- args: "'drop index `{{.Bucket}}`.default_result_ratings_claims_pindex'"
+- args: "'drop index `{{.NthBucket 2}}`.o2_result_rating'"
+- args: "'drop index `{{.NthBucket 3}}`.o3_result_rating'"
+- args: "'drop primary index on `{{.NthBucket 1}}`'"
+# Sleep for some time to allow DDL to complete in the background
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "600"
+   wait: true
+- section_end: drop_all_indexes
