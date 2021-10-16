@@ -109,6 +109,7 @@ buckets:
   -
       name: bucket1
       ram: 5%
+      ttl: 3600
   -
       name: bucket2
       ram: 5%
