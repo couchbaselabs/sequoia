@@ -229,6 +229,13 @@ func (t *TemplateResolver) NthQueryNode(n int) string {
 	return t.Address(n, serviceNodes)
 }
 
+// Shortcut: .ClusterNodes | .Service `analytics` | active n
+func (t *TemplateResolver) ActiveQueryNode(analytics int) string {
+	nodes := t.ClusterNodes()
+	serviceNodes := t.Service("n1ql", nodes)
+	return t.ActiveFilter(analytics, serviceNodes)
+}
+
 // Shortcut: .ClusterNodes | .Service `kv` | net 0
 func (t *TemplateResolver) DataNode() string {
 	nodes := t.ClusterNodes()
