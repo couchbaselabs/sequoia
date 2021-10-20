@@ -140,8 +140,11 @@ class CollectionOperations():
         scope_list = []
         content = self.get_raw_collection_map(bucket)
         #scope_coll_map = self.getallscopes(bucket)
-        for scope in content["scopes"]:
-            scope_list.append(scope["name"])
+        if "scopes" in content:
+            for scope in content["scopes"]:
+                scope_list.append(scope["name"])
+        else:
+            print("Some issue with get_scope_list. Printing the contents from get_raw_collection_map method : {0}".format(content))
 
         return scope_list
 
