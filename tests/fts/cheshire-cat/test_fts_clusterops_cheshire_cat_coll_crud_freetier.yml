@@ -84,7 +84,7 @@
 
 # ###############  Rebalance in an FTS node ################
 - template: rebalance_in
-  args: "{{.InActiveNode}}, fts"
+  args: "{{.InActiveNode}}, (data,index,query,fts)"
 
 -
   image: sequoiatools/cmd
@@ -136,7 +136,7 @@
 
 ###############  Add back data node ################
 - template: rebalance_in
-  args: "{{.InActiveNode}}"
+  args: "{{.InActiveNode}}, (data,index,query,fts)"
   wait: true
 
 # Sleep for some more time after rebalance completes
@@ -174,20 +174,7 @@
 
 # Swap Rebalance an FTS node
 - template: rebalance_swap
-  args: "{{.InActiveNode}}, {{.Nodes | .Service `fts` | net 1}}, fts"
-  wait: true
-
-
-# Sleep for 15 mins
--
-  image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "900"
-  wait: true
-
-# Swap Rebalance a data node
-- template: rebalance_swap
-  args: "{{.InActiveNode}}, {{.NthDataNode 2}}"
+  args: "{{.InActiveNode}}, {{.Nodes | .Service `fts` | net 1}}, (data,index,query,fts)"
   wait: true
 
 # Sleep for 15 mins
@@ -235,7 +222,7 @@
 
 # ###############  Rebalance in an FTS node ################
 - template: rebalance_in
-  args: "{{.InActiveNode}}, fts"
+  args: "{{.InActiveNode}}, (data,index,query,fts)"
   wait: true
 
 
