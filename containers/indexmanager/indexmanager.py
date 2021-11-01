@@ -13,6 +13,7 @@ import argparse
 import logging
 import requests
 import time
+import math
 import httplib2
 import paramiko
 
@@ -37,7 +38,23 @@ HOTEL_DS_INDEX_TEMPLATES = [
     {"indexname": "idx2",
      "statement": "CREATE INDEX `idx2_idxprefix` ON keyspacenameplaceholder(`free_breakfast`,`type`,`free_parking`,array_count((`public_likes`)),`price`,`country`)"},
     {"indexname": "idx3",
-     "statement": "CREATE INDEX `idx3_idxprefix` ON keyspacenameplaceholder(`free_breakfast`,`free_parking`,`country`,`city`) "}
+     "statement": "CREATE INDEX `idx3_idxprefix` ON keyspacenameplaceholder(`free_breakfast`,`free_parking`,`country`,`city`) "},
+    {"indexname": "idx4",
+     "statement": "CREATE INDEX `idx4_idxprefix` ON keyspacenameplaceholder(`price`,`city`,`name`)"},
+    {"indexname": "idx5",
+     "statement": "CREATE INDEX `idx5_idxprefix` ON keyspacenameplaceholder(ALL ARRAY `r`.`ratings`.`Rooms` FOR r IN `reviews` END,`avg_rating`)"},
+    {"indexname": "idx6",
+     "statement": "CREATE INDEX `idx6_idxprefix` ON keyspacenameplaceholder(`city`)"},
+    {"indexname": "idx7",
+     "statement": "CREATE INDEX `idx7_idxprefix` ON keyspacenameplaceholder(`price`,`name`,`city`,`country`)"},
+    {"indexname": "idx8",
+     "statement": "CREATE INDEX `idx8_idxprefix` ON keyspacenameplaceholder(DISTINCT ARRAY FLATTEN_KEYS(`r`.`author`,`r.`ratings`.`Cleanliness`) FOR r IN `reviews` when `r`.`ratings`.`Cleanliness` < 4 END, `country`, `email`, `free_parking`)"},
+    {"indexname": "idx9",
+     "statement": "CREATE INDEX `idx9_idxprefix` ON keyspacenameplaceholder(ALL ARRAY FLATTEN_KEYS(`r`.`author`,`r.`ratings`.`Rooms`) FOR r IN `reviews` END, `free_parking`) where `free_parking` = True"},
+    {"indexname": "idx10",
+     "statement": "CREATE INDEX `idx10_idxprefix` ON keyspacenameplaceholder((ALL (ARRAY(ALL (ARRAY flatten_keys(n,v) FOR n:v IN (`r`.`ratings`) END)) FOR `r` IN `reviews` END)))"},
+    {"indexname": "idx11",
+     "statement": "CREATE INDEX `idx11_idxprefix` ON keyspacenameplaceholder(ALL ARRAY FLATTEN_KEYS(`r.`ratings`.`Rooms`,`r.`ratings`.`Cleanliness`) FOR r IN `reviews` END, `email`, `free_parking`)"}
 ]
 
 HOTEL_DS_CBO_FIELDS = "`country`, DISTINCT ARRAY `r`.`ratings`.`Check in / front desk`, array_count((`public_likes`)),array_count((`reviews`)) DESC,`type`,`phone`,`price`,`email`,`address`,`name`,`url`,`free_breakfast`,`free_parking`,`city`"
@@ -59,10 +76,11 @@ class IndexManager:
                             default="hotel")
         parser.add_argument("-a", "--action",
                             choices=["create_index", "build_deferred_index", "drop_all_indexes", "create_index_loop",
-                                     "drop_index_loop", "alter_indexes", "enable_cbo", "item_count_check",
+                                     "drop_index_loop", "alter_indexes", "enable_cbo", "delete_statistics",
+                                     "item_count_check",
                                      "random_recovery", "create_udf", "drop_udf"],
                             help="Choose an action to be performed. Valid actions : create_index | build_deferred_index | drop_all_indexes | create_index_loop | "
-                                 "drop_index_loop | alter_indexes | enable_cbo | item_count_check | random_recovery | create_udf | drop_udf",
+                                 "drop_index_loop | alter_indexes | enable_cbo | delete_statistics | item_count_check | random_recovery | create_udf | drop_udf",
                             default="create_index")
         parser.add_argument("-m", "--build_max_collections", type=int, default=0,
                             help="Build Indexes on max number of collections")
@@ -72,6 +90,8 @@ class IndexManager:
                             help="Timeout for create index loop. 0 (default) is infinite")
         parser.add_argument("--cbo_enable_ratio", type=int, default=25,
                             help="Specify on how many % of collections should CBO be enabled. Range = 1-100")
+        parser.add_argument("--cbo_interval", type=int, default=15,
+                            help="Interval (minutes) to update statistics on collections of a bucket")
         parser.add_argument("--sample_size", type=int, default=5,
                             help="Specify how many indexes to be sampled for item count check. Default = 5")
         parser.add_argument("--num_udf_per_scope", type=int, default=10,
@@ -80,7 +100,8 @@ class IndexManager:
                             action='store_true')
         parser.add_argument("-t", "--test_mode", help="Test Mode : Create Scopes/Collections", action='store_true')
         parser.add_argument("-im", "--install_mode", help="install mode: ce or ee", default="ee")
-        parser.add_argument("--no_partitioned_indexes", help="No partitioned indexes to be created", action="store_true")
+        parser.add_argument("--no_partitioned_indexes", help="No partitioned indexes to be created",
+                            action="store_true")
         args = parser.parse_args()
 
         self.node_addr = args.node
@@ -100,6 +121,7 @@ class IndexManager:
         self.cbo_enable_ratio = args.cbo_enable_ratio
         if self.cbo_enable_ratio > 100:
             self.cbo_enable_ratio = 25
+        self.cbo_interval = args.cbo_interval
         self.sample_size = args.sample_size
         self.num_udf_per_scope = args.num_udf_per_scope
         self.disable_partitioned_indexes = args.no_partitioned_indexes
@@ -117,7 +139,6 @@ class IndexManager:
                                ClusterOptions(PasswordAuthenticator(self.username, self.password)))
         self.cb = self.cluster.bucket(self.bucket_name)
         self.index_nodes = self.find_nodes_with_service(self.get_services_map(), "index")
-
 
         # Logging configuration
 
@@ -296,7 +317,8 @@ class IndexManager:
                     if is_defer_idx:
                         with_clause_list.append("\'defer_build\':true")
 
-                    if (is_partitioned_idx and not self.disable_partitioned_indexes) or (self.max_num_replica > 0) or is_defer_idx:
+                    if (is_partitioned_idx and not self.disable_partitioned_indexes) or (
+                            self.max_num_replica > 0) or is_defer_idx:
                         idx_statement = idx_statement + " with {"
                         idx_statement = idx_statement + ','.join(with_clause_list) + "}"
 
@@ -549,21 +571,57 @@ class IndexManager:
 
     def enable_cbo_and_update_statistics(self, cbo_collections_ratio=25):
         # Get list of all collections with indexes
-        get_all_indexes_collections_query_for_bucket = "select raw '`' || `bucket_id` || '`.`' || `scope_id` || '`.`' || `keyspace_id` || '`' from system:all_indexes where `using`='gsi' and '`' || `bucket_id` = '{0}'".format(
+        get_all_indexes_collections_query_for_bucket = "select distinct raw '`' || `bucket_id` || '`.`' || `scope_id` || '`.`' || `keyspace_id` || '`' from system:all_indexes where `using`='gsi' and `bucket_id` = '{0}'".format(
             self.bucket_name)
-        status, results, queryResult = self._execute_query(get_all_indexes_collections_query_for_bucket)
-        keyspace_list = results[0]
+        try:
+            status, results, queryResult = self._execute_query(get_all_indexes_collections_query_for_bucket)
+        except Exception as e:
+            self.log.error(str(e))
+
+        keyspace_list = results
 
         # Select a few collections
-        cbo_collections_list = random.sample(keyspace_list, abs(len(keyspace_list) * cbo_collections_ratio / 100))
+        cbo_collections_list = random.sample(keyspace_list,
+                                             math.floor(len(keyspace_list) * cbo_collections_ratio / 100))
 
-        # Run update statistics for these collections
-        for coll in cbo_collections_list:
-            update_stats_query = "UPDATE STATISTICS FOR {0}({1};".format(coll, self.cbo_fields)
-            status, results, queryResult = self._execute_query(update_stats_query)
-            sleep(2)
+        while True:
+            # Run update statistics for these collections
+            for coll in cbo_collections_list:
+                try:
+                    self.log.info("Running Update Statistics for {0}".format(coll))
+                    update_stats_query = "UPDATE STATISTICS FOR {0} INDEX ALL;".format(coll)
+                    status, results, queryResult = self._execute_query(update_stats_query)
+                    sleep(2)
+                except Exception as e:
+                    self.log.error(str(e))
 
-        # TBD : Periodically update statistics in a loop for these collections
+            # Periodically update statistics in a loop for these collections
+            self.log.info("*** Sleeping for {0} mins until the next iteration for update statistics ***".format(
+                self.cbo_interval))
+            sleep(self.cbo_interval * 60)
+
+    """
+    Delete Statistics on all collections
+    """
+
+    def delete_statistics(self):
+        # Get list of all collections with indexes
+        get_all_indexes_collections_query_for_bucket = "select distinct raw '`' || `bucket_id` || '`.`' || `scope_id` || '`.`' || `keyspace_id` || '`' from system:all_indexes where `using`='gsi' and `bucket_id` = '{0}'".format(
+            self.bucket_name)
+        try:
+            status, results, queryResult = self._execute_query(get_all_indexes_collections_query_for_bucket)
+        except Exception as e:
+            self.log.error(str(e))
+
+        keyspace_list = results
+        for coll in keyspace_list:
+            try:
+                self.log.info("Running Delete Statistics for {0}".format(coll))
+                update_stats_query = "UPDATE STATISTICS FOR {0} DELETE ALL;".format(coll)
+                status, results, queryResult = self._execute_query(update_stats_query)
+                sleep(2)
+            except Exception as e:
+                self.log.error(str(e))
 
     """
     Item Count Check
@@ -597,13 +655,16 @@ class IndexManager:
                 "name"] + ":docid_count"
             alt_stat_key = index["bucket"] + ":" + index["scope"] + ":" + index["collection"] + ":" + index[
                 "name"] + ":items_count"
+            pending_mutations_key = index["bucket"] + ":" + index["scope"] + ":" + index["collection"] + ":" + index[
+                "name"] + ":num_docs_pending"
             keyspace_name_for_query = "`" + index["bucket"] + "`.`" + index["scope"] + "`.`" + index["collection"] + "`"
 
             index_item_count = 0
             for host in index["hosts"]:
-                item_count = self.get_stats(stat_key, alt_stat_key, host.split(":")[0])
+                item_count, pending_mutations = self.get_stats(stat_key, alt_stat_key, pending_mutations_key,
+                                                               host.split(":")[0])
                 if item_count >= 0:
-                    index_item_count += item_count
+                    index_item_count += item_count + pending_mutations
                 else:
                     self.log.info("Got an error retrieving stat {0} or {1} from {2}".format(stat_key, alt_stat_key,
                                                                                             host.split(":")[0]))
@@ -649,7 +710,7 @@ class IndexManager:
         else:
             self.log.info("Item check count passed. No discrepancies seen.")
 
-    def get_stats(self, stat_key, alt_stat_key, index_node_addr, index_node_port=9102):
+    def get_stats(self, stat_key, alt_stat_key, pending_mutations_key, index_node_addr, index_node_port=9102):
         endpoint = "http://" + index_node_addr + ":" + str(index_node_port) + "/stats"
 
         try:
@@ -660,18 +721,27 @@ class IndexManager:
             if response.ok:
                 response = json.loads(response.text)
                 if stat_key in response:
-                    return int(response[stat_key])
+                    item_count = int(response[stat_key])
                 else:
                     if alt_stat_key in response:
-                        return int(response[alt_stat_key])
+                        item_count = int(response[alt_stat_key])
                     else:
                         self.log.info(
                             "Stat {0} or {1} not found in stats output for host {2}".format(stat_key, alt_stat_key,
                                                                                             index_node_addr))
-                        return -1
+                        return -1, -1
+
+                if pending_mutations_key in response:
+                    pending_mutations = int(response[pending_mutations_key])
+                else:
+                    self.log.info("Stat {0} not found in stats output for host {1}".format(pending_mutations_key,
+                                                                                           index_node_addr))
+                    return -1, -1
+
+                return item_count, pending_mutations
             else:
                 self.log.info("Stat endpoint request status was not 200 : {0}".format(response))
-                return -1
+                return -1, -1
 
         except requests.exceptions.HTTPError as errh:
             self.log.error("HTTPError getting response from /stats : {0}".format(str(errh)))
@@ -758,6 +828,7 @@ class IndexManager:
     """
     Create n number of UDF on all scopes of a given bucket
     """
+
     def create_udfs(self):
         cb_scopes = self.cb.collections().get_all_scopes()
         scope_name_list = []
@@ -822,9 +893,8 @@ class IndexManager:
 
             for i in range(self.num_udf_per_scope):
                 udf_stmt = random.choice(udf_statement_templates).replace("keyspace_placeholder", scope)
-                udf_stmt = udf_stmt.replace("suffix",''.join(random.choices(string.ascii_uppercase +
-                                                                   string.digits, k=6)))
-
+                udf_stmt = udf_stmt.replace("suffix", ''.join(random.choices(string.ascii_uppercase +
+                                                                             string.digits, k=6)))
 
                 status, results, queryResult = self._execute_query(udf_stmt)
                 self.log.info(udf_stmt + " : " + str(status))
@@ -833,6 +903,7 @@ class IndexManager:
     """
     Drop all UDFs
     """
+
     def drop_all_udfs(self):
         drop_function_gen_template = "select raw 'DROP FUNCTION default:`' || identity.`bucket`|| '`.`' || identity.`scope`|| '`.`' || identity.name || '`' from system:functions;"
 
@@ -846,7 +917,6 @@ class IndexManager:
                 # Sleep for 0.25 secs after dropping an index
                 sleep(0.25)
         self.log.info("Drop all functions completed")
-
 
     """
     From the service map, find all nodes running the specified service and return the node list.
@@ -1136,6 +1206,8 @@ if __name__ == '__main__':
         indexMgr.alter_indexes(indexMgr.timeout, indexMgr.interval)
     elif indexMgr.action == "enable_cbo":
         indexMgr.enable_cbo_and_update_statistics(indexMgr.cbo_enable_ratio)
+    elif indexMgr.action == "delete_statistics":
+        indexMgr.delete_statistics()
     elif indexMgr.action == "drop_index_loop":
         indexMgr.drop_indexes_in_a_loop(indexMgr.timeout, indexMgr.interval)
     elif indexMgr.action == "item_count_check":
