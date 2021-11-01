@@ -278,7 +278,10 @@ class IndexManager:
             for keyspace_name in keyspace_name_list:
                 bucket, scope, collection = keyspace_name.split('.')
                 keyspaceused.append(keyspace_name)
-                for idx_template in self.idx_def_templates:
+
+                # Choose upto 3 random template definitions to create indexes with
+                idx_def_templates = random.sample(self.idx_def_templates, 3)
+                for idx_template in idx_def_templates:
                     idx_statement = idx_template['statement']
 
                     idx_prefix = ''.join(random.choices(string.ascii_letters + string.digits, k=random.randint(4, 8)))
