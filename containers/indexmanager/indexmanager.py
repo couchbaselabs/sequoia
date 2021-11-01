@@ -501,7 +501,7 @@ class IndexManager:
             # Sleep for interval
             sleep(interval)
 
-    def random_recovery(self, timeout=3600, min_frequency=120, max_frequency=300):
+    def random_recovery(self, timeout=3600, min_frequency=120, max_frequency=900):
         # Establish timeout. If timeout = 0, run in infinite loop
         end_time = 0
         if timeout > 0:

@@ -116,7 +116,7 @@
 ###############  Indexer Random Recovery ################
 
 - image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a random_recovery --timeout {{.Scale 3600}} --interval 120"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a random_recovery --timeout {{.Scale 3600}} --interval 180"
   alias: random_recovery
 
 ###############  build all deferred indexes ################
@@ -147,20 +147,22 @@
 -
    image: sequoiatools/cmd
    entrypoint: sleep
-   command: "600"
+   command: "60"
    wait: true
 
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a enable_cbo --cbo_enable_ratio=50"
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a enable_cbo --cbo_enable_ratio=50"
   alias: cbo_bucket2
 
 # Sleep for some time to allow update statistics to run
 -
    image: sequoiatools/cmd
    entrypoint: sleep
-   command: "600"
+   command: "60"
    wait: true
 
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -a enable_cbo --cbo_enable_ratio=50"
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -a enable_cbo --cbo_enable_ratio=50"
   alias: cbo_bucket3
 
 # Sleep for some time to allow update statistics to run
