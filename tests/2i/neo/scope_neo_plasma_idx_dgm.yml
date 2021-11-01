@@ -41,11 +41,11 @@ buckets:
       eviction: fullEviction
   -
       name: bucket4
-      ram: 8%
+      ram: 4%
       eviction: fullEviction
   -
       name: bucket5
-      ram: 8%
+      ram: 4%
       eviction: fullEviction
 
 
