@@ -289,7 +289,7 @@
     wait: true
 
   - template: add_node
-    args: "$0", "index"
+    args: "$0, index"
   - template: rebalance
     wait: true
 
