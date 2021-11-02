@@ -244,3 +244,54 @@
 
   - template: disable_autofailover
     wait: true
+
+- name: autofailover1IndexNode
+  actions:
+  - template: enable_autofailover
+    args: "30,1"
+    wait: true
+
+  -
+    image: sequoiatools/cmd
+    entrypoint: sleep
+    command: "10"
+    wait: true
+
+  -
+    image: sequoiatools/cbutil
+    command: "/cbinit.py $0 root couchbase stop"
+    wait: true
+  -
+    image: sequoiatools/cmd
+    entrypoint: sleep
+    command: "40"
+    wait: true
+
+  -
+    template: rebalance
+    wait: true
+
+  -
+    image: sequoiatools/cmd
+    entrypoint: sleep
+    command: "180"
+    wait: true
+
+  -
+    image: sequoiatools/cbutil
+    command: "/cbinit.py $0 root couchbase start"
+    wait: true
+
+  -
+    image: sequoiatools/cmd
+    entrypoint: sleep
+    command: "300"
+    wait: true
+
+  - template: add_node
+    args: "$0", "index"
+  - template: rebalance
+    wait: true
+
+  - template: disable_autofailover
+    wait: true

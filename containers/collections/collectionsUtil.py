@@ -17,7 +17,8 @@ class CollectionOperations():
         parser.add_option("-u", dest="username", default="Administrator", help="user name default=Administrator")
         parser.add_option("-p", dest="password", default="password", help="password default=password")
         parser.add_option("-b", dest="bucket", default="default", help="bucket, default=default")
-        parser.add_option("-o", dest="operations", choices=['get', 'create', 'delete', 'create_multi_scope_collection', 'crud_mode'],
+        parser.add_option("-o", dest="operations",
+                          choices=['get', 'create', 'delete', 'create_multi_scope_collection', 'crud_mode'],
                           help="create or delete scope/collections")
         parser.add_option("-s", dest="scopename", help="scope name")
         parser.add_option("-c", dest="collectionname", help="collection name")
@@ -29,7 +30,8 @@ class CollectionOperations():
                           help="count of scopes to be created in multi-scope/coll operation, default=1")
         parser.add_option("--collection_distribution", dest="collection_distribution", choices=["uniform", "random"],
                           default="uniform", help="Number of collections per scope to be created uniformly/randomly")
-        parser.add_option("--max_scopes", dest="max_scopes", type="int", help="Max scopes to be created in CRUD mode", default=10)
+        parser.add_option("--max_scopes", dest="max_scopes", type="int", help="Max scopes to be created in CRUD mode",
+                          default=10)
         parser.add_option("--max_collections", dest="max_collections", type="int",
                           help="Max collections to be created in CRUD mode", default=100)
         parser.add_option("--crud_timeout", dest="crud_timeout",
@@ -37,9 +39,10 @@ class CollectionOperations():
         parser.add_option("--crud_interval", dest="crud_interval",
                           help="Interval between operations in CRUD mode (in secs). Default = 2 secs", type="int",
                           default=5)
-        parser.add_option("--ignore_scope", dest="ignore_scope",help="ignore scope from delete",action="append",default=[])
-        parser.add_option("--ignore_collection", dest="ignore_coll",help="ignore scope from delete",action="append",default=[])
-
+        parser.add_option("--ignore_scope", dest="ignore_scope", help="ignore scope from delete", action="append",
+                          default=[])
+        parser.add_option("--ignore_collection", dest="ignore_coll", help="ignore scope from delete", action="append",
+                          default=[])
 
         # parser.add_option("--list",dest="list",type="string",help="list of collections/scope to be deleted")
 
@@ -93,7 +96,8 @@ class CollectionOperations():
                                                  options.collection_distribution)
         elif options.operations == "crud_mode":
             self.crud_on_scope_collections(options.bucket, options.max_scopes, options.max_collections,
-                                           options.crud_timeout, options.crud_interval,options.ignore_scope,options.ignore_coll)
+                                           options.crud_timeout, options.crud_interval, options.ignore_scope,
+                                           options.ignore_coll)
 
     def getallcollections(self, bucket):
         url = bucket + "/scopes"
@@ -139,12 +143,14 @@ class CollectionOperations():
     def get_scope_list(self, bucket):
         scope_list = []
         content = self.get_raw_collection_map(bucket)
-        #scope_coll_map = self.getallscopes(bucket)
+        # scope_coll_map = self.getallscopes(bucket)
         if "scopes" in content:
             for scope in content["scopes"]:
                 scope_list.append(scope["name"])
         else:
-            print("Some issue with get_scope_list. Printing the contents from get_raw_collection_map method : {0}".format(content))
+            print(
+                "Some issue with get_scope_list. Printing the contents from get_raw_collection_map method : {0}".format(
+                    content))
 
         return scope_list
 
@@ -220,7 +226,8 @@ class CollectionOperations():
             passed, response, content = self.api_call(url, "DELETE")
             print(response, content)
 
-    def crud_on_scope_collections(self, bucket, max_scopes=10, max_collections=100, timeout=3600, interval=60,ignore_scope=[],
+    def crud_on_scope_collections(self, bucket, max_scopes=10, max_collections=100, timeout=3600, interval=60,
+                                  ignore_scope=[],
                                   ignore_coll=[]):
         # Establish timeout. If timeout > 0, run in infinite loop
         end_time = 0
@@ -235,10 +242,18 @@ class CollectionOperations():
             curr_coll_count = 0
             curr_coll_map = {}
             if curr_scope_num > 0:
-                #curr_coll_map = self.getallcollections(bucket)
-                curr_coll_map = self.get_raw_collection_map(bucket)
-                for scope in curr_coll_map["scopes"]:
-                    curr_coll_count += len(scope["collections"])
+                # curr_coll_map = self.getallcollections(bucket)
+                try:
+                    curr_coll_map = self.get_raw_collection_map(bucket)
+
+                    for scope in curr_coll_map["scopes"]:
+                        curr_coll_count += len(scope["collections"])
+                except Exception as e:
+                    print(
+                        "Exception getting collection map (/pools/default/buckets/bucket/scopes endpoint) for bucket {0}".format(
+                            bucket))
+                    print("Collection map retrieved : {0}".format(curr_coll_map))
+                    print("Exception : \n{0}".format(str(e)))
 
             print("Existing number of scopes = %s, collections = %s" % (curr_scope_num, curr_coll_count))
 
@@ -261,7 +276,7 @@ class CollectionOperations():
 
                 if operation == "create":
                     letters_and_digits = string.ascii_letters + string.digits
-                    scope_name = ''.join((random.choice(letters_and_digits) for i in range(random.randint(8,30))))
+                    scope_name = ''.join((random.choice(letters_and_digits) for i in range(random.randint(8, 30))))
                     print("Creating Scope : %s" % scope_name)
                     self.create_scope(bucket, scope_name)
                 else:
@@ -281,11 +296,11 @@ class CollectionOperations():
                 else:
                     operation = random_operation
 
-                print ("Collection : Operation = %s" % operation)
+                print("Collection : Operation = %s" % operation)
 
                 if operation == "create":
                     letters_and_digits = string.ascii_letters + string.digits
-                    coll_name = ''.join((random.choice(letters_and_digits) for i in range(random.randint(8,30))))
+                    coll_name = ''.join((random.choice(letters_and_digits) for i in range(random.randint(8, 30))))
                     scope = random.choice(curr_scope_list)
                     print("Creating Collection : %s in scope %s" % (coll_name, scope))
                     self.create_collection(bucket, scope, coll_name)
@@ -321,7 +336,7 @@ class CollectionOperations():
         headers = {'content-type': 'application/x-www-form-urlencoded'}
 
         url = "http://" + self.host + "/pools/default/buckets/" + url
-        end_time = time.time() + timeout + retry_timeout # Threshold before raising exceptions
+        end_time = time.time() + timeout + retry_timeout  # Threshold before raising exceptions
         http = httplib2.Http(timeout=timeout)
         http.add_credentials(self.username, self.password)
         while True:
@@ -343,7 +358,8 @@ class CollectionOperations():
                 if time.time() > end_time:
                     raise e
                 print("Retrying because ServerNotFoundError with ", self.host)
-            time.sleep(3) # sleep before retry
+            time.sleep(3)  # sleep before retry
+
 
 if __name__ == "__main__":
     CollectionOperations().run()

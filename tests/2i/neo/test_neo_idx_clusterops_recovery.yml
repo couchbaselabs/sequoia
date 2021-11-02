@@ -1,4 +1,4 @@
-- include: tests/templates/kv.yml, tests/templates/n1ql.yml, tests/templates/rebalance.yml
+- include: tests/templates/kv.yml, tests/templates/n1ql.yml, tests/templates/rebalance.yml, tests/templates/multinode_failure.yml
 
 ############### Enable Plasma Bloom Filter ################
 - template: set_gsi_config
@@ -446,6 +446,11 @@
    command: "600"
    wait: true
 
+###############  Auto failover for indexer node ################
+- template: autofailover1IndexNode
+  args: "{{.ActiveIndexNode 1}}"
+  wait: true
+
 ###############  Rebalance out data node ################
 - template: rebalance_out
   args: "({{.NthDataNode 1}})"
@@ -637,13 +642,13 @@
 ###############  Item Count Check ################
 - section_start: item_count_check
 - image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a item_count_check --sample_size 50"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a item_count_check --sample_size 20"
   wait: true
 
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a item_count_check --sample_size 50"
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a item_count_check --sample_size 20"
   wait: true
 
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -a item_count_check --sample_size 50"
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -a item_count_check --sample_size 20"
   wait: true
 - section_end: item_count_check
 
@@ -652,10 +657,10 @@
   command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}}  -a delete_statistics"
   wait: true
 
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{{.NthBucket 1}}  -a delete_statistics"
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}}  -a delete_statistics"
   wait: true
 
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{{.NthBucket 2}}  -a delete_statistics"
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}}  -a delete_statistics"
   wait: true
 
 ###############  Drop all Indexes ################

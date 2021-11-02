@@ -654,20 +654,29 @@ class IndexManager:
         errors = []
 
         for index in item_count_check_indexes:
-            stat_key = index["bucket"] + ":" + index["scope"] + ":" + index["collection"] + ":" + index[
-                "name"] + ":docid_count"
-            alt_stat_key = index["bucket"] + ":" + index["scope"] + ":" + index["collection"] + ":" + index[
-                "name"] + ":items_count"
-            pending_mutations_key = index["bucket"] + ":" + index["scope"] + ":" + index["collection"] + ":" + index[
-                "name"] + ":num_docs_pending"
+            # Exclude any indexes that have when or where clause in the index definition from item count check
+            # as the item count will never match the number of docs in collection because of the partial index.
+            # Currently it is idx8 that has a when / where clause in the index definition
+            if index["name"].split("_")[0] == "idx8":
+                continue
+
+            if (index["scope"] != "_default" and index["collection"] != "_default"):
+                keyspace_path = index["bucket"] + ":" + index["scope"] + ":" + index["collection"] + ":"
+            else:
+                keyspace_path = index["bucket"] + ":"
+            stat_key = keyspace_path + index["name"] + ":docid_count"
+            alt_stat_key = keyspace_path + index["name"] + ":items_count"
+            pending_mutations_key = keyspace_path + index["name"] + ":num_docs_pending"
             keyspace_name_for_query = "`" + index["bucket"] + "`.`" + index["scope"] + "`.`" + index["collection"] + "`"
 
             index_item_count = 0
+            index_pending_mutations = 0
             for host in index["hosts"]:
                 item_count, pending_mutations = self.get_stats(stat_key, alt_stat_key, pending_mutations_key,
                                                                host.split(":")[0])
                 if item_count >= 0:
-                    index_item_count += item_count + pending_mutations
+                    index_item_count += item_count
+                    index_pending_mutations += pending_mutations
                 else:
                     self.log.info("Got an error retrieving stat {0} or {1} from {2}".format(stat_key, alt_stat_key,
                                                                                             host.split(":")[0]))
@@ -695,9 +704,9 @@ class IndexManager:
                 errors.append(errors_obj)
 
             self.log.info(
-                "Item count for index {0} on {1} is {2}. Total items in collection are {3}".format(index["name"],
+                "Item count for index {0} on {1} is {2}. Pending Mutations = {3} Total items in collection are {4}".format(index["name"],
                                                                                                    keyspace_name_for_query,
-                                                                                                   index_item_count,
+                                                                                                   index_item_count, index_pending_mutations,
                                                                                                    kv_item_count))
             if int(index_item_count) != int(kv_item_count):
                 errors_obj = {}
@@ -705,6 +714,7 @@ class IndexManager:
                 errors_obj["index_name"] = index["name"]
                 errors_obj["keyspace"] = keyspace_name_for_query
                 errors_obj["index_item_count"] = index_item_count
+                errors_obj["index_pending_mutations"] = index_pending_mutations
                 errors_obj["kv_item_count"] = kv_item_count
                 errors.append(errors_obj)
 
@@ -716,44 +726,56 @@ class IndexManager:
     def get_stats(self, stat_key, alt_stat_key, pending_mutations_key, index_node_addr, index_node_port=9102):
         endpoint = "http://" + index_node_addr + ":" + str(index_node_port) + "/stats"
 
-        try:
-            # Get index stats from the indexer node
-            response = requests.get(endpoint, auth=(
-                self.username, self.password), verify=True, )
-
-            if response.ok:
-                response = json.loads(response.text)
-                if stat_key in response:
-                    item_count = int(response[stat_key])
-                else:
-                    if alt_stat_key in response:
-                        item_count = int(response[alt_stat_key])
+        retry_count = 3
+        while retry_count > 1:
+            try:
+                # Get index stats from the indexer node
+                response = requests.get(endpoint, auth=(
+                    self.username, self.password), verify=True, )
+                need_retry = False
+                if response.ok:
+                    response = json.loads(response.text)
+                    if stat_key in response:
+                        item_count = int(response[stat_key])
                     else:
-                        self.log.info(
-                            "Stat {0} or {1} not found in stats output for host {2}".format(stat_key, alt_stat_key,
-                                                                                            index_node_addr))
+                        if alt_stat_key in response:
+                            item_count = int(response[alt_stat_key])
+                        else:
+                            self.log.info(
+                                "Stat {0} or {1} not found in stats output for host {2}".format(stat_key, alt_stat_key,
+                                                                                                index_node_addr))
+                            need_retry = True
+
+                    if pending_mutations_key in response:
+                        pending_mutations = int(response[pending_mutations_key])
+                    else:
+                        self.log.info("Stat {0} not found in stats output for host {1}".format(pending_mutations_key,
+                                                                                               index_node_addr))
+                        need_retry = True
+
+                else:
+                    self.log.info("Stat endpoint request status was not 200 : {0}".format(response))
+                    need_retry = True
+
+                if need_retry :
+                    retry_count = retry_count - 1
+                    if retry_count > 1:
+                        self.log.info("Retrying fetching stats. Retries left = {0}".format(str(retry_count)))
+                    else:
                         return -1, -1
 
-                if pending_mutations_key in response:
-                    pending_mutations = int(response[pending_mutations_key])
                 else:
-                    self.log.info("Stat {0} not found in stats output for host {1}".format(pending_mutations_key,
-                                                                                           index_node_addr))
-                    return -1, -1
+                    # return item_count, pending_mutations
+                    return item_count, pending_mutations
 
-                return item_count, pending_mutations
-            else:
-                self.log.info("Stat endpoint request status was not 200 : {0}".format(response))
-                return -1, -1
-
-        except requests.exceptions.HTTPError as errh:
-            self.log.error("HTTPError getting response from /stats : {0}".format(str(errh)))
-        except requests.exceptions.ConnectionError as errc:
-            self.log.error("ConnectionError getting response from /stats : {0}".format(str(errc)))
-        except requests.exceptions.Timeout as errt:
-            self.log.error("Timeout getting response from /stats : {0}".format(str(errt)))
-        except requests.exceptions.RequestException as err:
-            self.log.error("Error getting response from /stats : {0}".format(str(err)))
+            except requests.exceptions.HTTPError as errh:
+                self.log.error("HTTPError getting response from /stats : {0}".format(str(errh)))
+            except requests.exceptions.ConnectionError as errc:
+                self.log.error("ConnectionError getting response from /stats : {0}".format(str(errc)))
+            except requests.exceptions.Timeout as errt:
+                self.log.error("Timeout getting response from /stats : {0}".format(str(errt)))
+            except requests.exceptions.RequestException as err:
+                self.log.error("Error getting response from /stats : {0}".format(str(err)))
 
     """
     Determine number of index nodes in the cluster and set max num replica accordingly.
