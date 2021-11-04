@@ -1,0 +1,854 @@
+---
+-
+  include: tests/templates/rebalance.yml, tests/templates/vegeta.yml, tests/templates/kv.yml, tests/templates/fts.yml, tests/templates/n1ql.yml, tests/templates/multinode_failure.yml, tests/templates/collections.yml
+
+###### update Tombstone Purge Interval ######
+-
+  image: sequoiatools/couchbase-cli
+  requires:  "{{eq true .DoOnce }}"
+  command: "setting-compaction -c {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}} --metadata-purge-interval .04 --compaction-db-percentage 30 --compaction-view-percentage 30"
+  wait: true
+
+###### enable audit logging ######
+-
+  image: sequoiatools/couchbase-cli
+  requires:  "{{eq true .DoOnce }}"
+  command: "setting-audit -c {{.Orchestrator}}:8091 -u {{.RestUsername}} -p {{.RestPassword}} --set --audit-enabled 1 --audit-log-path /data --audit-log-rotate-interval 604800"
+  wait: true
+
+###### enable n2n encryption & ipv4only ######
+-
+  template: disable_autofailover
+  requires:  "{{eq true .DoOnce }}"
+-
+  image: sequoiatools/couchbase-cli
+  requires:  "{{eq true .DoOnce }}"
+  command: "node-to-node-encryption -c {{.Orchestrator}}:8091 -u {{.RestUsername}} -p {{.RestPassword}} --enable"
+  wait: true
+-
+  image: sequoiatools/couchbase-cli
+  requires:  "{{eq true .DoOnce }}"
+  command: "setting-security -c {{.Orchestrator}}:8091 -u {{.RestUsername}} -p {{.RestPassword}} --set --cluster-encryption-level control"
+  wait: true
+-
+  image: sequoiatools/couchbase-cli
+  requires:  "{{eq true .DoOnce }}"
+  command: "ip-family -c {{.Orchestrator}}:8091 -u {{.RestUsername}} -p {{.RestPassword}} --set --ipv4only"
+  wait: true
+-
+  template: enable_autofailover
+  args: "120,1"
+  requires:  "{{eq true .DoOnce }}"
+
+############### Enable Plasma Bloom Filter ################
+- template: set_gsi_config
+  args: "{{.ActiveIndexNode 0}}, 'indexer.plasma.backIndex.enablePageBloomFilter':true"
+
+############### Enable GSI OSO mode ################
+# Temporarily not enabling OSO mode as per MB-43725
+#- template: set_gsi_config
+#  args: "{{.ActiveIndexNode 0}}, 'indexer.build.enableOSO':true"
+
+############### Enable GSI Redistribution of indexes on rebalance in ################
+- template: set_gsi_config
+  args: "{{.ActiveIndexNode 0}}, 'indexer.settings.rebalance.redistribute_indexes':true"
+
+############### Set FTS bleveMaxResultWindow to 100000 ################
+- template: set_fts_manager_options
+  args: "{{.Nodes | .Service `fts` | net 0}}, 'bleveMaxResultWindow':'100000'"
+
+############### Set FTS bleveMaxClauseCount to 2500 ################
+- template: set_fts_manager_options
+  args: "{{.Nodes | .Service `fts` | net 0}}, 'bleveMaxClauseCount':'2500'"
+
+##### create a backup plan which backups up every 6 hours and merges every 2 days at 12:00noon to filesystem and s3 repos
+-
+  image:  appropriate/curl
+  command: "-X POST -u {{.RestUsername}}:{{.RestPassword}} -H Content-Type:application/json http://{{.Orchestrator}}:8091/_p/backup/api/v1/plan/my_plan -d '{\"name\":\"my_plan\",\"description\":\"This plan does backups every 2 day\",\"services\":[\"data\",\"gsi\",\"views\",\"ft\",\"eventing\",\"cbas\",\"query\"],\"default\":false,\"tasks\":[{\"name\":\"backup-1\",\"task_type\":\"BACKUP\",\"schedule\":{\"job_type\":\"BACKUP\",\"frequency\":6,\"period\":\"HOURS\",\"start_now\":false},\"full_backup\":true},{\"name\":\"merge\",\"task_type\":\"MERGE\",\"schedule\":{\"job_type\":\"MERGE\",\"frequency\":1,\"period\":\"DAYS\",\"time\":\"12:00\",\"start_now\":false},\"merge_options\":{\"offset_start\":0,\"offset_end\":2},\"full_backup\":true}]}'"
+  wait: true
+-
+  command: "-u {{.RestUsername}}:{{.RestPassword}} -X POST http://{{.Orchestrator}}:8091/_p/backup/api/v1/cluster/self/repository/active/my_repo -H Content-Type:application/json -d '{\"plan\": \"my_plan\", \"archive\": \"/data/archive\"}'"
+  wait: true
+-
+  command: "-u {{.RestUsername}}:{{.RestPassword}} -X POST http://{{.Orchestrator}}:8091/_p/backup/api/v1/cluster/self/repository/active/my_repo_s3 -H Content-Type:application/json -d '{\"plan\": \"my_plan\", \"archive\": \"s3://backup-service-testing/longevity-testing\", \"cloud_staging_dir\": \"/data/s3\", \"cloud_endpoint\": null, \"cloud_region\": \"$CB_AWS_REGION\", \"cloud_credentials_id\": \"$CB_AWS_ACCESS_KEY_ID\", \"cloud_credentials_key\": \"$CB_AWS_SECRET_ACCESS_KEY\", \"cloud_force_path_style\": false}'"
+  wait: true
+
+### create (scale * 10) scopes and (scale * 80) collections in local cluster across 6 buckets as scope_1,scope_2 ... ######
+- template: create-multi-scopes-collections
+  args: "{{.Orchestrator}}, {{.NthBucket 4}}, {{.Scale 2}}, {{.Scale 10}}, uniform"
+  requires:  "{{eq true .DoOnce }}"
+- args: "{{.Orchestrator}}, {{.NthBucket 5}}, {{.Scale 2}}, {{.Scale 10}}, uniform"
+  requires:  "{{eq true .DoOnce }}"
+- args: "{{.Orchestrator}}, {{.NthBucket 6}}, {{.Scale 2}}, {{.Scale 10}}, uniform"
+  requires:  "{{eq true .DoOnce }}"
+- args: "{{.Orchestrator}}, {{.NthBucket 7}}, {{.Scale 2}}, {{.Scale 10}}, uniform"
+  requires:  "{{eq true .DoOnce }}"
+- args: "{{.Orchestrator}}, {{.NthBucket 8}}, {{.Scale 1}}, {{.Scale 10}}, uniform"
+  requires:  "{{eq true .DoOnce }}"
+- args: "{{.Orchestrator}}, {{.NthBucket 9}}, {{.Scale 1}}, {{.Scale 10}}, uniform"
+  requires:  "{{eq true .DoOnce }}"
+
+###### Create scopes and collections in remote cluster  ######
+- template: create-multi-scopes-collections
+  args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 4}}, {{.Scale 2}}, {{.Scale 10}}, uniform"
+  requires:  "{{eq true .DoOnce }}"
+- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 8}}, {{.Scale 2}}, {{.Scale 10}}, uniform"
+  requires:  "{{eq true .DoOnce }}"
+- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 9}}, {{.Scale 2}}, {{.Scale 10}}, uniform"
+  requires:  "{{eq true .DoOnce }}"
+
+# Sleep for some time to allow collections manifest to sync
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "300"
+   wait: true
+
+# start xdcr replications
+- image: sequoiatools/couchbase-cli
+  requires:  "{{eq true .DoOnce }}"
+  command:  "xdcr-setup -c {{.Orchestrator}}:{{.RestPort}} --create --xdcr-cluster-name remote
+        --xdcr-hostname {{.Nodes | .Cluster 1 | net 0}}
+        --xdcr-username {{.Nodes | .Cluster 1 | .Attr `rest_username`}}
+        --xdcr-password {{.Nodes | .Cluster 1 | .Attr `rest_password`}}"
+  wait: true
+- command: "xdcr-replicate -c {{.Orchestrator}}:{{.RestPort}}
+        --create
+        --xdcr-cluster-name remote
+        --xdcr-from-bucket {{.Bucket}}
+        --xdcr-to-bucket {{.Nodes | .Cluster 1 | bucket 0}}
+        --enable-compression 1"
+  wait: true
+- command: "xdcr-replicate -c {{.Orchestrator}}:{{.RestPort}}
+        --create
+        --xdcr-cluster-name remote
+        --xdcr-from-bucket {{.NthBucket 4}}
+        --xdcr-to-bucket {{.Nodes | .Cluster 1 | bucket 1}}
+        --enable-compression 1"
+  wait: true
+- command: "xdcr-replicate -c {{.Orchestrator}}:{{.RestPort}}
+        --create
+        --xdcr-cluster-name remote
+        --xdcr-from-bucket {{.NthBucket 8}}
+        --xdcr-to-bucket {{.Nodes | .Cluster 1 | bucket 2}}
+        --enable-compression 1"
+  wait: true
+- command: "xdcr-replicate -c {{.Orchestrator}}:{{.RestPort}}
+        --create
+        --xdcr-cluster-name remote
+        --xdcr-from-bucket {{.NthBucket 9}}
+        --xdcr-to-bucket {{.Nodes | .Cluster 1 | bucket 3}}
+        --enable-compression 1"
+  wait: true
+
+############### Initial data loading to collections - no doc expiry, only creates ################
+- image: sequoiatools/catapult
+  command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 4}} -n {{.Scale 20000}} -pc 100 -dt Hotel -ds 1000 -ac True"
+  requires:  "{{eq true .DoOnce }}"
+  alias: catapult_bucket4_doc_ops1
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 5}} -n {{.Scale 20000}} -pc 100 -dt Hotel -ds 1000 -ac True"
+  requires:  "{{eq true .DoOnce }}"
+  alias: catapult_bucket5_doc_ops1
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 6}} -n {{.Scale 20000}} -pc 100 -dt Hotel -ds 1000 -ac True"
+  requires:  "{{eq true .DoOnce }}"
+  alias: catapult_bucket6_doc_ops1
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 7}} -n {{.Scale 20000}} -pc 100 -dt Hotel -ds 1000 -ac True"
+  requires:  "{{eq true .DoOnce }}"
+  alias: catapult_bucket7_doc_ops1
+
+
+# Start transactions workload on default bucket
+-
+  image: sequoiatools/transactions
+  command: "{{.Orchestrator}} {{.Bucket}} 1000"
+  alias: txn
+
+# Start Collections CRUD on bucket 4 & bucket5
+-
+  image: sequoiatools/collections:1.0
+  command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 8}} -o crud_mode --crud_interval=120 --max_scopes=10 --max_collections=100"
+  alias: collection_crud1
+-
+  command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 9}} -o crud_mode --crud_interval=120 --max_scopes=10 --max_collections=100"
+  alias: collection_crud2
+
+# continous kv loading
+- template: pillowfight_durability
+  args: "{{.Orchestrator}}, {{.Bucket}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 2000}}, {{.AuthPassword}} --durability majority"
+
+# Sleep for some time to allow some docs to be loaded to the collections
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "600"
+   wait: true
+
+# rebalance out a node
+- template: rebalance_out
+  args: "{{.ActiveDataNode 1}}:{{.RestPort}}"
+  wait: true
+
+# Sleep for some time to allow some docs to be loaded to the collections
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "600"
+   wait: true
+
+# creating eventing handlers and deploying them
+- test: tests/eventing/CC/test_eventing_rebalance_integration.yml
+  section: create_and_deploy
+
+# creating datasets and indexes
+- test: tests/analytics/cheshirecat/test_analytics_integration_scale3.yml
+  section: analytics_setup
+
+# 9/24/21 : Disabling creating indexes on default bucket to avoid issues like MB-48024 and MB-48581
+# GSI Index Creation
+# Create index on the default bucket so that the query workloads below in the test have indexes to work with
+#- image: sequoiatools/cbq
+#  command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_rating on `{{.Bucket}}`(rating) using GSI'"
+#  wait: true
+#- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_claims on `{{.Bucket}}`(claim) using GSI'"
+#  wait: true
+#- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_result on `{{.Bucket}}`(result) using GSI'"
+#- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create primary index on `{{.Bucket}}` using GSI'"
+#  wait: true
+
+# Create N1QL UDFs on the scopes
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}} -a create_udf --num_udf_per_scope=50"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 5}} -a create_udf --num_udf_per_scope=50"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 6}} -a create_udf --num_udf_per_scope=50"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 7}} -a create_udf --num_udf_per_scope=50"
+  wait: true
+
+# Create indexes on the collections
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}} -i {{.Scale 2}} -a create_index"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 5}} -i {{.Scale 2}} -a create_index"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 6}} -i {{.Scale 2}} -a create_index"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 7}} -i {{.Scale 2}} -a create_index"
+  wait: true
+
+###############  build all deferred indexes ################
+
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}} -a build_deferred_index -m 5"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 5}} -a build_deferred_index -m 5"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 6}} -a build_deferred_index -m 5"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 7}} -a build_deferred_index -m 5"
+  wait: true
+
+
+# Wait till all indexes are completely built
+-
+   image: sequoiatools/wait_for_idx_build_complete
+   command: "{{.ActiveIndexNode 0}} {{.RestUsername}} {{.RestPassword}}"
+   wait: true
+
+# Enable CBO and Update Statistics for indexes on some collections
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}} -a enable_cbo --cbo_enable_ratio=50"
+  alias: cbo_bucket4
+
+# Sleep for some time to allow update statistics to run
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "60"
+   wait: true
+
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 5}} -a enable_cbo --cbo_enable_ratio=50"
+  alias: cbo_bucket5
+
+# Sleep for some time to allow update statistics to run
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "60"
+   wait: true
+
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 6}} -a enable_cbo --cbo_enable_ratio=50"
+  alias: cbo_bucket6
+
+# Sleep for some time to allow update statistics to run
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "60"
+   wait: true
+
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 7}} -a enable_cbo --cbo_enable_ratio=50"
+  alias: cbo_bucket7
+
+# Sleep for some time to allow update statistics to run
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "60"
+   wait: true
+
+# Create FTS indexes on collections
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}} -m 1:1:2 -s {{.Scale 1}} -a create_index_from_map"
+  wait: true
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+- image: sequoiatools/ftsindexmanager
+- command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 5}} -m 1:0:5 -s {{.Scale 1}} -a create_index_from_map"
+  wait: true
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+- image: sequoiatools/ftsindexmanager
+- command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 6}} -m 1:1:1,1:1:2 -s {{.Scale 1}} -a create_index_from_map"
+  wait: true
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+- image: sequoiatools/ftsindexmanager
+- command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 7}} -m 1:0:2 -s {{.Scale 1}} -a create_index_from_map"
+  wait: true
+
+# run sync gateway testing through mobile-testkit - versions supplied are placeholders - they will be replaced with actual values during the run
+-
+  image: sequoiatools/sgw
+  command: "CBS_HOSTS={{.Orchestrator}} SGW_HOSTS={{.SyncGatewayAll}} SSH_USER={{.SSHUsername}} SSH_PWD={{.SSHPassword}}"
+  wait: false
+  requires:  "{{eq true .DoOnce }}"
+
+# replica data loading for eventing source with docs that will expire after 1 hour
+- image: sequoiatools/gideon2
+  command: "kv --ops {{.Scale 150}} --create 80 --delete 20 --get 82 --sizes 64 96  --expire 100 --ttl 3600  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --scope event_0 --collection coll0"
+- command: "kv --ops {{.Scale 150}} --create 80 --delete 20 --get 82 --sizes 64 96  --expire 100 --ttl 3600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}} --scope event_0 --collection coll0"
+
+############### incremental data loading to collections ################
+- image: sequoiatools/catapult
+  command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 4}} -n {{.Scale 7000}} -pc 100 -pu 25 -pd 25 -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 300 -fu price,free_parking -ac True --num_threads 1"
+  alias: catapult_bucket4_doc_ops2
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 5}} -n {{.Scale 7000}} -pc 100 -pu 25 -pd 25 -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 300 -fu price,free_parking -ac True --num_threads 1"
+  alias: catapult_bucket5_doc_ops2
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 6}} -n {{.Scale 7000}} -pc 100 -pu 25 -pd 25 -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 300 -fu price,free_parking -ac True --num_threads 1"
+  alias: catapult_bucket6_doc_ops2
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 7}} -n {{.Scale 7000}} -pc 100 -pu 25 -pd 25 -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 300 -fu price,free_parking -ac True --num_threads 1"
+  alias: catapult_bucket7_doc_ops2
+
+
+# query replica indexes
+- image: sequoiatools/queryapp
+  command: "-J-Xms256m -J-Xmx512m -J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.7.21/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 0 --print_duration=3600 --bucket {{.NthBucket 4}} --querycount {{.Scale 3}} --threads {{.Scale 3}} --n1ql True --query_timeout=600 --scan_consistency REQUEST_PLUS --bucket_names [{{.NthBucket 4}},{{.NthBucket 5}},{{.NthBucket 6}},{{.NthBucket 7}}] --collections_mode --dataset hotel"
+- command: "-J-Xms256m -J-Xmx512m -J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.7.21/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 0 --print_duration=3600 --bucket {{.NthBucket 5}} --querycount {{.Scale 3}} --threads {{.Scale 3}} --n1ql True --query_timeout=600 --scan_consistency REQUEST_PLUS --bucket_names [{{.NthBucket 4}},{{.NthBucket 5}},{{.NthBucket 6}},{{.NthBucket 7}}] --collections_mode --dataset hotel"
+- command: "-J-Xms256m -J-Xmx512m -J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.7.21/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 0 --print_duration=3600 --bucket {{.NthBucket 6}} --querycount {{.Scale 3}} --threads {{.Scale 3}} --n1ql True --query_timeout=600 --scan_consistency REQUEST_PLUS --bucket_names [{{.NthBucket 4}},{{.NthBucket 5}},{{.NthBucket 6}},{{.NthBucket 7}}] --collections_mode --dataset hotel"
+- command: "-J-Xms256m -J-Xmx512m -J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.7.21/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 0 --print_duration=3600 --bucket {{.NthBucket 7}} --querycount {{.Scale 3}} --threads {{.Scale 3}} --n1ql True --query_timeout=600 --scan_consistency REQUEST_PLUS --bucket_names [{{.NthBucket 4}},{{.NthBucket 5}},{{.NthBucket 6}},{{.NthBucket 7}}] --txns True --dataset hotel"
+
+# query FTS indexes
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}} --print_interval 600 -a run_queries -t 0 -nq 1"
+- command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 5}} --print_interval 600 -a run_flex_queries -t 0 -nq 1"
+
+# Sleep for some time to allow some queries to be run against the collections
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "600"
+   wait: true
+
+# swap rebalance
+- template: rebalance_swap
+  args: "{{.InActiveNode}}, {{.ActiveDataNode 2}}"
+  wait: true
+
+# Sleep for some time to allow some docs to be loaded to the collections
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "600"
+   wait: true
+
+# run queries and then connect to bucket
+- test: tests/analytics/cheshirecat/test_analytics_integration_scale3.yml
+  section: analytics_query
+
+# run http attacks against n1ql with various skip param
+- template: attack_query
+  args: "0, 10, {{$.NthQueryNode 1}}:{{$.QueryPort}},
+        delete from default where rating > 0 limit {{$.Scale 10}}"
+
+# more json docs on default bucket
+- image: sequoiatools/gideon
+  command: "kv --ops {{.Scale 500}} --create 10 --delete 8 --get 92 --expire 100 --ttl 660  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes  512 128 1024 2048 16000"
+- command: "kv --ops {{.Scale 500}} --create 100  --expire 100 --ttl 660 --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 64"
+  duration: 600
+- command: "kv --ops {{.Scale 600}} --create 15 --get 80 --delete 5  --expire 100 --ttl 660 --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 128"
+  duration: 7200
+
+# Change the topology (performs rebalance in/out/swap eventing nodes)
+- test: tests/eventing/CC/test_eventing_rebalance_integration.yml
+  section: topology_change
+
+# Sleep for some time to allow some docs to be loaded to the collections
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "600"
+   wait: true
+
+# Change the topology (performs rebalance in/out/swap analytics nodes)
+- test: tests/analytics/cheshirecat/test_analytics_integration_scale3.yml
+  section: analytics_topology_change
+
+# Sleep for some time to allow some docs to be loaded to the collections
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "600"
+   wait: true
+
+# run http attacks against view with various skip param
+- foreach: "{{range $i, $view := strlist `stats` `array` `padd`}}"
+  template: attack_view
+  args: "0, 10, {{$.NthDataNode $i}},
+         {{$.Bucket}},
+         scale,
+         {{$view}},
+         limit={{$.Scale 10}}&stale=update_after&connection_timeout=60000"
+
+# create fts index with custom child field using result key as type
+- template: create_index_with_child_field
+  requires:  "{{eq true .DoOnce }}"
+  args: "{{.FTSNodePort}}, good_state, default, SUCCESS, state, false, result, scorch"
+  wait: true
+
+# create fts index with nested type mappings and store results
+- template: create_index_with_child_field_nested_type_mapping
+  requires:  "{{eq true .DoOnce }}"
+  args: "{{.FTSNodePort}}, social, default, gideon, description, profile, status, true, , scorch"
+
+# get replication id
+-
+  image:  appropriate/curl
+  command: "-s http://{{.RestUsername}}:{{.RestPassword}}@{{.Orchestrator | noport}}:{{.ClusterNodes | .Attr `rest_port`}}/pools/default/remoteClusters"
+  alias: ReplId
+  wait: true
+
+# apply adv filtering to xdcr replications
+- image: appropriate/curl
+  requires:  "{{eq true .DoOnce }}"
+  command: "-u {{.RestUsername}}:{{.RestPassword}} -X POST http://{{.Orchestrator}}:{{.RestPort}}/settings/replications/{{(index (.AllLogs `ReplId` | json) 0).uuid }}/default/{{.Bucket}} -d filterExpression=rating>500 -d filterSkipRestream=0"
+  wait: true
+- command: "-u {{.RestUsername}}:{{.RestPassword}} -X POST http://{{.Orchestrator}}:{{.RestPort}}/settings/replications/{{(index (.AllLogs `ReplId` | json) 0).uuid }}/default/{{.Bucket}} -d filterExpression=REGEXP_CONTAINS(META().id,0$) -d filterSkipRestream=0"
+  wait: true
+- command: "-u {{.RestUsername}}:{{.RestPassword}} -X POST http://{{.Orchestrator}}:{{.RestPort}}/settings/replications/{{(index (.AllLogs `ReplId` | json) 0).uuid }}/default/{{.Bucket}} -d filterExpiration=true -d filterBypassExpiry=true -d filterDeletion=false -d filterExpression=result<>SUCCESS -d filterSkipRestream=1"
+  wait: true
+
+# Disabling this workload at it potentially causes https://issues.couchbase.com/browse/MB-46582
+## add some rbac users
+#- test: tests/n1ql/test_n1qlRBAC.yml
+#  section: add_users
+#
+## start rbac queries
+#- test: tests/n1ql/test_n1qlRBAC.yml
+#  section: rbac_query
+
+# pause eventing handlers
+- test: tests/eventing/CC/test_eventing_rebalance_integration.yml
+  section: pause
+
+# load 1M items
+- template: pillowfight_htp
+  wait: true
+
+# change the topologies on the query nodes
+- test: tests/2i/neo/test_idx_neo_integration.yml
+  section: change_query_topologies
+
+# change the topologies on the gsi nodes
+- test: tests/2i/neo/test_idx_neo_integration.yml
+  section: change_indexer_topologies
+
+# Sleep for some time to allow some docs to be loaded to the collections
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "600"
+   wait: true
+
+# resume eventing handlers
+- test: tests/eventing/CC/test_eventing_rebalance_integration.yml
+  section: resume
+
+# quick update batch
+- template: pillowfight_htp
+  wait: true
+
+# swap failover
+- template: add_node
+  args: "{{.InActiveNode}}"
+- template: hard_failover_node
+  args: "{{.ActiveDataNode 1}}"
+- template: rebalance
+  wait: true
+
+# Sleep for some time to allow some docs to be loaded to the collections
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "600"
+   wait: true
+
+# Pause and Resume XDCR replications
+-
+  image: appropriate/curl
+  command: "-u {{.RestUsername}}:{{.RestPassword}} -X POST http://{{.Orchestrator}}:{{.RestPort}}/settings/replications/{{(index (.AllLogs `ReplId` | json) 0).uuid }}/default/{{.Bucket}} -d pauseRequested=true"
+  wait: true
+  command: "-u {{.RestUsername}}:{{.RestPassword}} -X POST http://{{.Orchestrator}}:{{.RestPort}}/settings/replications/{{(index (.AllLogs `ReplId` | json) 0).uuid }}/{{.NthBucket 8}}/{{.Nodes | .Cluster 1 | bucket 2}} -d pauseRequested=true"
+  wait: true
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+-
+  image: appropriate/curl
+  command: "-u {{.RestUsername}}:{{.RestPassword}} -X POST http://{{.Orchestrator}}:{{.RestPort}}/settings/replications/{{(index (.AllLogs `ReplId` | json) 0).uuid }}/default/{{.Bucket}} -d pauseRequested=false"
+  wait: true
+  command: "-u {{.RestUsername}}:{{.RestPassword}} -X POST http://{{.Orchestrator}}:{{.RestPort}}/settings/replications/{{(index (.AllLogs `ReplId` | json) 0).uuid }}/{{.NthBucket 8}}/{{.Nodes | .Cluster 1 | bucket 2}} -d pauseRequested=false"
+  wait: true
+
+# load some new docs
+- image: sequoiatools/gideon
+  command: "kv --ops {{.Scale 500}} --create 100  --expire 100 --ttl 660 --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 64"
+  duration: 1800
+
+# quick update batch
+- template: pillowfight_htp
+  wait: true
+
+# swap hard failover
+- template: add_node
+  args: "{{.InActiveNode}}"
+- template: failover_node
+  args: "{{.ActiveDataNode 2}}"
+- template: hard_failover_node
+  args: "{{.ActiveDataNode 3}}"
+- template: rebalance
+  wait: true
+
+# Sleep for some time to allow some docs to be loaded to the collections
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "600"
+   wait: true
+
+# do multinode failover , failing only one node as we have 1 replica
+- template: autofailover1Node
+  args: "{{.ActiveDataNode 1}}"
+  wait: true
+
+# Sleep for some time to allow some docs to be loaded to the collections
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "600"
+   wait: true
+# quick update batch
+- template: pillowfight_htp
+  wait: true
+
+# ###############  Rebalance in an FTS node ################
+- template: rebalance_in
+  args: "{{.InActiveNode}}, fts"
+  wait: true
+
+# Sleep for 15 mins
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "900"
+  wait: true
+
+###############  Failover and addback ################
+- template: hard_failover_node
+  args: "{{.NthFTSNode 1}}"
+- template: readd_node
+  args: "{{.NthFTSNode 1}}"
+- template: recover_node
+  args: "{{.NthFTSNode 1}}, full"
+- template: rebalance
+  wait: true
+# Sleep for some more time after rebalance completes
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "900"
+  wait: true
+
+###############  Failover and rebalance out FTS node ################
+- template: hard_failover_node
+  args: "{{.NthFTSNode 1}}"
+- template: rebalance
+  wait: true
+
+# Sleep for some more time after rebalance completes
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "900"
+  wait: true
+
+- template: add_node
+  args: "{{.NthInActiveNode 0}}"
+- args: "{{.NthInActiveNode 1}}"
+- template: rebalance
+  wait: true
+
+# Sleep for some time to allow some docs to be loaded to the collections
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "600"
+   wait: true
+
+# undeploy eventing handlers
+- test: tests/eventing/CC/test_eventing_rebalance_integration.yml
+  section: undeploy_delete
+
+# analytics drop bucket , datasets and indexes
+- test: tests/analytics/cheshirecat/test_analytics_integration_scale3.yml
+  section: analytics_teardown
+
+############### Stop Catapult data laoding for Buckets 4-7, Collections CRUD and index creation on Buckets 8,9, transactions ###############
+-
+  client:
+    op: rm
+    container: collection_crud1
+-
+  client:
+    op: rm
+    container: collection_crud2
+-
+  client:
+    op: rm
+    container: catapult_bucket4_doc_ops2
+-
+  client:
+    op: rm
+    container: catapult_bucket5_doc_ops2
+-
+  client:
+    op: rm
+    container: catapult_bucket6_doc_ops2
+-
+  client:
+    op: rm
+    container: catapult_bucket7_doc_ops2
+-
+  client:
+    op: rm
+    container: catapult_bucket4_doc_ops1
+-
+  client:
+    op: rm
+    container: catapult_bucket5_doc_ops1
+-
+  client:
+    op: rm
+    container: catapult_bucket6_doc_ops1
+-
+  client:
+    op: rm
+    container: catapult_bucket7_doc_ops1
+-
+  client:
+    op: rm
+    container: txn
+-
+  client:
+    op: rm
+    container: cbo_bucket4
+-
+  client:
+    op: rm
+    container: cbo_bucket5
+-
+  client:
+    op: rm
+    container: cbo_bucket6
+-
+  client:
+    op: rm
+    container: cbo_bucket7
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "1200"
+   wait: true
+
+#============ XDCR item count check for buckets ============
+- image: sequoiatools/xdcrmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}}
+            -a validate -rn {{.Nodes | .Cluster 1 | net 0}} -ro {{.RestPort}} -ru {{.RestUsername}}
+            -rp {{.RestPassword}} -b {{.NthBucket 4}} -rb {{.Nodes | .Cluster 1 | bucket 1}}"
+  wait: true
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}}
+            -a validate -rn {{.Nodes | .Cluster 1 | net 0}} -ro {{.RestPort}} -ru {{.RestUsername}}
+            -rp {{.RestPassword}} -b {{.NthBucket 8}} -rb {{.Nodes | .Cluster 1 | bucket 2}}"
+  wait: true
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}}
+            -a validate -rn {{.Nodes | .Cluster 1 | net 0}} -ro {{.RestPort}} -ru {{.RestUsername}}
+            -rp {{.RestPassword}} -b {{.NthBucket 9}} -rb {{.Nodes | .Cluster 1 | bucket 3}}"
+  wait: true
+
+
+###############  GSI Item Count Check ################
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}} -a item_count_check --sample_size {{.Scale 10}}"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 5}} -a item_count_check --sample_size {{.Scale 10}}"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 6}} -a item_count_check --sample_size {{.Scale 10}}"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 7}} -a item_count_check --sample_size {{.Scale 10}}"
+  wait: true
+
+###############  Delete Statistics ################
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}}  -a delete_statistics"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 5}}  -a delete_statistics"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 6}}  -a delete_statistics"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 7}}  -a delete_statistics"
+  wait: true
+
+# Drop GSI indexes
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}} -a drop_all_indexes"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 5}} -a drop_all_indexes"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 6}} -a drop_all_indexes"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 7}} -a drop_all_indexes"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 8}} -a drop_all_indexes"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 9}} -a drop_all_indexes"
+  wait: true
+
+################ Check for item count #####################################
+- section_start: fts_indexes_item_count_check
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a item_count_check -vt 2400"
+  wait: true
+
+- section_end: fts_indexes_item_count_check
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+###############  Drop all Indexes ################
+- section_start: drop_all_indexes
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}} -a delete_all_indexes"
+  wait: true
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 5}} -a delete_all_indexes"
+  wait: true
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 6}} -a delete_all_indexes"
+  wait: true
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 7}} -a delete_all_indexes"
+  wait: true
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# Sleep for some time to allow DDL to complete in the background
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "1200"
+  wait: true
+
+# Drop all UDFs
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}} -a drop_udf"
+  wait: true
+
+- section_end: drop_all_indexes
+
+# Sleep for some time to allow DDL to complete in the background
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "600"
+   wait: true

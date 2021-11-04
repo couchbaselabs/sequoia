@@ -592,7 +592,7 @@ class IndexManager:
             for coll in cbo_collections_list:
                 try:
                     self.log.info("Running Update Statistics for {0}".format(coll))
-                    update_stats_query = "UPDATE STATISTICS FOR {0} INDEX ALL;".format(coll)
+                    update_stats_query = "UPDATE STATISTICS FOR {0} INDEX ALL WITH {{'update_statistics_timeout': 0}}  ;".format(coll)
                     status, results, queryResult = self._execute_query(update_stats_query)
                     sleep(2)
                 except Exception as e:

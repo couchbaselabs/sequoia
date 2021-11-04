@@ -106,6 +106,11 @@
    command: "300"
    wait: true
 
+###############  Auto failover for indexer node ################
+- template: autofailover1IndexNode
+  args: "{{.ActiveIndexNode 1}}"
+  wait: true
+
 ###############  Increase number of replicas for an index ################
 - image: sequoiatools/cbq
   command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='ALTER INDEX `{{.Bucket}}`.default_claims WITH {\"action\":\"replica_count\",\"num_replica\": 3}'"

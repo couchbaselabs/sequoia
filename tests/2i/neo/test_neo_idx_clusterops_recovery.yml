@@ -486,6 +486,11 @@
    command: "300"
    wait: true
 
+###############  Auto failover for indexer node ################
+- template: autofailover1IndexNode
+  args: "{{.ActiveIndexNode 1}}"
+  wait: true
+
 ############### Kill indexer ################
 -
   template: kill_process
@@ -553,7 +558,6 @@
    command: "300"
    wait: true
 
-
 ###############  Add back index node  ################
 - template: add_node
   args: "{{.NthInActiveNode 0}}, index"
@@ -565,6 +569,11 @@
    entrypoint: sleep
    command: "300"
    wait: true
+
+###############  Auto failover for indexer node ################
+- template: autofailover1IndexNode
+  args: "{{.ActiveIndexNode 1}}"
+  wait: true
 
 - section_end: change_indexer_topologies
 
