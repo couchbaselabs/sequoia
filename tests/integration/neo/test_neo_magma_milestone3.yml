@@ -62,7 +62,7 @@
   command: "-u {{.RestUsername}}:{{.RestPassword}} -X POST http://{{.Orchestrator}}:8091/_p/backup/api/v1/cluster/self/repository/active/my_repo -H Content-Type:application/json -d '{\"plan\": \"my_plan\", \"archive\": \"/data/archive\"}'"
   wait: true
 -
-  command: "-u {{.RestUsername}}:{{.RestPassword}} -X POST http://{{.Orchestrator}}:8091/_p/backup/api/v1/cluster/self/repository/active/my_repo_s3 -H Content-Type:application/json -d '{\"plan\": \"my_plan\", \"archive\": \"s3://backup-service-testing/longevity-testing\", \"cloud_staging_dir\": \"/data/s3\", \"cloud_endpoint\": null, \"cloud_region\": \"$CB_AWS_REGION\", \"cloud_credentials_id\": \"$CB_AWS_ACCESS_KEY_ID\", \"cloud_credentials_key\": \"$CB_AWS_SECRET_ACCESS_KEY\", \"cloud_force_path_style\": false}'"
+  command: "-u {{.RestUsername}}:{{.RestPassword}} -X POST http://{{.Orchestrator}}:8091/_p/backup/api/v1/cluster/self/repository/active/my_repo_s3 -H Content-Type:application/json -d \"{\"plan\": \"my_plan\", \"archive\": \"s3://backup-service-testing/longevity-testing\", \"cloud_staging_dir\": \"/data/s3\", \"cloud_endpoint\": null, \"cloud_region\": \"$CB_AWS_REGION\", \"cloud_credentials_id\": \"$CB_AWS_ACCESS_KEY_ID\", \"cloud_credentials_key\": \"$CB_AWS_SECRET_ACCESS_KEY\", \"cloud_force_path_style\": false}\""
   wait: true
 
 ### create (scale * 10) scopes and (scale * 80) collections in local cluster across 6 buckets as scope_1,scope_2 ... ######
