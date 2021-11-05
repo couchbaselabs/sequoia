@@ -12,7 +12,7 @@
 
 #============ setup xdcr replications ============
 -
-   image: sequoiatools/couchbase-cli
+   image: sequoiatools/couchbase-cli:6.6
    command:  "xdcr-setup -c {{.Orchestrator}}:{{.RestPort}} --create --xdcr-cluster-name remote
         --xdcr-hostname {{.Nodes | .Cluster 1 | net 0}}
         --xdcr-username {{.Nodes | .Cluster 1 | .Attr `rest_username`}}
@@ -28,7 +28,7 @@
 
 #============ swap hard failover ============
 -
-   image: sequoiatools/couchbase-cli
+   image: sequoiatools/couchbase-cli:6.6
    command: "server-add -c  {{.Orchestrator}}:{{.RestPort}}
        --server-add http://{{.NthDataNode 5}}:{{.RestPort}}
        -u  {{.RestUsername}} -p  {{.RestPassword}}
@@ -64,7 +64,7 @@
 
 #============ pause xdcr replications ============
 -
-   image: sequoiatools/couchbase-cli
+   image: sequoiatools/couchbase-cli:6.6
    command: "xdcr-replicate -c {{.Orchestrator}}:{{.RestPort}} --pause
                             -u {{.RestUsername}} -p {{.RestPassword}}
                             --xdcr-replicator={{(index (.AllLogs `ReplId` | json) 0).uuid }}/default/{{.Bucket}}"
@@ -83,7 +83,7 @@
 
 #============ swap add back ============
 -
-   image: sequoiatools/couchbase-cli
+   image: sequoiatools/couchbase-cli:6.6
    command: "server-add -c  {{.Orchestrator}}:{{.RestPort}}
        --server-add http://{{.NthDataNode 1}}:{{.RestPort}}
        -u  {{.RestUsername}} -p  {{.RestPassword}}
@@ -108,7 +108,7 @@
 
 #============ remote add ============
 -
-   image: sequoiatools/couchbase-cli
+   image: sequoiatools/couchbase-cli:6.6
    command: "server-add -c  {{.Nodes | .Cluster 1 | net 0}}:{{.RestPort}}
        --server-add http://{{.Nodes | .Cluster 1 | net 3}}:{{.RestPort}}
        -u  {{.RestUsername}} -p  {{.RestPassword}}
@@ -120,7 +120,7 @@
 
 #============ remote setup xdcr replications ============
 -
-   image: sequoiatools/couchbase-cli
+   image: sequoiatools/couchbase-cli:6.6
    requires:  "{{eq true .DoOnce}}"
    command:  "xdcr-setup -c {{.Nodes | .Cluster 1 | net 0}}:{{.RestPort}} --create --xdcr-cluster-name local
         --xdcr-hostname {{.Orchestrator}}
@@ -137,7 +137,7 @@
 
 #============ resume xdcr replications ============
 -
-   image: sequoiatools/couchbase-cli
+   image: sequoiatools/couchbase-cli:6.6
    command: "xdcr-replicate -c {{.Orchestrator}}:{{.RestPort}} --resume
                             -u {{.RestUsername}} -p {{.RestPassword}}
                             --xdcr-replicator={{(index (.AllLogs `ReplId` | json) 0).uuid }}/default/{{.Bucket}}"
@@ -158,7 +158,7 @@
 
 #============ delete xdcr replications ============
 -
-   image: sequoiatools/couchbase-cli
+   image: sequoiatools/couchbase-cli:6.6
    command: "xdcr-replicate -c {{.Orchestrator}}:{{.RestPort}} --delete
                             -u {{.RestUsername}} -p {{.RestPassword}}
                             --xdcr-replicator={{(index (.AllLogs `ReplId` | json) 0).uuid }}/default/{{.Bucket}}"
@@ -166,7 +166,7 @@
 
 #============ delete xdcr config ============
 -
-   image: sequoiatools/couchbase-cli
+   image: sequoiatools/couchbase-cli:6.6
    command:  "xdcr-setup -c {{.Orchestrator}}:{{.RestPort}} --delete --xdcr-cluster-name remote
                             -u {{.RestUsername}} -p {{.RestPassword}}"
    wait: true
@@ -174,7 +174,7 @@
 #============ hard failover remote node when remote finished rebalance-in ============
 -
   before: "{{.Status `RemoteRebalance` | eq `exited`}}"
-  image: sequoiatools/couchbase-cli
+  image: sequoiatools/couchbase-cli:6.6
   command: "failover -c {{.Nodes | .Cluster 1 | net 0}}:{{.RestPort}}
        --server-failover http://{{.Nodes | .Cluster 1 | net 3}}:{{.RestPort}}
        -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
