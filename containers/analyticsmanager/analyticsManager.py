@@ -8,6 +8,7 @@ import logging
 import time
 import httplib2
 import json
+import urllib
 from optparse import OptionParser
 from datetime import datetime
 import copy
@@ -93,6 +94,9 @@ class AnalyticsOperations():
         parser.add_option("--dv_cnt", dest="dataverse_count", type="int", default=1,
                           help="no of dataverses to be created, if count is 1 then no dataverse "
                                "will be created and Default dataverse will be used")
+        parser.add_option("--replica_cnt", dest="replica_count", type="int", default=0,
+                          help="replica will be created, if count 0 then no replication"
+                               "will be created and Default replication will be used")
         parser.add_option("--ds_cnt", dest="dataset_count", type="int", default=1,
                           help="no of dataset to be created, default=1")
         parser.add_option("--ds_dist", dest="dataset_distribution", choices=["uniform", "random"],
@@ -212,12 +216,28 @@ class AnalyticsOperations():
         elif self.options.operations == "create_cbas_infra":
             if self.options.remote_link_count > 0:
                 self.create_cbas_infra(True)
+                is_replica_set, content, response = self.set_replica()
+                if is_replica_set and content['numReplicas'] == self.options.replica_count:
+                if is_replica_set and content['numReplicas'] == self.options.replica_count:
+                    self.log.info("Replica is set")
+                else:
+                    self.log.info("Replica is not set")
             else:
                 self.create_cbas_infra(False)
+                is_replica_set, content, response = self.set_replica()
+                if is_replica_set and content['numReplicas'] == self.options.replica_count:
+                    self.log.info("Replica is set")
+                else:
+                    self.log.info("Replica is not set")
         elif self.options.operations == "drop_cbas_infra":
             self.drop_cbas_infra()
         elif self.options.operations == "recreate_cbas_infra":
             self.recreate_cbas_infra()
+            is_replica_set, content, response = self.set_replica()
+            if is_replica_set and content['numReplicas'] == self.options.replica_count:
+                self.log.info("Replica is set")
+            else:
+                self.log.info("Replica is not set")
 
     def set_max_counters(self):
         def inner_func(func_name):
@@ -286,6 +306,26 @@ class AnalyticsOperations():
                     else:
                         full_name.append(_)
         return '.'.join(full_name)
+
+    def set_replica(self):
+        headers = {'Content-Type': 'application/x-www-form-urlencoded',
+                   'Connection': 'close',
+                   'Accept': '*/*'}
+        url = "http://" + self.options.host + ":8091/settings/analytics"
+        http = httplib2.Http(timeout=self.options.api_timeout)
+        http.add_credentials(self.options.username, self.options.password)
+        params = {"numReplicas":  self.options.replica_count}
+        params = urllib.urlencode(params)
+        try:
+            response, content = http.request(uri=url, method="POST", headers=headers, body=params)
+            if response['status'] in ['200', '201', '202']:
+                return True, json.loads(content), response
+            else:
+                return False, content, response
+        except Exception as err:
+            self.log.error(str(err))
+            time.sleep(10)
+            return False, "", ""
 
     def create_dataverse(self, dataverse):
         self.log.info("Creating dataverse -- {0}".format(dataverse))

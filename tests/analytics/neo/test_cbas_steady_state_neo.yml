@@ -1,0 +1,96 @@
+############### create 3 * Scale scopes and 10 * Scale collections across n buckets as scope_1,scope_2 ... ###############
+- section_start: create_KV_infra
+-
+  image: sequoiatools/collections:1.0
+  command: "-i {{.Orchestrator}}:8091 -b {{.Bucket}} -o create_multi_scope_collection -s scope_ -c coll_
+  --scope_count={{.Scale 3}} --collection_count={{.Scale 10}} --collection_distribution=random"
+  wait: true
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 1}} -o create_multi_scope_collection -s scope_ -c coll_
+  --scope_count={{.Scale 3}} --collection_count={{.Scale 10}} --collection_distribution=random"
+  wait: true
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 2}} -o create_multi_scope_collection -s scope_ -c coll_
+  --scope_count={{.Scale 3}} --collection_count={{.Scale 10}} --collection_distribution=random"
+  wait: true
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 3}} -o create_multi_scope_collection -s scope_ -c coll_
+  --scope_count={{.Scale 3}} --collection_count={{.Scale 10}} --collection_distribution=random"
+  wait: true
+
+############### Sleep for some time to allow collections manifest to sync ###############
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "300"
+   wait: true
+- section_end: create_KV_infra
+
+############### Create CBAS infra ###############
+- section_start: create_CBAS_infra
+-
+  image: sequoiatools/analyticsmanager:1.0
+  command: "-i {{.ActiveAnalyticsNode 0 | noport}} -b {{.Bucket}},{{.NthBucket 1}},{{.NthBucket 2}},{{.NthBucket 3}}
+    -o create_cbas_infra --dv_cnt {{.Scale 3}} --ds_cnt {{.Scale 20}} --idx_cnt {{.Scale 6}} --data_src catapult --replica_cnt 3
+    --syn_cnt {{.Scale 20}} -w false --ingestion_timeout 3600 --ds_without_where 5 --api_timeout 3600"
+  wait: true
+- section_end: create_CBAS_infra
+
+###############  Failover and addback ################
+- template: hard_failover_node
+  args: "{{.ActiveAnalyticsNode 1}}"
+- template: recover_node
+  args: "{{.ActiveAnalyticsNode 1}}, full"
+- template: rebalance
+  wait: true
+
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "300"
+   wait: true
+
+############### data loading ################
+-
+  image: sequoiatools/catapult
+  command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -n {{.Scale 50000}} -pc 100 -pu 25 -pd 25
+      -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 60 -fu price,free_parking -ac True"
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 1}} -n {{.Scale 50000}} -pc 100 -pu 25
+    -pd 25 -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 60 -fu price,free_parking -ac True"
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 2}} -n {{.Scale 50000}} -pc 100 -pu 25
+    -pd 25 -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 60 -fu price,free_parking -ac True"
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 3}} -n {{.Scale 50000}} -pc 100 -pu 25
+    -pd 25 -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 60 -fu price,free_parking -ac True"
+
+# Sleep for some time to allow data ingestion to start before running the queries
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "60"
+   wait: true
+
+# ###############  run queries ################
+- section_start: run_cbas_query
+-
+  image: sequoiatools/queryapp
+  command: "-J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.7.21/* /AnalyticsQueryApp/Query/load_queries.py
+  --server_ip {{.ActiveAnalyticsNode 0}} --port {{.AnalyticsPort}} --duration {{.Scale 3600}} --bucket {{.Bucket}}
+  --querycount 100 -B [{{.Bucket}},{{.NthBucket 1}},{{.NthBucket 2}},{{.NthBucket 3}}] -a True
+  --analytics_queries catapult_queries --query_timeout 3600"
+  wait: true
+- section_end: run_cbas_query
+
+############### Drop CBAS infra ###############
+- section_start: drop_CBAS_infra
+-
+  image: sequoiatools/analyticsmanager:1.0
+  command: "-i {{.ActiveAnalyticsNode 0 | noport}} -b {{.Bucket}},{{.NthBucket 1}},{{.NthBucket 2}},{{.NthBucket 3}}
+  -o drop_cbas_infra --api_timeout 3600"
+  wait: true
+- section_end: drop_CBAS_infra
+
+# Sleep for some time to allow DDL to complete in the background
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+#   command: "120"
+   command: "600"
+   wait: true
