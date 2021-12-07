@@ -30,7 +30,7 @@
 - image: sequoiatools/couchbase-cli
   command: "user-manage -c {{.Orchestrator}} -u Administrator -p password --rbac-username bucketop --rbac-password password --roles eventing_manage_functions[bucket_op:scope_0],data_dcp_reader[bucket_op],data_reader[metadata],data_writer[metadata],data_writer[bucket_op] --auth-domain local --set"
 - image: sequoiatools/couchbase-cli
-  command: "user-manage -c {{.Orchestrator}} -u Administrator -p password --rbac-username timers --rbac-password password --roles eventing_manage_functions[timer_op:scope_0],data_dcp_reader[timer_op],data_reader[metadata],data_writer[metadata],data_writer[timer_op] --auth-domain local --set"
+  command: "user-manage -c {{.Orchestrator}} -u Administrator -p password --rbac-username timers --rbac-password password --roles eventing_manage_functions[timer_op],data_dcp_reader[timer_op],data_reader[metadata],data_writer[metadata],data_writer[timer_op] --auth-domain local --set"
 - image: sequoiatools/couchbase-cli
   command: "user-manage -c {{.Orchestrator}} -u Administrator -p password --rbac-username curl --rbac-password password --roles eventing_manage_functions[curl_op:scope_0],data_dcp_reader[curl_op],data_reader[metadata],data_writer[metadata],data_writer[curl_op] --auth-domain local --set"
 - image: sequoiatools/couchbase-cli
