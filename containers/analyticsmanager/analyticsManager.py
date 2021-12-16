@@ -205,6 +205,13 @@ class AnalyticsOperations():
         fh.setFormatter(formatter)
         self.log.addHandler(fh)
 
+        if 0 <= self.options.replica_count <= 3:
+            is_replica_set, content, response = self.set_replica()
+            if is_replica_set and content['numReplicas'] == self.options.replica_count:
+                self.log.info("Replica is set")
+            else:
+                self.log.info("Replica is not set")
+
         if self.options.operations != "recreate_cbas_infra":
             self.set_max_counters()
 
@@ -216,28 +223,12 @@ class AnalyticsOperations():
         elif self.options.operations == "create_cbas_infra":
             if self.options.remote_link_count > 0:
                 self.create_cbas_infra(True)
-                is_replica_set, content, response = self.set_replica()
-                if is_replica_set and content['numReplicas'] == self.options.replica_count:
-                if is_replica_set and content['numReplicas'] == self.options.replica_count:
-                    self.log.info("Replica is set")
-                else:
-                    self.log.info("Replica is not set")
             else:
                 self.create_cbas_infra(False)
-                is_replica_set, content, response = self.set_replica()
-                if is_replica_set and content['numReplicas'] == self.options.replica_count:
-                    self.log.info("Replica is set")
-                else:
-                    self.log.info("Replica is not set")
         elif self.options.operations == "drop_cbas_infra":
             self.drop_cbas_infra()
         elif self.options.operations == "recreate_cbas_infra":
             self.recreate_cbas_infra()
-            is_replica_set, content, response = self.set_replica()
-            if is_replica_set and content['numReplicas'] == self.options.replica_count:
-                self.log.info("Replica is set")
-            else:
-                self.log.info("Replica is not set")
 
     def set_max_counters(self):
         def inner_func(func_name):
@@ -314,18 +305,48 @@ class AnalyticsOperations():
         url = "http://" + self.options.host + ":8091/settings/analytics"
         http = httplib2.Http(timeout=self.options.api_timeout)
         http.add_credentials(self.options.username, self.options.password)
-        params = {"numReplicas":  self.options.replica_count}
-        params = urllib.urlencode(params)
-        try:
-            response, content = http.request(uri=url, method="POST", headers=headers, body=params)
-            if response['status'] in ['200', '201', '202']:
-                return True, json.loads(content), response
-            else:
-                return False, content, response
-        except Exception as err:
-            self.log.error(str(err))
-            time.sleep(10)
+        self.log.info("Fetching the analytics replica number")
+        retry = 0
+        set_replica_num = False
+        while retry < 3:
+            try:
+                response, content = http.request(uri=url, method="GET",
+                                                 headers=headers)
+                if response['status'] in ['200', '201', '202']:
+                    if json.loads(content)["numReplicas"] != \
+                            self.options.replica_count:
+                        set_replica_num = True
+                        break
+                retry += 1
+            except Exception as err:
+                self.log.error(str(err))
+                time.sleep(10)
+                retry += 1
+
+        if set_replica_num:
+            self.log.info("Setting Analytics replica number to {0}".format(
+                self.options.replica_count))
+            params = {"numReplicas":  self.options.replica_count}
+            params = urllib.urlencode(params)
+            retry = 0
+            while retry < 3:
+                try:
+                    response, content = http.request(
+                        uri=url, method="POST", headers=headers, body=params)
+                    if response['status'] in ['200', '201', '202']:
+                        self.log.info(
+                            "Setting Analytics replica number to {0} "
+                            "successfull".format(self.options.replica_count))
+                        return True, json.loads(content), response
+                    retry += 1
+                except Exception as err:
+                    self.log.error(str(err))
+                    time.sleep(10)
+                    retry += 1
             return False, "", ""
+        else:
+            return True, {"numReplicas":  self.options.replica_count}, ""
+
 
     def create_dataverse(self, dataverse):
         self.log.info("Creating dataverse -- {0}".format(dataverse))

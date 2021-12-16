@@ -1,3 +1,5 @@
+- include: tests/templates/rebalance.yml
+
 ############### create 3 * Scale scopes and 10 * Scale collections across n buckets as scope_1,scope_2 ... ###############
 - section_start: create_KV_infra
 -
@@ -32,21 +34,9 @@
     --syn_cnt {{.Scale 20}} -w false --ingestion_timeout 3600 --ds_without_where 5 --api_timeout 3600"
   wait: true
 - section_end: create_CBAS_infra
-
-###############  Failover and addback ################
-- template: hard_failover_node
-  args: "{{.ActiveAnalyticsNode 1}}"
-- template: recover_node
-  args: "{{.ActiveAnalyticsNode 1}}, full"
+# Do a no-op rebalance if setting analytics replica number
 - template: rebalance
   wait: true
-
-# Sleep for some more time after rebalance completes
--
-   image: sequoiatools/cmd
-   entrypoint: sleep
-   command: "300"
-   wait: true
 
 ############### data loading ################
 -
@@ -67,6 +57,16 @@
    command: "60"
    wait: true
 
+###############  Failover CBAS node to activate replicas and sleep for 10 mins ################
+- template: hard_failover_node
+  args: "{{.NthAnalyticsNode 1}}"
+
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "300"
+   wait: true
+
 # ###############  run queries ################
 - section_start: run_cbas_query
 -
@@ -77,6 +77,19 @@
   --analytics_queries catapult_queries --query_timeout 3600"
   wait: true
 - section_end: run_cbas_query
+
+- template: recover_node
+  args: "{{.NthAnalyticsNode 1}}, full"
+
+- template: rebalance
+  wait: true
+
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "300"
+   wait: true
 
 ############### Drop CBAS infra ###############
 - section_start: drop_CBAS_infra
@@ -91,6 +104,5 @@
 -
    image: sequoiatools/cmd
    entrypoint: sleep
-#   command: "120"
    command: "600"
    wait: true
