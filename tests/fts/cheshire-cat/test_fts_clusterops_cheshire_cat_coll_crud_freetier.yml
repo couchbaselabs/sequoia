@@ -134,44 +134,6 @@
   command: "900"
   wait: true
 
-###############  Add back data node ################
-- template: rebalance_in
-  args: "{{.InActiveNode}}, (data,index,query,fts)"
-  wait: true
-
-# Sleep for some more time after rebalance completes
--
-  image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "300"
-  wait: true
-
-
-# ############### Kill CBFT process on an FTS node ################
--
-  template: kill_process
-  args: "{{.Nodes | .Service `fts` | net 2}}, cbft"
-
-
-# Sleep for 15 mins
--
-  image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "900"
-  wait: true
-
-# Rebalance out an FTS node
-- template: rebalance_out
-  args: "{{.Nodes | .Service `fts` | net 1}}"
-  wait: true
-
-# Sleep for 15 mins
--
-  image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "900"
-  wait: true
-
 # Swap Rebalance an FTS node
 - template: rebalance_swap
   args: "{{.InActiveNode}}, {{.Nodes | .Service `fts` | net 1}}, (data,index,query,fts)"
@@ -218,31 +180,6 @@
   image: sequoiatools/cmd
   entrypoint: sleep
   command: "900"
-  wait: true
-
-# ###############  Rebalance in an FTS node ################
-- template: rebalance_in
-  args: "{{.InActiveNode}}, (data,index,query,fts)"
-  wait: true
-
-
-# Sleep for 15 mins
--
-  image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "900"
-  wait: true
-
-###############  Failover and rebalance out FTS node ################
-- template: hard_failover_node
-  args: "{{.Nodes | .Service `fts` | net 2}}"
-- template: rebalance
-  wait: true
-# Sleep for some more time after rebalance completes
--
-  image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "300"
   wait: true
 
 ############### Kill memcached ################
