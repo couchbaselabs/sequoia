@@ -13,11 +13,8 @@ from http.client import RemoteDisconnected, IncompleteRead
 from couchbase.cluster import Cluster, ClusterOptions, QueryOptions, ClusterTimeoutOptions
 from couchbase.exceptions import QueryException, QueryIndexAlreadyExistsException, TimeoutException
 from couchbase_core.cluster import PasswordAuthenticator
-from couchbase_core.bucketmanager import BucketManager
 from couchbase.management.collections import *
 from couchbase.management.admin import *
-from couchbase.search import QueryStringQuery, SearchQuery, SearchOptions, PrefixQuery, HighlightStyle, SortField, \
-    SortScore, TermFacet
 import random
 import argparse
 import logging
@@ -233,6 +230,7 @@ class FTSIndexManager:
         parser.add_argument("--print_interval", type=int,
                             help="Interval to print query result summary. Default is 10 mins",
                             default="600")
+        parser.add_argument("-tls", "--secure", type=bool, help="for secure pass true", default=None)
         parser.add_argument("--interval", type=int, default=60,
                             help="Interval between 2 create index calls when running in a loop")
         parser.add_argument("--timeout", type=int, default=0,
@@ -262,6 +260,7 @@ class FTSIndexManager:
         self.duration = args.duration
         self.print_interval = args.print_interval
         self.interval = args.interval
+        self.secure = args.secure
         self.timeout = args.timeout
         self.index_partition_map = args.index_partition_map
         self.scale = args.scale
@@ -270,6 +269,14 @@ class FTSIndexManager:
         self.validation_timeout = args.validation_timeout
 
         self.idx_def_templates = HOTEL_DS_FIELDS
+        if self.secure:
+            self.fts_port = 18094
+            self.node_port = 18091
+            self.protocol = "https"
+        else:
+            self.fts_port = 8094
+            self.node_port = 8091
+            self.protocol = "http"
 
         # If there are more datasets supported, this can be expanded.
         if self.dataset == "hotel":
@@ -282,11 +289,11 @@ class FTSIndexManager:
         count = 0
         while True:
             try:
-                self.cb_admin = Admin(self.username, self.password, self.node_addr, self.node_port)
-                self.cb_coll_mgr = CollectionManager(self.cb_admin, self.bucket_name)
+                #self.cb_admin = Admin(self.username, self.password, self.node_addr, self.node_port)
+                #self.cb_coll_mgr = CollectionManager(self.cb_admin, self.bucket_name)
                 timeout_options = ClusterTimeoutOptions(kv_timeout=timedelta(seconds=120), query_timeout=timedelta(seconds=10))
                 options = ClusterOptions(PasswordAuthenticator(self.username, self.password), timeout_options=timeout_options)
-                self.cluster = Cluster('couchbase://{0}'.format(self.node_addr),
+                self.cluster = Cluster('couchbase://{0}?ssl=no_verify'.format(self.node_addr),
                                        options)
                 self.cb = self.cluster.bucket(self.bucket_name)
                 break
@@ -410,7 +417,7 @@ class FTSIndexManager:
 
     def log_active_queries(self, index_name):
         try:
-            status, content, response = self.http_request(self.node_addr, FTS_PORT,
+            status, content, response = self.http_request(self.node_addr, self.fts_port,
                                                           "/api/query/index/{0}".format(index_name))
             self.log.info("status {0}, content {1}".format(status, content))
         except Exception as e:
@@ -599,55 +606,58 @@ class FTSIndexManager:
             end_time = time.time() + timeout
         count = 0
         while True:
+            try:
 
-            coll_list = self.get_all_collections()
-            multi_coll_scopes = self.get_all_scopes_with_multiple_collections()
+                coll_list = self.get_all_collections()
+                multi_coll_scopes = self.get_all_scopes_with_multiple_collections()
 
-            coll_list = list(filter(lambda a: "_default" not in a, coll_list))
-            multi_coll_scopes = list(filter(lambda a: "_default" not in a, multi_coll_scopes))
+                coll_list = list(filter(lambda a: "_default" not in a, coll_list))
+                multi_coll_scopes = list(filter(lambda a: "_default" not in a, multi_coll_scopes))
 
-            collections = []
-            random.seed(datetime.now())
-            if len(multi_coll_scopes) > 0:
-                # Select if to create single collection index or multi-collection (25% chance for multi collection idx)
-                index_type = random.choice(["single", "single", "single", "multi"])
-            else:
-                index_type = "single"
+                collections = []
+                random.seed(datetime.now())
+                if len(multi_coll_scopes) > 0:
+                    # Select if to create single collection index or multi-collection (25% chance for multi collection idx)
+                    index_type = random.choice(["single", "single", "single", "multi"])
+                else:
+                    index_type = "single"
 
-            if index_type == "single":
-                collections.append(random.choice(coll_list))
-            else:
-                # Select a scope with multiple collections first
-                scope_obj = random.choice(multi_coll_scopes)
-                scope_name = list(scope_obj.keys())[0]
-                num_coll = len(scope_obj[scope_name])
-                # Now randomly select a subset of random number collections from that scope
-                collections = random.sample(population=scope_obj[scope_name], k=random.randint(1, num_coll))
+                if index_type == "single":
+                    collections.append(random.choice(coll_list))
+                else:
+                    # Select a scope with multiple collections first
+                    scope_obj = random.choice(multi_coll_scopes)
+                    scope_name = list(scope_obj.keys())[0]
+                    num_coll = len(scope_obj[scope_name])
+                    # Now randomly select a subset of random number collections from that scope
+                    collections = random.sample(population=scope_obj[scope_name], k=random.randint(1, num_coll))
 
-            self.log.info("===== Creating {1} FTS index on {0} =====".format(collections, index_type))
-            status, content, response, idx_name = self.create_fts_index_on_collections(collections, count)
+                self.log.info("===== Creating {1} FTS index on {0} =====".format(collections, index_type))
+                status, content, response, idx_name = self.create_fts_index_on_collections(collections, count)
 
-            if not status:
-                self.log.info("Content = {0} \nResponse = {1}".format(content, response))
-                self.log.info("Index creation on {0} did not succeed. Pls check logs.".format(collections))
-                #command = f'yum install tcpdump -y;timeout 600 tcpdump -W 1 -G 300 -w tcp_dump_file_{idx_name}.pcap -s 0 port 8094'
-                #self.execute_command(command, self.node_addr, "root", "couchbase")
-            else:
-                self.log.info(f'Index creation on {idx_name} succeeded. Content = {content}, Response = {response}')
-
-            time.sleep(240)
-            cur_indexes = self.get_fts_index_list()
-            if idx_name in cur_indexes:
-                self.log.info(f'Deleting index {idx_name}')
-                uri = "/api/index/" + idx_name
-                status, content, response = self.http_request(self.node_addr, FTS_PORT, uri, method="DELETE")
                 if not status:
-                    self.log.info("Status : {0} \nResponse : {1} \nContent : {2}".format(status, response, content))
-                    self.log.info("Index {0} not deleted".format(idx_name))
+                    self.log.info("Content = {0} \nResponse = {1}".format(content, response))
+                    self.log.info("Index creation on {0} did not succeed. Pls check logs.".format(collections))
+                    #command = f'yum install tcpdump -y;timeout 600 tcpdump -W 1 -G 300 -w tcp_dump_file_{idx_name}.pcap -s 0 port 8094'
+                    #self.execute_command(command, self.node_addr, "root", "couchbase")
+                else:
+                    self.log.info(f'Index creation on {idx_name} succeeded. Content = {content}, Response = {response}')
 
-            # Exit if timed out
-            if timeout > 0 and time.time() > end_time:
-                break
+                time.sleep(240)
+                cur_indexes = self.get_fts_index_list()
+                if idx_name in cur_indexes:
+                    self.log.info(f'Deleting index {idx_name}')
+                    uri = "/api/index/" + idx_name
+                    status, content, response = self.http_request(self.node_addr, self.fts_port, uri, method="DELETE")
+                    if not status:
+                        self.log.info("Status : {0} \nResponse : {1} \nContent : {2}".format(status, response, content))
+                        self.log.info("Index {0} not deleted".format(idx_name))
+
+                # Exit if timed out
+                if timeout > 0 and time.time() > end_time:
+                    break
+            except Exception as e:
+                self.log.info(str(e))
             count += 1
 
             # Wait for the interval before doing the next CRUD operation
@@ -675,7 +685,7 @@ class FTSIndexManager:
             if idx_name in cur_indexes:
                 self.log.info(f'Deleting index {idx_name}')
                 uri = "/api/index/" + idx_name
-                status, content, response = self.http_request(self.node_addr, FTS_PORT, uri, method="DELETE")
+                status, content, response = self.http_request(self.node_addr, self.fts_port, uri, method="DELETE")
                 if not status:
                     self.log.info("Status : {0} \nResponse : {1} \nContent : {2}".format(status, response, content))
                     self.log.info("Index {0} not deleted".format(idx_name))
@@ -791,6 +801,7 @@ class FTSIndexManager:
         index_def_dict["name"] = idx_name
         index_def_dict["sourceType"] = "gocbcore"
         index_def_dict["sourceName"] = self.bucket_name
+        index_def_dict["sourceParams"] = {}
         index_def_dict["planParams"] = {}
         index_def_dict["planParams"]["maxPartitionsPerPIndex"] = 512
         index_def_dict["planParams"]["indexPartitions"] = num_partitions
@@ -808,7 +819,7 @@ class FTSIndexManager:
 
         # Index mapping common properties
         index_def_dict["params"]["mapping"] = {}
-        index_def_dict["params"]["mapping"]["default_analyzer"] = "keyword"
+        #index_def_dict["params"]["mapping"]["default_analyzer"] = "keyword"
         index_def_dict["params"]["mapping"]["default_datetime_parser"] = "dateTimeOptional"
         index_def_dict["params"]["mapping"]["default_field"] = "_all"
         index_def_dict["params"]["mapping"]["default_mapping"] = {}
@@ -904,7 +915,7 @@ class FTSIndexManager:
             if collection not in all_collections:
                 return False, "Seems like collections did not exist. So did not try to create index", "None"
 
-        status, content, response = self.http_request(self.node_addr, FTS_PORT, "/api/index/{0}".format(idx_name),
+        status, content, response = self.http_request(self.node_addr, self.fts_port, "/api/index/{0}".format(idx_name),
                                                       method="PUT", body=index_definition)
 
         return status, content, response, idx_name
@@ -1052,7 +1063,7 @@ class FTSIndexManager:
         # Create FTS index via REST
         index_definition = json.dumps(index_def_dict)
 
-        status, content, response = self.http_request(self.node_addr, FTS_PORT, "/api/index/{0}".format(idx_name),
+        status, content, response = self.http_request(self.node_addr, self.fts_port, "/api/index/{0}".format(idx_name),
                                                       method="PUT", body=index_definition)
 
         return status, content, response, idx_name
@@ -1063,7 +1074,7 @@ class FTSIndexManager:
 
     def get_fts_index_list(self, bucket=None):
         index_names = []
-        status, content, response = self.http_request(self.node_addr, FTS_PORT, "/api/index")
+        status, content, response = self.http_request(self.node_addr, self.fts_port, "/api/index")
         if status:
             try:
                 index_names = list(content["indexDefs"]["indexDefs"].keys())
@@ -1085,7 +1096,7 @@ class FTSIndexManager:
         count = 0
         content = ""
         try:
-            status, content, response = self.http_request(self.node_addr, FTS_PORT, "/api/index/{0}/count".format(name))
+            status, content, response = self.http_request(self.node_addr, self.fts_port, "/api/index/{0}/count".format(name))
             count = content['count']
         except TypeError as err:
             self.log.info(f'error: {err} while retrieving count for index {name}, content : {content}')
@@ -1093,7 +1104,7 @@ class FTSIndexManager:
 
     def get_fts_index_collections_count(self, name):
         """ get number of docs indexed"""
-        status, content, response = self.http_request(self.node_addr, FTS_PORT, "/api/index/{0}".format(name))
+        status, content, response = self.http_request(self.node_addr, self.fts_port, "/api/index/{0}".format(name))
         types = content["indexDef"]["params"]["mapping"]["types"]
         bucket_name = content["indexDef"]["sourceName"]
         collection_list = list(types.keys())
@@ -1177,7 +1188,7 @@ class FTSIndexManager:
             if "bucket_" + self.bucket_name + "_idx" in index:
                 self.log.info(f'Deleting index {index}')
                 uri = "/api/index/" + index
-                status, content, response = self.http_request(self.node_addr, FTS_PORT, uri, method="DELETE")
+                status, content, response = self.http_request(self.node_addr, self.fts_port, uri, method="DELETE")
                 if not status:
                     self.log.info("Status : {0} \nResponse : {1} \nContent : {2}".format(status, response, content))
                     self.log.info("Index {0} not deleted. Trying again".format(index))
@@ -1429,7 +1440,7 @@ class FTSIndexManager:
         # Randomize FTS host on which the query has to be run for load distribution
         fts_node_list = self.find_nodes_with_service(self.get_services_map(), "fts")
         query_host = random.choice(fts_node_list)
-        status, content, response = self.http_request(query_host, FTS_PORT, uri, method="POST", body=json.dumps(body))
+        status, content, response = self.http_request(query_host, self.fts_port, uri, method="POST", body=json.dumps(body))
 
         return status, content, response
 
@@ -1439,7 +1450,7 @@ class FTSIndexManager:
 
     def run_flex_query(self, index_name, query):
         index_hint = "USE INDEX (USING FTS, USING GSI)"
-        status, content, response = self.http_request(self.node_addr, FTS_PORT, "/api/index/{0}".format(index_name))
+        status, content, response = self.http_request(self.node_addr, self.fts_port, "/api/index/{0}".format(index_name))
         types = content["indexDef"]["params"]["mapping"]["types"]
         bucket_name = content["indexDef"]["sourceName"]
         collection_list = list(types.keys())
@@ -1527,9 +1538,10 @@ class FTSIndexManager:
                    'Accept': '*/*',
                    'Cache-Control': 'no-cache'}
 
-        url = "http://" + host + ":" + str(port) + uri
-        http = httplib2.Http(timeout=600)
+        url = self.protocol+"://" + host + ":" + str(port) + uri
+        http = httplib2.Http(timeout=600, disable_ssl_certificate_validation=True)
         http.add_credentials(self.username, self.password)
+        print(body)
         try:
             response, content = http.request(uri=url, method=method, headers=headers, body=body)
 
@@ -1558,12 +1570,12 @@ class FTSIndexManager:
     """
 
     def get_services_map(self):
-        cluster_url = "http://" + self.node_addr + ":" + self.node_port + "/pools/default"
+        cluster_url = self.protocol + "://" + self.node_addr + ":" + str(self.node_port) + "/pools/default"
         node_map = []
 
         # Get map of nodes in the cluster
         response = requests.get(cluster_url, auth=(
-            self.username, self.password), verify=True, )
+            self.username, self.password), verify=False, )
 
         if (response.ok):
             response = json.loads(response.text)
