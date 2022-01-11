@@ -5,11 +5,101 @@ users:
       password: password
       roles: admin
       auth_domain: local
+  -
+      name: bucket1
+      password: password
+      roles: admin
+      auth_domain: local
+  -
+      name: bucket2
+      password: password
+      roles: admin
+      auth_domain: local
+  -
+      name: bucket3
+      password: password
+      roles: admin
+      auth_domain: local
+  -
+      name: bucket4
+      password: password
+      roles: admin
+      auth_domain: local
+  -
+      name: bucket5
+      password: password
+      roles: admin
+      auth_domain: local
+  -
+      name: bucket6
+      password: password
+      roles: admin
+      auth_domain: local
+  -
+      name: bucket7
+      password: password
+      roles: admin
+      auth_domain: local
+  -
+      name: bucket8
+      password: password
+      roles: admin
+      auth_domain: local
+  -
+      name: bucket9
+      password: password
+      roles: admin
+      auth_domain: local
+
 buckets:
   -
       name: default
-      ram: 22%
-      durability: majority
+      ram: 8%
+      eviction: fullEviction
+      bucketscopes: scope1, scope2
+  -
+      name: bucket1
+      ram: 8%
+      eviction: fullEviction
+      bucketscopes: scope1, scope2
+  -
+      name: bucket2
+      ram: 8%
+      eviction: fullEviction
+      bucketscopes: scope1, scope2
+  -
+      name: bucket3
+      ram: 8%
+      eviction: fullEviction
+      bucketscopes: scope1, scope2
+  -
+      name: bucket4
+      ram: 8%
+      eviction: fullEviction
+      bucketscopes: scope1, scope2
+  -
+      name: bucket5
+      ram: 8%
+      eviction: fullEviction
+      bucketscopes: scope1, scope2
+  -
+      name: bucket6
+      ram: 8%
+      eviction: fullEviction
+      bucketscopes: scope1, scope2
+  -
+      name: bucket7
+      ram: 8%
+      eviction: fullEviction
+      bucketscopes: scope1, scope2
+  -
+      name: bucket8
+      ram: 8%
+      eviction: fullEviction
+      bucketscopes: scope1, scope2
+  -
+      name: bucket9
+      ram: 8%
       eviction: fullEviction
       bucketscopes: scope1, scope2
 
@@ -32,5 +122,5 @@ servers: # each server tag represents a cluster
       rest_password: password
       data_path: "/data"
       init_nodes: 6
-      buckets: default
-      users: default
+      buckets: default,bucket1,bucket2,bucket3,bucket4,bucket5,bucket6,bucket7,bucket8,bucket9
+      users: default,bucket1,bucket2,bucket3,bucket4,bucket5,bucket6,bucket7,bucket8,bucket9
