@@ -444,7 +444,7 @@
 
 # do multinode failover , failover one kv, 1 index and 1 n1ql node
 - template: autofailover3Nodes
-  args: "{{.ActiveDataNode 1}},{{.ActiveIndexNode 0}},{{.ActiveQueryNode 0}}"
+  args: "{{.ActiveDataNode 1}},{{.ActiveIndexNode 0}},{{.ActiveQueryNode 0}},data,index,query"
   wait: true
 
 # Sleep for some time to allow some docs to be loaded to the collections

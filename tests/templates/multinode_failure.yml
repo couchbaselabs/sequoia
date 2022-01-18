@@ -125,9 +125,9 @@
     wait: true
 
   - template: add_node
-    args: "$0"
-  - args: "$1"
-  - args: "$2"
+    args: "$0, $3"
+  - args: "$1, $4"
+  - args: "$2, $5"
   - template: rebalance
     wait: true
 

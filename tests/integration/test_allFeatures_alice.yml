@@ -199,7 +199,7 @@
 
 # do multinode failover
 - template: autofailover3Nodes
-  args: "{{.ActiveDataNode 1}},{{.ActiveDataNode 2}},{{.ActiveDataNode 3}}"
+  args: "{{.ActiveDataNode 1}},{{.ActiveDataNode 2}},{{.ActiveDataNode 3}},data,data,data"
   wait: true
 
 # quick update batch
