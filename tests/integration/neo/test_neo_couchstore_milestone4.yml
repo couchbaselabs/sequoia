@@ -117,28 +117,36 @@
         --xdcr-cluster-name remote
         --xdcr-from-bucket {{.Bucket}}
         --xdcr-to-bucket {{.Nodes | .Cluster 1 | bucket 0}}
-        --enable-compression 1"
+        --enable-compression 1
+        --source-nozzle-per-node 1
+        --target-nozzle-per-node 1"
   wait: true
 - command: "xdcr-replicate -c {{.Orchestrator}}:{{.RestPort}}
         --create
         --xdcr-cluster-name remote
         --xdcr-from-bucket {{.NthBucket 4}}
         --xdcr-to-bucket {{.Nodes | .Cluster 1 | bucket 1}}
-        --enable-compression 1"
+        --enable-compression 1
+        --source-nozzle-per-node 1
+        --target-nozzle-per-node 1"
   wait: true
 - command: "xdcr-replicate -c {{.Orchestrator}}:{{.RestPort}}
         --create
         --xdcr-cluster-name remote
         --xdcr-from-bucket {{.NthBucket 8}}
         --xdcr-to-bucket {{.Nodes | .Cluster 1 | bucket 2}}
-        --enable-compression 1"
+        --enable-compression 1
+        --source-nozzle-per-node 1
+        --target-nozzle-per-node 1"
   wait: true
 - command: "xdcr-replicate -c {{.Orchestrator}}:{{.RestPort}}
         --create
         --xdcr-cluster-name remote
         --xdcr-from-bucket {{.NthBucket 9}}
         --xdcr-to-bucket {{.Nodes | .Cluster 1 | bucket 3}}
-        --enable-compression 1"
+        --enable-compression 1
+        --source-nozzle-per-node 1
+        --target-nozzle-per-node 1"
   wait: true
 
 ############### Initial data loading to collections - no doc expiry, only creates ################
