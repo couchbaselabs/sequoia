@@ -12,6 +12,10 @@
 - template: set_fts_manager_options
   args: "{{.Nodes | .Service `fts` | net 0}}, 'disableFileTransferRebalance':false"
 
+############### Set FTS seqChecksTimeoutInSec to 20 ################
+- template: set_fts_manager_options
+  args: "{{.Nodes | .Service `fts` | net 0}}, 'seqChecksTimeoutInSec':'20'"
+
 ############### create 20 scopes and 200 collections across 3 buckets as scope_1,scope_2 ... ###############
 -
   image: sequoiatools/collections:1.0
