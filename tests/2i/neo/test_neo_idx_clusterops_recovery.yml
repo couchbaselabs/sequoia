@@ -5,6 +5,11 @@
   args: "{{.ActiveIndexNode 0}}, 'indexer.plasma.backIndex.enablePageBloomFilter':true"
   requires:  "{{eq true .DoOnce }}"
 
+############### Set num_replica ################
+- template: set_gsi_config
+  args: "{{.ActiveIndexNode 0}}, 'indexer.settings.num_replica':1"
+  requires:  "{{eq true .DoOnce }}"
+
 ############### Backup any corrupted index data files ################
 - template: set_gsi_config
   args: "{{.ActiveIndexNode 0}}, 'indexer.settings.enable_corrupt_index_backup':true"
