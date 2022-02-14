@@ -7,5 +7,6 @@ RUN apt-get install libssl-dev
 RUN python3 -m  pip install requests six future couchbase==3.0.10 httplib2 paramiko
 
 COPY indexmanager.py /indexmanager.py
+COPY n1ql_udf.js /n1ql_udf.js
 
 ENTRYPOINT ["python3","indexmanager.py"]

@@ -78,9 +78,9 @@ class IndexManager:
                             choices=["create_index", "build_deferred_index", "drop_all_indexes", "create_index_loop",
                                      "drop_index_loop", "alter_indexes", "enable_cbo", "delete_statistics",
                                      "item_count_check",
-                                     "random_recovery", "create_udf", "drop_udf"],
+                                     "random_recovery", "create_udf", "drop_udf", "create_n1ql_udf"],
                             help="Choose an action to be performed. Valid actions : create_index | build_deferred_index | drop_all_indexes | create_index_loop | "
-                                 "drop_index_loop | alter_indexes | enable_cbo | delete_statistics | item_count_check | random_recovery | create_udf | drop_udf",
+                                 "drop_index_loop | alter_indexes | enable_cbo | delete_statistics | item_count_check | random_recovery | create_udf | drop_udf | create_n1ql_udf",
                             default="create_index")
         parser.add_argument("-m", "--build_max_collections", type=int, default=0,
                             help="Build Indexes on max number of collections")
@@ -102,6 +102,8 @@ class IndexManager:
         parser.add_argument("-im", "--install_mode", help="install mode: ce or ee", default="ee")
         parser.add_argument("--no_partitioned_indexes", help="No partitioned indexes to be created",
                             action="store_true")
+        parser.add_argument("--lib_filename", help="Filename for N1QL JS UDF Library", default=None)
+        parser.add_argument("--lib_name", help="Name for the N1QL JS UDF Library to be created", default=None)
         args = parser.parse_args()
 
         self.node_addr = args.node
@@ -125,6 +127,8 @@ class IndexManager:
         self.sample_size = args.sample_size
         self.num_udf_per_scope = args.num_udf_per_scope
         self.disable_partitioned_indexes = args.no_partitioned_indexes
+        self.lib_filename = "./"+args.lib_filename
+        self.lib_name = args.lib_name
 
         self.idx_def_templates = HOTEL_DS_INDEX_TEMPLATES
         # If there are more datasets supported, this can be expanded.
@@ -139,6 +143,7 @@ class IndexManager:
                                ClusterOptions(PasswordAuthenticator(self.username, self.password)))
         self.cb = self.cluster.bucket(self.bucket_name)
         self.index_nodes = self.find_nodes_with_service(self.get_services_map(), "index")
+        self.n1ql_nodes = self.find_nodes_with_service(self.get_services_map(), "n1ql")
 
         # Logging configuration
 
@@ -1153,6 +1158,28 @@ class IndexManager:
         except requests.exceptions.RequestException as err:
             self.log.error("Error getting response from /getIndexStatus : {0}".format(str(err)))
 
+    def create_n1ql_udf(self):
+        try:
+            # Create JS Library
+            with open(self.lib_filename, 'rb') as f:
+                data = f.read()
+            url = "http://" + self.n1ql_nodes[0] + ":8093/evaluator/v1/libraries/" + self.lib_name
+            auth = (self.username, self.password)
+            response = requests.post(url=url,
+                            data=data,
+                            headers={'Content-Type': 'application/json'}, auth=auth)
+            if response.status_code != 200:
+                self.log.error(response)
+
+            # Create N1QL Function
+            n1ql_function_query_stmt = "CREATE OR REPLACE FUNCTION run_n1ql_query(bucketname) LANGUAGE JAVASCRIPT AS 'run_n1ql_query' AT '{0}';".format(self.lib_name)
+            self.log.info("Create Function Query : {0}".format(n1ql_function_query_stmt))
+
+            status, results, queryResult = self._execute_query(n1ql_function_query_stmt)
+        except Exception as e:
+            self.log.error(str(e))
+
+
     def wait_until_indexes_online(self, timeout=60, defer_build=False, check_paused_index=False):
         init_time = time.time()
         check = False
@@ -1243,6 +1270,8 @@ if __name__ == '__main__':
         indexMgr.create_udfs()
     elif indexMgr.action == "drop_udf":
         indexMgr.drop_all_udfs()
+    elif indexMgr.action == "create_n1ql_udf":
+        indexMgr.create_n1ql_udf()
     else:
         print("Invalid choice for action. Choose from the following - "
-              "create_index | build_deferred_index | drop_all_indexes | create_index_loop | alter_indexes | enable_cbo | drop_index_loop | item_count_check | random_recovery | create_udf | drop_udf")
+              "create_index | build_deferred_index | drop_all_indexes | create_index_loop | alter_indexes | enable_cbo | drop_index_loop | item_count_check | random_recovery | create_udf | drop_udf | create_n1ql_udf")
