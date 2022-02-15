@@ -127,7 +127,10 @@ class IndexManager:
         self.sample_size = args.sample_size
         self.num_udf_per_scope = args.num_udf_per_scope
         self.disable_partitioned_indexes = args.no_partitioned_indexes
-        self.lib_filename = "./"+args.lib_filename
+        if args.lib_filename:
+            self.lib_filename = "./" + args.lib_filename
+        else:
+            self.lib_filename = None
         self.lib_name = args.lib_name
 
         self.idx_def_templates = HOTEL_DS_INDEX_TEMPLATES
