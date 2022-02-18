@@ -62,15 +62,15 @@
 
 #############  create roles ###################
 - image: sequoiatools/couchbase-cli
-  command: "user-manage -c {{.Orchestrator}} -u Administrator -p password --rbac-username bucketop --rbac-password password --roles eventing_manage_functions[bucket_op:scope_0],data_dcp_reader[bucket_op],data_reader[metadata],data_writer[metadata],data_writer[bucket_op],data_writer[source_op] --auth-domain local --set"
+  command: "user-manage -c {{.Orchestrator}} -u Administrator -p password --rbac-username bucketop --rbac-password password --roles eventing_manage_functions[*],data_dcp_reader[bucket_op],data_reader[metadata],data_writer[metadata],data_writer[bucket_op],data_writer[source_op] --auth-domain local --set"
 - image: sequoiatools/couchbase-cli
-  command: "user-manage -c {{.Orchestrator}} -u Administrator -p password --rbac-username timers --rbac-password password --roles eventing_manage_functions[timer_op:scope_0],data_dcp_reader[timer_op],data_reader[metadata],data_writer[metadata],data_writer[timer_op] --auth-domain local --set"
+  command: "user-manage -c {{.Orchestrator}} -u Administrator -p password --rbac-username timers --rbac-password password --roles eventing_manage_functions[*],data_dcp_reader[timer_op],data_reader[metadata],data_writer[metadata],data_writer[timer_op] --auth-domain local --set"
 - image: sequoiatools/couchbase-cli
-  command: "user-manage -c {{.Orchestrator}} -u Administrator -p password --rbac-username curl --rbac-password password --roles eventing_manage_functions[curl_op:scope_0],data_dcp_reader[curl_op],data_reader[metadata],data_writer[metadata],data_writer[curl_op] --auth-domain local --set"
+  command: "user-manage -c {{.Orchestrator}} -u Administrator -p password --rbac-username curl --rbac-password password --roles eventing_manage_functions[*],data_dcp_reader[curl_op],data_reader[metadata],data_writer[metadata],data_writer[curl_op] --auth-domain local --set"
 - image: sequoiatools/couchbase-cli
-  command: "user-manage -c {{.Orchestrator}} -u Administrator -p password --rbac-username n1ql --rbac-password password --roles eventing_manage_functions[n1ql_op:scope_0],data_dcp_reader[n1ql_op],data_reader[metadata],data_writer[metadata],data_writer[n1ql_op],query_insert[n1ql_op],query_update[n1ql_op],query_delete[n1ql_op] --auth-domain local --set"
+  command: "user-manage -c {{.Orchestrator}} -u Administrator -p password --rbac-username n1ql --rbac-password password --roles eventing_manage_functions[*],data_dcp_reader[n1ql_op],data_reader[metadata],data_writer[metadata],data_writer[n1ql_op],query_insert[n1ql_op],query_update[n1ql_op],query_delete[n1ql_op] --auth-domain local --set"
 - image: sequoiatools/couchbase-cli
-  command: "user-manage -c {{.Orchestrator}} -u Administrator -p password --rbac-username sbm --rbac-password password --roles eventing_manage_functions[source_op:scope_0],data_dcp_reader[source_op],data_reader[metadata],data_writer[metadata],data_writer[source_op] --auth-domain local --set"
+  command: "user-manage -c {{.Orchestrator}} -u Administrator -p password --rbac-username sbm --rbac-password password --roles eventing_manage_functions[*],data_dcp_reader[source_op],data_reader[metadata],data_writer[metadata],data_writer[source_op] --auth-domain local --set"
 
 #### create handlers #####
 - foreach: "{{range $i, $sc := mkrange 0 1}}"
