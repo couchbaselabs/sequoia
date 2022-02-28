@@ -323,6 +323,12 @@
    command: "60"
    wait: true
 
+# Create N1QL UDF Library and function - do it once per test
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a create_n1ql_udf --lib_filename n1ql_udf.js --lib_name n1qludf"
+  requires:  "{{eq true .DoOnce }}"
+  wait: true
+
 # Create FTS indexes on collections
 - image: sequoiatools/ftsindexmanager
   command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}} -m 1:1:2 -s {{.Scale 1}} -a create_index_from_map"
@@ -381,10 +387,10 @@
 
 # query replica indexes
 - image: sequoiatools/queryapp
-  command: "-J-Xms256m -J-Xmx512m -J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.7.21/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 0 --print_duration=3600 --bucket {{.NthBucket 4}} --querycount {{.Scale 3}} --threads {{.Scale 3}} --n1ql True --query_timeout=600 --scan_consistency REQUEST_PLUS --bucket_names [{{.NthBucket 4}},{{.NthBucket 5}},{{.NthBucket 6}},{{.NthBucket 7}}] --collections_mode --dataset hotel"
-- command: "-J-Xms256m -J-Xmx512m -J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.7.21/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 0 --print_duration=3600 --bucket {{.NthBucket 5}} --querycount {{.Scale 3}} --threads {{.Scale 3}} --n1ql True --query_timeout=600 --scan_consistency REQUEST_PLUS --bucket_names [{{.NthBucket 4}},{{.NthBucket 5}},{{.NthBucket 6}},{{.NthBucket 7}}] --collections_mode --dataset hotel"
-- command: "-J-Xms256m -J-Xmx512m -J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.7.21/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 0 --print_duration=3600 --bucket {{.NthBucket 6}} --querycount {{.Scale 3}} --threads {{.Scale 3}} --n1ql True --query_timeout=600 --scan_consistency REQUEST_PLUS --bucket_names [{{.NthBucket 4}},{{.NthBucket 5}},{{.NthBucket 6}},{{.NthBucket 7}}] --collections_mode --dataset hotel"
-- command: "-J-Xms256m -J-Xmx512m -J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.7.21/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 0 --print_duration=3600 --bucket {{.NthBucket 7}} --querycount {{.Scale 3}} --threads {{.Scale 3}} --n1ql True --query_timeout=600 --scan_consistency REQUEST_PLUS --bucket_names [{{.NthBucket 4}},{{.NthBucket 5}},{{.NthBucket 6}},{{.NthBucket 7}}] --txns True --dataset hotel"
+  command: "-J-Xms256m -J-Xmx512m -J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.7.21/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 0 --print_duration=3600 --bucket {{.NthBucket 4}} --querycount {{.Scale 3}} --threads {{.Scale 3}} --n1ql True --query_timeout=600 --scan_consistency REQUEST_PLUS --bucket_names [{{.NthBucket 4}},{{.NthBucket 5}},{{.NthBucket 6}},{{.NthBucket 7}}] --collections_mode --dataset hotel --run_udf_queries True"
+- command: "-J-Xms256m -J-Xmx512m -J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.7.21/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 0 --print_duration=3600 --bucket {{.NthBucket 5}} --querycount {{.Scale 3}} --threads {{.Scale 3}} --n1ql True --query_timeout=600 --scan_consistency REQUEST_PLUS --bucket_names [{{.NthBucket 4}},{{.NthBucket 5}},{{.NthBucket 6}},{{.NthBucket 7}}] --collections_mode --dataset hotel --run_udf_queries True"
+- command: "-J-Xms256m -J-Xmx512m -J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.7.21/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 0 --print_duration=3600 --bucket {{.NthBucket 6}} --querycount {{.Scale 3}} --threads {{.Scale 3}} --n1ql True --query_timeout=600 --scan_consistency REQUEST_PLUS --bucket_names [{{.NthBucket 4}},{{.NthBucket 5}},{{.NthBucket 6}},{{.NthBucket 7}}] --collections_mode --dataset hotel --run_udf_queries True"
+- command: "-J-Xms256m -J-Xmx512m -J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.7.21/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 0 --print_duration=3600 --bucket {{.NthBucket 7}} --querycount {{.Scale 3}} --threads {{.Scale 3}} --n1ql True --query_timeout=600 --scan_consistency REQUEST_PLUS --bucket_names [{{.NthBucket 4}},{{.NthBucket 5}},{{.NthBucket 6}},{{.NthBucket 7}}] --txns True --dataset hotel --run_udf_queries True"
 
 # query FTS indexes
 - image: sequoiatools/ftsindexmanager
