@@ -53,6 +53,11 @@
 - template: set_gsi_config
   args: "{{.ActiveIndexNode 0}}, 'indexer.settings.rebalance.redistribute_indexes':true"
 
+############### Set num_replica ################
+- template: set_gsi_config
+  args: "{{.ActiveIndexNode 0}}, 'indexer.settings.num_replica':1"
+  requires:  "{{eq true .DoOnce }}"
+
 ##### create a backup plan which backups up every 6 hours and merges every 2 days at 12:00noon to filesystem and s3 repos
 -
   image:  appropriate/curl
