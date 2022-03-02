@@ -1,10 +1,5 @@
 - include: tests/templates/kv.yml, tests/templates/n1ql.yml, tests/templates/rebalance.yml, tests/templates/multinode_failure.yml
 
-############### Enable Plasma Bloom Filter ################
-- template: set_gsi_config
-  args: "{{.ActiveIndexNode 0}}, 'indexer.plasma.backIndex.enablePageBloomFilter':true"
-  requires:  "{{eq true .DoOnce }}"
-
 ############### Set num_replica ################
 - template: set_gsi_config
   args: "{{.ActiveIndexNode 0}}, 'indexer.settings.num_replica':1"
@@ -13,11 +8,6 @@
 ############### Backup any corrupted index data files ################
 - template: set_gsi_config
   args: "{{.ActiveIndexNode 0}}, 'indexer.settings.enable_corrupt_index_backup':true"
-  requires:  "{{eq true .DoOnce }}"
-
-############### Disable workaround for MB-46650 ################
-- template: set_gsi_config
-  args: "{{.ActiveIndexNode 0}}, 'indexer.plasma.recovery.enableFullReplayOnError':false"
   requires:  "{{eq true .DoOnce }}"
 
 ############### Enable GSI Redistribution of indexes on rebalance in ################
@@ -55,42 +45,18 @@
 
 ############### initial data loading ################
 - image: sequoiatools/catapult
-  command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -n {{.Scale 100000}} -pc 100
-    -dt Hotel -ds 1000 -ac True -dpx test1"
+  command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -n {{.Scale 50000}} -pc 100
+    -dt Hotel -ds 1000 -ac True"
   requires:  "{{eq true .DoOnce }}"
   alias: collection_bucket1_doc_ops1
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -n {{.Scale 100000}} -pc 100
-    -dt Hotel -ds 1000 -ac True -dpx test2"
-  requires:  "{{eq true .DoOnce }}"
-  alias: collection_bucket1_doc_ops3
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -n {{.Scale 100000}} -pc 100
-    -dt Hotel -ds 1000 -ac True -dpx test3"
-  requires:  "{{eq true .DoOnce }}"
-  alias: collection_bucket1_doc_ops4
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 1}} -n {{.Scale 100000}} -pc 100
-    -dt Hotel -ds 1000 -ac True -dpx test1"
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 1}} -n {{.Scale 50000}} -pc 100
+    -dt Hotel -ds 1000 -ac True"
   requires:  "{{eq true .DoOnce }}"
   alias: collection_bucket2_doc_ops1
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 1}} -n {{.Scale 100000}} -pc 100
-    -dt Hotel -ds 1000 -ac True -dpx test2"
-  requires:  "{{eq true .DoOnce }}"
-  alias: collection_bucket2_doc_ops3
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 1}} -n {{.Scale 100000}} -pc 100
-    -dt Hotel -ds 1000 -ac True -dpx test3"
-  requires:  "{{eq true .DoOnce }}"
-  alias: collection_bucket2_doc_ops4
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 2}} -n {{.Scale 100000}} -pc 100
-    -dt Hotel -ds 1000 -ac True -dpx test1"
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 2}} -n {{.Scale 50000}} -pc 100
+    -dt Hotel -ds 1000 -ac True"
   requires:  "{{eq true .DoOnce }}"
   alias: collection_bucket3_doc_ops1
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 2}} -n {{.Scale 100000}} -pc 100
-    -dt Hotel -ds 1000 -ac True -dpx test2"
-  requires:  "{{eq true .DoOnce }}"
-  alias: collection_bucket3_doc_ops3
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 2}} -n {{.Scale 100000}} -pc 100
-    -dt Hotel -ds 1000 -ac True -dpx test3"
-  requires:  "{{eq true .DoOnce }}"
-  alias: collection_bucket3_doc_ops4
 
 ############### Start Collections CRUD on bucket 4 & bucket5 ###############
 -
@@ -611,42 +577,6 @@
   client:
     op: rm
     container: collection_bucket3_doc_ops2
--
-  client:
-    op: rm
-    container: collection_bucket1_doc_ops3
--
-  client:
-    op: rm
-    container: collection_bucket2_doc_ops3
--
-  client:
-    op: rm
-    container: collection_bucket3_doc_ops3
--
-  client:
-    op: rm
-    container: collection_bucket1_doc_ops4
--
-  client:
-    op: rm
-    container: collection_bucket2_doc_ops4
--
-  client:
-    op: rm
-    container: collection_bucket3_doc_ops4
--
-  client:
-    op: rm
-    container: cbo_bucket1
--
-  client:
-    op: rm
-    container: cbo_bucket2
--
-  client:
-    op: rm
-    container: cbo_bucket3
 -
    image: sequoiatools/cmd
    entrypoint: sleep
