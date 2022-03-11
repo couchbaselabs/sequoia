@@ -666,6 +666,8 @@ func (s *Scope) CreateBuckets() {
 	if s.Spec.Servers[0].NumberOfBuckets != "" {
 		s.Rest.updateNumberOfBucktes(s.Spec.Servers[0].NumberOfBuckets)
 	}
+
+	s.Rest.updateMagmaMinMemoryQuota("256")
 	// configure rebalance operation
 	operation := func(name string, server *ServerSpec) {
 

@@ -341,3 +341,13 @@ func (r *RestClient) createCollections(bucketName, scopeName, collectionName str
 	data := "name=" + collectionName
 	r.JsonPostRequest(auth, reqUrl, data, &s)
 }
+
+func (r *RestClient) updateMagmaMinMemoryQuota(magmaMinMemoryQuota string) {
+	host := r.GetOrchestrator()
+	url := r.Provider.GetRestUrl(host)
+	auth := r.GetAuth(host)
+	reqUrl := fmt.Sprintf("%s/internalSettings", url)
+	var s []string
+	data := "magmaMinMemoryQuota=" + magmaMinMemoryQuota
+	r.JsonPostRequest(auth, reqUrl, data, &s)
+}
