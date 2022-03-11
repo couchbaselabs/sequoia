@@ -138,6 +138,7 @@ func (s *Scope) SetupServer() {
 	s.AddNodes()
 	s.RebalanceClusters()
 	s.getClusteInfo()
+	s.ApplyInternalSettings()
 	s.CreateBuckets()
 	s.CreateScope()
 	s.CreateViews()
@@ -659,6 +660,40 @@ func (s *Scope) RebalanceClusters() {
 
 }
 
+func (s *Scope) ApplyInternalSettings() {
+    var image = "appropriate/curl"
+
+	operation := func(name string, server *ServerSpec) {
+
+		orchestrator := server.Names[0]
+		ip := s.Provider.GetHostAddress(orchestrator)
+		ip = strings.Split(ip, ":")[0]
+        internalSettingsUrl := fmt.Sprintf("http://%s:%s/internalSettings",
+                ip, server.RestPort)
+        command := []string{"-s", "-X", "POST",
+            "-u", server.RestUsername + ":" + server.RestPassword,
+            internalSettingsUrl,
+            "-d", "magmaMinMemoryQuota=256",
+        }
+        desc := "Setting magmaMinMemoryQuota=256"
+        task := ContainerTask{
+            Describe: desc,
+            Image:    image,
+            Command:  command,
+            Async:    false,
+        }
+        if s.Provider.GetType() == "docker" {
+            task.LinksTo = orchestrator
+        }
+            s.Cm.Run(&task)
+    }
+
+	// apply only to orchestrator
+	s.Spec.ApplyToServers(operation, 0, 1)
+
+}
+
+
 func (s *Scope) CreateBuckets() {
 	//fmt.Printf("%+v\n", s.Spec.Buckets)
 	var image = s.GetCliImage()
@@ -667,7 +702,6 @@ func (s *Scope) CreateBuckets() {
 		s.Rest.updateNumberOfBucktes(s.Spec.Servers[0].NumberOfBuckets)
 	}
 
-	s.Rest.updateMagmaMinMemoryQuota("256")
 	// configure rebalance operation
 	operation := func(name string, server *ServerSpec) {
 
