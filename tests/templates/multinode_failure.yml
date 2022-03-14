@@ -10,17 +10,13 @@
   -
     image: sequoiatools/cmd
     entrypoint: sleep
-    command: "10"
+    command: "5"
     wait: true
 
+  # Bring down 2 nodes
   -
     image: sequoiatools/cbutil
     command: "/cbinit.py $0 root couchbase stop"
-    wait: true
-  -
-    image: sequoiatools/cmd
-    entrypoint: sleep
-    command: "10"
     wait: true
 
   -
@@ -28,16 +24,25 @@
     command: "/cbinit.py $1 root couchbase stop"
     wait: true
 
+  # Wait for auto-fo to kick in
   -
     image: sequoiatools/cmd
     entrypoint: sleep
     command: "10"
     wait: true
 
+  # Wait for failover to complete
+  -
+    # windows requires special status watching
+    requires: "{{ eq `windows` .Platform}}"
+    template: wait_for_rebalance
+
+  # Remove the failed nodes
   -
     template: rebalance
     wait: true
 
+  # Restart the stopped nodes
   -
     image: sequoiatools/cbutil
     command: "/cbinit.py $0 root couchbase start"
@@ -51,13 +56,12 @@
     command: "10"
     wait: true
 
+  # Add back the nodes + rebalance
   - template: add_node
     args: "$0"
   - args: "$1"
   - template: rebalance
     wait: true
-
-
 
 - name: autofailover3Nodes
   actions:
@@ -68,28 +72,17 @@
   -
     image: sequoiatools/cmd
     entrypoint: sleep
-    command: "10"
+    command: "5"
     wait: true
 
+  # Bring down 3 nodes
   -
     image: sequoiatools/cbutil
     command: "/cbinit.py $0 root couchbase stop"
     wait: true
   -
-    image: sequoiatools/cmd
-    entrypoint: sleep
-    command: "10"
-    wait: true
-
-  -
     image: sequoiatools/cbutil
     command: "/cbinit.py $1 root couchbase stop"
-    wait: true
-
-  -
-    image: sequoiatools/cmd
-    entrypoint: sleep
-    command: "10"
     wait: true
 
   -
@@ -97,12 +90,20 @@
     command: "/cbinit.py $2 root couchbase stop"
     wait: true
 
+  # Wait for auto-fo to kick in
   -
     image: sequoiatools/cmd
     entrypoint: sleep
     command: "10"
     wait: true
 
+  # Wait for failover to complete
+  -
+    # windows requires special status watching
+    requires: "{{ eq `windows` .Platform}}"
+    template: wait_for_rebalance
+
+  # Remove the failed nodes
   -
     template: rebalance
     wait: true
@@ -110,9 +111,10 @@
   -
     image: sequoiatools/cmd
     entrypoint: sleep
-    command: "180"
+    command: "60"
     wait: true
 
+  # Restart the stopped nodes
   -
     image: sequoiatools/cbutil
     command: "/cbinit.py $0,$1,$2 root couchbase start"
@@ -121,9 +123,10 @@
   -
     image: sequoiatools/cmd
     entrypoint: sleep
-    command: "300"
+    command: "120"
     wait: true
 
+  # Add back the nodes + rebalance
   - template: add_node
     args: "$0, $3"
   - args: "$1, $4"
