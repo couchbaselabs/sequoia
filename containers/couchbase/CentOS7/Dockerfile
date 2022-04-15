@@ -16,17 +16,10 @@ RUN yum install -y tar \
       tcpdump iptables psmisc  initscripts openssh-server openssh-clients
 
 # Install python-httplib2
-RUN curl https://bootstrap.pypa.io/get-pip.py | python - ; pip install httplib2
+RUN yum install -y python3
+RUN curl https://bootstrap.pypa.io/pip/3.6/get-pip.py | python3 - ; pip install httplib2
 
 COPY functions /etc/init.d/
-
-# Install gosu for startup script
-RUN gpg --keyserver ha.pool.sks-keyservers.net --recv-keys B42F6819007F00F88E364FD4036A9C25BF357DD4 \
-    && curl -o /usr/local/bin/gosu -sSL "https://github.com/tianon/gosu/releases/download/1.4/gosu-amd64" \
-    && curl -o /usr/local/bin/gosu.asc -sSL "https://github.com/tianon/gosu/releases/download/1.4/gosu-amd64.asc" \
-    && gpg --verify /usr/local/bin/gosu.asc \
-    && rm /usr/local/bin/gosu.asc \
-    && chmod +x /usr/local/bin/gosu
 
 
 RUN mkdir /var/run/sshd
@@ -46,9 +39,9 @@ RUN groupadd -g1000 couchbase && \
     echo 'couchbase:couchbase' | chpasswd
 
 
-ARG VERSION=5.0.0
-ARG BUILD_NO=2412
-ARG FLAVOR=spock
+ARG VERSION=7.1.0
+ARG BUILD_NO=2211
+ARG FLAVOR=neo
 ARG BUILD_PKG=couchbase-server-enterprise-$VERSION-$BUILD_NO-centos7.x86_64.rpm
 ARG BASE_URL=http://latestbuilds.service.couchbase.com/builds/latestbuilds/couchbase-server/$FLAVOR/$BUILD_NO
 

@@ -13,9 +13,12 @@ Scalable testing with docker
  
 **Build**
 ```bash
-go get github.com/couchbaselabs/sequoia
-cd $GOPATH/src/github.com/couchbaselabs/sequoia/
-go build
+cd $GOPATH/src/github.com/couchbaselabs/
+git clone https://github.com/couchbaselabs/sequoia.git
+cd sequoia
+go mod init
+go mod tidy
+go build -o sequoia
 ```
 
 ## Getting Started

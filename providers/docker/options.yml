@@ -2,7 +2,7 @@
 os: centos7
 
 # build version
-build: 5.0.0-3456
+build: 7.1.0-2211
 
 sync_gateway_version: null
 
