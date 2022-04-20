@@ -16,10 +16,13 @@ import time
 import math
 import httplib2
 import paramiko
+from couchbase.management.collections import CollectionSpec
+import dns.resolver
 
 ## Constants
 
 # In test mode, how many scopes to be created
+
 
 TOTAL_SCOPES = 1
 
@@ -46,8 +49,10 @@ HOTEL_DS_INDEX_TEMPLATES = [
     {"indexname": "idx6",
      "statement": "CREATE INDEX `idx6_idxprefix` ON keyspacenameplaceholder(`city`)"},
     {"indexname": "idx7",
-     "statement": "CREATE INDEX `idx7_idxprefix` ON keyspacenameplaceholder(`price`,`name`,`city`,`country`)"},
-    {"indexname": "idx8",
+     "statement": "CREATE INDEX `idx7_idxprefix` ON keyspacenameplaceholder(`price`,`name`,`city`,`country`)"}
+]
+HOTEL_DS_INDEX_TEMPLATES_NEW = [
+{"indexname": "idx8",
      "statement": "CREATE INDEX `idx8_idxprefix` ON keyspacenameplaceholder(DISTINCT ARRAY FLATTEN_KEYS(`r`.`author`,`r`.`ratings`.`Cleanliness`) FOR r IN `reviews` when `r`.`ratings`.`Cleanliness` < 4 END, `country`, `email`, `free_parking`)"},
     {"indexname": "idx9",
      "statement": "CREATE INDEX `idx9_idxprefix` ON keyspacenameplaceholder(ALL ARRAY FLATTEN_KEYS(`r`.`author`,`r`.`ratings`.`Rooms`) FOR r IN `reviews` END, `free_parking`)"},
@@ -56,7 +61,6 @@ HOTEL_DS_INDEX_TEMPLATES = [
     {"indexname": "idx11",
      "statement": "CREATE INDEX `idx11_idxprefix` ON keyspacenameplaceholder(ALL ARRAY FLATTEN_KEYS(`r`.`ratings`.`Rooms`,`r`.`ratings`.`Cleanliness`) FOR r IN `reviews` END, `email`, `free_parking`)"}
 ]
-
 HOTEL_DS_CBO_FIELDS = "`country`, DISTINCT ARRAY `r`.`ratings`.`Check in / front desk`, array_count((`public_likes`)),array_count((`reviews`)) DESC,`type`,`phone`,`price`,`email`,`address`,`name`,`url`,`free_breakfast`,`free_parking`,`city`"
 
 
@@ -65,6 +69,8 @@ class IndexManager:
     def __init__(self):
         parser = argparse.ArgumentParser()
         parser.add_argument("-n", "--node", help="Couchbase Server Node Address")
+        parser.add_argument("-c", "--capella", help="Set to True if tests need to run on Capella", default=False)
+        parser.add_argument("-x", "--tls", help="Set to True if tests need to run with TLS enabled", default=False)
         parser.add_argument("-o", "--port", help="Couchbase Server Node Port")
         parser.add_argument("-u", "--username", help="Couchbase Server Cluster Username")
         parser.add_argument("-p", "--password", help="Couchbase Server Cluster Password")
@@ -105,7 +111,8 @@ class IndexManager:
         parser.add_argument("--lib_filename", help="Filename for N1QL JS UDF Library", default=None)
         parser.add_argument("--lib_name", help="Name for the N1QL JS UDF Library to be created", default=None)
         args = parser.parse_args()
-
+        self.log = logging.getLogger("indexmanager")
+        self.log.setLevel(logging.INFO)
         self.node_addr = args.node
         self.node_port = args.port
         self.username = args.username
@@ -132,59 +139,107 @@ class IndexManager:
         else:
             self.lib_filename = None
         self.lib_name = args.lib_name
-
-        self.idx_def_templates = HOTEL_DS_INDEX_TEMPLATES
+        self.use_tls = args.tls
+        self.capella_run = args.capella
+        self.use_https = False
+        if self.use_tls or self.capella_run:
+            self.node_port_index = '19102'
+            self.node_port_query = '18093'
+            self.port = '18091'
+            self.scheme = "https"
+            self.use_https = True
+            if self.capella_run:
+                self.rest_url = self.fetch_rest_url(self.node_addr)
+                self.index_url = "{}://".format(self.scheme) + self.rest_url + ":" + self.node_port_index
+                self.url = "{}://".format(self.scheme) + self.rest_url  + ":" + self.port
+            else:
+                self.index_url = "{}://".format(self.scheme) + self.node_addr + ":" + self.node_port_index
+                self.url = "{}://".format(self.scheme) + self.node_addr + ":" + self.port
+        else:
+            self.node_port_index = '9102'
+            self.port = '8091'
+            self.node_port_query = '8093'
+            self.scheme = "http"
+            self.index_url = "{}://".format(self.scheme) + self.node_addr + ":" + self.node_port_index
+            self.url = "{}://".format(self.scheme) + self.node_addr + ":" + self.port
+        if self.capella_run:
+            self.idx_def_templates = HOTEL_DS_INDEX_TEMPLATES
+        else:
+            self.idx_def_templates = HOTEL_DS_INDEX_TEMPLATES + HOTEL_DS_INDEX_TEMPLATES_NEW
         # If there are more datasets supported, this can be expanded.
         if self.dataset == "hotel":
             self.idx_def_templates = HOTEL_DS_INDEX_TEMPLATES
             self.cbo_fields = HOTEL_DS_CBO_FIELDS
-
         # Initialize connections to the cluster
-        self.cb_admin = Admin(self.username, self.password, self.node_addr, self.node_port)
-        self.cb_coll_mgr = CollectionManager(self.cb_admin, self.bucket_name)
-        self.cluster = Cluster('couchbase://{0}'.format(self.node_addr),
-                               ClusterOptions(PasswordAuthenticator(self.username, self.password)))
+            # Logging configuration
+
+            ch = logging.StreamHandler()
+            ch.setLevel(logging.INFO)
+            formatter = logging.Formatter(
+                "%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+            ch.setFormatter(formatter)
+            self.log.addHandler(ch)
+            timestamp = str(datetime.now().strftime('%Y%m%dT_%H%M%S'))
+            fh = logging.FileHandler("./indexmanager-{0}.log".format(timestamp))
+            fh.setFormatter(formatter)
+            self.log.addHandler(fh)
+        self.log.info(f"Capella flag is set to {self.capella_run}. Use tls flag is set to {self.use_tls}")
+        if self.use_https:
+            self.log.info("This is Capella run.")
+            for i in range(5):
+                try:
+                    self.cluster = Cluster('couchbases://' + self.node_addr + '?ssl=no_verify',
+                                           ClusterOptions(PasswordAuthenticator(self.username, self.password)))
+                    break
+                except:
+                    sleep(10)
+        else:
+            self.log.info("This is a Server run.")
+            self.cluster = Cluster('couchbase://{0}'.format(self.node_addr),
+                                   ClusterOptions(PasswordAuthenticator(self.username, self.password)))
         self.cb = self.cluster.bucket(self.bucket_name)
+        self.coll_manager = self.cb.collections()
         self.index_nodes = self.find_nodes_with_service(self.get_services_map(), "index")
         self.n1ql_nodes = self.find_nodes_with_service(self.get_services_map(), "n1ql")
-
-        # Logging configuration
-
-        self.log = logging.getLogger("indexmanager")
-        self.log.setLevel(logging.INFO)
-        ch = logging.StreamHandler()
-        ch.setLevel(logging.INFO)
-        formatter = logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-        ch.setFormatter(formatter)
-        self.log.addHandler(ch)
-        timestamp = str(datetime.now().strftime('%Y%m%dT_%H%M%S'))
-        fh = logging.FileHandler("./indexmanager-{0}.log".format(timestamp))
-        fh.setFormatter(formatter)
-        self.log.addHandler(fh)
-
+        self.log.info(f"N1QL nodes {self.n1ql_nodes} and Index nodes : {self.index_nodes}")
         # Set max number of replica for the test. For that, fetch the number of indexer nodes in the cluster.
         self.max_num_replica = 0
         self.max_num_partitions = 4
-        self.set_max_num_replica()
+        ## TODO What should be done with this?
+        #self.set_max_num_replica()
 
         # Node SSH default credentials
         self.ssh_username = "root"
         self.ssh_password = "couchbase"
-
     """
     Create scope and collections in the cluster for the given bucket when the test mode is on.
     """
-
     def create_scopes_collections(self):
         for i in range(0, TOTAL_SCOPES):
             scopename = self.bucket_name + SCOPENAME_SUFFIX + str(i + 1)
-            self.cb_coll_mgr.create_scope(scopename)
-
+            try:
+                self.log.info("creating scope: {}".format(scopename))
+                self.coll_manager.create_scope(scopename)
+            except ScopeAlreadyExistsException:
+                self.log.error("scope: {} already exists. So not creating it again".format(scopename))
             for j in range(0, TOTAL_COLL_PER_SCOPE):
                 collectionname = scopename + "_coll" + str(j + 1)
+                self.log.info("creating collection: {}".format(collectionname))
                 coll_spec = CollectionSpec(collectionname, scopename)
-                self.cb_coll_mgr.create_collection(coll_spec)
+                self.coll_manager.create_collection(coll_spec)
+
+    def fetch_rest_url(self, url):
+        """
+        meant to find the srv record for Capella runs
+        """
+        self.log.info("This is a Capella run. Finding the srv domain for {}".format(url))
+        srv_info = {}
+        srv_records = dns.resolver.resolve('_couchbases._tcp.' + url, 'SRV')
+        for srv in srv_records:
+            srv_info['host'] = str(srv.target).rstrip('.')
+            srv_info['port'] = srv.port
+        self.log.info("This is a Capella run. Srv info {}".format(srv_info))
+        return srv_info['host']
 
     """
     Fetch list of all collections for the given bucket
@@ -302,8 +357,6 @@ class IndexManager:
                     with_clause_list = []
                     idx_statement = idx_statement.replace("keyspacenameplaceholder", keyspace_name)
                     idx_statement = idx_statement.replace('idxprefix', idx_prefix)
-
-                    keyspace_name = keyspace_name.replace('`', '')
                     reference_index_map[keyspace_name][idx_name]['bucket'] = bucket
                     reference_index_map[keyspace_name][idx_name]['scope'] = scope
                     reference_index_map[keyspace_name][idx_name]['collection'] = collection
@@ -312,14 +365,20 @@ class IndexManager:
 
                     if self.install_mode == "ee" and is_partitioned_idx and (not self.disable_partitioned_indexes):
                         idx_statement = idx_statement + " partition by hash(meta().id) "
-                        num_partition = random.randint(2, self.max_num_partitions + 1)
-                        with_clause_list.append("\'num_partition\':%s" % num_partition)
-                        idx_instances *= num_partition
-                        reference_index_map[keyspace_name][idx_name]['num_partition'] = num_partition
+                        if self.capella_run:
+                            ## TODO How do we set this? Is it always 8?
+                            reference_index_map[keyspace_name][idx_name]['num_partition'] = 8
+                        else:
+                            num_partition = random.randint(2, self.max_num_partitions + 1)
+                            with_clause_list.append("\'num_partition\':%s" % num_partition)
+                            idx_instances *= num_partition
+                            reference_index_map[keyspace_name][idx_name]['num_partition'] = num_partition
                     else:
                         reference_index_map[keyspace_name][idx_name]['num_partition'] = 1
-
-                    if self.install_mode == "ee" and self.max_num_replica > 0:
+                    if self.capella_run:
+                        ## TODO How do we set replica counts on capella? Is it always 1?
+                        reference_index_map[keyspace_name][idx_name]['replica_count'] = 2
+                    elif self.install_mode == "ee" and self.max_num_replica > 0:
                         num_replica = random.randint(1, self.max_num_replica)
                         with_clause_list.append("\'num_replica\':%s" % num_replica)
                         idx_instances *= num_replica + 1
@@ -332,7 +391,6 @@ class IndexManager:
                             self.max_num_replica > 0) or is_defer_idx:
                         idx_statement = idx_statement + " with {"
                         idx_statement = idx_statement + ','.join(with_clause_list) + "}"
-
                     create_index_statements.append(idx_statement)
                     total_idx_created += idx_instances
                     total_idx += num_idx
@@ -346,7 +404,6 @@ class IndexManager:
 
         self.log.debug("Keyspaces used : ")
         self.log.debug(keyspaceused)
-
         for create_index_statement in create_index_statements:
             self.log.info("Creating index : %s" % create_index_statement)
             try:
@@ -362,7 +419,6 @@ class IndexManager:
             for keyspace_name in reference_index_map.keys():
                 ref_keyspace_dict = reference_index_map[keyspace_name]
                 actual_keyspace_dict = index_map_from_system_indexes[keyspace_name]
-
                 if sorted(ref_keyspace_dict.keys()) != sorted(actual_keyspace_dict.keys()):
                     self.log.error(f"Indexes are not matching with expected value.")
                     self.log.error(f" Expected: {ref_keyspace_dict}, Actual: {actual_keyspace_dict}")
@@ -387,21 +443,21 @@ class IndexManager:
                 keyspace_name = f'{index["bucket"]}.{index["scope"]}.{index["collection"]}'
                 index_name = index['indexName']
                 if reference_index_map[keyspace_name][index_name]['replica_count'] != index['numReplica'] + 1:
-                    self.log.error(f"Replica count is not matching with expected value."
-                                   f"Expected: {index['numReplica'] + 1},"
-                                   f" Actual: {reference_index_map[keyspace_name][index_name]['replica_count']}")
+                    self.log.error(f"Replica count is not matching with expected value. for {index['name']}."
+                                   f"Actual: {index['numReplica'] + 1},"
+                                   f" Expected: {reference_index_map[keyspace_name][index_name]['replica_count']}")
                 if reference_index_map[keyspace_name][index_name]['num_partition'] != index['numPartition']:
-                    self.log.error(f"Index Partition no. is not matching with expected value"
-                                   f"Expected: {index['numPartition']},"
-                                   f" Actual: {reference_index_map[keyspace_name][index_name]['numPartition']}")
+                    self.log.error(f"Index Partition no. is not matching with expected value for {index['name']}."
+                               f"Actual: {index['numPartition']},"
+                               f" Expected: {reference_index_map[keyspace_name][index_name]['numPartition']}")
                 if reference_index_map[keyspace_name][index_name]['defer']:
                     if index['status'] != 'Created':
-                        self.log.error(f"Index status is not matching with expected value"
-                                       f"Expected: Created, Actual: {index['status']}")
+                        self.log.error(f"Index status for {index['name']} is not matching with expected value"
+                                   f"Expected: Created, Actual: {index['status']}")
                 else:
                     if index['status'] != 'Ready':
-                        self.log.error(f"Index status is not matching with expected value"
-                                       f"Expected: Created, Actual: {index['status']}")
+                        self.log.error(f"Index status for {index['name']} is not matching with expected value"
+                                   f"Expected: Created, Actual: {index['status']}")
             self.log.info("Validation completed")
 
     """
@@ -731,9 +787,8 @@ class IndexManager:
         else:
             self.log.info("Item check count passed. No discrepancies seen.")
 
-    def get_stats(self, stat_key, alt_stat_key, pending_mutations_key, index_node_addr, index_node_port=9102):
-        endpoint = "http://" + index_node_addr + ":" + str(index_node_port) + "/stats"
-
+    def get_stats(self, stat_key, alt_stat_key, pending_mutations_key, index_node_addr):
+        endpoint = self.index_url + "/stats"
         retry_count = 3
         while retry_count > 1:
             try:
@@ -785,11 +840,11 @@ class IndexManager:
             except requests.exceptions.RequestException as err:
                 self.log.error("Error getting response from /stats : {0}".format(str(err)))
 
-    """
-    Determine number of index nodes in the cluster and set max num replica accordingly.
-    """
 
     def set_max_num_replica(self):
+        """
+        Determine number of index nodes in the cluster and set max num replica accordingly.
+        """
         nodelist = self.find_nodes_with_service(self.get_services_map(), "index")
         if len(nodelist) > 4:
             self.max_num_replica = 3
@@ -797,16 +852,16 @@ class IndexManager:
             self.max_num_replica = len(nodelist) - 1  # Max num replica = number of idx nodes in cluster - 1
         self.log.info("Setting Max Replica for this test to : {0}".format(self.max_num_replica))
 
-    """
-    Return the index map for the specified bucket
-    """
 
-    def get_index_map(self, bucket, index_node_addr, index_node_port=9102):
-        endpoint = "http://" + index_node_addr + ":" + str(index_node_port) + "/getIndexStatus"
+    def get_index_map(self, bucket, index_node_addr):
+        """
+         Return the index map for the specified bucket
+        """
+        endpoint = f"{self.scheme}://" + index_node_addr + ":" + self.node_port_index + "/getIndexStatus"
         # Get map of indexes in the cluster
+        self.log.info(f"URL used for get_index_map is {endpoint}")
         response = requests.get(endpoint, auth=(
             self.username, self.password), verify=True, )
-
         idx_map = []
 
         if (response.ok):
@@ -817,24 +872,26 @@ class IndexManager:
 
         return idx_map
 
-    """
-    Populate the service map for all nodes in the cluster.
-    """
-
     def get_services_map(self):
-        cluster_url = "http://" + self.node_addr + ":" + self.node_port + "/pools/default"
+        """
+        Populate the service map for all nodes in the cluster.
+        """
+        cluster_url = self.url + "/pools/default"
+        self.log.info(f"Rest URL is {cluster_url}")
         node_map = []
 
         try:
             # Get map of nodes in the cluster
+
             response = requests.get(cluster_url, auth=(
-                self.username, self.password), verify=True, )
+                self.username, self.password), verify=False)
 
             if (response.ok):
-                response = json.loads(response.text)
 
+                response = json.loads(response.text)
                 for node in response["nodes"]:
                     clusternode = {}
+                    # Workaround for https://issues.couchbase.com/browse/MB-51119
                     clusternode["hostname"] = node["hostname"].replace(":8091", "")
                     clusternode["services"] = node["services"]
                     mem_used = int(node["memoryTotal"]) - int(node["memoryFree"])
@@ -855,14 +912,13 @@ class IndexManager:
             self.log.error("Timeout getting response from {1} : {0}".format(str(errt), cluster_url))
         except requests.exceptions.RequestException as err:
             self.log.error("Error getting response from {1} : {0}".format(str(err), cluster_url))
-
+        self.log.info(f"Node map is {node_map}")
         return node_map
 
-    """
-    Create n number of UDF on all scopes of a given bucket
-    """
-
     def create_udfs(self):
+        """
+        Create n number of UDF on all scopes of a given bucket
+        """
         cb_scopes = self.cb.collections().get_all_scopes()
         scope_name_list = []
         for scope in cb_scopes:
@@ -872,33 +928,33 @@ class IndexManager:
         # Create JS function
         self.log.info("Create JS Function")
         query_node = self.find_nodes_with_service(self.get_services_map(), "n1ql")[0]
-        api1 = "http://" + query_node + ':8093/functions/v1/libraries/math/functions/add'
+        api1 = "{}://".format(self.scheme) + query_node + ':{}/functions/v1/libraries/math/functions/add'.format(self.node_port_query)
         data1 = {"name": "add", "code": "function add(a, b) { let data = a + b; return data; }"}
 
-        api2 = "http://" + query_node + ':8093/functions/v1/libraries/math/functions/sub'
+        api2 = "{}://".format(self.scheme) + query_node + ':{}/functions/v1/libraries/math/functions/sub'.format(self.node_port_query)
         data2 = {"name": "add", "code": "function sub(a, b) { let data = a - b; return data; }"}
 
-        api3 = "http://" + query_node + ':8093/functions/v1/libraries/math/functions/mul'
+        api3 = "{}://".format(self.scheme) + query_node + ':{}/functions/v1/libraries/math/functions/mul'.format(self.node_port_query)
         data3 = {"name": "add", "code": "function mul(a, b) { let data = a * b; return data; }"}
 
-        api4 = "http://" + query_node + ':8093/functions/v1/libraries/math/functions/div'
+        api4 = "{}://".format(self.scheme) + query_node + ':{}/functions/v1/libraries/math/functions/div'.format(self.node_port_query)
         data4 = {"name": "add", "code": "function div(a, b) { let data = a / b; return data; }"}
 
         auth = (self.username, self.password)
         try:
-            response = requests.get(url=api1, auth=auth, data=data1, timeout=120)
+            response = requests.get(url=api1, auth=auth, data=data1, timeout=120, verify=False)
             if response.status_code == 200:
                 return response.json()
 
-            response = requests.get(url=api2, auth=auth, data=data2, timeout=120)
+            response = requests.get(url=api2, auth=auth, data=data2, timeout=120, verify=False)
             if response.status_code == 200:
                 return response.json()
 
-            response = requests.get(url=api3, auth=auth, data=data3, timeout=120)
+            response = requests.get(url=api3, auth=auth, data=data3, timeout=120, verify=False)
             if response.status_code == 200:
                 return response.json()
 
-            response = requests.get(url=api4, auth=auth, data=data4, timeout=120)
+            response = requests.get(url=api4, auth=auth, data=data4, timeout=120, verify=False)
             if response.status_code == 200:
                 return response.json()
 
@@ -933,11 +989,10 @@ class IndexManager:
                 self.log.info(udf_stmt + " : " + str(status))
                 sleep(0.25)
 
-    """
-    Drop all UDFs
-    """
-
     def drop_all_udfs(self):
+        """
+        Drop all UDFs
+        """
         drop_function_gen_template = "select raw 'DROP FUNCTION default:`' || identity.`bucket`|| '`.`' || identity.`scope`|| '`.`' || identity.name || '`' from system:functions;"
 
         self.log.info("Starting to drop all functions ")
@@ -951,11 +1006,10 @@ class IndexManager:
                 sleep(0.25)
         self.log.info("Drop all functions completed")
 
-    """
-    From the service map, find all nodes running the specified service and return the node list.
-    """
-
     def find_nodes_with_service(self, node_map, service):
+        """
+        From the service map, find all nodes running the specified service and return the node list.
+        """
         nodelist = []
         for node in node_map:
             if service == "all":
@@ -971,12 +1025,11 @@ class IndexManager:
     #    mgr = BucketManager(self.cb, self.bucket_name)
     #    mgr.build_n1ql_deferred_indexes()
 
-    """
-    Build all deferred indexes for all collections of the specified bucket. For each collection, issue a build index 
-    query with a subquery that would fetch all deferred indexes for that collection.
-    """
-
     def build_all_deferred_indexes(self, keyspace_name_list, max_collections_to_build=0):
+        """
+        Build all deferred indexes for all collections of the specified bucket. For each collection, issue a build index
+        query with a subquery that would fetch all deferred indexes for that collection.
+        """
         build_index_query_template = "build index on keyspacename (( select raw name from system:all_indexes where " \
                                      "`using`='gsi' and '`' || `bucket_id` || '`.`' || `scope_id` || '`.`' || " \
                                      "`keyspace_id` || '`' = 'keyspacename' and state = 'deferred'))"
@@ -1015,11 +1068,10 @@ class IndexManager:
 
         self.log.info("Building all deferred indexes completed ")
 
-    """
-    Drop all indexes in the cluster
-    """
-
     def drop_all_indexes(self, keyspace_name_list, validate=True):
+        """
+        Drop all indexes in the cluster
+        """
         drop_idx_query_gen_template = "SELECT RAW 'DROP INDEX `' || name || '` on keyspacename;'  " \
                                       "FROM system:all_indexes WHERE '`' || `bucket_id` || '`.`' || `scope_id` " \
                                       "|| '`.`' || `keyspace_id` || '`' = 'keyspacename';"
@@ -1027,7 +1079,7 @@ class IndexManager:
         self.log.info("Starting to drop all indexes ")
         for keyspace in keyspace_name_list:
             drop_idx_query_gen = drop_idx_query_gen_template.replace("keyspacename", keyspace)
-
+            self.log.info("Will run the query:{}".format(drop_idx_query_gen))
             status, results, queryResult = self._execute_query(drop_idx_query_gen)
             if status is not None:
                 for result in results:
@@ -1044,11 +1096,10 @@ class IndexManager:
                     self.log.error(f"All indexes not dropped for keyspace:{keyspace}")
             self.log.info("Validation completed")
 
-    """
-    Drop random indexes in a loop
-    """
-
     def drop_indexes_in_a_loop(self, timeout, interval):
+        """
+        Drop random indexes in a loop
+        """
         # Establish timeout. If timeout > 0, run in infinite loop
         end_time = 0
         if timeout > 0:
@@ -1105,16 +1156,16 @@ class IndexManager:
 
         return indexes_online
 
-    """
-    Method to execute a query statement 
-    """
-
     def _execute_query(self, statement):
+        """
+        Method to execute a query statement
+        """
         status = None
         results = None
         queryResult = None
 
         try:
+            self.log.debug("Will execute the statement:{}".format(statement))
             timeout = timedelta(minutes=5)
             queryResult = self.cluster.query(statement, QueryOptions(timeout=timeout))
             try:
@@ -1145,10 +1196,13 @@ class IndexManager:
     def get_indexer_metadata(self, timeout=120):
         self.log.info("polling /getIndexStatus")
         idx_node = self.find_nodes_with_service(self.get_services_map(), "index")[0]
-        api = "http://" + idx_node + ':9102/getIndexStatus'
+        if self.use_https:
+            api = f"{self.scheme}://" + idx_node + ':19102/getIndexStatus'
+        else:
+            api = f"{self.scheme}://" + idx_node + ':9102/getIndexStatus'
         auth = (self.username, self.password)
         try:
-            response = requests.get(url=api, auth=auth, timeout=timeout)
+            response = requests.get(url=api, auth=auth, timeout=timeout, verify=False)
             if response.status_code == 200:
                 return response.json()
 
@@ -1164,21 +1218,33 @@ class IndexManager:
     def create_n1ql_udf(self):
         try:
             # Create JS Library
+            # self.lib_filename = '/n1ql_udf.js'
             with open(self.lib_filename, 'rb') as f:
                 data = f.read()
-            url = "http://" + self.n1ql_nodes[0] + ":8093/evaluator/v1/libraries/" + self.lib_name
+            url = "{}://".format(self.scheme) + self.n1ql_nodes[0] + ":{}/evaluator/v1/libraries/".format(self.node_port_query) + self.lib_name
+
+            self.log.info("Javascript filepath is {}".format(self.lib_filename))
+            self.log.info("File data: \n {}".format(data))
+            self.log.info("url: {}".format(url))
+            self.log.info("username: {}".format(self.username))
+            self.log.info("password: {}".format(self.password))
+
             auth = (self.username, self.password)
             response = requests.post(url=url,
                             data=data,
-                            headers={'Content-Type': 'application/json'}, auth=auth)
+                            headers={'Content-Type': 'application/json'}, auth=auth, verify=False)
             if response.status_code != 200:
-                self.log.error(response)
+                self.log.error("Error code : {0}".format(response.status_code))
+                self.log.error("Error reason : {0}".format(response.reason))
+                self.log.error("Error Text : {0}".format(response.text))
+
 
             # Create N1QL Function
             n1ql_function_query_stmt = "CREATE OR REPLACE FUNCTION run_n1ql_query(bucketname) LANGUAGE JAVASCRIPT AS 'run_n1ql_query' AT '{0}';".format(self.lib_name)
             self.log.info("Create Function Query : {0}".format(n1ql_function_query_stmt))
 
             status, results, queryResult = self._execute_query(n1ql_function_query_stmt)
+            self.log.info(f"Status is {status} Results are {results} queryResult is {queryResult}")
         except Exception as e:
             self.log.error(str(e))
 
@@ -1240,6 +1306,7 @@ TODO : 1. Validation to check if indexes are created successfully
 """
 if __name__ == '__main__':
     indexMgr = IndexManager()
+    indexMgr.set_max_num_replica()
     if indexMgr.test_mode:
         indexMgr.create_scopes_collections()
     sleep(10)

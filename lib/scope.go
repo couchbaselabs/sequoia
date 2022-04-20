@@ -95,12 +95,12 @@ func NewScope(flags TestFlags, cm *ContainerManager) Scope {
 			}
 		}
 		if spec.Servers[i].BackupPort == "" {
-                        if provider.GetType() == "dev" {
-                                spec.Servers[i].BackupPort = fmt.Sprintf("%d", 9200+i)
-                        } else {
-                                spec.Servers[i].BackupPort = "8097"
-                        }
-                }
+			if provider.GetType() == "dev" {
+				spec.Servers[i].BackupPort = fmt.Sprintf("%d", 9200+i)
+			} else {
+				spec.Servers[i].BackupPort = "8097"
+			}
+		}
 		if spec.Servers[i].AnalyticsPort == "" {
 			if provider.GetType() == "dev" {
 				spec.Servers[i].AnalyticsPort = fmt.Sprintf("%d", 9200+i)
@@ -129,17 +129,19 @@ func NewScope(flags TestFlags, cm *ContainerManager) Scope {
 }
 
 func (s *Scope) SetupServer() {
-	s.WaitForServers()
-	s.InitRestContainer()
-	s.InitCli()
-	s.InitNodes()
-	s.InitCluster()
-	s.AddUsers()
-	s.AddNodes()
-	s.RebalanceClusters()
+	if !(*s.Flags.Capella){
+        s.WaitForServers()
+        s.InitCli()
+        s.InitNodes()
+        s.InitCluster()
+        s.AddUsers()
+        s.AddNodes()
+        s.RebalanceClusters()
+        s.ApplyInternalSettings()
+        s.CreateBuckets()
+	}
 	s.getClusteInfo()
-	s.ApplyInternalSettings()
-	s.CreateBuckets()
+	s.InitRestContainer()
 	s.CreateScope()
 	s.CreateViews()
 }
@@ -219,7 +221,7 @@ func (s *Scope) InitCli() {
 }
 
 func (s *Scope) GetCliImage() string {
-    // make sure proper couchbase-cli is used
+	// make sure proper couchbase-cli is used
 	var version string
 	if s.Flags.Version != nil && (*s.Flags.Version != "") {
 		version = *s.Flags.Version
@@ -497,7 +499,7 @@ func (s *Scope) InitCluster() {
 			}
 			command = append(command, "--cluster-eventing-ramsize", server.EventingRam)
 		}
-		
+
 		command = cliCommandValidator(s.Version, command)
 
 		desc := "init cluster " + orchestrator
@@ -526,7 +528,7 @@ func (s *Scope) AddUsers() {
 	if strings.Compare(s.Version, "5.0") == -1 {
 		return
 	}
-    var image = s.GetCliImage()
+	var image = s.GetCliImage()
 
 	// add users
 	operation := func(name string, server *ServerSpec) {
@@ -574,7 +576,7 @@ func (s *Scope) AddUsers() {
 }
 
 func (s *Scope) AddNodes() {
-    var image = s.GetCliImage()
+	var image = s.GetCliImage()
 	addNodesOp := func(name string, server *ServerSpec) {
 
 		if server.InitNodes <= server.NodesActive {
@@ -661,38 +663,37 @@ func (s *Scope) RebalanceClusters() {
 }
 
 func (s *Scope) ApplyInternalSettings() {
-    var image = "appropriate/curl"
+	var image = "appropriate/curl"
 
 	operation := func(name string, server *ServerSpec) {
 
 		orchestrator := server.Names[0]
 		ip := s.Provider.GetHostAddress(orchestrator)
 		ip = strings.Split(ip, ":")[0]
-        internalSettingsUrl := fmt.Sprintf("http://%s:%s/internalSettings",
-                ip, server.RestPort)
-        command := []string{"-s", "-X", "POST",
-            "-u", server.RestUsername + ":" + server.RestPassword,
-            internalSettingsUrl,
-            "-d", "magmaMinMemoryQuota=256",
-        }
-        desc := "Setting magmaMinMemoryQuota=256"
-        task := ContainerTask{
-            Describe: desc,
-            Image:    image,
-            Command:  command,
-            Async:    false,
-        }
-        if s.Provider.GetType() == "docker" {
-            task.LinksTo = orchestrator
-        }
-            s.Cm.Run(&task)
-    }
+		internalSettingsUrl := fmt.Sprintf("http://%s:%s/internalSettings",
+			ip, server.RestPort)
+		command := []string{"-s", "-X", "POST",
+			"-u", server.RestUsername + ":" + server.RestPassword,
+			internalSettingsUrl,
+			"-d", "magmaMinMemoryQuota=256",
+		}
+		desc := "Setting magmaMinMemoryQuota=256"
+		task := ContainerTask{
+			Describe: desc,
+			Image:    image,
+			Command:  command,
+			Async:    false,
+		}
+		if s.Provider.GetType() == "docker" {
+			task.LinksTo = orchestrator
+		}
+		s.Cm.Run(&task)
+	}
 
 	// apply only to orchestrator
 	s.Spec.ApplyToServers(operation, 0, 1)
 
 }
-
 
 func (s *Scope) CreateBuckets() {
 	//fmt.Printf("%+v\n", s.Spec.Buckets)
@@ -1005,7 +1006,7 @@ func (s *Scope) DeleteBuckets() {
 }
 
 func (s *Scope) RemoveNodes() {
-    var image = s.GetCliImage()
+	var image = s.GetCliImage()
 	rmNodesOp := func(name string, server *ServerSpec) {
 
 		orchestrator := server.Names[0]
@@ -1081,7 +1082,7 @@ func (s *Scope) getClusteInfo() {
 
 func (s *Scope) ConfigSyncGateway() {
 	var image = "sequoiatools/sgw-config"
-	
+
 	// configure sync gateway
 	operation := func(name string, ssh_user string, ssh_pwd string, serverNames []string, bucketName string, bucketUser string, bucketUserPwd string, sgws *[]SyncGatewaySpec) {
 

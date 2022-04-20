@@ -1,0 +1,88 @@
+- include: tests/templates/kv.yml, tests/templates/n1ql.yml, tests/templates/rebalance.yml, tests/templates/multinode_failure.yml
+
+
+################ create scopes and collections across 3 buckets as scope_1,scope_2 ... ###############
+- image: sequoiatools/collections:capella
+  command: "-i {{.Orchestrator}}:18091 -b {{.Bucket}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count={{.Scale 2}} --collection_count={{.Scale 5}} --collection_distribution=random -u Administrator -p Password1! --capella True"
+  requires:  "{{eq true .DoOnce }}"
+  wait: true
+
+################ Sleep for some time to allow collections manifest to sync... ###############
+- section_start: wait_after_create_scopes_collections
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "10"
+  requires:  "{{eq true .DoOnce }}"
+  wait: true
+- section_end: wait_after_create_scopes_collections
+
+############### initial data loading ################
+- section_start: data_load_via_catapult
+- image: sequoiatools/catapult:capella
+  command: "-i {{.Orchestrator}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -n {{.Scale 10000}} -pc 100
+    -dt Hotel -ds 100 -ac True -dpx test1 -cpl True"
+  requires:  "{{eq true .DoOnce }}"
+  #Usually we would not wait but adding this wait here to fast fail catapult if it's not  working
+  wait: true
+  alias: collection_bucket1_doc_ops1
+- section_end: data_load_via_catapult
+
+###############  create indexes ################
+- section_start: create_indexes
+- image: sequoiatools/indexmanager:capella
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -i {{.Scale 1}} -a create_index -v -c True"
+  wait: true
+- section_end: create_indexes
+
+###############  build all deferred indexes ################
+- section_start: build_deferred_indexes
+- image: sequoiatools/indexmanager:capella
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a build_deferred_index -m 1 -c True"
+  wait: true
+- section_end: build_deferred_indexes
+
+##############   Wait till all indexes are completely built ##############
+- section_start: wait_for_indexes_to_be_built
+- image: sequoiatools/wait_for_idx_build_complete:capella
+  command: "{{.Orchestrator }} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} capella"
+  wait: true
+- section_end: wait_for_indexes_to_be_built
+
+ ###############  run queries ##############################
+- section_start: query_using_secondary_indexes
+- image: sequoiatools/queryapp:capella
+  command: "/AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Orchestrator}} --duration 60 --print_duration=60 --bucket {{.Bucket}} --querycount {{.Scale 3}} --threads 5 --n1ql True --query_timeout=600 --scan_consistency REQUEST_PLUS --bucket_names [{{.Bucket}}] --collections_mode True --dataset hotel  --username {{.RestUsername}} --password {{.RestPassword}}"
+  wait: true
+- section_end: query_using_secondary_indexes
+
+###############  create fts indexes ################
+- section_start: create_fts_indexes
+- image: sequoiatools/ftsindexmanager:capella
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -i {{.Scale 4}} -a create_index -c True"
+  wait: true
+- section_end: create_fts_indexes
+
+ ###############  run fts queries ################
+- section_start: query_fts_indexes
+- image: sequoiatools/ftsindexmanager:capella
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a run_queries -t 60  --print_interval 60 -c True"
+  wait: true
+- section_end: query_fts_indexes
+
+###############  Drop all Indexes ##############################
+- section_start: drop_all_indexes
+- image: sequoiatools/indexmanager:capella
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}}  -a drop_all_indexes -v -c True"
+  wait: true
+
+###############  Drop all FTS Indexes ##############################
+- image: sequoiatools/ftsindexmanager:capella
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a delete_all_indexes -c True"
+  wait: true
+
+###############   Sleep for some time to allow DDL to complete in the background ##############
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "10"
+  wait: true
+- section_end: drop_all_indexes

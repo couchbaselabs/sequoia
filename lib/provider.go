@@ -10,11 +10,10 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
 	"io/ioutil"
-
 	"github.com/docker/docker/api/types/swarm"
 	docker "github.com/fsouza/go-dockerclient"
+	"net"
 )
 
 type ProviderLabel int
@@ -45,6 +44,7 @@ type FileProvider struct {
 	SyncGateways []SyncGatewaySpec
 	ServerNameIp map[string]string
 	HostFile     string
+	Flags        *TestFlags
 }
 type ClusterRunProvider struct {
 	Servers      []ServerSpec
@@ -155,6 +155,7 @@ func NewProvider(flags TestFlags, servers []ServerSpec, syncGateways []SyncGatew
 			syncGateways,
 			make(map[string]string),
 			hostFile,
+			&flags,
 		}
 	case "dev":
 		endpoint := "127.0.0.1"
@@ -175,12 +176,36 @@ func NewProvider(flags TestFlags, servers []ServerSpec, syncGateways []SyncGatew
 func (p *FileProvider) GetType() string {
 	return "file"
 }
+
 func (p *FileProvider) GetHostAddress(name string) string {
 	return p.ServerNameIp[name]
 }
 
 func (p *FileProvider) GetRestUrl(name string) string {
-	return p.GetHostAddress(name) + ":8091"
+	var host string
+	var port string
+	var scheme string
+	if *p.Flags.TLS || *p.Flags.Capella {
+		port = "18091"
+		scheme = "https"
+	} else {
+		port = "8091"
+		scheme = "http"
+	}
+	if *p.Flags.Capella {
+		cname, srvs , err := net.LookupSRV("couchbases", "tcp", p.ServerNameIp[name])
+		if err != nil {
+			fmt.Printf("\ncname: %s\n", cname)
+			panic(err)
+		}
+		for _, srv := range srvs {
+			host = strings.Trim(srv.Target, ".")
+		}
+	} else {
+		host = p.GetHostAddress(name)
+	}
+	add := scheme + "://" + host + ":" + port
+	return add
 }
 
 func (p *FileProvider) ProvideCouchbaseServers(filename *string, servers []ServerSpec) {

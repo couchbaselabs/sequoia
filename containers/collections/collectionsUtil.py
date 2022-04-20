@@ -5,10 +5,26 @@ from datetime import datetime
 import httplib2
 import json
 import socket
+import dns.resolver
+
 from optparse import OptionParser
 
+from couchbase.cluster import Cluster, ClusterOptions
+from couchbase_core.cluster import PasswordAuthenticator
+from couchbase.management.collections import CollectionSpec
+from couchbase.exceptions import ScopeAlreadyExistsException, CollectionAlreadyExistsException
 
-class CollectionOperations():
+class CollectionOperations:
+    def __init__(self):
+        self.host = None
+        self.username = None
+        self.password = None
+        self.capella = False
+        self.tls = False
+        self.domain = None
+        self.count = 1
+        self.bucket_name = None
+
     def run(self):
         usage = '''%prog -i hostname:port -u username -p password -b bucket -o operations -s scope_name -c collection_name --count
                  %prog -i hostname:port -u username -p password -b bucket -o operations -s scope_name1,scope_name2 -c collection_name'''
@@ -43,22 +59,40 @@ class CollectionOperations():
                           default=[])
         parser.add_option("--ignore_collection", dest="ignore_coll", help="ignore scope from delete", action="append",
                           default=[])
-
+        parser.add_option("--capella", dest="capella", default=False, help="Set it to True for Capella runs")
+        parser.add_option("--tls", dest="tls", default=False, help="Set it to True for TLS runs")
         # parser.add_option("--list",dest="list",type="string",help="list of collections/scope to be deleted")
 
         options, args = parser.parse_args()
-        # print(options)
+        print("Parsed arguments are:{}".format(options))
         self.host = options.host
         self.username = options.username
         self.password = options.password
         self.count = options.count
+        self.capella = options.capella
+        self.tls = options.tls
         # self.list=options.list.split(",")
 
-        if options.host is None or options.operations is None:
+        self.domain = self.host.split(":")[0]
+
+        if self.capella or self.tls:
+            self.cluster = Cluster("couchbases://{0}?ssl=no_verify".format(self.domain), ClusterOptions(
+                PasswordAuthenticator(self.username, self.password)
+            ))
+        else:
+            self.cluster = Cluster.connect("couchbase://{0}".format(self.domain), ClusterOptions(
+                PasswordAuthenticator(self.username, self.password)
+            ))
+
+        self.bucket_name = options.bucket
+        bucket_obj = self.cluster.bucket(self.bucket_name)
+        self.coll_manager = bucket_obj.collections()
+
+        if self.host is None or options.operations is None:
             print("Hostname and operations are mandatory")
             parser.print_help()
             exit(1)
-        if ":" not in options.host:
+        if ":" not in self.host:
             print("pass host with port as ip:port")
             parser.print_help()
             exit(1)
@@ -66,40 +100,40 @@ class CollectionOperations():
             print("create")
             if options.collectionname is None:
                 if self.count == 1:
-                    self.create_scope(options.bucket, options.scopename)
+                    self.create_scope(self.bucket_name, options.scopename)
                 else:
-                    self.create_multiple_scope(options.bucket, options.scopename, self.count)
+                    self.create_multiple_scope(self.bucket_name, options.scopename, self.count)
             else:
                 if self.count == 1:
-                    self.create_collection(options.bucket, options.scopename, options.collectionname)
+                    self.create_collection(self.bucket_name, options.scopename, options.collectionname)
                 else:
-                    self.create_multiple_collection(options.bucket, options.scopename, options.collectionname,
+                    self.create_multiple_collection(self.bucket_name, options.scopename, options.collectionname,
                                                     self.count)
         elif options.operations == "delete":
             print("delete")
             if options.collectionname is None:
                 if "," in options.scopename or self.count == 1:
-                    self.delete_scope(options.bucket, options.scopename)
+                    self.delete_scope(self.bucket_name, options.scopename)
                 else:
-                    self.delete_multiple_scope(options.bucket, options.scopename, self.count)
+                    self.delete_multiple_scope(self.bucket_name, options.scopename, self.count)
             else:
                 if "," in options.collectionname or self.count == 1:
-                    self.delete_collection(options.bucket, options.scopename, options.collectionname)
+                    self.delete_collection(self.bucket_name, options.scopename, options.collectionname)
                 else:
-                    self.delete_multiple_collection(options.bucket, options.scopename, options.collectionname,
+                    self.delete_multiple_collection(self.bucket_name, options.scopename, options.collectionname,
                                                     self.count)
         elif options.operations == "get":
-            self.getallcollections(options.bucket)
+            self.get_all_collections(self.bucket_name)
         elif options.operations == "create_multi_scope_collection":
-            self.create_multi_scopes_collections(options.bucket, options.scope_count, options.collection_count,
+            self.create_multi_scopes_collections(self.bucket_name, options.scope_count, options.collection_count,
                                                  options.scopename, options.collectionname,
                                                  options.collection_distribution)
         elif options.operations == "crud_mode":
-            self.crud_on_scope_collections(options.bucket, options.max_scopes, options.max_collections,
+            self.crud_on_scope_collections(self.bucket_name, options.max_scopes, options.max_collections,
                                            options.crud_timeout, options.crud_interval, options.ignore_scope,
                                            options.ignore_coll)
 
-    def getallcollections(self, bucket):
+    def get_all_collections(self, bucket):
         url = bucket + "/scopes"
         passed, content, response = self.api_call(url, "GET")
         collection_map = {}
@@ -134,7 +168,7 @@ class CollectionOperations():
         passed, content, response = self.api_call(url, "GET")
         return content
 
-    def getallscopes(self, bucket):
+    def get_all_scopes(self, bucket):
         url = bucket + "/scopes"
         passed, content, response = self.api_call(url, "GET")
         scopes_list = content["scopes"]
@@ -143,7 +177,7 @@ class CollectionOperations():
     def get_scope_list(self, bucket):
         scope_list = []
         content = self.get_raw_collection_map(bucket)
-        # scope_coll_map = self.getallscopes(bucket)
+        # scope_coll_map = self.get_all_scopes(bucket)
         if "scopes" in content:
             for scope in content["scopes"]:
                 scope_list.append(scope["name"])
@@ -151,16 +185,17 @@ class CollectionOperations():
             print(
                 "Some issue with get_scope_list. Printing the contents from get_raw_collection_map method : {0}".format(
                     content))
-
+            raise Exception("Scopes not fetched for bucket:".format(bucket))
         return scope_list
 
     def create_scope(self, bucket, scope):
         scope_list = scope.split(",")
         for scope in scope_list:
-            url = bucket + "/scopes"
-            scope_body = str("name=" + scope).encode('utf-8')
-            passed, response, content = self.api_call(url, "POST", body=scope_body)
-            print(response, content)
+            try:
+                print("creating scope: {}".format(scope))
+                self.coll_manager.create_scope(scope)
+            except ScopeAlreadyExistsException:
+                print("scope: {} already exists. So not creating it again".format(scope))
 
     def create_multiple_scope(self, bucket, scope, count):
         for i in range(count):
@@ -191,10 +226,13 @@ class CollectionOperations():
     def create_collection(self, bucket, scope, collection):
         coll_list = collection.split(",")
         for collection in coll_list:
-            url = bucket + "/scopes/" + scope + "/collections"
-            collection_body = str("name=" + collection).encode('utf-8')
-            passed, response, content = self.api_call(url, "POST", body=collection_body)
-            print(response, content)
+            try:
+                collection_spec = CollectionSpec(collection, scope_name=scope)
+                self.coll_manager.create_collection(collection_spec)
+            except CollectionAlreadyExistsException:
+                print("Collection: {} already exists. So not creating it again".format(collection))
+
+
 
     def create_multiple_collection(self, bucket, scope, collection, count):
         for i in range(count):
@@ -242,7 +280,7 @@ class CollectionOperations():
             curr_coll_count = 0
             curr_coll_map = {}
             if curr_scope_num > 0:
-                # curr_coll_map = self.getallcollections(bucket)
+                # curr_coll_map = self.get_all_collections(bucket)
                 try:
                     curr_coll_map = self.get_raw_collection_map(bucket)
 
@@ -332,16 +370,29 @@ class CollectionOperations():
 
     def api_call(self, url, method="GET", body=None, timeout=120, retry_timeout=20):
         # authorization = base64.encodestring(self.username+":"+self.password)
-
         headers = {'content-type': 'application/x-www-form-urlencoded'}
 
-        url = "http://" + self.host + "/pools/default/buckets/" + url
+        if self.capella or self.tls:
+            # For capella,we need rest url in the format :
+            # https://resolved_DNS_hostname:18091. Basically 3 changes: https, resolved_DNS_hostname and 18091
+            # fetch_rest_url gives us the resolved_DNS_hostname from DNS SRV record
+            # https and 18091 are handled while forming the url string
+            if self.capella:
+                rest_domain = self.fetch_rest_url(self.domain)
+            else:
+                rest_domain = self.domain
+            dest_url = "https://" + rest_domain + ":18091/pools/default/buckets/" + url
+            http = httplib2.Http(disable_ssl_certificate_validation=True, timeout=timeout)
+        else:
+            # For non capella, we need rest url in the format : http://localhost:8091.
+            dest_url = "http://" + self.host + "/pools/default/buckets/" + url
+            http = httplib2.Http(timeout=timeout)
+
         end_time = time.time() + timeout + retry_timeout  # Threshold before raising exceptions
-        http = httplib2.Http(timeout=timeout)
         http.add_credentials(self.username, self.password)
         while True:
             try:
-                response, content = http.request(uri=url, method=method, headers=headers, body=body)
+                response, content = http.request(uri=dest_url, method=method, headers=headers, body=body)
                 if response['status'] in ['200', '201', '202']:
                     return True, json.loads(content), response
                 else:
@@ -360,6 +411,20 @@ class CollectionOperations():
                 print("Retrying because ServerNotFoundError with ", self.host)
             time.sleep(3)  # sleep before retry
 
+    def fetch_rest_url(self, url):
+        """
+        returns the hostname for the srv domain
+        """
+        print("This is a Capella run. Finding the srv domain for {}".format(url))
+        srv_info = {}
+        srv_records = dns.resolver.resolve('_couchbases._tcp.' + url, 'SRV')
+        for srv in srv_records:
+            srv_info['host'] = str(srv.target).rstrip('.')
+            srv_info['port'] = srv.port
+        print("This is a Capella run. Srv info {}".format(srv_info))
+        return srv_info['host']
+
 
 if __name__ == "__main__":
-    CollectionOperations().run()
+    collection_ops = CollectionOperations()
+    collection_ops.run()

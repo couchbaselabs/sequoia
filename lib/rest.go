@@ -252,7 +252,7 @@ func (r *RestClient) IsNodeActive(host string) bool {
 //
 func (r *RestClient) JsonRequest(auth, restUrl string, v interface{}) {
 	// run curl container to make rest request
-	cmd := []string{"-u", auth, "-s", restUrl}
+	cmd := []string{"-u", auth, "-s", restUrl, "-k"}
 	id, svcId := r.Cm.RunRestContainer(cmd)
 	//fmt.Println(MakeTaskMsg("appropriate/curl", id, cmd, false))
 	// convert logs to json

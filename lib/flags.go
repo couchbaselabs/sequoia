@@ -8,6 +8,8 @@ import (
 )
 
 type TestFlags struct {
+	Capella          *bool `yaml:"capella"`
+	TLS              *bool `yaml:"tls"`
 	Mode             string
 	Args             []string
 	Config           *string
@@ -265,6 +267,14 @@ func (f *TestFlags) AddDefaultFlags(fset *flag.FlagSet) {
 		"show_topology",
 		false,
 		"print topology at the end of each cycle")
+	f.Capella = fset.Bool(
+		"capella",
+		false,
+		"Capella flag set to True for capella runs")
+	f.TLS = fset.Bool(
+		"tls",
+		false,
+		"TLS flag set to True for TLS runs")
 }
 
 func (f *TestFlags) AddImageFlags(fset *flag.FlagSet) {

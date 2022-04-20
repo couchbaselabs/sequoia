@@ -23,6 +23,7 @@ import time
 import httplib2
 import json
 import paramiko
+import dns.resolver
 
 ## Constants
 
@@ -209,6 +210,7 @@ class FTSIndexManager:
         parser = argparse.ArgumentParser()
         parser.add_argument("-n", "--node", help="Couchbase Server Node Address")
         parser.add_argument("-o", "--port", help="Couchbase Server Node Port")
+        parser.add_argument("-c", "--capella", help="Set to True for Capella system tests run", default=False)
         parser.add_argument("-u", "--username", help="Couchbase Server Cluster Username")
         parser.add_argument("-p", "--password", help="Couchbase Server Cluster Password")
         parser.add_argument("-b", "--bucket", help="Bucket name on which indexes are to be created")
@@ -248,7 +250,8 @@ class FTSIndexManager:
                             default="create_index")
 
         args = parser.parse_args()
-
+        self.log = logging.getLogger("ftsindexmanager")
+        self.capella_run = args.capella
         self.node_addr = args.node
         self.node_port = args.port
         self.username = args.username
@@ -261,6 +264,7 @@ class FTSIndexManager:
         self.print_interval = args.print_interval
         self.interval = args.interval
         self.secure = args.secure
+        self.use_https = self.secure or self.capella_run
         self.timeout = args.timeout
         self.index_partition_map = args.index_partition_map
         self.scale = args.scale
@@ -269,15 +273,20 @@ class FTSIndexManager:
         self.validation_timeout = args.validation_timeout
 
         self.idx_def_templates = HOTEL_DS_FIELDS
-        if self.secure:
+        if self.use_https:
             self.fts_port = 18094
             self.node_port = 18091
             self.protocol = "https"
+            if self.capella_run:
+                self.rest_url = self.fetch_rest_url(self.node_addr)
+            else:
+                self.rest_url = self.node_addr
         else:
             self.fts_port = 8094
             self.node_port = 8091
             self.protocol = "http"
-
+            self.url = "{}://".format(self.protocol) + self.node_addr + ":" + str(self.node_port)
+            self.rest_url = self.node_addr
         # If there are more datasets supported, this can be expanded.
         if self.dataset == "hotel":
             self.idx_def_templates = HOTEL_DS_FIELDS
@@ -293,8 +302,14 @@ class FTSIndexManager:
                 #self.cb_coll_mgr = CollectionManager(self.cb_admin, self.bucket_name)
                 timeout_options = ClusterTimeoutOptions(kv_timeout=timedelta(seconds=120), query_timeout=timedelta(seconds=10))
                 options = ClusterOptions(PasswordAuthenticator(self.username, self.password), timeout_options=timeout_options)
-                self.cluster = Cluster('couchbase://{0}?ssl=no_verify'.format(self.node_addr),
-                                       options)
+                if self.use_https:
+                    self.log.info("This is Capella run.")
+                    self.cluster = Cluster('couchbases://' + self.node_addr + '?ssl=no_verify',
+                                           options)
+                else:
+                    self.log.info("This is a Server run.")
+                    self.cluster = Cluster('couchbase://{0}'.format(self.node_addr),
+                                           options)
                 self.cb = self.cluster.bucket(self.bucket_name)
                 break
             except Exception as Ex:
@@ -303,12 +318,9 @@ class FTSIndexManager:
                 if count == 5:
                     raise
 
-
         self.cluster.search_indexes()
 
         # Logging configuration
-
-        self.log = logging.getLogger("ftsindexmanager")
         self.log.setLevel(logging.INFO)
         ch = logging.StreamHandler()
         ch.setLevel(logging.INFO)
@@ -325,12 +337,24 @@ class FTSIndexManager:
         self.max_num_replica = 0
         self.max_num_partitions = 20
         self.set_max_num_replica()
-
-    """
-    Fetch list of all collections for the given bucket
-    """
+    
+    def fetch_rest_url(self, url):
+        """
+        meant to find the srv record for Capella runs
+        """
+        self.log.info("This is a Capella run. Finding the srv domain for {}".format(url))
+        srv_info = {}
+        srv_records = dns.resolver.query('_couchbases._tcp.' + url, 'SRV')
+        for srv in srv_records:
+            srv_info['host'] = str(srv.target).rstrip('.')
+            srv_info['port'] = srv.port
+        self.log.info("This is a Capella run. Srv info {}".format(srv_info))
+        return srv_info['host']
 
     def get_all_collections(self):
+        """
+        Fetch list of all collections for the given bucket
+        """
         cb_scopes = self.cb.collections().get_all_scopes()
 
         keyspace_name_list = []
@@ -417,7 +441,7 @@ class FTSIndexManager:
 
     def log_active_queries(self, index_name):
         try:
-            status, content, response = self.http_request(self.node_addr, self.fts_port,
+            status, content, response = self.http_request(self.rest_url, self.fts_port,
                                                           "/api/query/index/{0}".format(index_name))
             self.log.info("status {0}, content {1}".format(status, content))
         except Exception as e:
@@ -648,7 +672,7 @@ class FTSIndexManager:
                 if idx_name in cur_indexes:
                     self.log.info(f'Deleting index {idx_name}')
                     uri = "/api/index/" + idx_name
-                    status, content, response = self.http_request(self.node_addr, self.fts_port, uri, method="DELETE")
+                    status, content, response = self.http_request(self.rest_url, self.fts_port, uri, method="DELETE")
                     if not status:
                         self.log.info("Status : {0} \nResponse : {1} \nContent : {2}".format(status, response, content))
                         self.log.info("Index {0} not deleted".format(idx_name))
@@ -685,7 +709,7 @@ class FTSIndexManager:
             if idx_name in cur_indexes:
                 self.log.info(f'Deleting index {idx_name}')
                 uri = "/api/index/" + idx_name
-                status, content, response = self.http_request(self.node_addr, self.fts_port, uri, method="DELETE")
+                status, content, response = self.http_request(self.rest_url, self.fts_port, uri, method="DELETE")
                 if not status:
                     self.log.info("Status : {0} \nResponse : {1} \nContent : {2}".format(status, response, content))
                     self.log.info("Index {0} not deleted".format(idx_name))
@@ -915,7 +939,7 @@ class FTSIndexManager:
             if collection not in all_collections:
                 return False, "Seems like collections did not exist. So did not try to create index", "None"
 
-        status, content, response = self.http_request(self.node_addr, self.fts_port, "/api/index/{0}".format(idx_name),
+        status, content, response = self.http_request(self.rest_url, self.fts_port, "/api/index/{0}".format(idx_name),
                                                       method="PUT", body=index_definition)
 
         return status, content, response, idx_name
@@ -1063,7 +1087,7 @@ class FTSIndexManager:
         # Create FTS index via REST
         index_definition = json.dumps(index_def_dict)
 
-        status, content, response = self.http_request(self.node_addr, self.fts_port, "/api/index/{0}".format(idx_name),
+        status, content, response = self.http_request(self.rest_url, self.fts_port, "/api/index/{0}".format(idx_name),
                                                       method="PUT", body=index_definition)
 
         return status, content, response, idx_name
@@ -1074,7 +1098,7 @@ class FTSIndexManager:
 
     def get_fts_index_list(self, bucket=None):
         index_names = []
-        status, content, response = self.http_request(self.node_addr, self.fts_port, "/api/index")
+        status, content, response = self.http_request(self.rest_url, self.fts_port, "/api/index")
         if status:
             try:
                 index_names = list(content["indexDefs"]["indexDefs"].keys())
@@ -1096,7 +1120,7 @@ class FTSIndexManager:
         count = 0
         content = ""
         try:
-            status, content, response = self.http_request(self.node_addr, self.fts_port, "/api/index/{0}/count".format(name))
+            status, content, response = self.http_request(self.rest_url, self.fts_port, "/api/index/{0}/count".format(name))
             count = content['count']
         except TypeError as err:
             self.log.info(f'error: {err} while retrieving count for index {name}, content : {content}')
@@ -1104,7 +1128,7 @@ class FTSIndexManager:
 
     def get_fts_index_collections_count(self, name):
         """ get number of docs indexed"""
-        status, content, response = self.http_request(self.node_addr, self.fts_port, "/api/index/{0}".format(name))
+        status, content, response = self.http_request(self.rest_url, self.fts_port, "/api/index/{0}".format(name))
         types = content["indexDef"]["params"]["mapping"]["types"]
         bucket_name = content["indexDef"]["sourceName"]
         collection_list = list(types.keys())
@@ -1146,7 +1170,11 @@ class FTSIndexManager:
         results = None
         queryResult = None
         nodelist = self.find_nodes_with_service(self.get_services_map(), "n1ql")
-        query_node = Cluster('couchbase://{0}'.format(nodelist[0]),
+        if self.use_https:
+            query_node = Cluster('couchbases://{0}'.format(self.node_addr),
+                                           ClusterOptions(PasswordAuthenticator(self.username, self.password)))
+        else:
+            query_node = Cluster('couchbase://{0}'.format(nodelist[0]),
                                ClusterOptions(PasswordAuthenticator(self.username, self.password)))
 
         try:
@@ -1188,7 +1216,7 @@ class FTSIndexManager:
             if "bucket_" + self.bucket_name + "_idx" in index:
                 self.log.info(f'Deleting index {index}')
                 uri = "/api/index/" + index
-                status, content, response = self.http_request(self.node_addr, self.fts_port, uri, method="DELETE")
+                status, content, response = self.http_request(self.rest_url, self.fts_port, uri, method="DELETE")
                 if not status:
                     self.log.info("Status : {0} \nResponse : {1} \nContent : {2}".format(status, response, content))
                     self.log.info("Index {0} not deleted. Trying again".format(index))
@@ -1450,7 +1478,7 @@ class FTSIndexManager:
 
     def run_flex_query(self, index_name, query):
         index_hint = "USE INDEX (USING FTS, USING GSI)"
-        status, content, response = self.http_request(self.node_addr, self.fts_port, "/api/index/{0}".format(index_name))
+        status, content, response = self.http_request(self.rest_url, self.fts_port, "/api/index/{0}".format(index_name))
         types = content["indexDef"]["params"]["mapping"]["types"]
         bucket_name = content["indexDef"]["sourceName"]
         collection_list = list(types.keys())
@@ -1570,7 +1598,7 @@ class FTSIndexManager:
     """
 
     def get_services_map(self):
-        cluster_url = self.protocol + "://" + self.node_addr + ":" + str(self.node_port) + "/pools/default"
+        cluster_url = self.protocol + "://" + self.rest_url + ":" + str(self.node_port) + "/pools/default"
         node_map = []
 
         # Get map of nodes in the cluster
