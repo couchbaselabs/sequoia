@@ -59,14 +59,20 @@ users:
 servers: # each server tag represents a cluster
   -
       name: local
-      count: 23
+      count: 31
       ram: 50%
       index_ram: 80%
+      fts_ram: 80%
+      eventing_ram: 90%
+      analytics_ram: 90%
       index_storage: default
       services:
         index: 6
         query: 2
         backup: 1
+        fts: 2
+        eventing: 3
+        analytics: 3
       rest_username: Administrator
       rest_password: password
       ssh_username: root
@@ -76,7 +82,7 @@ servers: # each server tag represents a cluster
       analytics_path: "/data/couchbase"
       rest_port: 8091
       query_port: 8093
-      init_nodes: 21
+      init_nodes: 29
       buckets: default,WAREHOUSE,NEW_ORDER,ITEM,bucket4,bucket5,bucket6,bucket7,bucket8,bucket9
       users: default,WAREHOUSE,NEW_ORDER,ITEM,bucket4,bucket5,bucket6,bucket7,bucket8,bucket9
   -
