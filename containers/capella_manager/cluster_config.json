@@ -1,0 +1,29 @@
+{
+  "environment": "hosted",
+  "description": "Cluster created via automation",
+  "place": {
+    "singleAZ": false,
+    "hosted": {
+      "provider": "aws",
+      "CIDR": "10.0.48.0/20",
+      "region": "us-west-2"
+    }
+  },
+  "servers": [
+    {
+      "compute": "r5.xlarge",
+      "size": 3,
+      "services": ["data", "query", "analytics", "search", "index"],
+      "storage": {
+        "size": 50,
+        "IOPS": 3000,
+        "type": "GP3"
+      }
+    }
+  ],
+  "supportPackage": {
+    "timezone": "GMT",
+    "type": "DeveloperPro"
+  },
+  "version": "latest"
+}

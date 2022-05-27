@@ -15,13 +15,17 @@ buckets:
 servers: # each server tag represents a cluster
   -
       name: local
-      count: 1
+      count: 3
       ram: 40%
       index_ram: 40%
       index_storage: default
       services:
-        index: 1
-        query: 1
+        query: 3
+        query_start: 1
+        index: 3
+        index_start: 1
+        analytics: 3
+        analytics_start: 1
       rest_port: 18091
       rest_username: Administrator
       rest_password: Password1!

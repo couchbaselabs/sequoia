@@ -5,6 +5,8 @@ import (
 	"time"
 
 	cmap "github.com/streamrail/concurrent-map"
+	"strings"
+	"strconv"
 )
 
 type RestClient struct {
@@ -27,6 +29,24 @@ type NodeSelf struct {
 	Version           string
 	Hostname          string
 	ClusterMembership string
+}
+
+type PoolNodes struct {
+    	Name  string
+    	Nodes []PoolNode
+    	FtsMemoryQuota    int
+    	IndexMemoryQuota  int
+    	MemoryQuota       int
+}
+
+type PoolNode struct {
+    	MemoryTotal       int
+    	MemoryFree        int
+    	McdMemoryReserved int
+    	Services          []string
+    	Version           string
+    	Hostname          string
+    	ClusterMembership string
 }
 
 type NodeStatuses map[string]NodeStatus
@@ -120,6 +140,7 @@ func (r *RestClient) GetMemReserved(host string) int {
 	return q
 }
 
+
 func (r *RestClient) GetIndexQuota(host string) int {
 	n := r.getHostNodeSelf(host)
 	q := n.IndexMemoryQuota
@@ -173,20 +194,29 @@ func (r *RestClient) GetAuth(host string) string {
 }
 
 func (r *RestClient) GetHostNodeSelf(host string) NodeSelf {
-
-	if val, ok := r.cacheGet("self", host); ok {
+    	if val, ok := r.cacheGet("self", host); ok {
 		return val.(NodeSelf)
 	}
 	return r.getHostNodeSelf(host)
 }
 
 func (r *RestClient) getHostNodeSelf(host string) NodeSelf {
+    	url := r.Provider.GetRestUrl(host)
+    	auth := r.GetAuth(host)
+    	n := r.GetNodeSelf(auth, url)
+    	r.cacheSet("self", host, n)
+    	return n
+}
 
-	url := r.Provider.GetRestUrl(host)
-	auth := r.GetAuth(host)
-	n := r.GetNodeSelf(auth, url)
-	r.cacheSet("self", host, n)
-	return n
+func (r *RestClient) getPoolNode(host string) PoolNode {
+    	if val, ok := r.cacheGet("pool/node/", host); ok {
+		return val.(PoolNode)
+	}
+    	url := r.Provider.GetRestUrl(host)
+    	auth := r.GetAuth(host)
+    	n := r.GetPoolNode(auth, url, host)
+    	r.cacheSet("pool/node/", host, n)
+    	return n
 }
 
 func (r *RestClient) GetHostNodeStatuses(host string) NodeStatuses {
@@ -211,6 +241,18 @@ func (r *RestClient) GetNodeSelf(auth, url string) NodeSelf {
 	var n NodeSelf
 	r.JsonRequest(auth, reqUrl, &n)
 	return n
+}
+
+func (r *RestClient) GetPoolNode(auth, url, host string) PoolNode {
+	reqUrl := fmt.Sprintf("%s/pools/nodes", url)
+	var cluster PoolNodes
+	var node PoolNode
+	r.JsonRequest(auth, reqUrl, &cluster)
+	index_str := strings.Split(host, ".")[0]
+	index := strings.Split(index_str, "-")[1]
+	index_int, _ := strconv.Atoi(index)
+	node = cluster.Nodes[index_int - 1]
+	return node
 }
 
 func (r *RestClient) GetNodeStatuses(auth, url string) NodeStatuses {
@@ -238,15 +280,14 @@ func (r *RestClient) GetClusterInfo() ClusterInfo {
 }
 
 func (r *RestClient) IsNodeActive(host string) bool {
-	cluster := r.GetClusterInfo()
-	for i := 0; i < len(cluster.Nodes); i++ {
+    	cluster := r.GetClusterInfo()
+    	for i := 0; i < len(cluster.Nodes); i++ {
 		ip := host + ":8091"
 		if cluster.Nodes[i].Hostname == ip && cluster.Nodes[i].ClusterMembership == "active" {
 			return true
 		}
 	}
 	return false
-
 }
 
 //

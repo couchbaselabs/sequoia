@@ -8,7 +8,13 @@ import (
 )
 
 type TestFlags struct {
+	CapellaCluster   *string `yaml:"capella_cluster"`
+	CapellaProject   *string `yaml:"capella_project"`
 	Capella          *bool `yaml:"capella"`
+	UserCapella      *string `yaml:"user_capella"`
+	PasswordCapella  *string `yaml:"password_capella"`
+	AccessKey        *string `yaml:"access_key"`
+	SecretKey        *string `yaml:"secret_key"`
 	TLS              *bool `yaml:"tls"`
 	Mode             string
 	Args             []string
@@ -275,6 +281,30 @@ func (f *TestFlags) AddDefaultFlags(fset *flag.FlagSet) {
 		"tls",
 		false,
 		"TLS flag set to True for TLS runs")
+	f.UserCapella = fset.String(
+		"user_capella",
+		"",
+		"Capella username in case you need to use the Capella V3 APIs")
+	f.PasswordCapella = fset.String(
+		"password_capella",
+		"",
+		"Capella password in case you need to use the Capella V3 APIs")
+	f.AccessKey = fset.String(
+		"access_key",
+		"",
+		"Capella access token. Necessary to use the Capella V2 APIs")
+	f.SecretKey = fset.String(
+		"secret_key",
+		"",
+		"Capella secret token. Necessary to use the Capella V2 APIs")
+	f.CapellaCluster = fset.String(
+		"capella_cluster",
+		"",
+		"Capella cluster name")
+	f.CapellaProject = fset.String(
+		"capella_project",
+		"",
+		"Capella project name")
 }
 
 func (f *TestFlags) AddImageFlags(fset *flag.FlagSet) {

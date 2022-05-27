@@ -47,6 +47,10 @@ type ServerSpec struct {
 	EventingRam     string `yaml:"eventing_ram"`
 	RestUsername    string `yaml:"rest_username"`
 	RestPassword    string `yaml:"rest_password"`
+	CapellaUsername string `yaml:"capella_username"`
+	CapellaPassword string `yaml:"capella_password"`
+	CapellaAccess   string `yaml:"capella_access"`
+	CapellaSecret   string `yaml:"capella_secret"`
 	SSHUsername     string `yaml:"ssh_username"`
 	SSHPassword     string `yaml:"ssh_password"`
 	RestPort        string `yaml:"rest_port"`
@@ -377,6 +381,14 @@ func (s *ScopeSpec) ToAttr(attr string) string {
 		return "RestUsername"
 	case "rest_password":
 		return "RestPassword"
+	case "capella_username":
+		return "CapellaUsername"
+	case "capella_password":
+		return "CapellaPassword"
+	case "capella_access":
+		return "CapellaAccess"
+	case "capella_secret":
+		return "CapellaSecret"
 	case "ssh_username":
 		return "SSHUsername"
 	case "ssh_password":

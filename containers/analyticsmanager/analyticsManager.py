@@ -12,6 +12,7 @@ import urllib
 from optparse import OptionParser
 from datetime import datetime
 import copy
+import dns.resolver
 
 ##Templates for data-set specific index statements
 
@@ -58,6 +59,13 @@ SYNONYM_MAX_COUNTER = 0
 LINK_MAX_COUNTER = 0
 
 class AnalyticsOperations():
+
+    def __init__(self):
+        self.scheme = "http"
+        self.use_https = False
+        self.rest_port = "8091"
+        self.analytics_port = "8095"
+        self.rest_url = None
 
     def run(self):
         usage = '''%prog -i hostname -u username -p password -b bucket -o operations --dataverse_count --dataset_count 
@@ -163,14 +171,29 @@ class AnalyticsOperations():
         # recreate_cbas_infra. Not required for drop_cbas_infra.
         parser.add_option("--ds_without_where", dest="dataset_without_where_clause_percentage",
                           type="int", default=0, help="Percentage of datasets to be created without any where clause")
+        parser.add_option("-x", dest="tls", default=False, help="TLS flag, default=False")
+        parser.add_option("-c", dest="capella", default=False, help="Pass True if the tests are meant for Cepalla")
 
         self.options, args = parser.parse_args()
-
+        print("Options are {}".format(self.options))
+        if self.options.tls or self.options.capella:
+            self.scheme = "https"
+            self.use_https = True
+            self.rest_port = "18091"
+            self.analytics_port = "18095"
+        if self.options.capella:
+            self.rest_url = self.fetch_rest_url(self.options.host)
+        else:
+            self.rest_url = self.options.host
         if self.options.host is None or self.options.operations is None or self.options.buckets is None:
-            print("Hostname, operations and buckets are mandatory")
+            print("Hostname, operations, and buckets are mandatory")
             parser.print_help()
             exit(1)
-
+        print("Rest URL:{}  TLS flag:{} Rest port:{} Analytics port:{} Rest port: {}".format(self.rest_url,
+                                                                                        self.options.tls,
+                                                                                        self.rest_port,
+                                                                                        self.analytics_port,
+                                                                                        self.rest_port))
         self.buckets = self.options.buckets.split(",")
         self.include_scopes = []
         self.exclude_scopes = []
@@ -230,12 +253,25 @@ class AnalyticsOperations():
         elif self.options.operations == "recreate_cbas_infra":
             self.recreate_cbas_infra()
 
+    def fetch_rest_url(self, url):
+        """
+        returns the hostname for the SRV record( for Capella runs)
+        """
+        print("This is a Capella run. Finding the hostname for the srv record {}".format(url))
+        srv_info = {}
+        srv_records = dns.resolver.query('_couchbases._tcp.' + url, 'SRV')
+        for srv in srv_records:
+            srv_info['host'] = str(srv.target).rstrip('.')
+            srv_info['port'] = srv.port
+        print("This is a Capella run. Srv info {}".format(srv_info))
+        return srv_info['host']
+
     def set_max_counters(self):
         def inner_func(func_name):
             items = func_name()
             counters = [0]
             for item in items:
-                if item == "Default":
+                if "Default" in item:
                     continue
                 counters.append(int(item.split("_")[-1]))
             return max(counters)
@@ -302,8 +338,8 @@ class AnalyticsOperations():
         headers = {'Content-Type': 'application/x-www-form-urlencoded',
                    'Connection': 'close',
                    'Accept': '*/*'}
-        url = "http://" + self.options.host + ":8091/settings/analytics"
-        http = httplib2.Http(timeout=self.options.api_timeout)
+        url = "{}://".format(self.scheme) + self.rest_url + ":{}/settings/analytics".format(self.rest_port)
+        http = httplib2.Http(timeout=self.options.api_timeout, disable_ssl_certificate_validation=True)
         http.add_credentials(self.options.username, self.options.password)
         self.log.info("Fetching the analytics replica number")
         retry = 0
@@ -504,8 +540,8 @@ class AnalyticsOperations():
 
         params = httplib2.urllib.urlencode(params)
         headers = {'content-type': 'application/x-www-form-urlencoded'}
-        url = "http://" + self.options.host + ":8095/analytics/link"
-        http = httplib2.Http(timeout=self.options.api_timeout)
+        url = "{}://".format(self.scheme) + self.rest_url + ":{}/analytics/link".format(self.analytics_port)
+        http = httplib2.Http(timeout=self.options.api_timeout, disable_ssl_certificate_validation=True)
         http.add_credentials(self.options.username, self.options.password)
         try:
             response, content = http.request(
@@ -538,9 +574,9 @@ class AnalyticsOperations():
     def get_pending_mutation_stats(self):
         self.log.info("Fetching pending mutations for all Analytics datasets")
         headers = {'content-type': 'application/x-www-form-urlencoded'}
-        url = "http://" + self.options.host + \
-              ":8095/analytics/node/agg/stats/remaining"
-        http = httplib2.Http(timeout=self.options.api_timeout)
+        url = "{}://".format(self.scheme) + self.rest_url + \
+              ":{}/analytics/node/agg/stats/remaining".format(self.analytics_port)
+        http = httplib2.Http(timeout=self.options.api_timeout, disable_ssl_certificate_validation=True)
         http.add_credentials(self.options.username, self.options.password)
         while True:
             try:
@@ -946,20 +982,16 @@ class AnalyticsOperations():
 
         def inner_func(get_func, drop_percentage, drop_func, max_counter,
                        dataverses=[]):
-
             if drop_percentage == 100:
                 max_counter = 0
             total_items = get_func()
             no_of_items_to_be_dropped = (drop_percentage * len(total_items)) / 100
-
             items_in_dataverses_to_be_deleted = None
             if dataverses:
                 items_in_dataverses_to_be_deleted = get_func(dataverses)
-
             if items_in_dataverses_to_be_deleted:
                 if len(items_in_dataverses_to_be_deleted) > no_of_items_to_be_dropped:
                     no_of_items_to_be_dropped = len(items_in_dataverses_to_be_deleted)
-
             while no_of_items_to_be_dropped > 0:
                 if items_in_dataverses_to_be_deleted:
                     item = random.choice(items_in_dataverses_to_be_deleted)
@@ -1137,8 +1169,8 @@ class AnalyticsOperations():
         headers = {'Content-Type': 'application/json',
                    'Connection': 'close',
                    'Accept': '*/*'}
-        url = "http://" + self.options.host + ":8095/analytics/service"
-        http = httplib2.Http(timeout=self.options.api_timeout)
+        url = "{}://".format(self.scheme) + self.rest_url + ":{}/analytics/service".format(self.analytics_port)
+        http = httplib2.Http(timeout=self.options.api_timeout, disable_ssl_certificate_validation=True)
         http.add_credentials(self.options.username, self.options.password)
         params = {'statement': statement, 'pretty': "true",
                   'client_context_id': None, 'timeout': "{0}s".format(self.options.api_timeout)}
@@ -1157,13 +1189,13 @@ class AnalyticsOperations():
     def api_call(self, url, method="GET", body=None, use_remote_host=False):
 
         headers = {'content-type': 'application/x-www-form-urlencoded'}
-        http = httplib2.Http(timeout=self.options.api_timeout)
+        http = httplib2.Http(timeout=self.options.api_timeout, disable_ssl_certificate_validation=True)
 
         if use_remote_host:
-            url = "http://" + self.options.remote_host + ":8091/pools/default/buckets/" + url
+            url = "{}://".format(self.scheme) + self.options.remote_host + ":{}/pools/default/buckets/".format(self.rest_port) + url
             http.add_credentials(self.options.remote_username, self.options.remote_password)
         else:
-            url = "http://" + self.options.host + ":8091/pools/default/buckets/" + url
+            url = "{}://".format(self.scheme) + self.rest_url + ":{}/pools/default/buckets/".format(self.rest_port) + url
             http.add_credentials(self.options.username, self.options.password)
         try:
             response, content = http.request(uri=url, method=method, headers=headers, body=body)
@@ -1192,4 +1224,5 @@ class AnalyticsOperations():
             return name
 
 if __name__ == "__main__":
-    AnalyticsOperations().run()
+    analytics_operations = AnalyticsOperations()
+    analytics_operations.run()

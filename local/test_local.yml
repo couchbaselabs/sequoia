@@ -69,6 +69,76 @@
   wait: true
 - section_end: query_fts_indexes
 
+############## Create CBAS infra ###############
+
+- section_start: create_CBAS_infra
+- image: sequoiatools/analyticsmanager:capella
+  command: "-i {{.Orchestrator}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -o create_cbas_infra --dv_cnt {{.Scale 3}} --ds_cnt {{.Scale 20}} --idx_cnt {{.Scale 6}} --data_src catapult --replica_cnt 3
+    --syn_cnt {{.Scale 20}} -w false --ingestion_timeout 3600 --ds_without_where 5 --api_timeout 3600 -c True"
+  wait: true
+- section_end: create_CBAS_infra
+
+# ############### Run CBAS queries ################
+
+- section_start: run_cbas_query
+- image: sequoiatools/queryapp:capella
+  command: "/AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --port 18095 --duration {{.Scale 60}} --bucket {{.Bucket}} --querycount 10 -B [{{.Bucket}}] -a True --analytics_queries catapult_queries --query_timeout 60"
+  wait: true
+- section_end: run_cbas_query
+
+##############  Scale Up operations ##############################
+
+############### Load data ################
+- section_start: data_load_during_topology_change
+- image: sequoiatools/catapult:capella
+  command: "-i {{.Orchestrator}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -n {{.Scale 100000}} -pc 100
+    -dt Hotel -ds 1000 -ac True -dpx test1 -cpl True"
+- section_end: data_load_during_topology_change
+
+############### Add Data Node ######################################
+- section_start: scale_up
+- image: sequoiatools/capellamanager:capella
+  command: "--username {{.CapellaUsername}} --password {{.CapellaPassword}} --access {{.CapellaAccess}} --secret {{.CapellaSecret}} --cluster {{.CapellaCluster}} --operation scale_up --numnodes 1"
+  wait: true
+- section_end: scale_up
+
+###############  Scale Down operations ##############################
+############### Remove Data Node ######################################
+- section_start: scale_down
+- image: sequoiatools/capellamanager:capella
+  command: "--username {{.CapellaUsername}} --password {{.CapellaPassword}} --access {{.CapellaAccess}} --secret {{.CapellaSecret}} --cluster {{.CapellaCluster}} --operation scale_down --numnodes 1"
+  wait: true
+- section_end: scale_down
+
+############### Run backup now ######################################
+- section_start: backup
+- image: sequoiatools/capellamanager:capella
+  command: "--username {{.CapellaUsername}} --password {{.CapellaPassword}} --access {{.CapellaAccess}} --secret {{.CapellaSecret}} --cluster {{.CapellaCluster}} --project {{.CapellaProject}} --operation backup_now --bucket {{.Bucket}}"
+  wait: true
+- section_end: backup
+
+############### Delete bucket ######################################
+- section_start: delete_bucket
+- image: sequoiatools/capellamanager:capella
+  command: "--username {{.CapellaUsername}} --password {{.CapellaPassword}} --access {{.CapellaAccess}} --secret {{.CapellaSecret}} --cluster {{.CapellaCluster}} --project {{.CapellaProject}} --operation delete_bucket --bucket {{.Bucket}}"
+  wait: true
+- section_end: delete_bucket
+
+############### Restore from backup ######################################
+- section_start: restore
+- image: sequoiatools/capellamanager:capella
+  command: "--username {{.CapellaUsername}} --password {{.CapellaPassword}} --access {{.CapellaAccess}} --secret {{.CapellaSecret}} --cluster {{.CapellaCluster}} --project {{.CapellaProject}} --operation restore_from_backup --bucket {{.Bucket}}"
+  wait: true
+- section_end: restore
+
+################ Drop CBAS infra ###############
+
+- section_start: drop_CBAS_infra
+- image: sequoiatools/analyticsmanager:capella
+  command: "-i {{.Orchestrator}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -o drop_cbas_infra --api_timeout 3600 -c True"
+  wait: true
+- section_end: drop_CBAS_infra
+
 ###############  Drop all Indexes ##############################
 - section_start: drop_all_indexes
 - image: sequoiatools/indexmanager:capella
@@ -86,3 +156,21 @@
   command: "10"
   wait: true
 - section_end: drop_all_indexes
+
+## Capella bug does not let create users with eventing admin permissions https://issues.couchbase.com/browse/CAPELLA-329
+################ create and deploy functions ################
+#- section_start: eventing_create_deploy_functions
+#- image: sequoiatools/eventing
+#  command: "/eventing.py {{.Orchestrator}} {{.RestPort}} bucket_op_capella.json {{.RestUsername}} {{.RestPassword}} create_and_deploy False True"
+#  wait: true
+#- section_end: eventing_create_deploy_functions
+#-
+#  command: "/eventing.py {{.Nodes | .Service `eventing` | net 0}} {{.RestPort}} doc_timer_op.json {{.RestUsername}} {{.RestPassword}} create_and_deploy"
+#  wait: true
+
+################   Sleep for some time to allow DDL to complete in the background ##############
+#- image: sequoiatools/cmd
+#  entrypoint: sleep
+#  command: "10"
+#  wait: true
+#- section_end: drop_all_indexes

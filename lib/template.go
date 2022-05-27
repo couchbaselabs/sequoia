@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"text/template"
+	"net"
 )
 
 type TemplateResolver struct {
@@ -84,7 +85,6 @@ func (t *TemplateResolver) Scale(val int) string {
 // resolve nodes with specified service, ie..
 // .Nodes | .Service `n1ql` | net 0
 func (t *TemplateResolver) Service(service string, servers []ServerSpec) []ServerSpec {
-
 	serviceNodes := []ServerSpec{}
 	matchIdx := 0
 	for _, spec := range servers {
@@ -104,7 +104,6 @@ func (t *TemplateResolver) Service(service string, servers []ServerSpec) []Serve
 			matchIdx++
 		}
 	}
-
 	if len(serviceNodes) == 0 {
 		// try from provisioning stack
 		// it may be that server was removed from cluster
@@ -409,6 +408,32 @@ func (t *TemplateResolver) RestPassword() string {
 	return t.Attr("rest_password", nodes)
 }
 
+func (t *TemplateResolver) CapellaUsername() string {
+	return *t.Scope.Flags.UserCapella
+}
+
+// Shortcut:  .ClusterNodes | .Attr `rest_password`
+func (t *TemplateResolver) CapellaPassword() string {
+	return *t.Scope.Flags.PasswordCapella
+}
+
+func (t *TemplateResolver) CapellaAccess() string {
+	return *t.Scope.Flags.AccessKey
+}
+
+// Shortcut:  .ClusterNodes | .Attr `rest_password`
+func (t *TemplateResolver) CapellaSecret() string {
+	return *t.Scope.Flags.SecretKey
+}
+
+func (t *TemplateResolver) CapellaCluster() string {
+	return *t.Scope.Flags.CapellaCluster
+}
+
+func (t *TemplateResolver) CapellaProject() string {
+	return *t.Scope.Flags.CapellaProject
+}
+
 // Shortcut:  .ClusterNodes | .Attr `ram`
 // Note this value adjusted by setup if %
 // but if setup was not run then 256 is returned
@@ -463,18 +488,27 @@ func (t *TemplateResolver) SSHPassword() string {
 func (t *TemplateResolver) NodesByAvailability(servers []ServerSpec, isActive bool) []string {
 
 	ips := []string{}
+	var ip string
 	for _, spec := range servers {
-		for _, name := range spec.Names {
-			ip := t.Scope.Provider.GetHostAddress(name)
-			active := t.Scope.Rest.IsNodeActive(ip)
-			if active == isActive {
-				ips = append(ips, ip)
-			}
-		}
+            for _, name := range spec.Names {
+                ip = t.Scope.Provider.GetHostAddress(name)
+                if *t.Scope.Flags.Capella{
+                    cname, srvs , err := net.LookupSRV("couchbases", "tcp", t.Scope.Provider.GetHostAddress(name))
+                    if err != nil {
+                        fmt.Printf("\ncname: %s\n", cname)
+                        panic(err)
+                    }
+                for _, srv := range srvs {
+                    ip = strings.Trim(srv.Target, ".")
+                }
+            }
+            active := t.Scope.Rest.IsNodeActive(ip)
+            if active == isActive {
+                ips = append(ips, ip)
+            }
+        }
 	}
-
 	return ips
-
 }
 
 // Get ALL nodes from Cluster Spec that are active
