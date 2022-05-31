@@ -59,7 +59,11 @@ HOTEL_DS_INDEX_TEMPLATES_NEW = [
     {"indexname": "idx10",
      "statement": "CREATE INDEX `idx10_idxprefix` ON keyspacenameplaceholder((ALL (ARRAY(ALL (ARRAY flatten_keys(n,v) FOR n:v IN (`r`.`ratings`) END)) FOR `r` IN `reviews` END)))"},
     {"indexname": "idx11",
-     "statement": "CREATE INDEX `idx11_idxprefix` ON keyspacenameplaceholder(ALL ARRAY FLATTEN_KEYS(`r`.`ratings`.`Rooms`,`r`.`ratings`.`Cleanliness`) FOR r IN `reviews` END, `email`, `free_parking`)"}
+     "statement": "CREATE INDEX `idx11_idxprefix` ON keyspacenameplaceholder(ALL ARRAY FLATTEN_KEYS(`r`.`ratings`.`Rooms`,`r`.`ratings`.`Cleanliness`) FOR r IN `reviews` END, `email`, `free_parking`)"},
+    {"indexname": "idx12",
+     "statement": "CREATE INDEX `idx12_idxprefix` ON keyspacenameplaceholder(`name` INCLUDE MISSING DESC,`phone`,`type`)"},
+    {"indexname": "idx13",
+     "statement": "CREATE INDEX `idx13_idxprefix` ON keyspacenameplaceholder(`city` INCLUDE MISSING ASC, `phone`)"}
 ]
 HOTEL_DS_CBO_FIELDS = "`country`, DISTINCT ARRAY `r`.`ratings`.`Check in / front desk`, array_count((`public_likes`)),array_count((`reviews`)) DESC,`type`,`phone`,`price`,`email`,`address`,`name`,`url`,`free_breakfast`,`free_parking`,`city`"
 
@@ -162,13 +166,13 @@ class IndexManager:
             self.scheme = "http"
             self.index_url = "{}://".format(self.scheme) + self.node_addr + ":" + self.node_port_index
             self.url = "{}://".format(self.scheme) + self.node_addr + ":" + self.port
-        if self.capella_run:
-            self.idx_def_templates = HOTEL_DS_INDEX_TEMPLATES
-        else:
-            self.idx_def_templates = HOTEL_DS_INDEX_TEMPLATES + HOTEL_DS_INDEX_TEMPLATES_NEW
+
         # If there are more datasets supported, this can be expanded.
         if self.dataset == "hotel":
-            self.idx_def_templates = HOTEL_DS_INDEX_TEMPLATES
+            if self.capella_run:
+                self.idx_def_templates = HOTEL_DS_INDEX_TEMPLATES
+            else:
+                self.idx_def_templates = HOTEL_DS_INDEX_TEMPLATES + HOTEL_DS_INDEX_TEMPLATES_NEW
             self.cbo_fields = HOTEL_DS_CBO_FIELDS
         # Initialize connections to the cluster
             # Logging configuration
@@ -184,6 +188,7 @@ class IndexManager:
             fh.setFormatter(formatter)
             self.log.addHandler(fh)
         self.log.info(f"Capella flag is set to {self.capella_run}. Use tls flag is set to {self.use_tls}")
+        self.log.info("Indexes will be chosen at random from the sample statements {}".format(self.idx_def_templates))
         if self.use_https:
             self.log.info("This is Capella run.")
             for i in range(5):
@@ -334,7 +339,7 @@ class IndexManager:
         total_idx_created = 0
         total_idx = 0
         create_index_statements = []
-        self.log.info("Starting to create indexes ")
+        self.log.info(f"Starting to create indexes. Will create {max_num_idx} indexes on these collections {keyspace_name_list}")
         reference_index_map = NestedDict()
         keyspaceused = []
         while total_idx_created < max_num_idx:
@@ -344,6 +349,7 @@ class IndexManager:
 
                 # Choose upto 3 random template definitions to create indexes with
                 idx_def_templates = random.sample(self.idx_def_templates, 3)
+                self.log.info(f"Index chosen randomly from the templates:{idx_def_templates}")
                 for idx_template in idx_def_templates:
                     idx_statement = idx_template['statement']
 
@@ -357,12 +363,12 @@ class IndexManager:
                     with_clause_list = []
                     idx_statement = idx_statement.replace("keyspacenameplaceholder", keyspace_name)
                     idx_statement = idx_statement.replace('idxprefix', idx_prefix)
-                    reference_index_map[keyspace_name][idx_name]['bucket'] = bucket
-                    reference_index_map[keyspace_name][idx_name]['scope'] = scope
-                    reference_index_map[keyspace_name][idx_name]['collection'] = collection
+                    keyspace_name = keyspace_name.replace("`", "")
+                    reference_index_map[keyspace_name][idx_name]['bucket'] = bucket.replace("`", "")
+                    reference_index_map[keyspace_name][idx_name]['scope'] = scope.replace("`", "")
+                    reference_index_map[keyspace_name][idx_name]['collection'] = collection.replace("`", "")
                     reference_index_map[keyspace_name][idx_name]['defer'] = is_defer_idx
                     reference_index_map[keyspace_name][idx_name]['partition'] = is_partitioned_idx
-
                     if self.install_mode == "ee" and is_partitioned_idx and (not self.disable_partitioned_indexes):
                         idx_statement = idx_statement + " partition by hash(meta().id) "
                         if self.capella_run:
@@ -383,7 +389,6 @@ class IndexManager:
                         with_clause_list.append("\'num_replica\':%s" % num_replica)
                         idx_instances *= num_replica + 1
                         reference_index_map[keyspace_name][idx_name]['replica_count'] = num_replica + 1
-
                     if is_defer_idx:
                         with_clause_list.append("\'defer_build\':true")
 
@@ -416,9 +421,11 @@ class IndexManager:
         if validate:
             self.wait_until_indexes_online(defer_build=False)
             index_map_from_system_indexes = self.get_index_map_from_system_indexes()
-            for keyspace_name in reference_index_map.keys():
-                ref_keyspace_dict = reference_index_map[keyspace_name]
-                actual_keyspace_dict = index_map_from_system_indexes[keyspace_name]
+            self.log.info(f"Index map obtained from the rest call : {index_map_from_system_indexes}")
+            for keyspace_name in list(reference_index_map):
+                ref_keyspace_dict = reference_index_map[keyspace_name.replace("`", "")]
+                actual_keyspace_dict = index_map_from_system_indexes[keyspace_name.replace("`", "")]
+                self.log.info(f"Will compare {ref_keyspace_dict} against {actual_keyspace_dict}")
                 if sorted(ref_keyspace_dict.keys()) != sorted(actual_keyspace_dict.keys()):
                     self.log.error(f"Indexes are not matching with expected value.")
                     self.log.error(f" Expected: {ref_keyspace_dict}, Actual: {actual_keyspace_dict}")

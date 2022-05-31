@@ -16,7 +16,7 @@ RUN curl -L "http://search.maven.org/remotecontent?filepath=org/python/jython-in
 RUN wget https://files.pythonhosted.org/packages/26/ff/c71b3943bebdd9f7ceb9e137296370587eb0b33fe2eb3732ae168bc45204/requests-2.7.0-py2.py3-none-any.whl
 RUN pip install requests-2.7.0-py2.py3-none-any.whl
 
-RUN git clone -b javaClientMigrationTo3.3 https://github.com/couchbaselabs/AnalyticsQueryApp.git
+RUN git clone https://github.com/couchbaselabs/AnalyticsQueryApp.git
 
 COPY queries.txt /AnalyticsQueryApp/Query/queries.txt
 COPY volume_queries.txt /AnalyticsQueryApp/Query/volume_queries.txt
