@@ -795,7 +795,7 @@ class IndexManager:
             self.log.info("Item check count passed. No discrepancies seen.")
 
     def get_stats(self, stat_key, alt_stat_key, pending_mutations_key, index_node_addr):
-        endpoint = self.index_url + "/stats"
+        endpoint = f"{self.scheme}://{index_node_addr}:{self.node_port_index}/stats"
         retry_count = 3
         while retry_count > 1:
             try:
