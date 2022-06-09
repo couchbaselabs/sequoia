@@ -26,6 +26,11 @@ users:
       roles: admin
       auth_domain: local
   -
+      name: src_bucket
+      password: password
+      roles: admin
+      auth_domain: local
+  -
       name: metadata
       password: password
       roles: admin
@@ -35,19 +40,22 @@ users:
 buckets:
   -
       name: bucket_op
-      ram: 17%
+      ram: 25%
   -
       name: timer_op
-      ram: 17%
+      ram: 4%
   -
       name: source_op
-      ram: 17%
+      ram: 25%
   -
       name: n1ql_op
-      ram: 17%
+      ram: 4%
   -
       name: curl_op
-      ram: 17%
+      ram: 4%
+  -
+      name: src_bucket
+      ram: 22%
   -
       name: metadata
       ram: 3%
@@ -70,5 +78,5 @@ servers: # each server tag represents a cluster
       index_path: "/data"
       rest_username: Administrator
       rest_password: password
-      buckets: bucket_op,source_op,timer_op,curl_op,n1ql_op,metadata
-      users: bucket_op,source_op,timer_op,curl_op,n1ql_op,metadata
+      buckets: bucket_op,source_op,timer_op,curl_op,n1ql_op,src_bucket,metadata
+      users: bucket_op,source_op,timer_op,curl_op,n1ql_op,src_bucket,metadata

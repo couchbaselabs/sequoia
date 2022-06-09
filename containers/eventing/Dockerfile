@@ -1,8 +1,8 @@
-FROM ubuntu:16.04
+FROM ubuntu:20.04
 RUN apt-get update
 RUN apt-get upgrade -s
-RUN apt-get install -y git python-pip curl tar
-RUN apt-get install -y build-essential libssl-dev libffi-dev python-dev
+RUN apt-get install -y git python3-pip curl tar
+RUN apt-get install -y build-essential libssl-dev libffi-dev python3-dev python3-setuptools
 
 
 RUN pip install httplib2 docker
@@ -30,4 +30,4 @@ COPY mad-hatter/* mad-hatter/
 COPY mad-hatter/ABO/* mad-hatter/ABO/
 COPY CC/* CC/
 
-ENTRYPOINT ["python"]
+ENTRYPOINT ["python3"]
