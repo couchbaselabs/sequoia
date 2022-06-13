@@ -29,5 +29,6 @@ COPY alice/* alice/
 COPY mad-hatter/* mad-hatter/
 COPY mad-hatter/ABO/* mad-hatter/ABO/
 COPY CC/* CC/
+COPY neo/* neo/
 
 ENTRYPOINT ["python3"]
