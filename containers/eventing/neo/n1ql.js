@@ -20,7 +20,7 @@ function OnUpdate(doc, meta) {
                 UPSERT INTO $namespace ( KEY, VALUE ) VALUES ( $$meta.id ,"n1ql insert");
             }
         }
-        else{
+        else if(meta.keyspace.scope_name == "scope_1"){
             if(meta.keyspace.collection_name == "coll0"){
                 UPSERT INTO n1ql_op.scope_1.coll0 ( KEY, VALUE ) VALUES ( $$meta.id ,"n1ql insert");
             }
@@ -39,6 +39,9 @@ function OnUpdate(doc, meta) {
             else{
                 UPSERT INTO $namespace ( KEY, VALUE ) VALUES ( $$meta.id ,"n1ql insert");
             }
+        }
+        else{
+            UPSERT INTO $namespace ( KEY, VALUE ) VALUES ( $$meta.id ,"n1ql insert");
         }
     }
     catch(e){
@@ -68,7 +71,7 @@ function OnDelete(meta, options) {
                 DELETE from $namespace USE KEYS $$meta.id;
             }
         }
-        else{
+        else if(meta.keyspace.scope_name == "scope_1"){
             if(meta.keyspace.collection_name == "coll0"){
                 DELETE FROM n1ql_op.scope_1.coll0 USE KEYS $$meta.id;
             }
@@ -87,6 +90,9 @@ function OnDelete(meta, options) {
             else{
                 DELETE from $namespace USE KEYS $$meta.id;
             }
+        }
+        else{
+            DELETE from $namespace USE KEYS $$meta.id;
         }
     }
     catch(e){
