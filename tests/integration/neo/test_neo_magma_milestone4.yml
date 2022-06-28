@@ -45,9 +45,8 @@
   args: "{{.ActiveIndexNode 0}}, 'indexer.plasma.backIndex.enablePageBloomFilter':true"
 
 ############### Enable GSI OSO mode ################
-# Temporarily not enabling OSO mode as per MB-43725
-#- template: set_gsi_config
-#  args: "{{.ActiveIndexNode 0}}, 'indexer.build.enableOSO':true"
+- template: set_gsi_config
+  args: "{{.ActiveIndexNode 0}}, 'indexer.build.enableOSO':true"
 
 ############### Enable GSI Redistribution of indexes on rebalance in ################
 - template: set_gsi_config
