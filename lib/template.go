@@ -434,6 +434,18 @@ func (t *TemplateResolver) CapellaProject() string {
 	return *t.Scope.Flags.CapellaProject
 }
 
+func (t *TemplateResolver) CapellaURL() string {
+	return *t.Scope.Flags.CapellaURL
+}
+
+func (t *TemplateResolver) CapellaProjectID() string {
+	return *t.Scope.Flags.CapellaProjectID
+}
+
+func (t *TemplateResolver) CapellaTenantID() string {
+	return *t.Scope.Flags.CapellaTenantID
+}
+
 // Shortcut:  .ClusterNodes | .Attr `ram`
 // Note this value adjusted by setup if %
 // but if setup was not run then 256 is returned

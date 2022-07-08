@@ -10,7 +10,10 @@ import (
 type TestFlags struct {
 	CapellaCluster   *string `yaml:"capella_cluster"`
 	CapellaProject   *string `yaml:"capella_project"`
+	CapellaProjectID *string `yaml:"capella_project_id"`
+	CapellaTenantID  *string `yaml:"capella_tenant_id"`
 	Capella          *bool `yaml:"capella"`
+	CapellaURL       *string `yaml:"url_capella"`
 	UserCapella      *string `yaml:"user_capella"`
 	PasswordCapella  *string `yaml:"password_capella"`
 	AccessKey        *string `yaml:"access_key"`
@@ -285,6 +288,10 @@ func (f *TestFlags) AddDefaultFlags(fset *flag.FlagSet) {
 		"user_capella",
 		"",
 		"Capella username in case you need to use the Capella V3 APIs")
+	f.CapellaURL = fset.String(
+		"url_capella",
+		"https://cloudapi.cloud.couchbase.com",
+		"Capella URL in case you need to use non production environment")
 	f.PasswordCapella = fset.String(
 		"password_capella",
 		"",
@@ -305,6 +312,14 @@ func (f *TestFlags) AddDefaultFlags(fset *flag.FlagSet) {
 		"capella_project",
 		"",
 		"Capella project name")
+	f.CapellaProjectID = fset.String(
+		"capella_project_id",
+		"",
+		"Capella project ID")
+	f.CapellaTenantID = fset.String(
+		"capella_tenant_id",
+		"",
+		"Capella tenant ID")
 }
 
 func (f *TestFlags) AddImageFlags(fset *flag.FlagSet) {

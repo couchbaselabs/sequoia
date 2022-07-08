@@ -5,8 +5,8 @@
     "singleAZ": false,
     "hosted": {
       "provider": "aws",
-      "CIDR": "10.0.48.0/20",
-      "region": "us-west-2"
+      "CIDR": "<enter a unique CIDR value>",
+      "region": "<enter the name of the region>"
     }
   },
   "servers": [

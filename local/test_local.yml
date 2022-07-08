@@ -50,15 +50,15 @@
 
  ###############  run queries ##############################
 - section_start: query_using_secondary_indexes
-- image: sequoiatools/queryapp:capella
-  command: "/AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Orchestrator}} --duration 60 --print_duration=60 --bucket {{.Bucket}} --querycount {{.Scale 3}} --threads 5 --n1ql True --query_timeout=600 --scan_consistency REQUEST_PLUS --bucket_names [{{.Bucket}}] --collections_mode True --dataset hotel  --username {{.RestUsername}} --password {{.RestPassword}}"
+- image: sequoiatools/queryapp
+  command: "/AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Orchestrator}} --duration 300 --print_duration=60 --bucket {{.Bucket}} --querycount {{.Scale 1}} --threads 1 --n1ql True --query_timeout=60 --scan_consistency REQUEST_PLUS --bucket_names [{{.Bucket}}] --collections_mode True --dataset hotel  --username {{.RestUsername}} --password {{.RestPassword}}"
   wait: true
 - section_end: query_using_secondary_indexes
 
 ###############  create fts indexes ################
 - section_start: create_fts_indexes
 - image: sequoiatools/ftsindexmanager:capella
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -i {{.Scale 4}} -a create_index -c True"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -i {{.Scale 1}} -a create_index -c True"
   wait: true
 - section_end: create_fts_indexes
 
@@ -73,15 +73,15 @@
 
 - section_start: create_CBAS_infra
 - image: sequoiatools/analyticsmanager:capella
-  command: "-i {{.Orchestrator}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -o create_cbas_infra --dv_cnt {{.Scale 3}} --ds_cnt {{.Scale 20}} --idx_cnt {{.Scale 6}} --data_src catapult --replica_cnt 3
-    --syn_cnt {{.Scale 20}} -w false --ingestion_timeout 3600 --ds_without_where 5 --api_timeout 3600 -c True"
+  command: "-i {{.Orchestrator}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -o create_cbas_infra --dv_cnt {{.Scale 1}} --ds_cnt {{.Scale 5}} --idx_cnt {{.Scale 2}} --data_src catapult --replica_cnt 3
+    --syn_cnt {{.Scale 5}} -w false --ingestion_timeout 3600 --ds_without_where 5 --api_timeout 3600 -c True"
   wait: true
 - section_end: create_CBAS_infra
 
 # ############### Run CBAS queries ################
 
 - section_start: run_cbas_query
-- image: sequoiatools/queryapp:capella
+- image: sequoiatools/queryapp
   command: "/AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --port 18095 --duration {{.Scale 60}} --bucket {{.Bucket}} --querycount 10 -B [{{.Bucket}}] -a True --analytics_queries catapult_queries --query_timeout 60"
   wait: true
 - section_end: run_cbas_query
@@ -91,43 +91,43 @@
 ############### Load data ################
 - section_start: data_load_during_topology_change
 - image: sequoiatools/catapult:capella
-  command: "-i {{.Orchestrator}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -n {{.Scale 100000}} -pc 100
+  command: "-i {{.Orchestrator}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -n {{.Scale 10000}} -pc 100
     -dt Hotel -ds 1000 -ac True -dpx test1 -cpl True"
 - section_end: data_load_during_topology_change
 
-############### Add Data Node ######################################
-- section_start: scale_up
-- image: sequoiatools/capellamanager:capella
-  command: "--username {{.CapellaUsername}} --password {{.CapellaPassword}} --access {{.CapellaAccess}} --secret {{.CapellaSecret}} --cluster {{.CapellaCluster}} --operation scale_up --numnodes 1"
-  wait: true
-- section_end: scale_up
-
-###############  Scale Down operations ##############################
-############### Remove Data Node ######################################
-- section_start: scale_down
-- image: sequoiatools/capellamanager:capella
-  command: "--username {{.CapellaUsername}} --password {{.CapellaPassword}} --access {{.CapellaAccess}} --secret {{.CapellaSecret}} --cluster {{.CapellaCluster}} --operation scale_down --numnodes 1"
-  wait: true
-- section_end: scale_down
-
+################ Add Data Node ######################################
+#- section_start: scale_up
+#- image: sequoiatools/capellamanager:capella
+#  command: "--username {{.CapellaUsername}} --password {{.CapellaPassword}} --access {{.CapellaAccess}} --secret {{.CapellaSecret}} --cluster {{.CapellaCluster}} --operation scale_up --numnodes 1 --url {{.CapellaURL}} --tenant_id {{.CapellaTenantID}}"
+#  wait: true
+#- section_end: scale_up
+#
+################  Scale Down operations ##############################
+################ Remove Data Node ######################################
+#- section_start: scale_down
+#- image: sequoiatools/capellamanager:capella
+#  command: "--username {{.CapellaUsername}} --password {{.CapellaPassword}} --access {{.CapellaAccess}} --secret {{.CapellaSecret}} --cluster {{.CapellaCluster}} --operation scale_down --numnodes 1 --url {{.CapellaURL}} --tenant_id {{.CapellaTenantID}}"
+#  wait: true
+#- section_end: scale_down
+#
 ############### Run backup now ######################################
 - section_start: backup
 - image: sequoiatools/capellamanager:capella
-  command: "--username {{.CapellaUsername}} --password {{.CapellaPassword}} --access {{.CapellaAccess}} --secret {{.CapellaSecret}} --cluster {{.CapellaCluster}} --project {{.CapellaProject}} --operation backup_now --bucket {{.Bucket}}"
+  command: "--username {{.CapellaUsername}} --password {{.CapellaPassword}} --access {{.CapellaAccess}} --secret {{.CapellaSecret}} --cluster {{.CapellaCluster}} --operation backup_now --bucket {{.Bucket}} --project_id {{.CapellaProjectID}} --url {{.CapellaURL}} --tenant_id {{.CapellaTenantID}}"
   wait: true
 - section_end: backup
 
 ############### Delete bucket ######################################
 - section_start: delete_bucket
 - image: sequoiatools/capellamanager:capella
-  command: "--username {{.CapellaUsername}} --password {{.CapellaPassword}} --access {{.CapellaAccess}} --secret {{.CapellaSecret}} --cluster {{.CapellaCluster}} --project {{.CapellaProject}} --operation delete_bucket --bucket {{.Bucket}}"
+  command: "--username {{.CapellaUsername}} --password {{.CapellaPassword}} --access {{.CapellaAccess}} --secret {{.CapellaSecret}} --cluster {{.CapellaCluster}} --project_id {{.CapellaProjectID}} --operation delete_bucket --bucket {{.Bucket}} --url {{.CapellaURL}} --tenant_id {{.CapellaTenantID}}"
   wait: true
 - section_end: delete_bucket
 
-############### Restore from backup ######################################
+############## Restore from backup ######################################
 - section_start: restore
 - image: sequoiatools/capellamanager:capella
-  command: "--username {{.CapellaUsername}} --password {{.CapellaPassword}} --access {{.CapellaAccess}} --secret {{.CapellaSecret}} --cluster {{.CapellaCluster}} --project {{.CapellaProject}} --operation restore_from_backup --bucket {{.Bucket}}"
+  command: "--username {{.CapellaUsername}} --password {{.CapellaPassword}} --access {{.CapellaAccess}} --secret {{.CapellaSecret}} --cluster {{.CapellaCluster}} --project_id {{.CapellaProjectID}} --operation restore_from_backup --bucket {{.Bucket}} --url {{.CapellaURL}} --tenant_id {{.CapellaTenantID}}"
   wait: true
 - section_end: restore
 

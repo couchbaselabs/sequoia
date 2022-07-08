@@ -14,13 +14,13 @@ logging.basicConfig()
 
 
 class APIManager:
-    def __init__(self, url="https://cloudapi.cloud.couchbase.com"):
+    def __init__(self):
         self.log = logging.getLogger("capella_api_manager")
         self.parser = argparse.ArgumentParser()
         self.parser.add_argument("-u", "--username", help="Capella username", required=True)
         self.parser.add_argument("-p", "--password", help="Capella login password", required=True)
-        self.parser.add_argument("-s", "--secret", help="API secret key", required=True)
-        self.parser.add_argument("-a", "--access", help="API access key", required=True)
+        self.parser.add_argument("-s", "--secret", help="API secret key", required=False)
+        self.parser.add_argument("-a", "--access", help="API access key", required=False)
         self.parser.add_argument("-c", "--cluster", help="Cluster Name", default="system_testing")
         self.parser.add_argument("-o", "--operation", help="Operations to be run.", default="get_cluster_id")
         self.parser.add_argument("-n", "--numnodes", help="Node count used for scaling operations", default=1)
@@ -30,6 +30,18 @@ class APIManager:
         self.parser.add_argument("-e", "--db_password", help="DB password", default="Password1!")
         self.parser.add_argument("-w", "--project", help="Project name if it already exists", default="system_testing")
         self.parser.add_argument("-j", "--json", help="Cluster config to be used for deployment")
+        self.parser.add_argument("-i", "--image_name", help="AMI for CB server")
+        self.parser.add_argument("-pid", "--project_id", help="ProjectId under which we will do cluster deployment",
+                                 default=None)
+        self.parser.add_argument("-tid", "--tenant_id", help="TenantId for cluster deployment", default=None)
+        self.parser.add_argument("-ot", "--override_token", help="Override token to be used for cluster deployment")
+        self.parser.add_argument("-url", "--url",
+                                 help="https url reflecting the env where the cluster will be deployed",
+                                 default="https://cloudapi.cloud.couchbase.com")
+        self.parser.add_argument("-cidr", "--cidr", help="cidr for the cluster", default="10.0.160.0/20")
+        self.parser.add_argument("-r", "--region", help="Region on which the cluster needs to be deployed",
+                                 default="us-east-1")
+
         self.args = self.parser.parse_args()
         self.log_level = logging.INFO
         if self.args.log_level == 'DEBUG':
@@ -46,7 +58,7 @@ class APIManager:
         self.db_user = self.args.db_user
         self.db_password = self.args.db_password
         self.cluster_config = self.args.json
-        self.url = url
+        self.url = self.args.url
         self.node_count = int(self.args.numnodes)
         self.bucket_name = self.args.bucket
         self.api_obj = CapellaAPI(url=self.url, secret=self.secret, access=self.access, user=self.username,
@@ -57,24 +69,46 @@ class APIManager:
             with open(os.path.join(os.path.dirname(__file__), 'cluster_config.json')) as f:
                 self.cluster_config = json.load(f)
         self.log.debug("Cluster config json content is {}".format(self.cluster_config))
+        self.image_name = self.args.image_name
+        self.project_id = self.args.project_id
+        self.tenant_id = self.args.tenant_id
+        self.override_token = self.args.override_token
+        self.cidr = self.args.cidr
+        self.region = self.args.region
 
     def get_cluster_id(self, name):
-        return self._get_meta_data(name=name)['id']
+        return self.api_obj.get_cluster_id(name)
+
+    def get_cluster_name(self, id):
+        all_clusters = json.loads(self.api_obj.get_clusters().content)['data']
+        for cluster in all_clusters['items']:
+            if cluster['id'] == id:
+                return cluster['name']
 
     def _get_meta_data(self, name):
-        all_clusters = json.loads(self.api_obj.get_clusters().content)['data']
+        if not self.project_id:
+            all_clusters = json.loads(self.api_obj.get_clusters().content)['data']
+        else:
+            params = "projectId={}".format(self.project_id)
+            self.log.debug("Params parameter being sent in _get_meta_data method: {}".format(params))
+            all_clusters = json.loads(self.api_obj.get_clusters(params).content)['data']
         self.log.debug("All clusters: {}".format(all_clusters))
         for cluster in all_clusters['items']:
             if cluster['name'] == name:
                 return cluster
 
     def get_tenant_id(self):
-        self.log.debug("Fetching tenant ID")
-        return json.loads(self.api_obj.get_clusters().content)['data']['tenantId']
+        if self.tenant_id is None:
+            raise Exception(
+                "Tenant ID should be passed as an argument --tenant_id. Run the container with --tenant_id param")
+        return self.tenant_id
 
     def get_project_id(self, name):
-        self.log.debug("Fetching project ID")
-        return self._get_meta_data(name=name)['projectId']
+        if self.project_id is None:
+            self.log.debug("Fetching project ID")
+            return self._get_meta_data(name=name)['projectId']
+        else:
+            return self.project_id
 
     def get_bucket_id(self, name):
         self.log.debug("Fetching bucket ID")
@@ -102,7 +136,10 @@ class APIManager:
 
     def get_num_nodes(self):
         tenant_id = self.get_tenant_id()
-        project_id = self.get_project_id(self.project_name)
+        if self.project_id:
+            project_id = self.project_id
+        else:
+            project_id = self.get_project_id(self.project_name)
         cluster_id = self.get_cluster_id(self.cluster_name)
         all_nodes = json.loads(self.api_obj.get_nodes(tenant_id, project_id, cluster_id).content)['data']
         return len(all_nodes)
@@ -132,11 +169,18 @@ class APIManager:
         resp = self.api_obj.create_bucket(tenant_id, project_id, cluster_id, bucket_config)
         self.log.info("Create Bucket status:{}".format(resp.status_code))
 
-    def delete_bucket(self, name):
-        tenant_id, project_id, cluster_id = self.get_tenant_id(), self.get_project_id(
-            self.project_name), self.get_cluster_id(self.cluster_name)
+    def delete_bucket(self, bucket_name):
+        if not self.project_id:
+            project_id = self.get_project_id(self.project_name)
+        else:
+            project_id = self.project_id
+        if not self.tenant_id:
+            tenant_id = self.get_tenant_id()
+        else:
+            tenant_id = self.tenant_id
+        cluster_id = self.get_cluster_id(self.cluster_name)
         self.log.debug("Tenant ID: {}, Project ID: {} ClusterID: {}".format(tenant_id, project_id, cluster_id))
-        bucket_id = self.get_bucket_id(name)
+        bucket_id = self.get_bucket_id(bucket_name)
         self.log.debug("Bucket ID to be deleted : {}".format(bucket_id))
         resp = self.api_obj.delete_bucket(tenant_id, project_id, cluster_id, bucket_id)
         self.log.info("Delete Bucket status:{}".format(resp.status_code))
@@ -190,10 +234,15 @@ class APIManager:
             raise Exception("Scale down operation failure")
 
     def get_cluster_status(self, cluster_name=None):
+        self.log.info("get_cluster_status")
+
         if cluster_name is None:
             cluster_name = self.cluster_name
+        self.log.info("going to get cluster_id")
         cluster_id = self.get_cluster_id(name=cluster_name)
+        self.log.info("cluster_id:{}".format(cluster_id))
         cluster_status = json.loads(self.api_obj.get_cluster_status(cluster_id=cluster_id).content)
+        self.log.info("cluster_status:{}".format(cluster_status))
         return cluster_status['status']
 
     def create_db_user(self, username, password):
@@ -212,9 +261,10 @@ class APIManager:
         resp = self.api_obj.delete_db_user(tenant_id, project_id, cluster_id, user_id)
         self.log.info("Delete user status:{}".format(resp.status_code))
 
-    def create_cluster(self, project_name, cluster_name, timeout=30):
+    def create_cluster(self, project_name, cluster_name, region, project_id=None, timeout=30):
         self.log.info("Will create the cluster {} on project {}".format(cluster_name, project_name))
-        project_id = self.get_project_id(project_name)
+        if project_id is None:
+            project_id = self.get_project_id(project_name)
         self.log.info("Project ID:{}".format(project_id))
         if project_id is None:
             raise Exception(
@@ -222,6 +272,8 @@ class APIManager:
         cluster_configuration = self.cluster_config
         cluster_configuration["clusterName"] = cluster_name
         cluster_configuration["projectId"] = project_id
+        cluster_configuration['place']["hosted"]["CIDR"] = self.get_free_cidr_range()
+        cluster_configuration['place']["hosted"]["region"] = region
         self.log.info("Payload used for cluster creation:{}".format(cluster_configuration))
         resp = self.api_obj.create_cluster(cluster_configuration)
         self.log.info("Create cluster config response: {}".format(resp.content))
@@ -240,6 +292,50 @@ class APIManager:
         if cluster_status != 'healthy':
             self.log.error("Create cluster operation ended in error. Cluster status is not healthy")
             raise Exception("Create cluster operation failure")
+
+    def get_free_cidr_range(self):
+        deployment_options = json.loads(self.api_obj.get_deployment_options(self.tenant_id).content)
+        self.log.debug("Fetching deployment options:{}".format(deployment_options))
+        return deployment_options['suggestedCidr']
+
+    def create_cluster_customAMI(self, image_name, cluster_name, project_id, tenant_id, override_token,
+                                 region, timeout=30, cluster_configuration=None):
+        try:
+            if cluster_configuration is None:
+                with open(os.path.join(os.path.dirname(__file__), 'cluster_config_ami.json')) as f:
+                    cluster_configuration = json.load(f)
+
+            cluster_configuration["cidr"] = self.get_free_cidr_range()
+            cluster_configuration["region"] = region
+            cluster_configuration["name"] = cluster_name
+            cluster_configuration["projectId"] = project_id
+            cluster_configuration["overRide"]["image"] = image_name
+            cluster_configuration["overRide"]["token"] = override_token
+            self.log.info("Payload used for cluster creation:{}".format(cluster_configuration))
+
+            resp = self.api_obj.create_cluster_customAMI(tenant_id, cluster_configuration)
+            self.log.info(" Json response for Create cluster using AMI : {}".format(resp.json()))
+        except Exception as ex:
+            self.log.info("Got exception while submitting for cluster creation using AMI: {}".format(ex))
+
+        try:
+            time.sleep(60)
+            cluster_status = self.get_cluster_status(cluster_name)
+            time_now = time.time()
+            self.log.info("Cluster status is {}".format(cluster_status))
+            while cluster_status == 'deploying' and time.time() - time_now < timeout * 60:
+                cluster_status = self.get_cluster_status(cluster_name)
+                if cluster_status == 'healthy':
+                    break
+                time.sleep(20)
+                self.log.info("Cluster status is {}".format(cluster_status))
+            cluster_status = self.get_cluster_status(cluster_name)
+            self.log.info("Cluster status after creation: {}".format(cluster_status))
+            if cluster_status != 'healthy':
+                self.log.error("Create cluster operation ended in error. Cluster status is not healthy")
+                raise Exception("Create cluster operation failure")
+        except Exception as ex:
+            self.log.info("Got exception while polling for status for cluster creation using AMI: {}".format(ex))
 
     def delete_cluster(self, cluster_name, timeout=20):
         self.log.info("Will delete the cluster {}".format(cluster_name))
@@ -289,14 +385,14 @@ class APIManager:
             f.write(file_content)
 
     def restore_from_backup(self, timeout=20):
-        self.api_obj.restore_from_backup(cluster_name=self.cluster_name, project_name=self.project_name,
-                                         bucket_name=self.bucket_name)
-        tenant_id, project_id, cluster_id = self.get_tenant_id(), self.get_project_id(
-            self.project_name), self.get_cluster_id(name=self.cluster_name)
-        time.sleep(120)
+        cluster_id = self.get_cluster_id(self.cluster_name)
+        self.api_obj.restore_from_backup(tenant_id=self.tenant_id, project_id=self.project_id,
+                                         cluster_id=cluster_id, bucket_name=self.bucket_name)
+        time.sleep(180)
         time_now = time.time()
         while time.time() - time_now < timeout * 60:
-            jobs_response = self.api_obj.jobs(project_id=project_id, tenant_id=tenant_id, cluster_id=cluster_id).content
+            jobs_response = self.api_obj.jobs(project_id=self.project_id, tenant_id=self.tenant_id,
+                                              cluster_id=cluster_id).content
             self.log.debug(f"resp_json is {jobs_response}")
             resp_json_data = json.loads(str(jobs_response, "UTF-8"))['data']
             if not resp_json_data:
@@ -308,14 +404,14 @@ class APIManager:
                         time.sleep(60)
 
     def backup_now(self, timeout=20):
-        self.api_obj.backup_now(cluster_name=self.cluster_name, project_name=self.project_name,
-                                bucket_name=self.bucket_name)
-        tenant_id, project_id, cluster_id = self.get_tenant_id(), self.get_project_id(
-            self.project_name), self.get_cluster_id(name=self.cluster_name)
-        time.sleep(120)
+        cluster_id = self.get_cluster_id(self.cluster_name)
+        self.api_obj.backup_now(tenant_id=self.tenant_id, project_id=self.project_id,
+                                cluster_id=cluster_id, bucket_name=self.bucket_name)
+        time.sleep(180)
         time_now = time.time()
         while time.time() - time_now < timeout * 60:
-            jobs_response = self.api_obj.jobs(project_id=project_id, tenant_id=tenant_id, cluster_id=cluster_id).content
+            jobs_response = self.api_obj.jobs(project_id=self.project_id, tenant_id=self.tenant_id,
+                                              cluster_id=cluster_id).content
             self.log.debug(f"resp_json is {jobs_response}")
             resp_json_data = json.loads(str(jobs_response, "UTF-8"))['data']
             if not resp_json_data:
@@ -346,7 +442,8 @@ class APIManager:
         elif self.operation == 'delete_db_user':
             self.delete_db_user(self.db_user)
         elif self.operation == 'create_cluster':
-            self.create_cluster(project_name=self.project_name, cluster_name=self.cluster_name)
+            self.create_cluster(project_id=self.project_id, project_name=self.project_name,
+                                cluster_name=self.cluster_name, region=self.region)
         elif self.operation == 'delete_cluster':
             self.delete_cluster(self.cluster_name)
         elif self.operation == 'allow_my_ip':
@@ -359,11 +456,18 @@ class APIManager:
             self.backup_now()
         elif self.operation == 'restore_from_backup':
             self.restore_from_backup()
+        elif self.operation == 'create_cluster_customAMI':
+            self.create_cluster_customAMI(image_name=self.image_name, cluster_name=self.cluster_name,
+                                          project_id=self.project_id, tenant_id=self.tenant_id,
+                                          override_token=self.override_token, region=self.region)
+        elif self.operation == 'get_free_cidr_range':
+            print(self.get_free_cidr_range())
         else:
             raise Exception("Incorrect choice. Choices can be :"
                             "get_cluster_id, get_cluster_status, scale_up, scale_down, get_num_nodes, create_bucket, "
                             "delete_bucket, create_db_user, delete_db_user, create_cluster, delete_cluster,"
-                            "allow_my_ip, get_srv_domain, populate_provider_file, backup_now, restore_from_backup")
+                            "allow_my_ip, get_srv_domain, populate_provider_file, backup_now, restore_from_backup,"
+                            "get_free_cidr_range, create_cluster_customAMI")
 
 
 if __name__ == "__main__":
