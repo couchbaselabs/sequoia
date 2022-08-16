@@ -77,12 +77,18 @@ class APIManager:
         self.region = self.args.region
 
     def get_cluster_id(self, name):
-        return self.api_obj.get_cluster_id(name)
+        cluster = self._get_meta_data(name)
+        return cluster['id']
 
-    def get_cluster_name(self, id):
-        all_clusters = json.loads(self.api_obj.get_clusters().content)['data']
+    def get_cluster_name(self, cluster_id):
+        if not self.project_id:
+            all_clusters = json.loads(self.api_obj.get_clusters().content)['data']
+        else:
+            params = "projectId={}".format(self.project_id)
+            self.log.debug("Params parameter being sent in _get_meta_data method: {}".format(params))
+            all_clusters = json.loads(self.api_obj.get_clusters(params).content)['data']
         for cluster in all_clusters['items']:
-            if cluster['id'] == id:
+            if cluster['id'] == cluster_id:
                 return cluster['name']
 
     def _get_meta_data(self, name):
@@ -367,8 +373,7 @@ class APIManager:
         self.log.info("Add allowed ip response: {}".format(resp.status_code))
 
     def get_srv_domain(self):
-        tenant_id, project_id, cluster_id = self.get_tenant_id(), self.get_project_id(
-            self.project_name), self.get_cluster_id(self.cluster_name)
+        tenant_id, project_id, cluster_id = self.get_tenant_id(), self.project_id, self.get_cluster_id(self.cluster_name)
         resp_json = json.loads(self.api_obj.get_cluster_internal(tenant_id, project_id, cluster_id).content)
         srv_domain = resp_json['data']['connect']['srv']
         self.log.info(
