@@ -9,7 +9,7 @@ import httplib2
 
 
 class EventingHelper:
-    handler_map={"bucket_op":"CC/bucket_op.js","timers":"CC/timers.js","n1ql":"CC/n1ql.js","sbm":"CC/sbm.js","curl":"CC/curl.js","bucket_op_sbm":"CC/bucket_op_sbm.js"}
+    handler_map={"bucket_op":"neo/bucket_op.js","timers":"neo/timers.js","n1ql":"neo/n1ql.js","sbm":"neo/sbm.js","curl":"neo/curl.js","bucket_op_sbm":"neo/bucket_op_sbm.js"}
 
     def run(self):
         usage = '''%prog -i hostname:port -u username -p password -s source_collection -m metadata_colletcion -d bindings -t type -n number'''
@@ -144,11 +144,13 @@ class EventingHelper:
 
 
     def get_all_handlers(self,prefix=None):
-        authorization = base64.encodestring('%s:%s' % (self.username, self.password))
+        credentials = '{}:{}'.format(self.username, self.password)
+        authorization = base64.encodebytes(credentials.encode('utf-8'))
+        authorization = authorization.decode('utf-8').rstrip('\n')
         headers = {'Content-type': 'application/json', 'Authorization': 'Basic %s' % authorization}
         url = "http://" + self.hostname + ":8096" + "/api/v1/list/functions"
         response, content = httplib2.Http(timeout=120).request(uri=url, method="GET", headers=headers)
-        print content, response
+        print(content, response)
         if response.status != 200:
             raise Exception(content)
         result = json.loads(content)
@@ -158,17 +160,21 @@ class EventingHelper:
             return self.fillter_handler(result["functions"],prefix)
 
     def create_save_handler(self,functions):
-        authorization = base64.encodestring('%s:%s' % (self.username, self.password))
+        credentials = '{}:{}'.format(self.username, self.password)
+        authorization = base64.encodebytes(credentials.encode('utf-8'))
+        authorization = authorization.decode('utf-8').rstrip('\n')
         headers = {'Content-type': 'application/json', 'Authorization': 'Basic %s' % authorization}
         url = "http://" + self.hostname + ":8096" + "/api/v1/functions/"
         body = json.dumps(functions).encode("ascii", "ignore")
         response, content = httplib2.Http(timeout=120).request(uri=url, method="POST", headers=headers, body=body)
-        print content, response
+        print(content, response)
         if response.status !=200:
             raise Exception(content)
 
     def perform_lifecycle_operation(self, name, operation,body=None):
-        authorization = base64.encodestring('%s:%s' % (self.username, self.password))
+        credentials = '{}:{}'.format(self.username, self.password)
+        authorization = base64.encodebytes(credentials.encode('utf-8'))
+        authorization = authorization.decode('utf-8').rstrip('\n')
         headers = {'Content-type': 'application/json', 'Authorization': 'Basic %s' % authorization}
         url = "http://" + self.hostname + ":8096" + "/api/v1/functions/" + name + "/" + operation
         try:
@@ -177,7 +183,7 @@ class EventingHelper:
                 response, content = httplib2.Http(timeout=120).request(uri=url, method="POST", headers=headers, body=body)
             else:
                 response, content = httplib2.Http(timeout=120).request(uri=url, method="POST", headers=headers)
-            print content, response
+            print(content, response)
             if response.status !=200:
                 raise Exception(content)
         except Exception as e:
@@ -216,13 +222,16 @@ class EventingHelper:
                      "collection_name": bind_map[3], "access": bind_map[4]})
         else:
             bind= destination_bindings[0].split(".")
-            collection = bind[1] + "." + bind[2] + ".`" + bind[3]+"`"
+            collection = bind[1] + "." + bind[2] + ".`" + bind[3] + "`"
             body['appcode']=Template(body['appcode']).substitute(namespace=collection.strip())
         body['settings'] = {}
         body['settings']['dcp_stream_boundary'] = dcp_stream_boundary
         body['settings']['deployment_status'] = False
         body['settings']['processing_status'] = False
-        body['settings']['worker_count'] = 1
+        if options.type == 'timers':
+            body['settings']['worker_count'] = 3
+        else:
+            body['settings']['worker_count'] = 1
         body['settings']['log_level'] = options.log_level
         if options.type=='curl':
             body['depcfg']['curl'].append({"hostname": "http://qa.sc.couchbase.com/", "value": "server","auth_type":'no-auth',
@@ -232,7 +241,9 @@ class EventingHelper:
         return body
 
     def check_handler_status(self,appname,app_status):
-        authorization = base64.encodestring('%s:%s' % (self.username, self.password))
+        credentials = '{}:{}'.format(self.username, self.password)
+        authorization = base64.encodebytes(credentials.encode('utf-8'))
+        authorization = authorization.decode('utf-8').rstrip('\n')
         headers = {'Content-type': 'application/json', 'Authorization': 'Basic %s' % authorization}
         url = "http://" + self.hostname + ":8096" + "/api/v1/status/" + appname
         method="GET"
@@ -241,7 +252,7 @@ class EventingHelper:
         result=json.loads(content)
         status=response['status']
         if not status:
-            print status, result, headers
+            print(status, result, headers)
             raise Exception("Failed to get deployed apps")
         composite_status = None
         while composite_status != app_status:
@@ -255,27 +266,31 @@ class EventingHelper:
                 print(e)
 
     def delete_handlers(self,handler=None):
-        authorization = base64.encodestring('%s:%s' % (self.username, self.password))
+        credentials = '{}:{}'.format(self.username, self.password)
+        authorization = base64.encodebytes(credentials.encode('utf-8'))
+        authorization = authorization.decode('utf-8').rstrip('\n')
         headers = {'Content-type': 'application/json', 'Authorization': 'Basic %s' % authorization}
         if handler!=None:
             url = "http://" + self.hostname + ":8096" + "/api/v1/functions/" + handler
         else:
             url = "http://" + self.hostname + ":8096" + "/api/v1/functions/"
         response, content = httplib2.Http(timeout=120).request(uri=url, method="DELETE", headers=headers)
-        print content, response
+        print(content, response)
         if response['status'] in ['200', '201', '202']:
             return True, content, response
         else:
             return False, content, response
 
     def execute_n1ql_query(self,query):
-        authorization = base64.encodestring('%s:%s' % (self.username, self.password))
+        credentials = '{}:{}'.format(self.username, self.password)
+        authorization = base64.encodebytes(credentials.encode('utf-8'))
+        authorization = authorization.decode('utf-8').rstrip('\n')
         headers = {'Content-type': 'application/x-www-form-urlencoded', 'Authorization': 'Basic %s' % authorization}
         url = "http://" + self.hostname + ":8093/query/service"
         body="statement="+query
         response, content = httplib2.Http(timeout=120).request(uri=url, method="POST", headers=headers,body=body)
         if response.status != 200:
-            print content, response
+            print(content, response)
             raise Exception(content)
         return json.loads(content)
 
@@ -312,7 +327,7 @@ class EventingHelper:
         elif curr_count >= expected_count:
             raise Exception("No of docs in source and destination don't match: Source Bucket({0}) : {1}, Destination Bucket({2}): {3}".
             format(source_collection, source_count["results"][0], destination_collection, binding_count["results"][0]))
-            
+
     def wait_for_failover_complete(self):
         status, content, header = self.failover_rebalance_status()
         count = 0
@@ -332,7 +347,9 @@ class EventingHelper:
         print("##### Failover Completed #####")
 
     def failover_rebalance_status(self):
-        authorization = base64.encodestring('%s:%s' % (self.username, self.password))
+        credentials = '{}:{}'.format(self.username, self.password)
+        authorization = base64.encodebytes(credentials.encode('utf-8'))
+        authorization = authorization.decode('utf-8').rstrip('\n')
         headers = {'Content-type': 'application/json', 'Authorization': 'Basic %s' % authorization}
         url = "http://" + self.hostname + ":" + self.port + "/getAggRebalanceStatus"
         response, content = httplib2.Http(timeout=120).request(uri=url, method="GET", headers=headers)
