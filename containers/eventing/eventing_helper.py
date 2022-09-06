@@ -6,10 +6,24 @@ from optparse import OptionParser
 from string import Template
 
 import httplib2
+import dns.resolver
 
 
 class EventingHelper:
     handler_map={"bucket_op":"neo/bucket_op.js","timers":"neo/timers.js","n1ql":"neo/n1ql.js","sbm":"neo/sbm.js","curl":"neo/curl.js","bucket_op_sbm":"neo/bucket_op_sbm.js"}
+
+    def __init__(self):
+        self.hostname = None
+        self.username = None
+        self.password = None
+        self.capella_run = False
+        self.use_tls = False
+        self.use_https = False
+        self.eventing_port = 8096
+        self.node_port = 8091
+        self.n1ql_port = 8093
+        self.protocol = "http"
+        self.rest_url = None
 
     def run(self):
         usage = '''%prog -i hostname:port -u username -p password -s source_collection -m metadata_colletcion -d bindings -t type -n number'''
@@ -30,11 +44,31 @@ class EventingHelper:
         parser.add_option("--timeout",dest="timeout",type="int", default=1200)
         parser.add_option("--sleep",dest="sleep",type="int", default=60)
         parser.add_option("--sbm",dest="sbm",default=False)
+        parser.add_option("--capella", dest="capella", help="Set to True if tests need to run on Capella", default=False)
+        parser.add_option("--tls", dest="tls", help="Set to True if tests need to run with TLS enabled", default=False)
         options, args = parser.parse_args()
         print(options)
         self.username = options.username
         self.password = options.password
         self.hostname = options.host
+        self.use_tls = options.tls
+        self.capella_run = options.capella
+        self.use_https = self.use_tls or self.capella_run
+        if self.use_https:
+            self.eventing_port = 18096
+            self.node_port = 18091
+            self.n1ql_port = 18093
+            self.protocol = "https"
+            if self.capella_run:
+                self.rest_url = self.fetch_rest_url(self.hostname)
+            else:
+                self.rest_url = self.hostname
+        else:
+            self.eventing_port = 8096
+            self.node_port = 8091
+            self.n1ql_port = 8093
+            self.protocol = "http"
+            self.rest_url = self.hostname
         functions=[]
         if options.operation == "create":
             if options.type != "MIX":
@@ -148,8 +182,8 @@ class EventingHelper:
         authorization = base64.encodebytes(credentials.encode('utf-8'))
         authorization = authorization.decode('utf-8').rstrip('\n')
         headers = {'Content-type': 'application/json', 'Authorization': 'Basic %s' % authorization}
-        url = "http://" + self.hostname + ":8096" + "/api/v1/list/functions"
-        response, content = httplib2.Http(timeout=120).request(uri=url, method="GET", headers=headers)
+        url = "{0}://{1}:{2}/api/v1/list/functions".format(self.protocol, self.rest_url, self.eventing_port)
+        response, content = httplib2.Http(timeout=120, disable_ssl_certificate_validation=True).request(uri=url, method="GET", headers=headers)
         print(content, response)
         if response.status != 200:
             raise Exception(content)
@@ -164,9 +198,10 @@ class EventingHelper:
         authorization = base64.encodebytes(credentials.encode('utf-8'))
         authorization = authorization.decode('utf-8').rstrip('\n')
         headers = {'Content-type': 'application/json', 'Authorization': 'Basic %s' % authorization}
-        url = "http://" + self.hostname + ":8096" + "/api/v1/functions/"
+        url = "{0}://{1}:{2}/api/v1/functions/".format(self.protocol, self.rest_url, self.eventing_port)
+        print(url)
         body = json.dumps(functions).encode("ascii", "ignore")
-        response, content = httplib2.Http(timeout=120).request(uri=url, method="POST", headers=headers, body=body)
+        response, content = httplib2.Http(timeout=120, disable_ssl_certificate_validation=True).request(uri=url, method="POST", headers=headers, body=body)
         print(content, response)
         if response.status !=200:
             raise Exception(content)
@@ -176,13 +211,13 @@ class EventingHelper:
         authorization = base64.encodebytes(credentials.encode('utf-8'))
         authorization = authorization.decode('utf-8').rstrip('\n')
         headers = {'Content-type': 'application/json', 'Authorization': 'Basic %s' % authorization}
-        url = "http://" + self.hostname + ":8096" + "/api/v1/functions/" + name + "/" + operation
+        url = "{0}://{1}:{2}/api/v1/functions/{3}/{4}".format(self.protocol, self.rest_url, self.eventing_port, name, operation)
         try:
             if body !=None:
                 body = json.dumps(body).encode("ascii", "ignore")
-                response, content = httplib2.Http(timeout=120).request(uri=url, method="POST", headers=headers, body=body)
+                response, content = httplib2.Http(timeout=120, disable_ssl_certificate_validation=True).request(uri=url, method="POST", headers=headers, body=body)
             else:
-                response, content = httplib2.Http(timeout=120).request(uri=url, method="POST", headers=headers)
+                response, content = httplib2.Http(timeout=120, disable_ssl_certificate_validation=True).request(uri=url, method="POST", headers=headers)
             print(content, response)
             if response.status !=200:
                 raise Exception(content)
@@ -245,9 +280,9 @@ class EventingHelper:
         authorization = base64.encodebytes(credentials.encode('utf-8'))
         authorization = authorization.decode('utf-8').rstrip('\n')
         headers = {'Content-type': 'application/json', 'Authorization': 'Basic %s' % authorization}
-        url = "http://" + self.hostname + ":8096" + "/api/v1/status/" + appname
+        url = "{0}://{1}:{2}/api/v1/status/{3}".format(self.protocol, self.rest_url, self.eventing_port, appname)
         method="GET"
-        response, content = httplib2.Http(timeout=120).request(uri=url, method=method, headers=headers)
+        response, content = httplib2.Http(timeout=120, disable_ssl_certificate_validation=True).request(uri=url, method=method, headers=headers)
         print("v1/status {}".format(content))
         result=json.loads(content)
         status=response['status']
@@ -259,7 +294,7 @@ class EventingHelper:
             try:
                 print("checking {} for {}".format(app_status,appname))
                 time.sleep(5)
-                response, content = httplib2.Http(timeout=120).request(uri=url, method=method, headers=headers)
+                response, content = httplib2.Http(timeout=120, disable_ssl_certificate_validation=True).request(uri=url, method=method, headers=headers)
                 result = json.loads(content)
                 composite_status = result['app']['composite_status']
             except Exception as e:
@@ -271,10 +306,10 @@ class EventingHelper:
         authorization = authorization.decode('utf-8').rstrip('\n')
         headers = {'Content-type': 'application/json', 'Authorization': 'Basic %s' % authorization}
         if handler!=None:
-            url = "http://" + self.hostname + ":8096" + "/api/v1/functions/" + handler
+            url = "{0}://{1}:{2}/api/v1/functions/{3}".format(self.protocol, self.rest_url, self.eventing_port, handler)
         else:
-            url = "http://" + self.hostname + ":8096" + "/api/v1/functions/"
-        response, content = httplib2.Http(timeout=120).request(uri=url, method="DELETE", headers=headers)
+            url = "{0}://{1}:{2}/api/v1/functions/".format(self.protocol, self.rest_url, self.eventing_port)
+        response, content = httplib2.Http(timeout=120, disable_ssl_certificate_validation=True).request(uri=url, method="DELETE", headers=headers)
         print(content, response)
         if response['status'] in ['200', '201', '202']:
             return True, content, response
@@ -286,9 +321,9 @@ class EventingHelper:
         authorization = base64.encodebytes(credentials.encode('utf-8'))
         authorization = authorization.decode('utf-8').rstrip('\n')
         headers = {'Content-type': 'application/x-www-form-urlencoded', 'Authorization': 'Basic %s' % authorization}
-        url = "http://" + self.hostname + ":8093/query/service"
+        url = "{0}://{1}:{2}/query/service".format(self.protocol, self.rest_url, self.n1ql_port)
         body="statement="+query
-        response, content = httplib2.Http(timeout=120).request(uri=url, method="POST", headers=headers,body=body)
+        response, content = httplib2.Http(timeout=120, disable_ssl_certificate_validation=True).request(uri=url, method="POST", headers=headers,body=body)
         if response.status != 200:
             print(content, response)
             raise Exception(content)
@@ -351,8 +386,8 @@ class EventingHelper:
         authorization = base64.encodebytes(credentials.encode('utf-8'))
         authorization = authorization.decode('utf-8').rstrip('\n')
         headers = {'Content-type': 'application/json', 'Authorization': 'Basic %s' % authorization}
-        url = "http://" + self.hostname + ":" + self.port + "/getAggRebalanceStatus"
-        response, content = httplib2.Http(timeout=120).request(uri=url, method="GET", headers=headers)
+        url = "{0}://{1}:{2}/getAggRebalanceStatus".format(self.protocol, self.rest_url, self.node_port)
+        response, content = httplib2.Http(timeout=120, disable_ssl_certificate_validation=True).request(uri=url, method="GET", headers=headers)
         if response['status'] in ['200', '201', '202']:
             if content == "true":
                 return True, True, response
@@ -360,6 +395,19 @@ class EventingHelper:
                 return True, False , response
         else:
             return False, content, response
+
+    def fetch_rest_url(self, url):
+        """
+        meant to find the srv record for Capella runs
+        """
+        print("This is a Capella run. Finding the srv domain for {}".format(url))
+        srv_info = {}
+        srv_records = dns.resolver.query('_couchbases._tcp.' + url, 'SRV')
+        for srv in srv_records:
+            srv_info['host'] = str(srv.target).rstrip('.')
+            srv_info['port'] = srv.port
+        print("This is a Capella run. Srv info {}".format(srv_info))
+        return srv_info['host']
 
 if __name__ == "__main__":
     EventingHelper().run()
