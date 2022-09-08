@@ -1,7 +1,10 @@
 package sequoia
 
 import (
+	"bufio"
+	"encoding/xml"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"strconv"
@@ -20,6 +23,27 @@ type Test struct {
 type CollectionManager struct {
 	Ch                []chan bool
 	ActiveCollections int
+}
+
+type Result struct {
+	XMLName      xml.Name `xml:"testResult"`
+	XMLClassName string   `xml:"_class,attr"`
+	Duration     int64    `xml:"duration"`
+	FailCount    int      `xml:"failCount"`
+	PassCount    int      `xml:"passCount"`
+	Suite        suite    `xml:"suite"`
+}
+type suite struct {
+	Case     []casefield `xml:"case"`
+	Duration int64       `xml:"duration"`
+	Name     string      `xml:"name"`
+}
+
+type casefield struct {
+	ClassName string `xml:"className"`
+	Name      string `xml:"name"`
+	Duration  int64  `xml:"duration"`
+	Status    string `xml:"status"`
 }
 
 type ActionSpec struct {
@@ -227,30 +251,80 @@ func (t *Test) Run(scope Scope) {
 		t.runActions(scope, loops, t.Actions)
 		return
 	}
-
+	total_duration := int64(0)
+	total_passed := 0
+	total_failed := 0
+	test_duration := int64(0)
+	test_full_path_str := (strings.Split(*t.Flags.TestFile, "/"))
+	test_file := test_full_path_str[len(test_full_path_str)-1]
+	duration_end := int64(0)
+	var cases_run_list []casefield
+	if *t.Flags.GenerateXML == true {
+		defer func() {
+			WriteToXML(t, total_duration, total_passed, total_failed, cases_run_list)
+		}()
+	}
 	if repeat == -1 {
 		// run forever
 		for {
+			duration_start := time.Now().Unix()
+			cycle_start := t.Cm.TapHandle.Count()
 			fmt.Println("Test cycle started:", loops+1)
 			t.runRepeatableActions(scope, loops, t.Actions)
 			// kill test containers
 			t.DoContainerCleanup(scope)
-
+			duration_end = time.Now().Unix()
+			test_duration = duration_end - duration_start
+			total_duration += test_duration
+			status := FetchCycleStatus(cycle_start)
+			if status == "passed" {
+				total_passed += 1
+			} else {
+				total_failed += 1
+			}
+			classname := test_file + "_Cycle_" + strconv.Itoa(loops+1)
+			c := casefield{
+				ClassName: classname,
+				Name:      classname,
+				Duration:  test_duration,
+				Status:    status,
+			}
+			cases_run_list = append(cases_run_list, c)
+			fmt.Printf("Test cycle: %v ended after %v seconds\n", loops+1, test_duration)
 			loops++
 		}
 	} else {
 		repeat++
 		for loops = 0; loops < repeat; loops++ {
+			duration_start := time.Now().Unix()
+			cycle_start := t.Cm.TapHandle.Count()
 			fmt.Println("Test cycle started:", loops+1)
 			t.runRepeatableActions(scope, loops, t.Actions)
 			// kill test containers
 			if *t.Flags.SkipCleanup == false {
 				t.DoContainerCleanup(scope)
 			}
+			duration_end = time.Now().Unix()
+			test_duration = duration_end - duration_start
+			total_duration += test_duration
+			status := FetchCycleStatus(cycle_start)
+			if status == "passed" {
+				total_passed += 1
+			} else {
+				total_failed += 1
+			}
+			classname := test_file + "_Cycle_" + strconv.Itoa(loops+1)
+			c := casefield{
+				ClassName: classname,
+				Name:      classname,
+				Duration:  test_duration,
+				Status:    status,
+			}
+			cases_run_list = append(cases_run_list, c)
+			fmt.Printf("Test cycle: %v ended after %v seconds\n", loops+1, test_duration)
 		}
 	}
 	t.Cm.TapHandle.AutoPlan()
-
 	// wait if collect is happening
 	t.WaitForCollect()
 
@@ -263,6 +337,45 @@ func (t *Test) Run(scope Scope) {
 	if *t.Flags.SkipCleanup == false {
 		t.Cleanup(scope)
 	}
+}
+
+func WriteToXML(t *Test, total_duration int64, total_passed int, total_failed int, cases_run_list []casefield) {
+	fmt.Println("generate_xml flag is set to True. Will create report.xml")
+	suite_field := suite{
+		Duration: total_duration,
+		Name:     *t.Flags.TestFile,
+		Case:     cases_run_list,
+	}
+	result_field := Result{
+		Duration:     total_duration,
+		FailCount:    total_failed,
+		PassCount:    total_passed,
+		Suite:        suite_field,
+		XMLClassName: "hudson.tasks.junit.TestResult",
+	}
+	file, _ := xml.MarshalIndent(result_field, "", " ")
+	_ = ioutil.WriteFile("report.xml", file, 0644)
+}
+
+func FetchCycleStatus(cycle_start_line_num int) string {
+	readFile, _ := os.Open("results.tap4j")
+	fileScanner := bufio.NewScanner(readFile)
+	fileScanner.Split(bufio.ScanLines)
+	var fileLines []string
+	for fileScanner.Scan() {
+		fileLines = append(fileLines, fileScanner.Text())
+	}
+	readFile.Close()
+	last_line := len(fileLines) - 1
+	for i := cycle_start_line_num; i <= last_line; i++ {
+		step_status := fileLines[last_line][:2]
+		if step_status == "ok" {
+			continue
+		} else {
+			return "failed"
+		}
+	}
+	return "passed"
 }
 
 // blocks when item is being collected

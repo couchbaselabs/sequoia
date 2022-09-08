@@ -12,13 +12,13 @@ type TestFlags struct {
 	CapellaProject   *string `yaml:"capella_project"`
 	CapellaProjectID *string `yaml:"capella_project_id"`
 	CapellaTenantID  *string `yaml:"capella_tenant_id"`
-	Capella          *bool `yaml:"capella"`
+	Capella          *bool   `yaml:"capella"`
 	CapellaURL       *string `yaml:"url_capella"`
 	UserCapella      *string `yaml:"user_capella"`
 	PasswordCapella  *string `yaml:"password_capella"`
 	AccessKey        *string `yaml:"access_key"`
 	SecretKey        *string `yaml:"secret_key"`
-	TLS              *bool `yaml:"tls"`
+	TLS              *bool   `yaml:"tls"`
 	Mode             string
 	Args             []string
 	Config           *string
@@ -59,6 +59,7 @@ type TestFlags struct {
 	CleanFlagSet     *flag.FlagSet
 	FrameworkFlagSet *flag.FlagSet
 	ShowTopology     *bool
+	GenerateXML      *bool `yaml:"generate_xml"`
 }
 
 // parse top-level args and set test flag parsing mode
@@ -320,6 +321,10 @@ func (f *TestFlags) AddDefaultFlags(fset *flag.FlagSet) {
 		"capella_tenant_id",
 		"",
 		"Capella tenant ID")
+	f.GenerateXML = fset.Bool(
+		"generate_xml",
+		false,
+		"Do you need an XML report at the end of the test?")
 }
 
 func (f *TestFlags) AddImageFlags(fset *flag.FlagSet) {

@@ -503,7 +503,6 @@ func (cm *ContainerManager) DidPull(repo string) bool {
 
 func (cm *ContainerManager) PullImage(repo string) error {
 	msg := UtilTaskMsg("[pull]", repo)
-	cm.TapHandle.Ok(true, msg)
 	fmt.Println(msg)
 
 	// pull image across all clients
