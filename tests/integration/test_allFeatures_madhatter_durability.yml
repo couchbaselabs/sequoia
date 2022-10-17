@@ -9,6 +9,20 @@
   command: "setting-compaction -c {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}} --metadata-purge-interval .04 --compaction-db-percentage 30 --compaction-view-percentage 30"
   wait: true
 
+###### enable n2n encryption ######
+-
+  template: disable_autofailover
+  requires:  "{{eq true .DoOnce }}"
+-
+  image: sequoiatools/couchbase-cli
+  requires:  "{{eq true .DoOnce }}"
+  command: "node-to-node-encryption -c {{.Orchestrator}}:8091 -u {{.RestUsername}} -p {{.RestPassword}} --enable"
+  wait: true
+-
+  template: enable_autofailover
+  args: "120,1"
+  requires:  "{{eq true .DoOnce }}"
+
 # continous kv loading
 - template: pillowfight_durability
   args: "{{.Orchestrator}}, {{.Bucket}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 2000}}, {{.AuthPassword}} --durability majority"
