@@ -18,7 +18,8 @@ import httplib2
 import paramiko
 from couchbase.management.collections import CollectionSpec
 import dns.resolver
-
+import boto3
+from collections import defaultdict
 ## Constants
 
 # In test mode, how many scopes to be created
@@ -88,9 +89,12 @@ class IndexManager:
                             choices=["create_index", "build_deferred_index", "drop_all_indexes", "create_index_loop",
                                      "drop_index_loop", "alter_indexes", "enable_cbo", "delete_statistics",
                                      "item_count_check",
-                                     "random_recovery", "create_udf", "drop_udf", "create_n1ql_udf"],
+                                     "random_recovery", "create_udf", "drop_udf", "create_n1ql_udf", "validate_tenant_affinity", "set_fast_rebalance_config",
+                                     "create_n_indexes_on_buckets", "validate_s3_cleanup"],
                             help="Choose an action to be performed. Valid actions : create_index | build_deferred_index | drop_all_indexes | create_index_loop | "
-                                 "drop_index_loop | alter_indexes | enable_cbo | delete_statistics | item_count_check | random_recovery | create_udf | drop_udf | create_n1ql_udf",
+                                 "drop_index_loop | alter_indexes | enable_cbo | delete_statistics "
+                                 "| item_count_check | random_recovery | create_udf | drop_udf | create_n1ql_udf "
+                                 "| validate_tenant_affinity | set_fast_rebalance_config | create_n_indexes_on_buckets",
                             default="create_index")
         parser.add_argument("-m", "--build_max_collections", type=int, default=0,
                             help="Build Indexes on max number of collections")
@@ -114,6 +118,13 @@ class IndexManager:
                             action="store_true")
         parser.add_argument("--lib_filename", help="Filename for N1QL JS UDF Library", default=None)
         parser.add_argument("--lib_name", help="Name for the N1QL JS UDF Library to be created", default=None)
+        parser.add_argument("--aws_access_key_id", help="AWS access key ID for fast rebalance", default="AKIAT277BFQVH3ARRJQF")
+        parser.add_argument("--aws_secret_access_key", help="AWS secret key for fast rebalance", default="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")
+        parser.add_argument("--region", help="AWS region for fast rebalance", default="us-west-1")
+        parser.add_argument("--s3_bucket", help="S3 bucket used for fast rebalance", default="gsi-system-test-onprem")
+        parser.add_argument("--storage_prefix", help="Storage prefix for S3 bucket used for fast rebalance", default="indexing-system-test")
+        parser.add_argument("--bucket_list", help="List of buckets to be used for index creation")
+        parser.add_argument("--num_of_indexes_per_bucket", type=int, default=20, help="Number of indexes per bucket you want to create")
         args = parser.parse_args()
         self.log = logging.getLogger("indexmanager")
         self.log.setLevel(logging.INFO)
@@ -132,6 +143,12 @@ class IndexManager:
         self.install_mode = args.install_mode
         self.max_num_collections = args.build_max_collections
         self.cbo_enable_ratio = args.cbo_enable_ratio
+        self.aws_access_key_id = args.aws_access_key_id
+        self.s3_bucket = args.s3_bucket
+        self.storage_prefix = args.storage_prefix
+        self.aws_secret_access_key = args.aws_secret_access_key
+        self.region = args.region
+        self.num_of_indexes_per_bucket = args.num_of_indexes_per_bucket
         if self.cbo_enable_ratio > 100:
             self.cbo_enable_ratio = 25
         self.cbo_interval = args.cbo_interval
@@ -199,11 +216,19 @@ class IndexManager:
                 except:
                     sleep(10)
         else:
-            self.log.info("This is a Server run.")
+            self.log.info(f"This is a Server run. Will create cluster object against server {self.node_addr} "
+                          f"with username {self.username} password {self.password}")
             self.cluster = Cluster('couchbase://{0}'.format(self.node_addr),
                                    ClusterOptions(PasswordAuthenticator(self.username, self.password)))
-        self.cb = self.cluster.bucket(self.bucket_name)
-        self.coll_manager = self.cb.collections()
+        if self.bucket_name is not None:
+            self.cb = self.cluster.bucket(self.bucket_name)
+            self.coll_manager = self.cb.collections()
+        else:
+            self.log.error("No bucket name has been passed. So no couchbase bucket object will be created")
+        if args.bucket_list:
+            self.bucket_list = args.bucket_list.split(",")
+        else:
+            self.bucket_list = self.get_all_buckets()
         self.index_nodes = self.find_nodes_with_service(self.get_services_map(), "index")
         self.n1ql_nodes = self.find_nodes_with_service(self.get_services_map(), "n1ql")
         self.log.info(f"N1QL nodes {self.n1ql_nodes} and Index nodes : {self.index_nodes}")
@@ -466,7 +491,63 @@ class IndexManager:
                         self.log.error(f"Index status for {index['name']} is not matching with expected value"
                                    f"Expected: Created, Actual: {index['status']}")
             self.log.info("Validation completed")
+    
+    def create_n_indexes_on_buckets(self):
+        num_of_indexes_per_bucket = self.num_of_indexes_per_bucket
+        self.log.info(f"Configuration used: Bucket_list {self.bucket_list}. Num of indexes per bucket {num_of_indexes_per_bucket}")
+        for bucket_name in self.bucket_list:
+            keyspaces = []
+            bucket_obj = self.cluster.bucket(bucket_name)
+            scopes = bucket_obj.collections().get_all_scopes()
+            self.log.info("Bucket name {}".format(bucket_name))
+            for scope in scopes:
+                for coll in scope.collections:
+                    if scope.name not in ["_system"]:
+                        keyspaces.append("`" + bucket_name + "`.`" + scope.name + "`.`" + coll.name + "`")
+            self.log.info("Keyspaces that will be used: {}".format(keyspaces))
+            total_idx_created = 0
+            create_index_statements = []
+            self.log.info(f"Starting to create indexes. Will create a total of {num_of_indexes_per_bucket} indexes on these collections {keyspace_name_list}")
+            while total_idx_created < num_of_indexes_per_bucket:
+                keyspace = random.choice(keyspaces)
+                idx_template = random.choice(self.idx_def_templates)
+                idx_statement = idx_template['statement']
+                idx_prefix = ''.join(random.choices(string.ascii_letters + string.digits, k=random.randint(4, 8)))
+                idx_name = f"{idx_template['indexname']}_{idx_prefix}"
+                is_partitioned_idx = bool(random.getrandbits(1))
+                is_defer_idx = bool(random.getrandbits(1))
+                with_clause_list = []
+                idx_statement = idx_statement.replace("keyspacenameplaceholder", keyspace)
+                idx_statement = idx_statement.replace('idxprefix', idx_prefix)
+                keyspace_name = keyspace.replace("`", "")
+                if self.install_mode == "ee":
+                    idx_statement = idx_statement + " partition by hash(meta().id) "
+                    if self.capella_run:
+                        reference_index_map[keyspace_name][idx_name]['num_partition'] = 8
+                    else:
+                        num_partition = random.randint(2, 8)
+                        with_clause_list.append("\'num_partition\':%s" % num_partition)
+                if self.install_mode == "ee" and self.max_num_replica > 0:
+                    num_replica = 1
+                    with_clause_list.append("\'num_replica\':%s" % num_replica)
+                if is_defer_idx:
+                    with_clause_list.append("\'defer_build\':true")
 
+                if (is_partitioned_idx and not self.disable_partitioned_indexes) or (
+                        self.max_num_replica > 0) or is_defer_idx:
+                    idx_statement = idx_statement + " with {"
+                    idx_statement = idx_statement + ','.join(with_clause_list) + "}"
+                    create_index_statements.append(idx_statement)
+                total_idx_created += 1
+            self.log.info("Create index statements: {}".format(create_index_statements))
+            for num, create_index_statement in enumerate(create_index_statements):
+                self.log.info(f"Creating index number {num} on bucket {bucket_name}. Index statement: {create_index_statement}")
+                try:
+                    self._execute_query(create_index_statement)
+                    sleep(10)
+                except Exception as err:
+                    self.log.error(f"Index creation failed for statement: {create_index_statement}")
+                    self.log.error(err)
     """
     Alter indexes
     """
@@ -1292,7 +1373,112 @@ class IndexManager:
                 break
         return check
 
+    def get_all_buckets(self):
+        query = "Select * from system:buckets"
+        status, result, _ = self._execute_query(query)
+        self.log.info(f"Results from system:buckets {result}")
+        bucket_list = []
+        for item in result:
+            bucket_list.append(item['buckets']['name'])
+        return bucket_list
 
+    def get_bucket_index_node_map(self):
+        indexer_metadata = self.get_indexer_metadata()
+        self.log.debug("Indexer metadata:{}".format(indexer_metadata))
+        bucket_indexer_node_map = defaultdict(list)
+        for index in indexer_metadata['status']:
+            for host in index['hosts']:
+                self.log.debug("Index is {}. Host is {}".format(index, host))
+                host_ip = host.split(":")[0]
+                if host_ip not in bucket_indexer_node_map[index['bucket']]:
+                    bucket_indexer_node_map[index['bucket']].append(host_ip)
+        return bucket_indexer_node_map
+
+    def validate_tenant_affinity(self):
+        bucket_indexer_node_map = self.get_bucket_index_node_map()
+        self.log.info("Bucket indexer map is {}".format(bucket_indexer_node_map))
+        for bucket in bucket_indexer_node_map:
+            self.log.info(f"Validating tenant affinity for {bucket}. Indexes for {bucket} are on nodes {bucket_indexer_node_map[bucket]}")
+            if len(bucket_indexer_node_map[bucket]) != 2:
+                self.log.error(f"Tenant affinity not honoured for bucket {bucket}."
+                               f"Index hosts the bucket is on:{bucket_indexer_node_map[bucket]}")
+                raise Exception("Tenant affinity check fail")
+            else:
+                self.log.info(f"Tenant affinity honoured for bucket {bucket}")
+                
+
+    def get_indexer_nodes(self):
+        service_map = self.get_services_map()
+        self.log.info(f"Services map is {service_map}")
+        indexer_nodes_list = []
+        for node in service_map:
+            if "index" in node['services']:
+                indexer_nodes_list.append(node['hostname'])
+        return indexer_nodes_list
+    
+    def set_fast_rebalance_config(self):
+        if not self.aws_access_key_id or not self.aws_secret_access_key or not self.region:
+            raise Exception("Please pass aws_access_key_id, aws_secret_access_key, and region "
+                            "parameters to set_fast_rebalance_config")
+        self.log.info("Will use this bucket {} and this storage prefix {}".format(self.s3_bucket,
+                                                                                  self.scheme))
+        print("Will use this access key {} and this secret key {}".format(self.aws_access_key_id,
+                                                                                  self.aws_secret_access_key))
+        indexer_nodes = self.get_indexer_nodes()
+        self.log.info("The indexer nodes are {}".format(indexer_nodes))
+        for node in indexer_nodes:
+            ssh = paramiko.SSHClient()
+            ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            ssh.connect(node, username=self.ssh_username, password=self.ssh_password, timeout=10)
+            ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command("rm -rf /opt/couchbase/.aws/")
+            out, err = ssh_stdout.read(), ssh_stderr.read()
+            self.log.info("Output for rm -rf command {} error {}".format(out, err))
+            ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command("mkdir -p /opt/couchbase/.aws/")
+            out, err = ssh_stdout.read(), ssh_stderr.read()
+            self.log.info("Output for mkdir command {} error {}".format(out,err))
+            remote_path_aws_cred_file = "/opt/couchbase/.aws/credentials"
+            remote_path_aws_conf_file = '/opt/couchbase/.aws/config'
+            aws_cred_file = ('[default]\n'
+                             f'aws_access_key_id={self.aws_access_key_id}\n'
+                             f'aws_secret_access_key={self.aws_secret_access_key}')
+            aws_conf_file = ('[default]\n'
+                             f'region={self.region}\n'
+                             'output=json')
+            ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command("echo '{0}' > {1}".format(aws_cred_file, remote_path_aws_cred_file))
+            out, err = ssh_stdout.read(), ssh_stderr.read()
+            self.log.info("Output for creating aws cred file command {} error {}".format(out, err))
+            ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command("echo '{0}' > {1}".format(aws_conf_file, remote_path_aws_conf_file))
+            out, err = ssh_stdout.read(), ssh_stderr.read()
+            self.log.info("Output for creating aws conf file command {} error {}".format(out, err))
+
+            fast_rebalance_config = {"indexer.settings.rebalance.blob_storage_bucket": self.s3_bucket,
+                                     "indexer.settings.rebalance.blob_storage_prefix": self.storage_prefix,
+                                     "indexer.settings.rebalance.blob_storage_scheme": "s3"}
+            self.set_index_settings(setting_json=fast_rebalance_config, node_ip=node)
+    
+    def validate_s3_cleanup(self):
+        s3 = boto3.client(service_name='s3', region_name=self.region,
+                          aws_access_key_id=self.aws_access_key_id,
+                          aws_secret_access_key=self.aws_secret_access_key)
+        folder_path_expected = [f"{self.storage_prefix}/"]
+        self.log.info(f"Expected folder list {folder_path_expected}")
+        folder_list_on_aws = []
+        result = s3.list_objects_v2(Bucket=self.s3_bucket, Delimiter='/*')
+        self.log.info(f"Result from the s3 list_objects_v2 API call:{result}")
+        for item in result['Contents']:
+            if folder_path_expected in item['Key']:
+                folder_list_on_aws.append(item['Key'])
+        if folder_list_on_aws != folder_path_expected:
+            self.log.error(f"Clean-up did not happen. Folder list on the AWS bucket:{folder_list_on_aws}")
+            raise Exception("S3 cleanup failure during rebalance")
+
+    def set_index_settings(self, setting_json, node_ip):
+        api = f"{self.scheme}://{node_ip}:{self.node_port_index}/settings"
+        self.log.info(f"Endpoint to which index settings will be posted {api}")
+        response = requests.post(url=api, data=json.dumps(setting_json), timeout=120, auth=(
+            self.username, self.password), verify=False)
+        response.raise_for_status()
+        
 class NestedDict(dict):
     """Implementation of perl's autovivification feature."""
 
@@ -1319,7 +1505,11 @@ if __name__ == '__main__':
     sleep(10)
 
     # Get list of all collections for the bucket
-    keyspace_name_list = indexMgr.get_all_collections()
+    try:
+        keyspace_name_list = indexMgr.get_all_collections()
+    except:
+        print("No buckets passed. Will not fetch list of collections")
+        keyspace_name_list = []
 
     if indexMgr.action == "create_index":
         indexMgr.create_indexes_on_bucket(keyspace_name_list, indexMgr.validate)
@@ -1349,6 +1539,16 @@ if __name__ == '__main__':
         indexMgr.drop_all_udfs()
     elif indexMgr.action == "create_n1ql_udf":
         indexMgr.create_n1ql_udf()
+    elif indexMgr.action == "validate_tenant_affinity":
+        indexMgr.validate_tenant_affinity()
+    elif indexMgr.action == "set_fast_rebalance_config":
+        indexMgr.set_fast_rebalance_config()
+    elif indexMgr.action == "create_n_indexes_on_buckets":
+        indexMgr.create_n_indexes_on_buckets()
+    elif indexMgr.action == "validate_s3_cleanup":
+        indexMgr.validate_s3_cleanup()
     else:
         print("Invalid choice for action. Choose from the following - "
-              "create_index | build_deferred_index | drop_all_indexes | create_index_loop | alter_indexes | enable_cbo | drop_index_loop | item_count_check | random_recovery | create_udf | drop_udf | create_n1ql_udf")
+              "create_index | build_deferred_index | drop_all_indexes | create_index_loop | alter_indexes | "
+              "enable_cbo | drop_index_loop | item_count_check | random_recovery "
+              "| create_udf | drop_udf | create_n1ql_udf | validate_tenant_affinity | set_fast_rebalance_config | validate_s3_cleanup")
