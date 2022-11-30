@@ -118,8 +118,8 @@ class IndexManager:
                             action="store_true")
         parser.add_argument("--lib_filename", help="Filename for N1QL JS UDF Library", default=None)
         parser.add_argument("--lib_name", help="Name for the N1QL JS UDF Library to be created", default=None)
-        parser.add_argument("--aws_access_key_id", help="AWS access key ID for fast rebalance", default="AKIAT277BFQVH3ARRJQF")
-        parser.add_argument("--aws_secret_access_key", help="AWS secret key for fast rebalance", default="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")
+        parser.add_argument("--aws_access_key_id", help="AWS access key ID for fast rebalance")
+        parser.add_argument("--aws_secret_access_key", help="AWS secret key for fast rebalance")
         parser.add_argument("--region", help="AWS region for fast rebalance", default="us-west-1")
         parser.add_argument("--s3_bucket", help="S3 bucket used for fast rebalance", default="gsi-system-test-onprem")
         parser.add_argument("--storage_prefix", help="Storage prefix for S3 bucket used for fast rebalance", default="indexing-system-test")
@@ -1466,7 +1466,7 @@ class IndexManager:
         result = s3.list_objects_v2(Bucket=self.s3_bucket, Delimiter='/*')
         self.log.info(f"Result from the s3 list_objects_v2 API call:{result}")
         for item in result['Contents']:
-            if folder_path_expected in item['Key']:
+            if folder_path_expected[0] in item['Key']:
                 folder_list_on_aws.append(item['Key'])
         if folder_list_on_aws != folder_path_expected:
             self.log.error(f"Clean-up did not happen. Folder list on the AWS bucket:{folder_list_on_aws}")

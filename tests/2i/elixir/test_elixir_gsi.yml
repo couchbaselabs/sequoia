@@ -71,7 +71,7 @@
 ################  Set fast rebalance configuration ################
 
 - image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a set_fast_rebalance_config"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a set_fast_rebalance_config --aws_access_key_id {{.AWSAccessKey}} --aws_secret_access_key {{.AWSSecretKey}}"
   wait: true
 
 ############### create scopes and collections across all 20 buckets as scope_0,scope_1 etc and coll_0, coll_1 etc.... ###############
@@ -572,7 +572,7 @@
 ################ Validate S3 cleanup ################
 
 - image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a validate_s3_cleanup"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a validate_s3_cleanup --aws_access_key_id {{.AWSAccessKey}} --aws_secret_access_key {{.AWSSecretKey}}"
   wait: true
 
 ############################  Rebalance-out 2 indexer nodes #############################
@@ -608,7 +608,7 @@
 
 ################ Validate S3 cleanup ################
 - image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a validate_s3_cleanup"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a validate_s3_cleanup --aws_access_key_id {{.AWSAccessKey}} --aws_secret_access_key {{.AWSSecretKey}}"
   wait: true
 
 ################ Rebalance in query node ################
@@ -674,7 +674,7 @@
 ################ Validate S3 cleanup ################
 
 - image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a validate_s3_cleanup"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a validate_s3_cleanup --aws_access_key_id {{.AWSAccessKey}} --aws_secret_access_key {{.AWSSecretKey}}"
   wait: true
 
 ############################  Rebalance-out 2 indexer nodes unsuccessful rebalance #############################
@@ -715,7 +715,7 @@
 
 ################ Validate S3 cleanup ################
 - image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a validate_s3_cleanup"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a validate_s3_cleanup --aws_access_key_id {{.AWSAccessKey}} --aws_secret_access_key {{.AWSSecretKey}}"
   wait: true
 
 ################ Rebalance in query node ################
@@ -792,7 +792,7 @@
 ################ Validate S3 cleanup ################
 
 - image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a validate_s3_cleanup"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a validate_s3_cleanup --aws_access_key_id {{.AWSAccessKey}} --aws_secret_access_key {{.AWSSecretKey}}"
   wait: true
 
 ############### Kill memcached ################
