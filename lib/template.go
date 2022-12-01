@@ -426,14 +426,6 @@ func (t *TemplateResolver) CapellaSecret() string {
 	return *t.Scope.Flags.SecretKey
 }
 
-func (t *TemplateResolver) AWSAccessKey() string {
-	return *t.Scope.Flags.AWSAccessKey
-}
-
-func (t *TemplateResolver) AWSSecretKey() string {
-	return *t.Scope.Flags.AWSSecretKey
-}
-
 func (t *TemplateResolver) CapellaCluster() string {
 	return *t.Scope.Flags.CapellaCluster
 }

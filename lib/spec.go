@@ -51,8 +51,6 @@ type ServerSpec struct {
 	CapellaPassword string `yaml:"capella_password"`
 	CapellaAccess   string `yaml:"capella_access"`
 	CapellaSecret   string `yaml:"capella_secret"`
-	AWSAccess       string `yaml:"aws_access_key"`
-	AWSSecret       string `yaml:"aws_secret_key"`
 	SSHUsername     string `yaml:"ssh_username"`
 	SSHPassword     string `yaml:"ssh_password"`
 	RestPort        string `yaml:"rest_port"`
@@ -391,10 +389,6 @@ func (s *ScopeSpec) ToAttr(attr string) string {
 		return "CapellaAccess"
 	case "capella_secret":
 		return "CapellaSecret"
-	case "AWSAccess":
-		return "aws_access_key"
-	case "AWSSecret":
-		return "aws_secret_key"
 	case "ssh_username":
 		return "SSHUsername"
 	case "ssh_password":
