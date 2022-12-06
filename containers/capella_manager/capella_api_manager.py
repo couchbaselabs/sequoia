@@ -6,7 +6,7 @@ import os
 import logging
 import random
 
-from CapellaAPI import CapellaAPI
+from capella.dedicated.CapellaAPI import CapellaAPI
 
 NODES_MAX = 8
 

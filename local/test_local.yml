@@ -29,21 +29,21 @@
 
 ###############  create indexes ################
 - section_start: create_indexes
-- image: sequoiatools/indexmanager:capella
+- image: sequoiatools/indexmanager
   command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -i {{.Scale 1}} -a create_index -v -c True"
   wait: true
 - section_end: create_indexes
 
 ###############  build all deferred indexes ################
 - section_start: build_deferred_indexes
-- image: sequoiatools/indexmanager:capella
+- image: sequoiatools/indexmanager
   command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a build_deferred_index -m 1 -c True"
   wait: true
 - section_end: build_deferred_indexes
 
 ##############   Wait till all indexes are completely built ##############
 - section_start: wait_for_indexes_to_be_built
-- image: sequoiatools/wait_for_idx_build_complete:capella
+- image: sequoiatools/wait_for_idx_build_complete
   command: "{{.Orchestrator }} {{.RestUsername}} {{.RestPassword}} {{.Bucket}} capella"
   wait: true
 - section_end: wait_for_indexes_to_be_built
@@ -97,7 +97,7 @@
 
 ################ Add Data Node ######################################
 #- section_start: scale_up
-#- image: sequoiatools/capellamanager:capella
+#- image: sequoiatools/capellamanager
 #  command: "--username {{.CapellaUsername}} --password {{.CapellaPassword}} --access {{.CapellaAccess}} --secret {{.CapellaSecret}} --cluster {{.CapellaCluster}} --operation scale_up --numnodes 1 --url {{.CapellaURL}} --tenant_id {{.CapellaTenantID}}"
 #  wait: true
 #- section_end: scale_up
@@ -105,28 +105,28 @@
 ################  Scale Down operations ##############################
 ################ Remove Data Node ######################################
 #- section_start: scale_down
-#- image: sequoiatools/capellamanager:capella
+#- image: sequoiatools/capellamanager
 #  command: "--username {{.CapellaUsername}} --password {{.CapellaPassword}} --access {{.CapellaAccess}} --secret {{.CapellaSecret}} --cluster {{.CapellaCluster}} --operation scale_down --numnodes 1 --url {{.CapellaURL}} --tenant_id {{.CapellaTenantID}}"
 #  wait: true
 #- section_end: scale_down
 #
 ############### Run backup now ######################################
 - section_start: backup
-- image: sequoiatools/capellamanager:capella
+- image: sequoiatools/capellamanager
   command: "--username {{.CapellaUsername}} --password {{.CapellaPassword}} --access {{.CapellaAccess}} --secret {{.CapellaSecret}} --cluster {{.CapellaCluster}} --operation backup_now --bucket {{.Bucket}} --project_id {{.CapellaProjectID}} --url {{.CapellaURL}} --tenant_id {{.CapellaTenantID}}"
   wait: true
 - section_end: backup
 
 ############### Delete bucket ######################################
 - section_start: delete_bucket
-- image: sequoiatools/capellamanager:capella
+- image: sequoiatools/capellamanager
   command: "--username {{.CapellaUsername}} --password {{.CapellaPassword}} --access {{.CapellaAccess}} --secret {{.CapellaSecret}} --cluster {{.CapellaCluster}} --project_id {{.CapellaProjectID}} --operation delete_bucket --bucket {{.Bucket}} --url {{.CapellaURL}} --tenant_id {{.CapellaTenantID}}"
   wait: true
 - section_end: delete_bucket
 
 ############## Restore from backup ######################################
 - section_start: restore
-- image: sequoiatools/capellamanager:capella
+- image: sequoiatools/capellamanager
   command: "--username {{.CapellaUsername}} --password {{.CapellaPassword}} --access {{.CapellaAccess}} --secret {{.CapellaSecret}} --cluster {{.CapellaCluster}} --project_id {{.CapellaProjectID}} --operation restore_from_backup --bucket {{.Bucket}} --url {{.CapellaURL}} --tenant_id {{.CapellaTenantID}}"
   wait: true
 - section_end: restore
@@ -141,7 +141,7 @@
 
 ###############  Drop all Indexes ##############################
 - section_start: drop_all_indexes
-- image: sequoiatools/indexmanager:capella
+- image: sequoiatools/indexmanager
   command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}}  -a drop_all_indexes -v -c True"
   wait: true
 
