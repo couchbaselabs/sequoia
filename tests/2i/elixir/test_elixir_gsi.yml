@@ -1,0 +1,1028 @@
+- include: tests/templates/kv.yml, tests/templates/n1ql.yml, tests/templates/rebalance.yml, tests/templates/multinode_failure.yml, tests/templates/groups.yml
+
+
+####- System test
+#- Phase 1
+#- Cluster provisioning with N2N encryption and S3 configuration in serverless profile
+#- Create index in batches for 20 tenants
+#- Parallel data load and scan
+#- Rebalance in/out (index, query)
+#- Cluster affinity and Fast rebalance validation
+
+#- Phase 2
+#- Auto-failover
+#- service kill
+#- failed rebalance
+#- CBO(optional)
+#- Alter index (optional)
+
+##### enable n2n encryption ######
+-
+  template: disable_autofailover
+  requires:  "{{eq true .DoOnce }}"
+-
+  image: sequoiatools/couchbase-cli
+  requires:  "{{eq true .DoOnce }}"
+  command: "node-to-node-encryption -c {{.Orchestrator}}:8091 -u {{.RestUsername}} -p {{.RestPassword}} --enable"
+  wait: true
+
+- requires: "{{eq true .DoOnce }}"
+  command: "setting-security -c {{.Orchestrator}}:8091 -u {{.RestUsername}} -p {{.RestPassword}} --set --cluster-encryption-level all"
+  wait: true
+# TODO not sure whether to run with strict or all
+##- requires: "{{eq true .DoOnce }}"
+##  command: "setting-security -c {{.Orchestrator}}:18091 -u {{.RestUsername}} -p {{.RestPassword}} --set --cluster-encryption-level strict --no-ssl-verify"
+##  wait: true
+- template: enable_autofailover
+  args: "120,1"
+  requires:  "{{eq true .DoOnce }}"
+
+- template: group_create
+  requires:  "{{eq true .DoOnce}}"
+  args: "group1"
+- args: "group2"
+  wait: true
+- args: "group3"
+  wait: true
+
+- template: group_move_servers
+  requires:  "{{eq true .DoOnce}}"
+  args: "'Group 1', group1, ({{.Nodes | net 0}}, {{.Nodes | net 3}}, {{.Nodes | net 6}}, {.Nodes | net 9}})"
+- args: "'Group 1', group2, ({{.Nodes | net 1}}, {{.Nodes | net 4}}, {{.Nodes | net 7}}, {{.Nodes | net 10}})"
+- args: "'Group 1', group3, ({{.Nodes | net 2}}, {{.Nodes | net 5}}, {{.Nodes | net 8}}, {{.Nodes | net 11}})"
+  wait: true
+
+################ Set num_replica ################
+- template: set_gsi_config
+  args: "{{.ActiveIndexNode 0}}, 'indexer.settings.num_replica':1"
+  requires:  "{{eq true .DoOnce }}"
+
+################ Backup any corrupted index data files ################
+- template: set_gsi_config
+  args: "{{.ActiveIndexNode 0}}, 'indexer.settings.enable_corrupt_index_backup':true"
+  requires:  "{{eq true .DoOnce }}"
+
+################ Enable Retry on failed rebalance ################
+- image: sequoiatools/couchbase-cli
+  requires:  "{{eq true .DoOnce }}"
+  command: "setting-rebalance -c {{.Orchestrator}}:8091 -u {{.RestUsername}} -p {{.RestPassword}} --set --enable 1 --wait-for 300 --max-attempts 3"
+  wait: true
+
+################  Set fast rebalance configuration ################
+
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a set_fast_rebalance_config --aws_access_key_id {{.AWSAccessKey}} --aws_secret_access_key {{.AWSSecretKey}}"
+  wait: true
+
+############### create scopes and collections across all 20 buckets as scope_0,scope_1 etc and coll_0, coll_1 etc.... ###############
+- image: sequoiatools/collections:1.0
+  command: "-i {{.Orchestrator}}:8091 -b {{.Bucket}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count={{.Scale 2}} --collection_count={{.Scale 25}} --collection_distribution=random"
+  requires:  "{{eq true .DoOnce }}"
+  wait: true
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 1}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count={{.Scale 2}} --collection_count={{.Scale 25}} --collection_distribution=random"
+  requires:  "{{eq true .DoOnce }}"
+  wait: true
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 2}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count={{.Scale 2}} --collection_count={{.Scale 25}} --collection_distribution=random"
+  requires:  "{{eq true .DoOnce }}"
+  wait: true
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 3}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count={{.Scale 2}} --collection_count={{.Scale 25}} --collection_distribution=random"
+  requires:  "{{eq true .DoOnce }}"
+  wait: true
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 4}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count={{.Scale 2}} --collection_count={{.Scale 25}} --collection_distribution=random"
+  requires:  "{{eq true .DoOnce }}"
+  wait: true
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 5}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count={{.Scale 2}} --collection_count={{.Scale 25}} --collection_distribution=random"
+  requires:  "{{eq true .DoOnce }}"
+  wait: true
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 6}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count={{.Scale 2}} --collection_count={{.Scale 25}} --collection_distribution=random"
+  requires:  "{{eq true .DoOnce }}"
+  wait: true
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 7}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count={{.Scale 2}} --collection_count={{.Scale 25}} --collection_distribution=random"
+  requires:  "{{eq true .DoOnce }}"
+  wait: true
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 8}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count={{.Scale 2}} --collection_count={{.Scale 25}} --collection_distribution=random"
+  requires:  "{{eq true .DoOnce }}"
+  wait: true
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 9}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count={{.Scale 2}} --collection_count={{.Scale 25}} --collection_distribution=random"
+  requires:  "{{eq true .DoOnce }}"
+  wait: true
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 10}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count={{.Scale 2}} --collection_count={{.Scale 25}} --collection_distribution=random"
+  requires:  "{{eq true .DoOnce }}"
+  wait: true
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 11}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count={{.Scale 2}} --collection_count={{.Scale 25}} --collection_distribution=random"
+  requires:  "{{eq true .DoOnce }}"
+  wait: true
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 12}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count={{.Scale 2}} --collection_count={{.Scale 25}} --collection_distribution=random"
+  requires:  "{{eq true .DoOnce }}"
+  wait: true
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 13}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count={{.Scale 2}} --collection_count={{.Scale 25}} --collection_distribution=random"
+  requires:  "{{eq true .DoOnce }}"
+  wait: true
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 14}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count={{.Scale 2}} --collection_count={{.Scale 25}} --collection_distribution=random"
+  requires:  "{{eq true .DoOnce }}"
+  wait: true
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 12}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count={{.Scale 2}} --collection_count={{.Scale 25}} --collection_distribution=random"
+  requires:  "{{eq true .DoOnce }}"
+  wait: true
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 13}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count={{.Scale 2}} --collection_count={{.Scale 25}} --collection_distribution=random"
+  requires:  "{{eq true .DoOnce }}"
+  wait: true
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 14}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count={{.Scale 2}} --collection_count={{.Scale 25}} --collection_distribution=random"
+  requires:  "{{eq true .DoOnce }}"
+  wait: true
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 15}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count={{.Scale 2}} --collection_count={{.Scale 25}} --collection_distribution=random"
+  requires:  "{{eq true .DoOnce }}"
+  wait: true
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 16}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count={{.Scale 2}} --collection_count={{.Scale 25}} --collection_distribution=random"
+  requires:  "{{eq true .DoOnce }}"
+  wait: true
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 17}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count={{.Scale 2}} --collection_count={{.Scale 25}} --collection_distribution=random"
+  requires:  "{{eq true .DoOnce }}"
+  wait: true
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 18}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count={{.Scale 2}} --collection_count={{.Scale 25}} --collection_distribution=random"
+  requires:  "{{eq true .DoOnce }}"
+  wait: true
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 19}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count={{.Scale 2}} --collection_count={{.Scale 25}} --collection_distribution=random"
+  requires:  "{{eq true .DoOnce }}"
+  wait: true
+
+################## Sleep for some time to allow collections manifest to sync ################
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  requires:  "{{eq true .DoOnce }}"
+  wait: true
+#
+################ initial data loading ################
+- image: sequoiatools/catapult
+  command: "-i {{.Orchestrator}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -n {{.Scale 100000}} -pc 100
+    -dt Hotel -ds 1000 -ac True -dpx test1"
+  requires:  "{{eq true .DoOnce }}"
+  alias: collection_bucket_doc_ops0
+- command: "-i {{.Orchestrator}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -n {{.Scale 100000}} -pc 100
+    -dt Hotel -ds 1000 -ac True -dpx test2"
+  requires:  "{{eq true .DoOnce }}"
+  alias: collection_bucket_doc_ops1
+- command: "-i {{.Orchestrator}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -n {{.Scale 100000}} -pc 100
+    -dt Hotel -ds 1000 -ac True -dpx test3"
+  requires:  "{{eq true .DoOnce }}"
+  alias: collection_bucket_doc_ops2
+- command: "-i {{.Orchestrator}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 3}} -n {{.Scale 100000}} -pc 100
+    -dt Hotel -ds 1000 -ac True -dpx test4"
+  requires:  "{{eq true .DoOnce }}"
+  alias: collection_bucket_doc_ops3
+- command: "-i {{.Orchestrator}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}} -n {{.Scale 100000}} -pc 100
+    -dt Hotel -ds 1000 -ac True -dpx test5"
+  requires:  "{{eq true .DoOnce }}"
+  alias: collection_bucket_doc_ops4
+- command: "-i {{.Orchestrator}}-u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 5}} -n {{.Scale 100000}} -pc 100
+    -dt Hotel -ds 1000 -ac True -dpx test6"
+  requires:  "{{eq true .DoOnce }}"
+  alias: collection_bucket_doc_ops5
+- command: "-i {{.Orchestrator}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 6}} -n {{.Scale 100000}} -pc 100
+    -dt Hotel -ds 1000 -ac True -dpx test7"
+  requires:  "{{eq true .DoOnce }}"
+  alias: collection_bucket_doc_ops6
+- command: "-i {{.Orchestrator}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 7}} -n {{.Scale 100000}} -pc 100
+    -dt Hotel -ds 1000 -ac True -dpx test8"
+  requires:  "{{eq true .DoOnce }}"
+  alias: collection_bucket_doc_ops7
+- command: "-i {{.Orchestrator}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 8}} -n {{.Scale 100000}} -pc 100
+    -dt Hotel -ds 1000 -ac True -dpx test9"
+  requires:  "{{eq true .DoOnce }}"
+  alias: collection_bucket_doc_ops8
+- command: "-i {{.Orchestrator}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 9}} -n {{.Scale 100000}} -pc 100
+    -dt Hotel -ds 1000 -ac True -dpx test10"
+  requires:  "{{eq true .DoOnce }}"
+  alias: collection_bucket_doc_ops9
+- command: "-i {{.Orchestrator}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 10}} -n {{.Scale 100000}} -pc 100
+    -dt Hotel -ds 1000 -ac True -dpx test11"
+  requires:  "{{eq true .DoOnce }}"
+  alias: collection_bucket_doc_ops10
+- command: "-i {{.Orchestrator}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 11}} -n {{.Scale 100000}} -pc 100
+    -dt Hotel -ds 1000 -ac True -dpx test12"
+  requires:  "{{eq true .DoOnce }}"
+  alias: collection_bucket_doc_ops11
+- command: "-i {{.Orchestrator}}-u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 12}} -n {{.Scale 100000}} -pc 100
+    -dt Hotel -ds 1000 -ac True -dpx test13"
+  requires:  "{{eq true .DoOnce }}"
+  alias: collection_bucket_doc_ops12
+- command: "-i {{.Orchestrator}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 13}} -n {{.Scale 100000}} -pc 100
+    -dt Hotel -ds 1000 -ac True -dpx test14"
+  requires:  "{{eq true .DoOnce }}"
+  alias: collection_bucket_doc_ops13
+- command: "-i {{.Orchestrator}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 14}} -n {{.Scale 100000}} -pc 100
+    -dt Hotel -ds 1000 -ac True -dpx test15"
+  requires:  "{{eq true .DoOnce }}"
+  alias: collection_bucket_doc_ops14
+- command: "-i {{.Orchestrator}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 15}} -n {{.Scale 100000}} -pc 100
+    -dt Hotel -ds 1000 -ac True -dpx test16"
+  requires:  "{{eq true .DoOnce }}"
+  alias: collection_bucket_doc_ops15
+- command: "-i {{.Orchestrator}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 16}} -n {{.Scale 100000}} -pc 100
+    -dt Hotel -ds 1000 -ac True -dpx test17"
+  requires:  "{{eq true .DoOnce }}"
+  alias: collection_bucket_doc_ops16
+- command: "-i {{.Orchestrator}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 17}} -n {{.Scale 100000}} -pc 100
+    -dt Hotel -ds 1000 -ac True -dpx test18"
+  requires:  "{{eq true .DoOnce }}"
+  alias: collection_bucket_doc_ops17
+- command: "-i {{.Orchestrator}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 18}} -n {{.Scale 100000}} -pc 100
+    -dt Hotel -ds 1000 -ac True -dpx test19"
+  requires:  "{{eq true .DoOnce }}"
+  alias: collection_bucket_doc_ops18
+- command: "-i {{.Orchestrator}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 19}} -n {{.Scale 100000}} -pc 100
+    -dt Hotel -ds 1000 -ac True -dpx test20"
+  requires:  "{{eq true .DoOnce }}"
+  alias: collection_bucket_doc_ops19
+
+################## Sleep for some time to allow data loading to run ###############
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "120"
+  wait: true
+
+################ Start Collections CRUD on a few buckets ###############
+- image: sequoiatools/collections:1.0
+  command: "-i {{.Orchestrator}}:8091 -b {{.Bucket}} -o crud_mode --crud_interval=30 --max_scopes={{.Scale 5}} --max_collections={{.Scale 50}}"
+  alias: collection_crud0
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 1}} -o crud_mode --crud_interval=30 --max_scopes={{.Scale 5}} --max_collections={{.Scale 50}}"
+  alias: collection_crud0
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 2}} -o crud_mode --crud_interval=30 --max_scopes={{.Scale 5}} --max_collections={{.Scale 50}}"
+  alias: collection_crud0
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 3}} -o crud_mode --crud_interval=30 --max_scopes={{.Scale 5}} --max_collections={{.Scale 50}}"
+  alias: collection_crud0
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 4}} -o crud_mode --crud_interval=30 --max_scopes={{.Scale 5}} --max_collections={{.Scale 50}}"
+  alias: collection_crud0
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 5}} -o crud_mode --crud_interval=30 --max_scopes={{.Scale 5}} --max_collections={{.Scale 50}}"
+  alias: collection_crud1
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 6}} -o crud_mode --crud_interval=30 --max_scopes={{.Scale 5}} --max_collections={{.Scale 50}}"
+  alias: collection_crud1
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 7}} -o crud_mode --crud_interval=30 --max_scopes={{.Scale 5}} --max_collections={{.Scale 50}}"
+  alias: collection_crud1
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 8}} -o crud_mode --crud_interval=30 --max_scopes={{.Scale 5}} --max_collections={{.Scale 50}}"
+  alias: collection_crud1
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 9}} -o crud_mode --crud_interval=30 --max_scopes={{.Scale 5}} --max_collections={{.Scale 50}}"
+  alias: collection_crud1
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 10}} -o crud_mode --crud_interval=30 --max_scopes={{.Scale 5}} --max_collections={{.Scale 50}}"
+  alias: collection_crud2
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 11}} -o crud_mode --crud_interval=30 --max_scopes={{.Scale 5}} --max_collections={{.Scale 50}}"
+  alias: collection_crud2
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 12}} -o crud_mode --crud_interval=30 --max_scopes={{.Scale 5}} --max_collections={{.Scale 50}}"
+  alias: collection_crud2
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 13}} -o crud_mode --crud_interval=30 --max_scopes={{.Scale 5}} --max_collections={{.Scale 50}}"
+  alias: collection_crud2
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 14}} -o crud_mode --crud_interval=30 --max_scopes={{.Scale 5}} --max_collections={{.Scale 50}}"
+  alias: collection_crud2
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 15}} -o crud_mode --crud_interval=30 --max_scopes={{.Scale 5}} --max_collections={{.Scale 50}}"
+  alias: collection_crud3
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 16}} -o crud_mode --crud_interval=30 --max_scopes={{.Scale 5}} --max_collections={{.Scale 50}}"
+  alias: collection_crud3
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 17}} -o crud_mode --crud_interval=30 --max_scopes={{.Scale 5}} --max_collections={{.Scale 50}}"
+  alias: collection_crud3
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 18}} -o crud_mode --crud_interval=30 --max_scopes={{.Scale 5}} --max_collections={{.Scale 50}}"
+  alias: collection_crud3
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 19}} -o crud_mode --crud_interval=30 --max_scopes={{.Scale 5}} --max_collections={{.Scale 50}}"
+  alias: collection_crud3
+
+################  create 200 indexes for 20 databases ################
+- section_start: create_indexes
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.Bucket}},{{.NthBucket 1}},{{.NthBucket 2}},{{.NthBucket 3}},{{.NthBucket 4}} --num_of_indexes_per_bucket {{.Scale 50}} -a create_n_indexes_on_buckets"
+  wait: true
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 5}},{{.NthBucket 6}},{{.NthBucket 7}},{{.NthBucket 8}},{{.NthBucket 9}} --num_of_indexes_per_bucket {{.Scale 50}} -a create_n_indexes_on_buckets"
+  wait: true
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 10}},{{.NthBucket 11}},{{.NthBucket 12}},{{.NthBucket 13}},{{.NthBucket 14}} --num_of_indexes_per_bucket {{.Scale 50}} -a create_n_indexes_on_buckets"
+  wait: true
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 15}},{{.NthBucket 16}},{{.NthBucket 17}},{{.NthBucket 18}},{{.NthBucket 19}} --num_of_indexes_per_bucket {{.Scale 50}} -a create_n_indexes_on_buckets"
+  wait: true
+
+################  Validate tenant affinity ################
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a validate_tenant_affinity"
+  wait: true
+
+################  Indexer Random Recovery ################
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a random_recovery --timeout {{.Scale 3600}} --interval 300"
+  alias: random_recovery
+
+################  build all deferred indexes ################
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a build_deferred_index -m 5"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a build_deferred_index -m 5"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -a build_deferred_index -m 5"
+  wait: true
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 3}} -a build_deferred_index -m 5"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}} -a build_deferred_index -m 5"
+  wait: true
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 5}} -a build_deferred_index -m 5"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 6}} -a build_deferred_index -m 5"
+  wait: true
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 7}} -a build_deferred_index -m 5"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 8}} -a build_deferred_index -m 5"
+  wait: true
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 9}} -a build_deferred_index -m 5"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 10}} -a build_deferred_index -m 5"
+  wait: true
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 11}} -a build_deferred_index -m 5"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 12}} -a build_deferred_index -m 5"
+  wait: true
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 13}} -a build_deferred_index -m 5"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 14}} -a build_deferred_index -m 5"
+  wait: true
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 15}} -a build_deferred_index -m 5"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 16}} -a build_deferred_index -m 5"
+  wait: true
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 17}} -a build_deferred_index -m 5"
+  wait: true
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 18}} -a build_deferred_index -m 5"
+  wait: true
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 19}} -a build_deferred_index -m 5"
+  wait: true
+
+################## Wait till all indexes are completely built ################
+- image: sequoiatools/wait_for_idx_build_complete
+  command: "{{.ActiveIndexNode 0}} {{.RestUsername}} {{.RestPassword}}"
+  wait: true
+
+################  Validate tenant affinity ################
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a validate_tenant_affinity"
+  wait: true
+
+
+################## Enable CBO and Update Statistics for indexes on bucket1 ################
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a enable_cbo --cbo_enable_ratio=50"
+  alias: cbo_bucket1
+
+################## Sleep for some time to allow update statistics to run ################
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "60"
+  wait: true
+
+##################  Enable CBO and Update Statistics for indexes on bucket2 ################
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a enable_cbo --cbo_enable_ratio=50"
+  alias: cbo_bucket2
+
+################### Sleep for some time to allow update statistics to run ##################
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "60"
+  wait: true
+
+##################  Enable CBO and Update Statistics for indexes on bucket3 ################
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -a enable_cbo --cbo_enable_ratio=50"
+  alias: cbo_bucket3
+
+################### Sleep for some time to allow update statistics to run ##################
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+###################  Create N1QL UDF Library and function - do it once per test ##################
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a create_n1ql_udf --lib_filename n1ql_udf.js --lib_name n1qludf"
+  requires:  "{{eq true .DoOnce }}"
+
+################ incremental data loading ################
+- image: sequoiatools/catapult
+  command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -n {{.Scale 20000}} -pc 100 -pu 5 -pd 10
+    -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 300 -fu price,free_parking -ac True --num_threads 1"
+  alias: collection_bucket1_doc_ops2
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 1}} -n {{.Scale 20000}} -pc 100 -pu 5 -pd 10
+    -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 300 -fu price,free_parking -ac True --num_threads 1"
+  alias: collection_bucket2_doc_ops2
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 2}} -n {{.Scale 20000}} -pc 100 -pu 5 -pd 10
+    -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 300 -fu price,free_parking -ac True --num_threads 1"
+  alias: collection_bucket3_doc_ops2
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 3}} -n {{.Scale 20000}} -pc 100 -pu 5 -pd 10
+    -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 300 -fu price,free_parking -ac True --num_threads 1"
+  alias: collection_bucket3_doc_ops2
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 4}} -n {{.Scale 20000}} -pc 100 -pu 5 -pd 10
+    -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 300 -fu price,free_parking -ac True --num_threads 1"
+  alias: collection_bucket3_doc_ops2
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 5}} -n {{.Scale 20000}} -pc 100 -pu 5 -pd 10
+    -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 300 -fu price,free_parking -ac True --num_threads 1"
+  alias: collection_bucket3_doc_ops2
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 6}} -n {{.Scale 20000}} -pc 100 -pu 5 -pd 10
+    -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 300 -fu price,free_parking -ac True --num_threads 1"
+  alias: collection_bucket3_doc_ops2
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 7}} -n {{.Scale 20000}} -pc 100 -pu 5 -pd 10
+    -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 300 -fu price,free_parking -ac True --num_threads 1"
+  alias: collection_bucket3_doc_ops2
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 8}} -n {{.Scale 20000}} -pc 100 -pu 5 -pd 10
+    -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 300 -fu price,free_parking -ac True --num_threads 1"
+  alias: collection_bucket3_doc_ops2
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 9}} -n {{.Scale 20000}} -pc 100 -pu 5 -pd 10
+    -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 300 -fu price,free_parking -ac True --num_threads 1"
+  alias: collection_bucket3_doc_ops2
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 10}} -n {{.Scale 20000}} -pc 100 -pu 5 -pd 10
+    -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 300 -fu price,free_parking -ac True --num_threads 1"
+  alias: collection_bucket3_doc_ops2
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 11}} -n {{.Scale 20000}} -pc 100 -pu 5 -pd 10
+    -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 300 -fu price,free_parking -ac True --num_threads 1"
+  alias: collection_bucket3_doc_ops2
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 12}} -n {{.Scale 20000}} -pc 100 -pu 5 -pd 10
+    -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 300 -fu price,free_parking -ac True --num_threads 1"
+  alias: collection_bucket3_doc_ops2
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 13}} -n {{.Scale 20000}} -pc 100 -pu 5 -pd 10
+    -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 300 -fu price,free_parking -ac True --num_threads 1"
+  alias: collection_bucket3_doc_ops2
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 14}} -n {{.Scale 20000}} -pc 100 -pu 5 -pd 10
+    -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 300 -fu price,free_parking -ac True --num_threads 1"
+  alias: collection_bucket3_doc_ops2
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 15}} -n {{.Scale 20000}} -pc 100 -pu 5 -pd 10
+    -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 300 -fu price,free_parking -ac True --num_threads 1"
+  alias: collection_bucket3_doc_ops2
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 16}} -n {{.Scale 20000}} -pc 100 -pu 5 -pd 10
+    -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 300 -fu price,free_parking -ac True --num_threads 1"
+  alias: collection_bucket3_doc_ops2
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 17}} -n {{.Scale 20000}} -pc 100 -pu 5 -pd 10
+    -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 300 -fu price,free_parking -ac True --num_threads 1"
+  alias: collection_bucket3_doc_ops2
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 18}} -n {{.Scale 20000}} -pc 100 -pu 5 -pd 10
+    -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 300 -fu price,free_parking -ac True --num_threads 1"
+  alias: collection_bucket3_doc_ops2
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 19}} -n {{.Scale 20000}} -pc 100 -pu 5 -pd 10
+    -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 300 -fu price,free_parking -ac True --num_threads 1"
+  alias: collection_bucket3_doc_ops2
+
+## ###############  run queries ################
+- section_start: query_replica_indexes
+- image: sequoiatools/queryapp
+  command: "-J-Xms256m -J-Xmx512m -J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.7.21/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 0 --print_duration=3600 --bucket {{.Bucket}} --querycount {{.Scale 3}} --threads 5 --n1ql True --query_timeout=600 --scan_consistency REQUEST_PLUS --bucket_names [{{.Bucket}},{{.NthBucket 1}},{{.NthBucket 2}},{{.NthBucket 3}},{{.NthBucket 4}}] --collections_mode --dataset hotel --run_udf_queries True"
+- command: "-J-Xms256m -J-Xmx512m -J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.7.21/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 0 --print_duration=3600 --bucket {{.NthBucket 1}} --querycount {{.Scale 3}} --threads 5 --n1ql True --query_timeout=600 --scan_consistency REQUEST_PLUS --bucket_names [{{.NthBucket 5}},{{.NthBucket 6}},{{.NthBucket 7}},{{.NthBucket 8}},{{.NthBucket 9}}] --collections_mode --dataset hotel --run_udf_queries True"
+- command: "-J-Xms256m -J-Xmx512m -J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.7.21/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 0 --print_duration=3600 --bucket {{.NthBucket 2}} --querycount {{.Scale 3}} --threads 5 --n1ql True --query_timeout=600 --scan_consistency REQUEST_PLUS --bucket_names [{{.NthBucket 10}},{{.NthBucket 11}},{{.NthBucket 12}},{{.NthBucket 13}},{{.NthBucket 14}}]  --txns True --dataset hotel --run_udf_queries True"
+- command: "-J-Xms256m -J-Xmx512m -J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.7.21/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 0 --print_duration=3600 --bucket {{.NthBucket 3}} --querycount {{.Scale 3}} --threads 5 --n1ql True --query_timeout=600 --scan_consistency REQUEST_PLUS --bucket_names [{{.NthBucket 15}},{{.NthBucket 16}},{{.NthBucket 17}},{{.NthBucket 18}},{{.NthBucket 19}}]  --txns True --dataset hotel --run_udf_queries True"
+################  TODO phase 2 Alter indexes throughout the iteration ################
+
+################## Start dropping indexes in a loop on bucket4 & bucket5 (Collection CRUD workload)  ################
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 3}} -d hotel -a drop_index_loop --interval 120 --timeout {{.Scale 3600}}"
+  alias: index_drop_loop1
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}} -d hotel -a drop_index_loop --interval 120 --timeout {{.Scale 3600}}"
+  alias: index_drop_loop1
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 8}} -d hotel -a drop_index_loop --interval 120 --timeout {{.Scale 3600}}"
+  alias: index_drop_loop2
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 9}} -d hotel -a drop_index_loop --interval 120 --timeout {{.Scale 3600}}"
+  alias: index_drop_loop2
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 13}} -d hotel -a drop_index_loop --interval 120 --timeout {{.Scale 3600}}"
+  alias: index_drop_loop3
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 14}} -d hotel -a drop_index_loop --interval 120 --timeout {{.Scale 3600}}"
+  alias: index_drop_loop3
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 18}} -d hotel -a drop_index_loop --interval 120 --timeout {{.Scale 3600}}"
+  alias: index_drop_loop4
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 19}} -d hotel -a drop_index_loop --interval 120 --timeout {{.Scale 3600}}"
+  alias: index_drop_loop4
+  wait: true
+- section_end: query_replica_indexes
+
+################ Stop Collections CRUD and index creation on bucket4 & bucket5 ###############
+- client:
+  op: rm
+  container: index_drop_loop1
+- client:
+  op: rm
+  container: index_drop_loop2
+- client:
+  op: rm
+  container: index_drop_loop3
+- client:
+  op: rm
+  container: index_drop_loop4
+- client:
+  op: rm
+  container: random_recovery
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+- section_start: change_indexer_topologies
+############################  Rebalance-in indexer nodes #############################
+- template: add_node
+  args: "{{.NthInActiveNode 0}}, index"
+- args: "{{.NthInActiveNode 1}}, index"
+- template: rebalance
+  wait: true
+# Sleep for some more time after rebalance completes
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+# Sleep after starting rebalance
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+# Sleep before starting to poll for rebalance progress
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "420"
+  wait: true
+
+# Wait for rebalance to complete
+- template: wait_for_rebalance
+  wait: true
+
+############## Sleep for some more time after rebalance completes #############
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+################ Validate tenant affinity ################
+
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a validate_tenant_affinity"
+  wait: true
+
+################ Validate S3 cleanup ################
+
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a validate_s3_cleanup --aws_access_key_id {{.AWSAccessKey}} --aws_secret_access_key {{.AWSSecretKey}}"
+  wait: true
+
+############################  Rebalance-out 2 indexer nodes #############################
+- template: rebalance_out
+  args: "({{.ActiveIndexNode 0}},{{.ActiveIndexNode 2}})"
+
+# Sleep after starting rebalance
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+# Sleep before starting to poll for rebalance progress
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "420"
+  wait: true
+
+# Wait for rebalance to complete
+- template: wait_for_rebalance
+  wait: true
+
+############## Sleep for some more time after rebalance completes #############
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+################ Validate tenant affinity ################
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a validate_tenant_affinity"
+  wait: true
+
+################ Validate S3 cleanup ################
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a validate_s3_cleanup --aws_access_key_id {{.AWSAccessKey}} --aws_secret_access_key {{.AWSSecretKey}}"
+  wait: true
+
+################ Rebalance in query node ################
+  template: rebalance_in
+  args: "{{.InActiveNode}} query"
+
+# Sleep after starting rebalance
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+# Sleep before starting to poll for rebalance progress
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "420"
+  wait: true
+############################  Rebalance-in indexer nodes unsuccessful rebalance #############################
+- template: add_node
+  args: "{{.NthInActiveNode 0}}, index"
+- args: "{{.NthInActiveNode 1}}, index"
+- template: rebalance
+  wait: true
+############### Kill indexer ################
+-
+  template: kill_process
+  args: "{{.ActiveIndexNode 0}}, indexer"
+
+############################# Sleep for some more time after rebalance completes #############################
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+############################## Sleep after starting rebalance #############################
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+##############################  Sleep before starting to poll for rebalance progress #############################
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "420"
+  wait: true
+
+############################## Wait for rebalance to complete #############################
+- template: wait_for_rebalance
+  wait: true
+
+############## Sleep for some more time after rebalance completes #############
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+################ Validate tenant affinity ################
+
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a validate_tenant_affinity"
+  wait: true
+
+################ Validate S3 cleanup ################
+
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a validate_s3_cleanup --aws_access_key_id {{.AWSAccessKey}} --aws_secret_access_key {{.AWSSecretKey}}"
+  wait: true
+
+############################  Rebalance-out 2 indexer nodes unsuccessful rebalance #############################
+- template: rebalance_out
+  args: "({{.ActiveIndexNode 0}},{{.ActiveIndexNode 2}})"
+
+############### Kill indexer ################
+-
+  template: kill_process
+  args: "{{.ActiveIndexNode 0}}, indexer"
+
+############################## Sleep after starting rebalance #############################
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+######################## Sleep before starting to poll for rebalance progress #######################
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "420"
+  wait: true
+
+######################## Wait for rebalance to complete #######################
+- template: wait_for_rebalance
+  wait: true
+
+############## Sleep for some more time after rebalance completes #############
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+################ Validate tenant affinity ################
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a validate_tenant_affinity"
+  wait: true
+
+################ Validate S3 cleanup ################
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a validate_s3_cleanup --aws_access_key_id {{.AWSAccessKey}} --aws_secret_access_key {{.AWSSecretKey}}"
+  wait: true
+
+################ Rebalance in query node ################
+  template: rebalance_in
+  args: "{{.InActiveNode}} query"
+
+# Sleep after starting rebalance
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+# Sleep before starting to poll for rebalance progress
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "420"
+  wait: true
+
+
+################ Rebalance out query node ################
+- template: rebalance_out
+  args: "({{.QueryNode}}"
+  wait: true
+
+# Sleep after starting rebalance
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+# Sleep before starting to poll for rebalance progress
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "420"
+  wait: true
+
+# Wait for rebalance to complete
+- template: wait_for_rebalance
+  wait: true
+
+###############  Swap single index node ################
+- template: rebalance_swap
+  args: "{{.InActiveNode}}, {{.ActiveIndexNode 0}}, index"
+
+# Sleep after starting rebalance
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+# Sleep before starting to poll for rebalance progress
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "420"
+  wait: true
+
+# Wait for rebalance to complete
+- template: wait_for_rebalance
+  wait: true
+
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "300"
+   wait: true
+
+################ Validate tenant affinity ################
+
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a validate_tenant_affinity"
+  wait: true
+
+################ Validate S3 cleanup ################
+
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a validate_s3_cleanup --aws_access_key_id {{.AWSAccessKey}} --aws_secret_access_key {{.AWSSecretKey}}"
+  wait: true
+
+############### Kill memcached ################
+-
+  template: kill_process
+  args: "{{.NthDataNode 2}}, memcached"
+
+# Sleep for some more time after memcached-kill completes (10 minutes)
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "600"
+   wait: true
+############### Kill projector ################
+-
+  template: kill_process
+  args: "{{.NthDataNode 0}}, projector"
+
+# Sleep for some more time after projector-kill completes (10 minutes)
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "600"
+   wait: true
+
+############### Kill query ################
+-
+  template: kill_process
+  args: "{{.Nodes | .Service `n1ql` | net 1}}, cbq-engine"
+
+# Sleep for some more time after query-kill completes (10 minutes)
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "600"
+   wait: true
+
+################ Kill query ################
+- template: kill_process
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, cbq-engine"
+
+# Sleep for some more time after query-kill completes (10 minutes)
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+################ Kill indexer ################
+- template: kill_process
+  args: "{{.ActiveIndexNode 0}}, indexer"
+
+# Sleep for some more time after indexer-kill completes (10 minutes)
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+################ Stop Data loading to cool down system for item count check ###############
+-
+  client:
+    op: rm
+    container: collection_bucket_doc_ops0
+-
+  client:
+    op: rm
+    container: collection_bucket_doc_ops1
+-
+  client:
+    op: rm
+    container: collection_bucket_doc_ops2
+-
+  client:
+    op: rm
+    container: collection_bucket_doc_ops3
+-
+  client:
+    op: rm
+    container: collection_bucket_doc_ops4
+-
+  client:
+    op: rm
+    container: collection_bucket_doc_ops5
+-
+  client:
+    op: rm
+    container: collection_bucket_doc_ops6
+-
+  client:
+    op: rm
+    container: collection_bucket_doc_ops7
+-
+  client:
+    op: rm
+    container: collection_bucket_doc_ops8
+-
+  client:
+    op: rm
+    container: collection_bucket_doc_ops9
+-
+  client:
+    op: rm
+    container: collection_bucket_doc_ops10
+-
+  client:
+    op: rm
+    container: collection_bucket_doc_ops11
+-
+  client:
+    op: rm
+    container: cbo_bucket1
+-
+  client:
+    op: rm
+    container: collection_bucket_doc_ops12
+-
+  client:
+    op: rm
+    container: collection_bucket_doc_ops13
+-
+  client:
+    op: rm
+    container: collection_bucket_doc_ops14
+-
+  client:
+    op: rm
+    container: collection_bucket_doc_ops15
+-
+  client:
+    op: rm
+    container: collection_bucket_doc_ops16
+-
+  client:
+    op: rm
+    container: collection_bucket_doc_ops17
+-
+  client:
+    op: rm
+    container: collection_bucket_doc_ops18
+-
+  client:
+    op: rm
+    container: collection_bucket_doc_ops19
+-
+  client:
+    op: rm
+    container: cbo_bucket1
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "1200"
+  wait: true
+#
+################  Delete Statistics ################
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}}  -a delete_statistics"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}}  -a delete_statistics"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}}  -a delete_statistics"
+  wait: true
+
+################  Drop all Indexes ################
+- section_start: drop_all_indexes
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}}  -a drop_all_indexes -v"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a drop_all_indexes -v"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -a drop_all_indexes -v"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 3}} -a drop_all_indexes -v"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}} -a drop_all_indexes -v"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 5}} -a drop_all_indexes -v"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 6}} -a drop_all_indexes -v"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 7}} -a drop_all_indexes -v"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 8}} -a drop_all_indexes -v"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 9}} -a drop_all_indexes -v"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 10}} -a drop_all_indexes -v"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 11}} -a drop_all_indexes -v"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 12}} -a drop_all_indexes -v"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 13}} -a drop_all_indexes -v"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 14}} -a drop_all_indexes -v"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 15}} -a drop_all_indexes -v"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 16}} -a drop_all_indexes -v"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 17}} -a drop_all_indexes -v"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 18}} -a drop_all_indexes -v"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 19}} -a drop_all_indexes -v"
+  wait: true
+
+# Sleep for some time to allow DDL to complete in the background
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "600"
+   wait: true
+- section_end: drop_all_indexes

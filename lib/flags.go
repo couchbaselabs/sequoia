@@ -18,6 +18,8 @@ type TestFlags struct {
 	PasswordCapella  *string `yaml:"password_capella"`
 	AccessKey        *string `yaml:"access_key"`
 	SecretKey        *string `yaml:"secret_key"`
+	AWSAccessKey     *string `yaml:"aws_access_key"`
+	AWSSecretKey     *string `yaml:"aws_secret_key"`
 	TLS              *bool   `yaml:"tls"`
 	Mode             string
 	Args             []string
@@ -305,6 +307,14 @@ func (f *TestFlags) AddDefaultFlags(fset *flag.FlagSet) {
 		"secret_key",
 		"",
 		"Capella secret token. Necessary to use the Capella V2 APIs")
+	f.AWSAccessKey = fset.String(
+		"aws_access_key",
+		"",
+		"AWS access token. Necessary to use the Capella V2 APIs")
+	f.AWSSecretKey = fset.String(
+		"aws_secret_key",
+		"",
+		"AWS secret token. Necessary to use the Capella V2 APIs")
 	f.CapellaCluster = fset.String(
 		"capella_cluster",
 		"",
