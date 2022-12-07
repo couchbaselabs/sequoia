@@ -95,9 +95,13 @@ class APIManager:
         if not self.project_id:
             all_clusters = json.loads(self.api_obj.get_clusters().content)['data']
         else:
-            params = "projectId={}".format(self.project_id)
+            params = "page=1&perPage=1000&projectId={}".format(self.project_id)
             self.log.debug("Params parameter being sent in _get_meta_data method: {}".format(params))
-            all_clusters = json.loads(self.api_obj.get_clusters(params).content)['data']
+            all_clusters = self.api_obj.get_clusters(params)
+            self.log.debug("All clusters {}".format(all_clusters))
+            all_clusters = all_clusters.content
+            self.log.debug("All clusters {}".format(all_clusters))
+            all_clusters = json.loads(all_clusters)['data']
         self.log.debug("All clusters: {}".format(all_clusters))
         for cluster in all_clusters['items']:
             if cluster['name'] == name:

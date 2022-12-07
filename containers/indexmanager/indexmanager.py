@@ -74,6 +74,7 @@ class IndexManager:
     def __init__(self):
         parser = argparse.ArgumentParser()
         parser.add_argument("-n", "--node", help="Couchbase Server Node Address")
+        parser.add_argument("-nl", "--node_list", help="Used to directly interact with the node", default="")
         parser.add_argument("-c", "--capella", help="Set to True if tests need to run on Capella", default=False)
         parser.add_argument("-x", "--tls", help="Set to True if tests need to run with TLS enabled", default=False)
         parser.add_argument("-o", "--port", help="Couchbase Server Node Port")
@@ -90,11 +91,12 @@ class IndexManager:
                                      "drop_index_loop", "alter_indexes", "enable_cbo", "delete_statistics",
                                      "item_count_check",
                                      "random_recovery", "create_udf", "drop_udf", "create_n1ql_udf", "validate_tenant_affinity", "set_fast_rebalance_config",
-                                     "create_n_indexes_on_buckets", "validate_s3_cleanup"],
+                                     "create_n_indexes_on_buckets", "validate_s3_cleanup", "copy_aws_keys", "cleanup_s3"],
                             help="Choose an action to be performed. Valid actions : create_index | build_deferred_index | drop_all_indexes | create_index_loop | "
                                  "drop_index_loop | alter_indexes | enable_cbo | delete_statistics "
                                  "| item_count_check | random_recovery | create_udf | drop_udf | create_n1ql_udf "
-                                 "| validate_tenant_affinity | set_fast_rebalance_config | create_n_indexes_on_buckets",
+                                 "| validate_tenant_affinity | set_fast_rebalance_config | create_n_indexes_on_buckets "
+                                 "| copy_aws_keys | cleanup_s3 | validate_s3_cleanup",
                             default="create_index")
         parser.add_argument("-m", "--build_max_collections", type=int, default=0,
                             help="Build Indexes on max number of collections")
@@ -121,7 +123,7 @@ class IndexManager:
         parser.add_argument("--aws_access_key_id", help="AWS access key ID for fast rebalance")
         parser.add_argument("--aws_secret_access_key", help="AWS secret key for fast rebalance")
         parser.add_argument("--region", help="AWS region for fast rebalance", default="us-west-1")
-        parser.add_argument("--s3_bucket", help="S3 bucket used for fast rebalance", default="gsi-system-test-onprem")
+        parser.add_argument("--s3_bucket", help="S3 bucket used for fast rebalance", default="gsi-system-test-onprem-2")
         parser.add_argument("--storage_prefix", help="Storage prefix for S3 bucket used for fast rebalance", default="indexing-system-test")
         parser.add_argument("--bucket_list", help="List of buckets to be used for index creation")
         parser.add_argument("--num_of_indexes_per_bucket", type=int, default=20, help="Number of indexes per bucket you want to create")
@@ -129,6 +131,7 @@ class IndexManager:
         self.log = logging.getLogger("indexmanager")
         self.log.setLevel(logging.INFO)
         self.node_addr = args.node
+        self.node_list = args.node_list.split(",")
         self.node_port = args.port
         self.username = args.username
         self.password = args.password
@@ -228,7 +231,10 @@ class IndexManager:
         if args.bucket_list:
             self.bucket_list = args.bucket_list.split(",")
         else:
-            self.bucket_list = self.get_all_buckets()
+            try:
+                self.bucket_list = self.get_all_buckets()
+            except:
+                self.log.error("Fetching buckets query has failed. create_n_indexes_on_bucket will not work")
         self.index_nodes = self.find_nodes_with_service(self.get_services_map(), "index")
         self.n1ql_nodes = self.find_nodes_with_service(self.get_services_map(), "n1ql")
         self.log.info(f"N1QL nodes {self.n1ql_nodes} and Index nodes : {self.index_nodes}")
@@ -501,9 +507,12 @@ class IndexManager:
             scopes = bucket_obj.collections().get_all_scopes()
             self.log.info("Bucket name {}".format(bucket_name))
             for scope in scopes:
-                for coll in scope.collections:
-                    if scope.name not in ["_system"]:
-                        keyspaces.append("`" + bucket_name + "`.`" + scope.name + "`.`" + coll.name + "`")
+                print(f"scope is {scope.name}")
+                if "scope_" in scope.name:
+                    for coll in scope.collections:
+                        print(f"coll is {coll.name}")
+                        if "coll_" in coll.name:
+                            keyspaces.append("`" + bucket_name + "`.`" + scope.name + "`.`" + coll.name + "`")
             self.log.info("Keyspaces that will be used: {}".format(keyspaces))
             total_idx_created = 0
             create_index_statements = []
@@ -548,6 +557,8 @@ class IndexManager:
                 except Exception as err:
                     self.log.error(f"Index creation failed for statement: {create_index_statement}")
                     self.log.error(err)
+                    if "Planner not able to find any node" in str(err):
+                        break
     """
     Alter indexes
     """
@@ -1259,26 +1270,29 @@ class IndexManager:
             try:
                 status = queryResult.metadata().status()
                 results = queryResult.rows()
-            except:
+            except Exception as e:
                 self.log.info("Query didnt return status or results")
-                self.log.error("Unexpected error :", sys.exc_info()[0])
+                self.log.error(f"Unexpected error during execution of query. Query is {statement}. Exception is {str(e)}", )
                 pass
 
         except couchbase.exceptions.QueryException as qerr:
             self.log.debug("qerr")
             self.log.error(qerr)
+            #raise Exception(f"Exception seen while running the query {statement}. Error is {str(qerr)}")
         except couchbase.exceptions.HTTPException as herr:
             self.log.debug("herr")
             self.log.error(herr)
+            #raise Exception(f"Exception seen while running the query {statement}. Error is {str(herr)}")
         except couchbase.exceptions.QueryIndexAlreadyExistsException as qiaeerr:
             self.log.debug("qiaeerr")
             self.log.error(qiaeerr)
         except couchbase.exceptions.TimeoutException as terr:
             self.log.debug("terr")
             self.log.error(terr)
-        except:
-            self.log.error("Unexpected error :", sys.exc_info()[0])
-
+            #raise Exception(f"Exception seen while running the query {statement}. Error is {str(terr)}")
+        except Exception as e:
+            self.log.error(f"Unexpected error : {str(e)}")
+            #raise Exception(f"Exception seen while running the query {statement}. Error {str(e)}")
         return status, results, queryResult
 
     def get_indexer_metadata(self, timeout=120):
@@ -1417,60 +1431,71 @@ class IndexManager:
         return indexer_nodes_list
     
     def set_fast_rebalance_config(self):
+        indexer_nodes = self.get_indexer_nodes()
+        self.log.info("The indexer nodes are {}".format(indexer_nodes))
+        node = indexer_nodes[0]
+        fast_rebalance_config = {"indexer.settings.rebalance.blob_storage_bucket": self.s3_bucket,
+                                 "indexer.settings.rebalance.blob_storage_prefix": self.storage_prefix,
+                                 "indexer.settings.rebalance.blob_storage_scheme": "s3",
+                                 "indexer.settings.rebalance.blob_storage_region": self.region}
+        self.set_index_settings(setting_json=fast_rebalance_config, node_ip=node)
+
+    def copy_aws_keys(self):
         if not self.aws_access_key_id or not self.aws_secret_access_key or not self.region:
             raise Exception("Please pass aws_access_key_id, aws_secret_access_key, and region "
-                            "parameters to set_fast_rebalance_config")
+                            "parameters to copy_aws_keys")
         self.log.info("Will use this bucket {} and this storage prefix {}".format(self.s3_bucket,
                                                                                   self.scheme))
         print("Will use this access key {} and this secret key {}".format(self.aws_access_key_id,
                                                                                   self.aws_secret_access_key))
-        indexer_nodes = self.get_indexer_nodes()
-        self.log.info("The indexer nodes are {}".format(indexer_nodes))
-        for node in indexer_nodes:
+        for node in self.node_list:
+            print(f"Will ssh into {node} and copy the keys")
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             ssh.connect(node, username=self.ssh_username, password=self.ssh_password, timeout=10)
-            ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command("rm -rf /opt/couchbase/.aws/")
+            ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command("rm -rf /home/couchbase/.aws/")
             out, err = ssh_stdout.read(), ssh_stderr.read()
             self.log.info("Output for rm -rf command {} error {}".format(out, err))
-            ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command("mkdir -p /opt/couchbase/.aws/")
+            ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command("mkdir -p /home/couchbase/.aws/")
             out, err = ssh_stdout.read(), ssh_stderr.read()
-            self.log.info("Output for mkdir command {} error {}".format(out,err))
-            remote_path_aws_cred_file = "/opt/couchbase/.aws/credentials"
-            remote_path_aws_conf_file = '/opt/couchbase/.aws/config'
+            self.log.info("Output for mkdir command {} error {}".format(out, err))
+            remote_path_aws_cred_file = "/home/couchbase/.aws/credentials"
+            remote_path_aws_conf_file = '/home/couchbase/.aws/config'
             aws_cred_file = ('[default]\n'
                              f'aws_access_key_id={self.aws_access_key_id}\n'
                              f'aws_secret_access_key={self.aws_secret_access_key}')
             aws_conf_file = ('[default]\n'
                              f'region={self.region}\n'
                              'output=json')
-            ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command("echo '{0}' > {1}".format(aws_cred_file, remote_path_aws_cred_file))
+            ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command(
+                "echo '{0}' > {1}".format(aws_cred_file, remote_path_aws_cred_file))
             out, err = ssh_stdout.read(), ssh_stderr.read()
             self.log.info("Output for creating aws cred file command {} error {}".format(out, err))
-            ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command("echo '{0}' > {1}".format(aws_conf_file, remote_path_aws_conf_file))
+            ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command(
+                "echo '{0}' > {1}".format(aws_conf_file, remote_path_aws_conf_file))
             out, err = ssh_stdout.read(), ssh_stderr.read()
             self.log.info("Output for creating aws conf file command {} error {}".format(out, err))
 
-            fast_rebalance_config = {"indexer.settings.rebalance.blob_storage_bucket": self.s3_bucket,
-                                     "indexer.settings.rebalance.blob_storage_prefix": self.storage_prefix,
-                                     "indexer.settings.rebalance.blob_storage_scheme": "s3"}
-            self.set_index_settings(setting_json=fast_rebalance_config, node_ip=node)
-    
     def validate_s3_cleanup(self):
         s3 = boto3.client(service_name='s3', region_name=self.region,
                           aws_access_key_id=self.aws_access_key_id,
                           aws_secret_access_key=self.aws_secret_access_key)
         folder_path_expected = [f"{self.storage_prefix}/"]
         self.log.info(f"Expected folder list {folder_path_expected}")
-        folder_list_on_aws = []
         result = s3.list_objects_v2(Bucket=self.s3_bucket, Delimiter='/*')
         self.log.info(f"Result from the s3 list_objects_v2 API call:{result}")
-        for item in result['Contents']:
-            if folder_path_expected[0] in item['Key']:
-                folder_list_on_aws.append(item['Key'])
-        if folder_list_on_aws != folder_path_expected:
-            self.log.error(f"Clean-up did not happen. Folder list on the AWS bucket:{folder_list_on_aws}")
-            raise Exception("S3 cleanup failure during rebalance")
+        if result['KeyCount'] > 1:
+            raise Exception(f"S3 cleanup validation failure. Folder list: {result}")
+
+    def cleanup_s3(self):
+        s3 = boto3.client(service_name='s3', region_name=self.region,
+                          aws_access_key_id=self.aws_access_key_id,
+                          aws_secret_access_key=self.aws_secret_access_key)
+        response = s3.list_objects_v2(Bucket=self.s3_bucket, Prefix=self.storage_prefix)
+        for obj in response['Contents']:
+            if obj['Key'] != '{}/'.format(self.storage_prefix):
+                print('Deleting', obj['Key'])
+                s3.delete_object(Bucket=self.s3_bucket, Key=obj['Key'])
 
     def set_index_settings(self, setting_json, node_ip):
         api = f"{self.scheme}://{node_ip}:{self.node_port_index}/settings"
@@ -1543,12 +1568,17 @@ if __name__ == '__main__':
         indexMgr.validate_tenant_affinity()
     elif indexMgr.action == "set_fast_rebalance_config":
         indexMgr.set_fast_rebalance_config()
+    elif indexMgr.action == "copy_aws_keys":
+        indexMgr.copy_aws_keys()
     elif indexMgr.action == "create_n_indexes_on_buckets":
         indexMgr.create_n_indexes_on_buckets()
     elif indexMgr.action == "validate_s3_cleanup":
         indexMgr.validate_s3_cleanup()
+    elif indexMgr.action == "cleanup_s3":
+        indexMgr.cleanup_s3()
     else:
         print("Invalid choice for action. Choose from the following - "
               "create_index | build_deferred_index | drop_all_indexes | create_index_loop | alter_indexes | "
               "enable_cbo | drop_index_loop | item_count_check | random_recovery "
-              "| create_udf | drop_udf | create_n1ql_udf | validate_tenant_affinity | set_fast_rebalance_config | validate_s3_cleanup")
+              "| create_udf | drop_udf | create_n1ql_udf | validate_tenant_affinity | set_fast_rebalance_config | "
+              "validate_s3_cleanup | cleanup_s3")

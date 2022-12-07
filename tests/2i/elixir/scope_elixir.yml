@@ -22,102 +22,100 @@ users:
     auth_domain: local
 buckets:
   - name: bucket1
-    ram: 20%
+    ram: 256
     eviction: fullEviction
     storage: magma
   - name: bucket2
-    ram: 20%
+    ram: 256
     eviction: fullEviction
     storage: magma
   - name: bucket3
-    ram: 20%
+    ram: 256
     eviction: fullEviction
     storage: magma
   - name: bucket4
-    ram: 20%
+    ram: 512
     eviction: fullEviction
     storage: magma
   - name: bucket5
-    ram: 20%
+    ram: 512
     eviction: fullEviction
     storage: magma
   - name: bucket6
-    ram: 20%
+    ram: 256
     eviction: fullEviction
     storage: magma
   - name: bucket7
-    ram: 20%
+    ram: 256
     eviction: fullEviction
     storage: magma
   - name: bucket8
-    ram: 20%
+    ram: 256
     eviction: fullEviction
     storage: magma
   - name: bucket9
-    ram: 20%
+    ram: 512
     eviction: fullEviction
     storage: magma
   - name: bucket10
-    ram: 20%
+    ram: 512
     eviction: fullEviction
     storage: magma
   - name: bucket11
-    ram: 20%
+    ram: 256
     eviction: fullEviction
     storage: magma
   - name: bucket12
-    ram: 20%
+    ram: 256
     eviction: fullEviction
     storage: magma
   - name: bucket13
-    ram: 20%
+    ram: 256
     eviction: fullEviction
     storage: magma
   - name: bucket14
-    ram: 20%
+    ram: 512
     eviction: fullEviction
     storage: magma
   - name: bucket15
-    ram: 20%
+    ram: 512
     eviction: fullEviction
     storage: magma
   - name: bucket16
-    ram: 20%
+    ram: 256
     eviction: fullEviction
     storage: magma
   - name: bucket17
-    ram: 20%
+    ram: 256
     eviction: fullEviction
     storage: magma
   - name: bucket18
-    ram: 20%
+    ram: 256
     eviction: fullEviction
     storage: magma
   - name: bucket19
-    ram: 20%
+    ram: 512
     eviction: fullEviction
     storage: magma
   - name: bucket20
-    ram: 20%
+    ram: 512
     eviction: fullEviction
     storage: magma
 servers:
   - name: local
     count: 12
-    ram: 80%
-    index_ram: 40%
+    ram: 90%
+    index_ram: 70%
     index_storage: default
     services:
-      index: 6
-      index_start: 7
+      index: 4
+      index_start: 6
       query: 2
-      query_start: 5
+      query_start: 4
     rest_username: Administrator
     rest_password: password
     data_path: /data
     index_path: /data
-    init_nodes: 6
-    buckets: bucket1, bucket2, bucket3, bucket4, bucket5, bucket6, bucket7, bucket8,
-      bucket9, bucket10, bucket11, bucket12, bucket13, bucket14, bucket15,
-      bucket16, bucket17, bucket18, bucket19, bucket20
+    init_nodes: 9
+    buckets: bucket1, bucket2, bucket3, bucket4, bucket5, bucket6, bucket7, bucket8, bucket9, bucket10, bucket11, bucket12, bucket13, bucket14, bucket15, bucket16, bucket17, bucket18, bucket19, bucket20
     users: bucket1, bucket2, bucket3, bucket4, bucket5

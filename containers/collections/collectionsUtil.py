@@ -275,6 +275,8 @@ class CollectionOperations:
             random.seed(datetime.now())
             # First get the current count for scopes and collections in the bucket
             curr_scope_list = self.get_scope_list(bucket)
+            curr_scope_list = [scope for scope in curr_scope_list if scope not in ['_system']]
+            print(f"Curr_scope_list: {curr_scope_list}")
             curr_scope_num = len(curr_scope_list)
 
             curr_coll_count = 0
@@ -318,12 +320,14 @@ class CollectionOperations:
                     print("Creating Scope : %s" % scope_name)
                     self.create_scope(bucket, scope_name)
                 else:
-                    scope_name = random.choice([x for x in curr_scope_list if x != "_default"])
-                    if scope_name not in ignore_scope:
-                        print("Deleting Scope : %s" % scope_name)
-                        self.delete_scope(bucket, scope_name)
-                    else:
-                        print("Ignoring Scope Deletion : %s" % scope_name)
+                    delete_list = [x for x in curr_scope_list if x not in ["_default", "_system"] and "scope_" not in x]
+                    if delete_list:
+                        scope_name = random.choice(delete_list)
+                        if scope_name not in ignore_scope:
+                            print("Deleting Scope : %s" % scope_name)
+                            self.delete_scope(bucket, scope_name)
+                        else:
+                            print("Ignoring Scope Deletion : %s" % scope_name)
 
             # Create / Drop single collection
             else:
@@ -344,6 +348,7 @@ class CollectionOperations:
                     self.create_collection(bucket, scope, coll_name)
                 else:
                     scope = random.choice(curr_scope_list)
+                    print(f"Deleting collection from scope {scope}")
                     coll_list = []
                     for sc in curr_coll_map["scopes"]:
                         if sc["name"] == scope:
@@ -352,12 +357,14 @@ class CollectionOperations:
                         else:
                             pass
                     if (scope == "_default" and len(coll_list) > 1) or (scope != "_default" and len(coll_list) > 0):
-                        coll_name = random.choice([x for x in coll_list if x != "_default"])
-                        if scope not in ignore_scope and coll_name not in ignore_coll:
-                            print("Deleting Collection : %s in scope %s" % (coll_name, scope))
-                            self.delete_collection(bucket, scope, coll_name)
-                        else:
-                            print("Ignoring Collection : %s in scope %s" % (coll_name, scope))
+                        list_coll = [x for x in coll_list if x != "_default" and "coll_" not in x]
+                        if list_coll:
+                            coll_name = random.choice([x for x in coll_list if x != "_default" and "coll_" not in x])
+                            if scope not in ignore_scope and coll_name not in ignore_coll:
+                                print("Deleting Collection : %s in scope %s" % (coll_name, scope))
+                                self.delete_collection(bucket, scope, coll_name)
+                            else:
+                                print("Ignoring Collection : %s in scope %s" % (coll_name, scope))
                     else:
                         pass
 
