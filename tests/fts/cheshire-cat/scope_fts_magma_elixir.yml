@@ -77,56 +77,6 @@ buckets:
       ram: 256
       eviction: fullEviction
       storage: magma
-  -
-      name: bucket11
-      ram: 256
-      eviction: fullEviction
-      storage: magma
-  -
-      name: bucket12
-      ram: 256
-      eviction: fullEviction
-      storage: magma
-  -
-      name: bucket13
-      ram: 256
-      eviction: fullEviction
-      storage: magma
-  -
-      name: bucket14
-      ram: 256
-      eviction: fullEviction
-      storage: magma
-  -
-      name: bucket15
-      ram: 256
-      eviction: fullEviction
-      storage: magma
-  -
-      name: bucket16
-      ram: 256
-      eviction: fullEviction
-      storage: magma
-  -
-      name: bucket17
-      ram: 256
-      eviction: fullEviction
-      storage: magma
-  -
-      name: bucket18
-      ram: 256
-      eviction: fullEviction
-      storage: magma
-  -
-      name: bucket19
-      ram: 256
-      eviction: fullEviction
-      storage: magma
-  -
-      name: bucket20
-      ram: 256
-      eviction: fullEviction
-      storage: magma
 
 servers: # each server tag represents a cluster
   -
@@ -145,5 +95,5 @@ servers: # each server tag represents a cluster
       data_path: "/data"
       index_path: "/data"
       init_nodes: 7
-      buckets: bucket1, bucket2, bucket3, bucket4, bucket5, bucket6, bucket7, bucket8, bucket9, bucket10, bucket11, bucket12, bucket13, bucket14, bucket15, bucket16, bucket17, bucket18, bucket19, bucket20
+      buckets: bucket1, bucket2, bucket3, bucket4, bucket5, bucket6, bucket7, bucket8, bucket9, bucket10
       users: bucket1, bucket2, bucket3, bucket4, bucket5

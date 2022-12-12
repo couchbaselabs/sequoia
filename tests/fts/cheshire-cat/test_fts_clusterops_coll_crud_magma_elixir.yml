@@ -39,26 +39,6 @@
   wait: true
 - command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 9}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count=6 --collection_count=20 --collection_distribution=random"
   wait: true
-- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 10}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count=6 --collection_count=20 --collection_distribution=random"
-  wait: true
-- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 11}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count=6 --collection_count=20 --collection_distribution=random"
-  wait: true
-- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 12}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count=6 --collection_count=20 --collection_distribution=random"
-  wait: true
-- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 13}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count=6 --collection_count=20 --collection_distribution=random"
-  wait: true
-- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 14}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count=6 --collection_count=20 --collection_distribution=random"
-  wait: true
-- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 15}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count=6 --collection_count=20 --collection_distribution=random"
-  wait: true
-- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 16}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count=6 --collection_count=20 --collection_distribution=random"
-  wait: true
-- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 17}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count=6 --collection_count=20 --collection_distribution=random"
-  wait: true
-- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 18}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count=6 --collection_count=20 --collection_distribution=random"
-  wait: true
-- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 19}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count=6 --collection_count=20 --collection_distribution=random"
-  wait: true
 ############### Sleep for some time to allow collections manifest to sync ###############
 -
   image: sequoiatools/cmd
@@ -71,47 +51,23 @@
 - image: sequoiatools/ftsindexmanager
   command: "-n {{.NthFTSNode 1}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -m 10:1:1 -s {{.Scale 1}} -a create_index_from_map"
   wait: true
-
 - command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -m 10:1:1 -s {{.Scale 1}} -a create_index_from_map"
   wait: true
-
 - command: "-n {{.NthFTSNode 1}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -m 10:1:1 -s {{.Scale 1}} -a create_index_from_map"
   wait: true
-
 - command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 3}} -m 10:1:1 -s {{.Scale 1}} -a create_index_from_map"
   wait: true
-
 - command: "-n {{.NthFTSNode 1}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}} -m 10:1:1 -s {{.Scale 1}} -a create_index_from_map"
   wait: true
-- command: "-n {{.NthFTSNode 1}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 5}} -m 10:1:1 -s {{.Scale 1}} -a create_index_from_map"
+- command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 5}} -m 10:1:1 -s {{.Scale 1}} -a create_index_from_map"
   wait: true
 - command: "-n {{.NthFTSNode 1}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 6}} -m 10:1:1 -s {{.Scale 1}} -a create_index_from_map"
   wait: true
-- command: "-n {{.NthFTSNode 1}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 7}} -m 10:1:1 -s {{.Scale 1}} -a create_index_from_map"
+- command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 7}} -m 10:1:1 -s {{.Scale 1}} -a create_index_from_map"
   wait: true
 - command: "-n {{.NthFTSNode 1}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 8}} -m 10:1:1 -s {{.Scale 1}} -a create_index_from_map"
   wait: true
-- command: "-n {{.NthFTSNode 1}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 9}} -m 10:1:1 -s {{.Scale 1}} -a create_index_from_map"
-  wait: true
-- command: "-n {{.NthFTSNode 1}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 10}} -m 10:1:1 -s {{.Scale 1}} -a create_index_from_map"
-  wait: true
-- command: "-n {{.NthFTSNode 1}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 11}} -m 10:1:1 -s {{.Scale 1}} -a create_index_from_map"
-  wait: true
-- command: "-n {{.NthFTSNode 1}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 12}} -m 10:1:1 -s {{.Scale 1}} -a create_index_from_map"
-  wait: true
-- command: "-n {{.NthFTSNode 1}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 13}} -m 10:1:1 -s {{.Scale 1}} -a create_index_from_map"
-  wait: true
-- command: "-n {{.NthFTSNode 1}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 14}} -m 10:1:1 -s {{.Scale 1}} -a create_index_from_map"
-  wait: true
-- command: "-n {{.NthFTSNode 1}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 15}} -m 10:1:1 -s {{.Scale 1}} -a create_index_from_map"
-  wait: true
-- command: "-n {{.NthFTSNode 1}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 16}} -m 10:1:1 -s {{.Scale 1}} -a create_index_from_map"
-  wait: true
-- command: "-n {{.NthFTSNode 1}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 17}} -m 10:1:1 -s {{.Scale 1}} -a create_index_from_map"
-  wait: true
-- command: "-n {{.NthFTSNode 1}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 18}} -m 10:1:1 -s {{.Scale 1}} -a create_index_from_map"
-  wait: true
-- command: "-n {{.NthFTSNode 1}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 19}} -m 10:1:1 -s {{.Scale 1}} -a create_index_from_map"
+- command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 9}} -m 10:1:1 -s {{.Scale 1}} -a create_index_from_map"
   wait: true
 - section_end: create_fts_indexes
 
@@ -157,46 +113,6 @@
   requires:  "{{eq true .DoOnce }}"
   wait: true
   alias: collection_bucket9_doc_ops
-- command: "-i {{.Orchestrator}} -r 20 -u Administrator -p password -n {{.Scale 1000}} -b {{.NthBucket 10}} -dt Hotel -pc 100 -nt 4 -ds 1000 -ac True"
-  requires:  "{{eq true .DoOnce }}"
-  wait: true
-  alias: collection_bucket10_doc_ops
-- command: "-i {{.Orchestrator}} -r 20 -u Administrator -p password -n {{.Scale 1000}} -b {{.NthBucket 11}} -dt Hotel -pc 100 -nt 4 -ds 1000 -ac True"
-  requires:  "{{eq true .DoOnce }}"
-  wait: true
-  alias: collection_bucket11_doc_ops
-- command: "-i {{.Orchestrator}} -r 20 -u Administrator -p password -n {{.Scale 1000}} -b {{.NthBucket 12}} -dt Hotel -pc 100 -nt 4 -ds 1000 -ac True"
-  requires:  "{{eq true .DoOnce }}"
-  wait: true
-  alias: collection_bucket12_doc_ops
-- command: "-i {{.Orchestrator}} -r 20 -u Administrator -p password -n {{.Scale 1000}} -b {{.NthBucket 13}} -dt Hotel -pc 100 -nt 4 -ds 1000 -ac True"
-  requires:  "{{eq true .DoOnce }}"
-  wait: true
-  alias: collection_bucket13_doc_ops
-- command: "-i {{.Orchestrator}} -r 20 -u Administrator -p password -n {{.Scale 1000}} -b {{.NthBucket 14}} -dt Hotel -pc 100 -nt 4 -ds 1000 -ac True"
-  requires:  "{{eq true .DoOnce }}"
-  wait: true
-  alias: collection_bucket14_doc_ops
-- command: "-i {{.Orchestrator}} -r 20 -u Administrator -p password -n {{.Scale 1000}} -b {{.NthBucket 15}} -dt Hotel -pc 100 -nt 4 -ds 1000 -ac True"
-  requires:  "{{eq true .DoOnce }}"
-  wait: true
-  alias: collection_bucket15_doc_ops
-- command: "-i {{.Orchestrator}} -r 20 -u Administrator -p password -n {{.Scale 1000}} -b {{.NthBucket 16}} -dt Hotel -pc 100 -nt 4 -ds 1000 -ac True"
-  requires:  "{{eq true .DoOnce }}"
-  wait: true
-  alias: collection_bucket16_doc_ops
-- command: "-i {{.Orchestrator}} -r 20 -u Administrator -p password -n {{.Scale 1000}} -b {{.NthBucket 17}} -dt Hotel -pc 100 -nt 4 -ds 1000 -ac True"
-  requires:  "{{eq true .DoOnce }}"
-  wait: true
-  alias: collection_bucket17_doc_ops
-- command: "-i {{.Orchestrator}} -r 20 -u Administrator -p password -n {{.Scale 1000}} -b {{.NthBucket 18}} -dt Hotel -pc 100 -nt 4 -ds 1000 -ac True"
-  requires:  "{{eq true .DoOnce }}"
-  wait: true
-  alias: collection_bucket18_doc_ops
-- command: "-i {{.Orchestrator}} -r 20 -u Administrator -p password -n {{.Scale 1000}} -b {{.NthBucket 19}} -dt Hotel -pc 100 -nt 4 -ds 1000 -ac True"
-  requires:  "{{eq true .DoOnce }}"
-  wait: true
-  alias: collection_bucket19_doc_ops
 ############### Wait for some time till all indexes are completely built ###############
 -
   image: sequoiatools/cmd
@@ -270,46 +186,6 @@
   client:
     op: rm
     container: collection_bucket9_doc_ops
--
-  client:
-    op: rm
-    container: collection_bucket10_doc_ops
--
-  client:
-    op: rm
-    container: collection_bucket11_doc_ops
--
-  client:
-    op: rm
-    container: collection_bucket12_doc_ops
--
-  client:
-    op: rm
-    container: collection_bucket13_doc_ops
--
-  client:
-    op: rm
-    container: collection_bucket14_doc_ops
--
-  client:
-    op: rm
-    container: collection_bucket15_doc_ops
--
-  client:
-    op: rm
-    container: collection_bucket16_doc_ops
--
-  client:
-    op: rm
-    container: collection_bucket17_doc_ops
--
-  client:
-    op: rm
-    container: collection_bucket18_doc_ops
--
-  client:
-    op: rm
-    container: collection_bucket19_doc_ops
 # Sleep for 10 mins
 -
   image: sequoiatools/cmd
@@ -618,6 +494,60 @@
 
 - image: sequoiatools/ftsindexmanager
   command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 3}} -a delete_all_indexes"
+  wait: true
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}} -a delete_all_indexes"
+  wait: true
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 5}} -a delete_all_indexes"
+  wait: true
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 6}} -a delete_all_indexes"
+  wait: true
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 7}} -a delete_all_indexes"
+  wait: true
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 8}} -a delete_all_indexes"
+  wait: true
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 9}} -a delete_all_indexes"
   wait: true
 -
   image: sequoiatools/cmd
