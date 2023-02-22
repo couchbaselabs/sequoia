@@ -183,7 +183,7 @@
     -dt Hotel -ds 1000 -ac True -dpx test5"
   requires:  "{{eq true .DoOnce }}"
   alias: collection_bucket_doc_ops4
-- command: "-i {{.Orchestrator}}-u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 5}} -n {{.Scale 10}} -pc 100
+- command: "-i {{.Orchestrator}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 5}} -n {{.Scale 10}} -pc 100
     -dt Hotel -ds 1000 -ac True -dpx test6"
   requires:  "{{eq true .DoOnce }}"
   alias: collection_bucket_doc_ops5
@@ -211,7 +211,7 @@
     -dt Hotel -ds 1000 -ac True -dpx test12"
   requires:  "{{eq true .DoOnce }}"
   alias: collection_bucket_doc_ops11
-- command: "-i {{.Orchestrator}}-u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 12}} -n {{.Scale 1000}} -pc 100
+- command: "-i {{.Orchestrator}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 12}} -n {{.Scale 1000}} -pc 100
     -dt Hotel -ds 1000 -ac True -dpx test13"
   requires:  "{{eq true .DoOnce }}"
   alias: collection_bucket_doc_ops12
@@ -269,10 +269,10 @@
 - command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 15}},{{.NthBucket 16}},{{.NthBucket 17}} --num_of_indexes_per_bucket {{.Scale 20}} -a create_n_indexes_on_buckets"
   wait: true
 
-################  Indexer Random Recovery ################
-- image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a random_recovery --timeout {{.Scale 3600}} --interval 300"
-  alias: random_recovery
+#################  Indexer Random Recovery ################
+#- image: sequoiatools/indexmanager
+#  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a random_recovery --timeout {{.Scale 3600}} --interval 300"
+#  alias: random_recovery
 
 ################  build all deferred indexes ################
 - image: sequoiatools/indexmanager
@@ -494,7 +494,17 @@
 #  command: "600"
 #  wait: true
 
+# stop index crash image to not interfere with rebalance
+#- client:
+#  op: rm
+#  container: random_recovery
+################  create indexes for 18 databases during rebalance ################
 - section_start: change_topology
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.Bucket}},{{.NthBucket 1}},{{.NthBucket 2}},{{.NthBucket 3}},{{.NthBucket 4}} --num_of_indexes_per_bucket {{.Scale 5}} -a create_n_indexes_on_buckets"
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 5}},{{.NthBucket 6}},{{.NthBucket 7}},{{.NthBucket 8}},{{.NthBucket 9}} --num_of_indexes_per_bucket {{.Scale 5}} -a create_n_indexes_on_buckets"
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 10}},{{.NthBucket 11}},{{.NthBucket 12}},{{.NthBucket 13}},{{.NthBucket 14}} --num_of_indexes_per_bucket {{.Scale 5}} -a create_n_indexes_on_buckets"
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 15}},{{.NthBucket 16}},{{.NthBucket 17}} --num_of_indexes_per_bucket {{.Scale 5}} -a create_n_indexes_on_buckets"
 ###########################  Rebalance-in indexer nodes #############################
 - template: add_node
   args: "{{.NthInActiveNode 0}}, index"
@@ -551,108 +561,6 @@
   command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a cleanup_s3 --aws_access_key_id {{.AWSAccessKey}} --aws_secret_access_key {{.AWSSecretKey}}"
   wait: true
 
-############################  Rebalance-out 2 indexer nodes #############################
-- template: rebalance_out
-  args: "({{.ActiveIndexNode 1}},{{.ActiveIndexNode 2}})"
-
-# Sleep after starting rebalance
-- image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "300"
-  wait: true
-
-# Sleep before starting to poll for rebalance progress
-- image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "420"
-  wait: true
-
-# Wait for rebalance to complete
-- template: wait_for_rebalance
-  wait: true
-
-############# Sleep for some more time after rebalance completes #############
-- image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "300"
-  wait: true
-
-################ Validate tenant affinity ################
-- image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a validate_tenant_affinity"
-  wait: true
-
-################ Validate S3 cleanup ################
-- image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a validate_s3_cleanup --aws_access_key_id {{.AWSAccessKey}} --aws_secret_access_key {{.AWSSecretKey}}"
-  wait: true
-
-################ Cleanup S3 ################
-- image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a cleanup_s3 --aws_access_key_id {{.AWSAccessKey}} --aws_secret_access_key {{.AWSSecretKey}}"
-  wait: true
-
-###########################  Rebalance-in indexer nodes unsuccessful rebalance #############################
-- template: add_node
-  args: "{{.NthInActiveNode 0}}, index"
-- args: "{{.NthInActiveNode 1}}, index"
-- template: group_move_servers
-  requires:  "{{eq true .DoOnce}}"
-  args: "'Group 1', group1, ({{.NthInActiveNode 0}})"
-  wait: true
-- args: "'Group 1', group2, ({{.NthInActiveNode 1}})"
-- template: rebalance
-  wait: true
-############## Kill indexer ################
--
-  template: kill_process
-  args: "{{.ActiveIndexNode 0}}, indexer"
-
-############################ Sleep for some more time after rebalance completes #############################
-- image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "300"
-  wait: true
-
-############################## Sleep after starting rebalance #############################
-- image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "300"
-  wait: true
-
-##############################  Sleep before starting to poll for rebalance progress #############################
-- image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "420"
-  wait: true
-
-############################# Wait for rebalance to complete #############################
-- template: wait_for_rebalance
-  wait: true
-
-############# Sleep for some more time after rebalance completes #############
-- image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "300"
-  wait: true
-
-############### Validate tenant affinity ################
-
-- image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a validate_tenant_affinity"
-  wait: true
-
-################ Validate S3 cleanup ################
-
-- image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a validate_s3_cleanup --aws_access_key_id {{.AWSAccessKey}} --aws_secret_access_key {{.AWSSecretKey}}"
-  wait: true
-
-################ Cleanup S3 ################
-- image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a cleanup_s3 --aws_access_key_id {{.AWSAccessKey}} --aws_secret_access_key {{.AWSSecretKey}}"
-  wait: true
-
 ############################  Rebalance-out 2 indexer nodes unsuccessful rebalance #############################
 - template: rebalance_out
   args: "({{.ActiveIndexNode 0}},{{.ActiveIndexNode 1}})"
@@ -697,6 +605,104 @@
 ################ Cleanup S3 ################
 - image: sequoiatools/indexmanager
   command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a cleanup_s3 --aws_access_key_id {{.AWSAccessKey}} --aws_secret_access_key {{.AWSSecretKey}}"
+  wait: true
+
+############################  Rebalance-out 2 indexer nodes #############################
+- template: rebalance_out
+  args: "({{.ActiveIndexNode 1}},{{.ActiveIndexNode 2}})"
+
+# Sleep after starting rebalance
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+# Sleep before starting to poll for rebalance progress
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "420"
+  wait: true
+
+# Wait for rebalance to complete
+- template: wait_for_rebalance
+  wait: true
+
+############# Sleep for some more time after rebalance completes #############
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+################ Validate tenant affinity ################
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a validate_tenant_affinity"
+  wait: true
+
+################ Validate S3 cleanup ################
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a validate_s3_cleanup --aws_access_key_id {{.AWSAccessKey}} --aws_secret_access_key {{.AWSSecretKey}}"
+  wait: true
+
+################ Cleanup S3 ################
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a cleanup_s3 --aws_access_key_id {{.AWSAccessKey}} --aws_secret_access_key {{.AWSSecretKey}}"
+  wait: true
+
+################  build all deferred indexes ################
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a build_deferred_index -m 5"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a build_deferred_index -m 5"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -a build_deferred_index -m 5"
+  wait: true
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 3}} -a build_deferred_index -m 5"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}} -a build_deferred_index -m 5"
+  wait: true
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 5}} -a build_deferred_index -m 5"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 6}} -a build_deferred_index -m 5"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 7}} -a build_deferred_index -m 5"
+  wait: true
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 8}} -a build_deferred_index -m 5"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 9}} -a build_deferred_index -m 5"
+  wait: true
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 10}} -a build_deferred_index -m 5"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 11}} -a build_deferred_index -m 5"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 12}} -a build_deferred_index -m 5"
+  wait: true
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 13}} -a build_deferred_index -m 5"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 14}} -a build_deferred_index -m 5"
+  wait: true
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 15}} -a build_deferred_index -m 5"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 16}} -a build_deferred_index -m 5"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 17}} -a build_deferred_index -m 5"
+  wait: true
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 18}} -a build_deferred_index -m 5"
+  wait: true
+
+################## Wait till all indexes are completely built ################
+- image: sequoiatools/wait_for_idx_build_complete
+  command: "{{.ActiveIndexNode 0}} {{.RestUsername}} {{.RestPassword}}"
   wait: true
 
 ################ Rebalance in query node ################
@@ -794,9 +800,6 @@
 - template: failover_force_and_recover
   args: "{{.ActiveIndexNode 2}}, full"
   wait: true
-- template: group_move_servers
-  requires: "{{eq true .DoOnce}}"
-  args: "'Group 1', group1, ({{.ActiveIndexNode 3}})"
 
 # Sleep for some more time after rebalance completes
 -
@@ -844,6 +847,19 @@
 - template: group_move_servers
   requires: "{{eq true .DoOnce}}"
   args: "'Group 1', group2, ({{.ActiveIndexNode 3}})"
+  wait: true
+- template: group_move_servers
+  requires: "{{eq true .DoOnce}}"
+  args: "'Group 1', group2, ({{.ActiveIndexNode 2}})"
+  wait: true
+- template: group_move_servers
+  requires: "{{eq true .DoOnce}}"
+  args: "'Group 1', group2, ({{.ActiveIndexNode 1}})"
+  wait: true
+- template: group_move_servers
+  requires: "{{eq true .DoOnce}}"
+  args: "'Group 1', group2, ({{.ActiveIndexNode 0}})"
+  wait: true
 
 # Sleep for some more time after rebalance completes
 -
@@ -1028,6 +1044,18 @@
   args: "{{.NthInActiveNode 0}}"
 - template: rebalance
   wait: true
+- template: group_move_servers
+  requires: "{{eq true .DoOnce}}"
+  args: "'Group 1', group2, ({{.NthDataNode 0}})"
+  wait: true
+- template: group_move_servers
+  requires: "{{eq true .DoOnce}}"
+  args: "'Group 1', group2, ({{.NthDataNode 1}})"
+  wait: true
+- template: group_move_servers
+  requires: "{{eq true .DoOnce}}"
+  args: "'Group 1', group2, ({{.NthDataNode 2}})"
+  wait: true
 
 # Sleep for some more time after rebalance completes
 -
@@ -1199,6 +1227,10 @@
     op: rm
     container: cbo_bucket1
 -
+  client:
+    op: rm
+    container: collection_crud0
+-
   image: sequoiatools/cmd
   entrypoint: sleep
   command: "1200"
@@ -1261,9 +1293,26 @@
 #
 - section_start: create_indexes
 - image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.Bucket}},{{.NthBucket 1}},{{.NthBucket 2}},{{.NthBucket 3}},{{.NthBucket 4}} --num_of_indexes_per_bucket {{.Scale 50}} -a create_n_indexes_on_buckets"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.Bucket}},{{.NthBucket 1}},{{.NthBucket 2}},{{.NthBucket 3}},{{.NthBucket 4}} --num_of_indexes_per_bucket {{.Scale 10}} -a create_n_indexes_on_buckets"
   wait: true
 - section_end: create_indexes
+
+
+################  build all deferred indexes ################
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a build_deferred_index -m 5"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a build_deferred_index -m 5"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -a build_deferred_index -m 5"
+  wait: true
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 3}} -a build_deferred_index -m 5"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}} -a build_deferred_index -m 5"
+  wait: true
 
 ################## Wait till all indexes are completely built ################
 - image: sequoiatools/wait_for_idx_build_complete
@@ -1295,4 +1344,3 @@
   entrypoint: sleep
   command: "600"
   wait: true
-
