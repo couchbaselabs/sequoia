@@ -4,14 +4,14 @@
 
 ###### update Tombstone Purge Interval ######
 -
-  image: sequoiatools/couchbase-cli
+  image: sequoiatools/couchbase-cli:7.2
   requires:  "{{eq true .DoOnce }}"
   command: "setting-compaction -c {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}} --metadata-purge-interval .04 --compaction-db-percentage 30 --compaction-view-percentage 30"
   wait: true
 
 ###### enable audit logging ######
 #-
-#  image: sequoiatools/couchbase-cli
+#  image: sequoiatools/couchbase-cli:7.2
 #  requires:  "{{eq true .DoOnce }}"
 #  command: "setting-audit -c {{.Orchestrator}}:8091 -u {{.RestUsername}} -p {{.RestPassword}} --set --audit-enabled 1 --audit-log-path /data --audit-log-rotate-interval 604800"
 #  wait: true
@@ -21,17 +21,17 @@
   template: disable_autofailover
   requires:  "{{eq true .DoOnce }}"
 -
-  image: sequoiatools/couchbase-cli
+  image: sequoiatools/couchbase-cli:7.2
   requires:  "{{eq true .DoOnce }}"
   command: "node-to-node-encryption -c {{.Orchestrator}}:8091 -u {{.RestUsername}} -p {{.RestPassword}} --enable"
   wait: true
 -
-  image: sequoiatools/couchbase-cli
+  image: sequoiatools/couchbase-cli:7.2
   requires:  "{{eq true .DoOnce }}"
   command: "setting-security -c {{.Orchestrator}}:8091 -u {{.RestUsername}} -p {{.RestPassword}} --set --cluster-encryption-level control"
   wait: true
 -
-  image: sequoiatools/couchbase-cli
+  image: sequoiatools/couchbase-cli:7.2
   requires:  "{{eq true .DoOnce }}"
   command: "ip-family -c {{.Orchestrator}}:8091 -u {{.RestUsername}} -p {{.RestPassword}} --set --ipv4only"
   wait: true
@@ -108,7 +108,7 @@
    wait: true
 
 # start xdcr replications
-- image: sequoiatools/couchbase-cli
+- image: sequoiatools/couchbase-cli:7.2
   requires:  "{{eq true .DoOnce }}"
   command:  "xdcr-setup -c {{.Orchestrator}}:{{.RestPort}} --create --xdcr-cluster-name remote
         --xdcr-hostname {{.Nodes | .Cluster 1 | net 0}}
