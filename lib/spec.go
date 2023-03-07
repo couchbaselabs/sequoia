@@ -29,7 +29,7 @@ type BucketSpec struct {
 	Durability      string
 	HistoryRetentionBytes string
 	HistoryRetentionSeconds string
-	EnableHistoryRetentionByDefault uint8
+	EnableHistoryRetentionByDefault string
 	BucketScopeSpec []BucketScopeSpec
 }
 
