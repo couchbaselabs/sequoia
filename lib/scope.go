@@ -746,6 +746,15 @@ func (s *Scope) CreateBuckets() {
 				if bucket.Durability != "" {
 					command = append(command, "--durability-min-level", bucket.Durability)
 				}
+				if bucket.HistoryRetentionBytes != "" {
+					command = append(command, "--history-retention-bytes", bucket.HistoryRetentionBytes)
+				}
+				if bucket.HistoryRetentionSeconds != "" {
+					command = append(command, "--history-retention-seconds", bucket.HistoryRetentionSeconds)
+				}
+				if bucket.EnableHistoryRetentionByDefault != "" {
+					command = append(command, "--enable-history-retention-by-default", bucket.EnableHistoryRetentionByDefault)
+				}
 
 				desc := "bucket create " + bucketName
 				task := ContainerTask{
