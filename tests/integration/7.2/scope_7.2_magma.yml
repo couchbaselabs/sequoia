@@ -109,7 +109,7 @@ buckets:
       ddocs: scale
       compression: active
       ttl: 3600
-      historyretentionbytes : 53687091200
+      historyretentionbytes : 536870912000
       historyretentionseconds : 86400
       enablehistoryretentionbydefault : 1
   -
@@ -118,8 +118,8 @@ buckets:
       storage: magma
       eviction: fullEviction
       ttl: 3600
-      historyretentionbytes: 107374182400
-      historyretentionseconds: 3600
+      historyretentionbytes: 268435456000
+      historyretentionseconds: 43200
       enablehistoryretentionbydefault: 1
   -
       name: NEW_ORDER

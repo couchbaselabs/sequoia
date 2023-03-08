@@ -9,13 +9,6 @@
   command: "setting-compaction -c {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}} --metadata-purge-interval .04 --compaction-db-percentage 30 --compaction-view-percentage 30"
   wait: true
 
-###### enable audit logging ######
-#-
-#  image: sequoiatools/couchbase-cli:7.2
-#  requires:  "{{eq true .DoOnce }}"
-#  command: "setting-audit -c {{.Orchestrator}}:8091 -u {{.RestUsername}} -p {{.RestPassword}} --set --audit-enabled 1 --audit-log-path /data --audit-log-rotate-interval 604800"
-#  wait: true
-
 ###### enable n2n encryption & ipv4only ######
 -
   template: disable_autofailover
@@ -43,13 +36,6 @@
 ############### Enable Plasma Bloom Filter ################
 - template: set_gsi_config
   args: "{{.ActiveIndexNode 0}}, 'indexer.plasma.backIndex.enablePageBloomFilter':true"
-
-# Temporarily disabling In-memory compression
-############### Enable Plasma In memory compression ################
-#- template: set_gsi_config
-#  args: "{{.ActiveIndexNode 0}}, 'indexer.plasma.mainIndex.enableInMemoryCompression':true"
-#- template: set_gsi_config
-#  args: "{{.ActiveIndexNode 0}}, 'indexer.plasma.backIndex.enableInMemoryCompression':true"
 
 ############### Enable GSI OSO mode ################
 - template: set_gsi_config
@@ -158,7 +144,12 @@
 - command: "-i {{.Orchestrator}} -r 80 -u Administrator -p password -b {{.NthBucket 7}} -n {{.Scale 2000}} -pc 100 -dt Hotel -ds 1000 -ac True"
   requires:  "{{eq true .DoOnce }}"
   alias: catapult_bucket7_doc_ops1
-
+- command: "-i {{.Orchestrator}} -r 80 -u Administrator -p password -b {{.NthBucket 8}} -n {{.Scale 2000}} -pc 100 -dt Hotel -ds 1000 -ac True"
+  requires:  "{{eq true .DoOnce }}"
+  alias: catapult_bucket8_doc_ops1
+- command: "-i {{.Orchestrator}} -r 80 -u Administrator -p password -b {{.NthBucket 9}} -n {{.Scale 2000}} -pc 100 -dt Hotel -ds 1000 -ac True"
+  requires:  "{{eq true .DoOnce }}"
+  alias: catapult_bucket9_doc_ops1
 
 # Start transactions workload on default bucket
 -
@@ -177,7 +168,25 @@
 
 # continous kv loading
 - template: pillowfight_durability
-  args: "{{.Orchestrator}}, {{.Bucket}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 2000}}, {{.AuthPassword}} --durability majority"
+  args: "{{.Orchestrator}}, {{.Bucket}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1"
+- template: pillowfight_durability
+  args: "{{.Orchestrator}}, {{.NthBucket 1}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1"
+- template: pillowfight_durability
+  args: "{{.Orchestrator}}, {{.NthBucket 2}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1"
+- template: pillowfight_durability
+  args: "{{.Orchestrator}}, {{.NthBucket 3}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1"
+- template: pillowfight_durability
+  args: "{{.Orchestrator}}, {{.NthBucket 4}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1"
+- template: pillowfight_durability
+  args: "{{.Orchestrator}}, {{.NthBucket 5}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1"
+- template: pillowfight_durability
+  args: "{{.Orchestrator}}, {{.NthBucket 6}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1"
+- template: pillowfight_durability
+  args: "{{.Orchestrator}}, {{.NthBucket 7}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1"
+- template: pillowfight_durability
+  args: "{{.Orchestrator}}, {{.NthBucket 8}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1"
+- template: pillowfight_durability
+  args: "{{.Orchestrator}}, {{.NthBucket 9}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1"
 
 # Sleep for some time to allow some docs to be loaded to the collections
 -
@@ -205,18 +214,6 @@
 # creating datasets and indexes
 - test: tests/analytics/cheshirecat/test_analytics_integration_scale3.yml
   section: analytics_setup
-
-# 9/24/21 : Disabling creating indexes on default bucket to avoid issues like MB-48024 and MB-48581
-# GSI Index Creation
-# Create index on the default bucket so that the query workloads below in the test have indexes to work with
-#- image: sequoiatools/cbq
-#  command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_rating on `{{.Bucket}}`(rating) using GSI'"
-#  wait: true
-#- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_claims on `{{.Bucket}}`(claim) using GSI'"
-#  wait: true
-#- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create index default_result on `{{.Bucket}}`(result) using GSI'"
-#- command: "-e=http://{{.QueryNodePort}}  -u={{.RestUsername}} -p={{.RestPassword}} -script='create primary index on `{{.Bucket}}` using GSI'"
-#  wait: true
 
 # Create N1QL UDFs on the scopes
 - image: sequoiatools/indexmanager
@@ -431,15 +428,6 @@
 - command: "-u {{.RestUsername}}:{{.RestPassword}} -X POST http://{{.Orchestrator}}:{{.RestPort}}/settings/replications/{{(index (.AllLogs `ReplId` | json) 0).uuid }}/default/{{.Bucket}} -d filterExpiration=true -d filterBypassExpiry=true -d filterDeletion=false -d filterExpression=result<>SUCCESS -d filterSkipRestream=1"
   wait: true
 
-# Disabling this workload at it potentially causes https://issues.couchbase.com/browse/MB-46582
-## add some rbac users
-#- test: tests/n1ql/test_n1qlRBAC.yml
-#  section: add_users
-#
-## start rbac queries
-#- test: tests/n1ql/test_n1qlRBAC.yml
-#  section: rbac_query
-
 # pause eventing handlers
 - test: tests/eventing/CC/test_eventing_rebalance_integration.yml
   section: pause
@@ -645,6 +633,14 @@
   client:
     op: rm
     container: catapult_bucket7_doc_ops1
+-
+  client:
+    op: rm
+    container: catapult_bucket8_doc_ops1
+-
+  client:
+    op: rm
+    container: catapult_bucket9_doc_ops1
 -
   client:
     op: rm
