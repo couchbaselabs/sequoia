@@ -109,8 +109,8 @@ buckets:
       ddocs: scale
       compression: active
       ttl: 3600
-      historyretentionbytes : 104857600
-      historyretentionseconds : 600
+      historyretentionbytes : 53687091200
+      historyretentionseconds : 86400
       enablehistoryretentionbydefault : 1
   -
       name: WAREHOUSE
@@ -118,8 +118,8 @@ buckets:
       storage: magma
       eviction: fullEviction
       ttl: 3600
-      historyretentionbytes: 104857600
-      historyretentionseconds: 600
+      historyretentionbytes: 107374182400
+      historyretentionseconds: 3600
       enablehistoryretentionbydefault: 1
   -
       name: NEW_ORDER
@@ -127,8 +127,8 @@ buckets:
       storage: magma
       eviction: fullEviction
       ttl: 3600
-      historyretentionbytes: 104857600
-      historyretentionseconds: 600
+      historyretentionbytes: 1073741824
+      historyretentionseconds: 3600
       enablehistoryretentionbydefault: 1
   -
       name: ITEM
@@ -136,8 +136,8 @@ buckets:
       storage: magma
       eviction: fullEviction
       ddocs: all
-      historyretentionbytes: 104857600
-      historyretentionseconds: 600
+      historyretentionbytes: 53687091200
+      historyretentionseconds: 7200
       enablehistoryretentionbydefault: 1
   -
       name: bucket4
@@ -145,7 +145,7 @@ buckets:
       storage: magma
       eviction: fullEviction
       historyretentionbytes: 104857600
-      historyretentionseconds: 600
+      historyretentionseconds: 14440
       enablehistoryretentionbydefault: 1
   -
       name: bucket5
@@ -153,7 +153,7 @@ buckets:
       storage: magma
       eviction: fullEviction
       historyretentionbytes: 104857600
-      historyretentionseconds: 600
+      historyretentionseconds: 86400
       enablehistoryretentionbydefault: 1
   -
       name: bucket6
@@ -161,7 +161,7 @@ buckets:
       storage: magma
       eviction: fullEviction
       historyretentionbytes: 104857600
-      historyretentionseconds: 600
+      historyretentionseconds: 86400
       enablehistoryretentionbydefault: 1
   -
       name: bucket7
@@ -169,7 +169,7 @@ buckets:
       storage: magma
       eviction: fullEviction
       historyretentionbytes: 104857600
-      historyretentionseconds: 600
+      historyretentionseconds: 86400
       enablehistoryretentionbydefault: 1
   -
       name: bucket8
@@ -177,7 +177,7 @@ buckets:
       storage: magma
       eviction: fullEviction
       historyretentionbytes: 104857600
-      historyretentionseconds: 600
+      historyretentionseconds: 86400
       enablehistoryretentionbydefault: 1
   -
       name: bucket9
@@ -185,7 +185,7 @@ buckets:
       storage: magma
       eviction: fullEviction
       historyretentionbytes: 104857600
-      historyretentionseconds: 600
+      historyretentionseconds: 86400
       enablehistoryretentionbydefault: 1
   -
       name: remote
@@ -193,7 +193,7 @@ buckets:
       storage: magma
       eviction: fullEviction
       historyretentionbytes: 104857600
-      historyretentionseconds: 600
+      historyretentionseconds: 86400
       enablehistoryretentionbydefault: 1
 
 ddocs:
