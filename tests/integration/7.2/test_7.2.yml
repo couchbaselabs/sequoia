@@ -168,25 +168,25 @@
 
 # continous kv loading
 - template: pillowfight_durability
-  args: "{{.Orchestrator}}, {{.Bucket}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1"
+  args: "{{.Orchestrator}}, {{.Bucket}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1 --json"
 - template: pillowfight_durability
-  args: "{{.Orchestrator}}, {{.NthBucket 1}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1"
+  args: "{{.Orchestrator}}, {{.NthBucket 1}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1 --json"
 - template: pillowfight_durability
-  args: "{{.Orchestrator}}, {{.NthBucket 2}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1"
+  args: "{{.Orchestrator}}, {{.NthBucket 2}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1 --json"
 - template: pillowfight_durability
-  args: "{{.Orchestrator}}, {{.NthBucket 3}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1"
+  args: "{{.Orchestrator}}, {{.NthBucket 3}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1 --json"
 - template: pillowfight_durability
-  args: "{{.Orchestrator}}, {{.NthBucket 4}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1"
+  args: "{{.Orchestrator}}, {{.NthBucket 4}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1 --json"
 - template: pillowfight_durability
-  args: "{{.Orchestrator}}, {{.NthBucket 5}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1"
+  args: "{{.Orchestrator}}, {{.NthBucket 5}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1 --json"
 - template: pillowfight_durability
-  args: "{{.Orchestrator}}, {{.NthBucket 6}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1"
+  args: "{{.Orchestrator}}, {{.NthBucket 6}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1 --json"
 - template: pillowfight_durability
-  args: "{{.Orchestrator}}, {{.NthBucket 7}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1"
+  args: "{{.Orchestrator}}, {{.NthBucket 7}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1 --json"
 - template: pillowfight_durability
-  args: "{{.Orchestrator}}, {{.NthBucket 8}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1"
+  args: "{{.Orchestrator}}, {{.NthBucket 8}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1 --json"
 - template: pillowfight_durability
-  args: "{{.Orchestrator}}, {{.NthBucket 9}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1"
+  args: "{{.Orchestrator}}, {{.NthBucket 9}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1 --json"
 
 # Sleep for some time to allow some docs to be loaded to the collections
 -
