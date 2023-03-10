@@ -109,7 +109,7 @@ buckets:
       ddocs: scale
       compression: active
       ttl: 3600
-      historyretentionbytes : 268435456000
+      historyretentionbytes : 134217728000
       historyretentionseconds : 86400
       enablehistoryretentionbydefault : 1
   -
