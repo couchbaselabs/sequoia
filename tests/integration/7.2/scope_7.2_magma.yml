@@ -127,7 +127,7 @@ buckets:
       storage: magma
       eviction: fullEviction
       ttl: 3600
-      historyretentionbytes: 1073741824
+      historyretentionbytes: 2147483648
       historyretentionseconds: 3600
       enablehistoryretentionbydefault: 1
   -
@@ -144,7 +144,7 @@ buckets:
       ram: 5%
       storage: magma
       eviction: fullEviction
-      historyretentionbytes: 104857600
+      historyretentionbytes: 2147483648
       historyretentionseconds: 14440
       enablehistoryretentionbydefault: 1
   -
@@ -152,7 +152,7 @@ buckets:
       ram: 5%
       storage: magma
       eviction: fullEviction
-      historyretentionbytes: 104857600
+      historyretentionbytes: 2147483648
       historyretentionseconds: 86400
       enablehistoryretentionbydefault: 1
   -
@@ -160,7 +160,7 @@ buckets:
       ram: 10%
       storage: magma
       eviction: fullEviction
-      historyretentionbytes: 104857600
+      historyretentionbytes: 2147483648
       historyretentionseconds: 86400
       enablehistoryretentionbydefault: 1
   -
@@ -168,7 +168,7 @@ buckets:
       ram: 10%
       storage: magma
       eviction: fullEviction
-      historyretentionbytes: 104857600
+      historyretentionbytes: 2147483648
       historyretentionseconds: 86400
       enablehistoryretentionbydefault: 1
   -
@@ -176,7 +176,7 @@ buckets:
       ram: 5%
       storage: magma
       eviction: fullEviction
-      historyretentionbytes: 104857600
+      historyretentionbytes: 2147483648
       historyretentionseconds: 86400
       enablehistoryretentionbydefault: 1
   -
@@ -184,7 +184,7 @@ buckets:
       ram: 5%
       storage: magma
       eviction: fullEviction
-      historyretentionbytes: 104857600
+      historyretentionbytes: 2147483648
       historyretentionseconds: 86400
       enablehistoryretentionbydefault: 1
   -
@@ -192,7 +192,7 @@ buckets:
       ram: 80%
       storage: magma
       eviction: fullEviction
-      historyretentionbytes: 104857600
+      historyretentionbytes: 2147483648
       historyretentionseconds: 86400
       enablehistoryretentionbydefault: 1
 
