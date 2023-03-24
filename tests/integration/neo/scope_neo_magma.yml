@@ -108,19 +108,17 @@ buckets:
       eviction: fullEviction
       ddocs: scale
       compression: active
-      ttl: 3600
   -
       name: WAREHOUSE
       ram: 5%
       storage: magma
       eviction: fullEviction
-      ttl: 3600
   -
       name: NEW_ORDER
       ram: 5%
       storage: magma
       eviction: fullEviction
-      ttl: 3600
+      ttl: 10800
   -
       name: ITEM
       ram: 5%

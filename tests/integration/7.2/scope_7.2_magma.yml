@@ -108,7 +108,6 @@ buckets:
       eviction: fullEviction
       ddocs: scale
       compression: active
-      ttl: 3600
       historyretentionbytes : 134217728000
       historyretentionseconds : 86400
       enablehistoryretentionbydefault : 1
@@ -117,7 +116,6 @@ buckets:
       ram: 5%
       storage: magma
       eviction: fullEviction
-      ttl: 3600
       historyretentionbytes: 268435456000
       historyretentionseconds: 43200
       enablehistoryretentionbydefault: 1
@@ -126,7 +124,7 @@ buckets:
       ram: 5%
       storage: magma
       eviction: fullEviction
-      ttl: 3600
+      ttl: 10800
       historyretentionbytes: 2147483648
       historyretentionseconds: 3600
       enablehistoryretentionbydefault: 1
