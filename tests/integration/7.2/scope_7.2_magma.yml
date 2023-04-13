@@ -87,7 +87,7 @@ servers: # each server tag represents a cluster
       users: default,WAREHOUSE,NEW_ORDER,ITEM,bucket4,bucket5,bucket6,bucket7,bucket8,bucket9
   -
       name: remote
-      count: 8
+      count: 6
       ram: 60%
       rest_username: Administrator
       rest_password: password
@@ -95,7 +95,7 @@ servers: # each server tag represents a cluster
       index_path: "/data/couchbase"
       analytics_path: "/data/couchbase"
       rest_port: 8091
-      init_nodes: 8
+      init_nodes: 6
       buckets: remote,bucket4,bucket8,bucket9
       users: remote,bucket4,bucket8,bucket9
 
