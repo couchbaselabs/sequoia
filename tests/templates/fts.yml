@@ -344,3 +344,40 @@
     - image: sequoiatools/ftsindexmanager
       command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a item_count_check -vt 3600"
       wait: true
+
+# Create n number of indexes for given scopes for 4 buckets
+# $0 = scope
+-
+  name: create_single_partition_index_for_scope_2
+  actions:
+    - image: sequoiatools/ftsindexmanager
+      command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -s {{.Scale 1}} -sc $0 -a create_index_for_each_collection -d hotel_single_field"
+      wait: true
+
+    - image: sequoiatools/ftsindexmanager
+      command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a item_count_check -vt 3600"
+      wait: true
+
+    - command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -s {{.Scale 1}} -sc $0 -a create_index_for_each_collection -d hotel_single_field"
+      wait: true
+
+    - image: sequoiatools/ftsindexmanager
+      command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a item_count_check -vt 3600"
+      wait: true
+
+    - command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -s {{.Scale 1}} -sc $0 -a create_index_for_each_collection -d hotel_single_field"
+      wait: true
+
+    - image: sequoiatools/ftsindexmanager
+      command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -a item_count_check -vt 3600"
+      wait: true
+
+    - command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 3}} -s {{.Scale 1}} -sc $0 -a create_index_for_each_collection -d hotel_single_field"
+      wait: true
+
+    - image: sequoiatools/ftsindexmanager
+      command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 3}} -a item_count_check -vt 3600"
+      wait: true
+
+
+

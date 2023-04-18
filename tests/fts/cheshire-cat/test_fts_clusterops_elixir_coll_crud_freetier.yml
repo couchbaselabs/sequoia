@@ -1,0 +1,341 @@
+# FTS TENANT DENSITY PLAN
+#  Scale = 4
+#  Total indexes to make= 400 (800 partitions) -> 1 partition per index
+#  Scopes = 20
+#  Total buckets = 4
+#  Index per bucket = 100
+#  Collection per bucket = scaleX25 =  100 || Collection per scope = 100/20 = 5
+
+- include: tests/templates/kv.yml, tests/templates/rebalance.yml, tests/templates/fts.yml, tests/templates/util.yml
+
+############### Set FTS bleveMaxResultWindow to 100000 ################
+- template: set_fts_manager_options
+  args: "{{.Nodes | .Service `fts` | net 0}}, 'bleveMaxResultWindow':'100000'"
+
+############### Set FTS bleveMaxClauseCount to 2500 ################
+- template: set_fts_manager_options
+  args: "{{.Nodes | .Service `fts` | net 0}}, 'bleveMaxClauseCount':'2500'"
+
+############### Set FTS bleveMaxClauseCount to 2500 ################
+- template: set_fts_manager_options
+  args: "{{.Nodes | .Service `fts` | net 0}}, 'disableFileTransferRebalance':false"
+
+############### create 20 scopes and 200 collections across 3 buckets as scope_1,scope_2 ... ###############
+-
+  image: sequoiatools/collections:1.0
+  command: "-i {{.Orchestrator}}:8091 -b {{.Bucket}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count=20 --collection_count={{.Scale 25}} --collection_distribution=uniform"
+  wait: true
+
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 1}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count=20 --collection_count={{.Scale 25}} --collection_distribution=uniform"
+  wait: true
+
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 2}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count=20 --collection_count={{.Scale 25}} --collection_distribution=uniform"
+  wait: true
+
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 3}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count=20 --collection_count={{.Scale 25}} --collection_distribution=uniform"
+  wait: true
+
+############### Sleep for some time to allow collections manifest to sync ###############
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+###############  create 2i indexes ################
+- section_start: create_replica_indexes
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -i 5 -a create_index"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -i 5 -a create_index"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -i 5 -a create_index"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 3}} -i 5 -a create_index"
+  wait: true
+
+############### Wait for some time till all indexes are completely built ###############
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+############### data loading ################
+- image: sequoiatools/catapult
+  command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -n 10000 -dt Hotel -nt 1 -ds 1000"
+  wait: true
+
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 1}} -n 10000 -dt Hotel -nt 1 -ds 1000"
+  wait: true
+
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 2}} -n 10000 -dt Hotel -nt 1 -ds 1000"
+  wait: true
+
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 3}} -n 10000 -dt Hotel -nt 1 -ds 1000"
+  wait: true
+
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a copy_docs_from_source_collection"
+  wait: true
+
+- command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a copy_docs_from_source_collection"
+  wait: true
+
+- command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -a copy_docs_from_source_collection"
+  wait: true
+
+- command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 3}} -a copy_docs_from_source_collection"
+  wait: true
+
+###############  create fts indexes ################
+- section_start: create_fts_indexes
+
+- foreach: "{{range $i, $scn := mkrange 1 20}}"
+  template: create_single_partition_index_for_scope_2
+  args: "scope_{{$i}}"
+  wait: true
+
+- section_end: create_fts_indexes
+
+################ Check for item count #####################################
+- section_start: fts_indexes_item_count_check
+  template: item_count_check_buckets
+  wait: true
+- section_end: fts_indexes_item_count_check
+
+# ###############  Collect Logs ################
+- template: collect_logs_uploadto_s3
+  wait: true
+
+# ###############  run queries ################
+- section_start: query_fts_indexes
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a run_queries_on_each_index -nq 1 -d hotel_single_field --print_interval 600"
+  alias: query_run_1
+
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a run_queries_on_each_index -nq 1 -d hotel_single_field --print_interval 600"
+  alias: query_run_1
+
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -a run_queries_on_each_index -nq 1 -d hotel_single_field --print_interval 600"
+  alias: query_run_1
+
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 3}} -a run_queries_on_each_index -nq 1 -d hotel_single_field --print_interval 600"
+  alias: query_run_1
+
+- section_end: query_fts_indexes
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# ###############  Collect Logs ################
+- template: collect_logs_uploadto_s3
+  wait: true
+
+# ############### Kill CBFT process on an FTS node ################
+-
+  template: kill_process
+  args: "{{.Nodes | .Service `fts` | net 1}}, cbft"
+
+# Sleep for 15 mins
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "900"
+  wait: true
+
+# ###############  Rebalance in an FTS node ################
+- template: rebalance_in
+  args: "{{.InActiveNode}}, (data,index,query,fts)"
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "150"
+  wait: true
+
+-
+  template: wait_for_rebalance
+  wait: true
+
+# ###############  Collect Logs ################
+- template: collect_logs_uploadto_s3
+  wait: true
+
+# ############### Kill CBFT process on an FTS node ################
+-
+  template: kill_process
+  args: "{{.Nodes | .Service `fts` | net 2}}, cbft"
+
+
+# Sleep for 15 mins
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "900"
+  wait: true
+
+###############  Rebalance out data node ################
+- template: rebalance_out
+  args: "({{.NthDataNode 1}})"
+  wait: true
+
+# Sleep for some more time after rebalance completes
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+############### Kill memcached ################
+-
+  template: kill_process
+  args: "{{.NthDataNode 2}}, memcached"
+
+# Sleep for 15 mins
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "900"
+  wait: true
+
+# Swap Rebalance an FTS node
+- template: rebalance_swap
+  args: "{{.InActiveNode}}, {{.Nodes | .Service `fts` | net 1}}, (data,index,query,fts)"
+  wait: true
+
+# Sleep for 15 mins
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "900"
+  wait: true
+
+# ###############  Collect Logs ################
+- template: collect_logs_uploadto_s3
+  wait: true
+
+############### Kill memcached ################
+-
+  template: kill_process
+  args: "{{.NthDataNode 2}}, memcached"
+
+# Sleep for 15 mins
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "900"
+  wait: true
+
+###############  Failover and addback FTS node ################
+- template: failover_force_and_recover
+  args: "{{.Nodes | .Service `fts` | net 1}}, full"
+  wait: true
+
+# Sleep for some more time after rebalance completes
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+# ############### Kill CBFT process on an FTS node ################
+-
+  template: kill_process
+  args: "{{.Nodes | .Service `fts` | net 0}}, cbft"
+
+# Sleep for 15 mins
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "900"
+  wait: true
+
+# ###############  Collect Logs ################
+- template: collect_logs_uploadto_s3
+  wait: true
+
+############### Kill memcached ################
+-
+  template: kill_process
+  args: "{{.NthDataNode 2}}, memcached"
+
+# Sleep for 15 mins
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "900"
+  wait: true
+
+-
+  client:
+    op: rm
+    container: query_run_1
+-
+  client:
+    op: rm
+    container: query_run_2
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+################ Check for item count #####################################
+- section_start: fts_indexes_item_count_check
+
+  template: item_count_check_buckets
+  wait: true
+
+- section_end: fts_indexes_item_count_check
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+###############  Drop all Indexes ################
+- section_start: drop_all_indexes
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a delete_all_indexes"
+  wait: true
+
+- command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a delete_all_indexes"
+  wait: true
+
+- command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -a delete_all_indexes"
+  wait: true
+
+- command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 3}} -a delete_all_indexes"
+  wait: true
+
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# ###############  Collect Logs ################
+- template: collect_logs_uploadto_s3
+  wait: true
+
+# Sleep for some time to allow DDL to complete in the background
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "1200"
+  wait: true
+- section_end: drop_all_indexes
+
+# ###############  Collect Logs ################
+- template: collect_logs_uploadto_s3
+  wait: true
