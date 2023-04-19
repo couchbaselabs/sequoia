@@ -44,6 +44,15 @@
       until: "{{with .AllLogs `__self__`}}{{contains `completed` .}}{{else}}{{true}}{{end}}"
       wait: true
 
+    -
+      image: sequoiatools/couchbase-cli
+      command: "collect-logs-status
+                -c {{.Orchestrator}}
+                -u {{.RestUsername}}
+                -p {{.RestPassword}}"
+      log_level: 2
+      wait: true
+
 -
   # run cbcollect_info on all nodes in all clusters
   # and wait for completion
