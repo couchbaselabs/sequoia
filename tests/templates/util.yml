@@ -22,6 +22,29 @@
       wait: true
 
 -
+  # run cluster wide cbcollect_info and upload to s3
+  # and wait for completion
+  name: collect_logs_uploadto_s3
+  actions:
+    -
+      image: sequoiatools/couchbase-cli
+      command: "collect-logs-start
+                -c {{.Orchestrator}}
+                -u {{.RestUsername}}
+                -p {{.RestPassword}}
+                --all-nodes --upload --upload-host cb-jira.s3.us-east-2.amazonaws.com/logs --customer systemtest"
+    -
+      # loop until status is 'collected'
+      image: sequoiatools/couchbase-cli
+      command: "collect-logs-status
+                -c {{.Orchestrator}}
+                -u {{.RestUsername}}
+                -p {{.RestPassword}}"
+      repeat: -1
+      until: "{{with .AllLogs `__self__`}}{{contains `completed` .}}{{else}}{{true}}{{end}}"
+      wait: true
+
+-
   # run cbcollect_info on all nodes in all clusters
   # and wait for completion
   name: collect_info_all_clusters
