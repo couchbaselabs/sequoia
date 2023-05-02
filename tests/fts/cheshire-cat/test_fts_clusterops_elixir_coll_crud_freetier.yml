@@ -57,7 +57,7 @@
 - command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 3}} -i 5 -a create_index"
   wait: true
 
-############### Wait for some time till all indexes are completely built ###############
+############## Wait for some time till all indexes are completely built ###############
 -
   image: sequoiatools/cmd
   entrypoint: sleep
@@ -66,16 +66,16 @@
 
 ############### data loading ################
 - image: sequoiatools/catapult
-  command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -n 10000 -dt Hotel -nt 1 -ds 1000"
+  command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -n 10000 -dt Hotel -nt 1 -ds 100 -s scope_0 -c coll_0"
   wait: true
 
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 1}} -n 10000 -dt Hotel -nt 1 -ds 1000"
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 1}} -n 10000 -dt Hotel -nt 1 -ds 100 -s scope_0 -c coll_0"
   wait: true
 
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 2}} -n 10000 -dt Hotel -nt 1 -ds 1000"
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 2}} -n 10000 -dt Hotel -nt 1 -ds 100 -s scope_0 -c coll_0"
   wait: true
 
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 3}} -n 10000 -dt Hotel -nt 1 -ds 1000"
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 3}} -n 10000 -dt Hotel -nt 1 -ds 100 -s scope_0 -c coll_0"
   wait: true
 
 - image: sequoiatools/ftsindexmanager

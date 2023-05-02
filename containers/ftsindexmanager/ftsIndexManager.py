@@ -1502,11 +1502,11 @@ class FTSIndexManager:
         return status
 
     def copy_docs_source_collection(self, create_primary=True):
-
-        #create primary index on bucket1.scope_0.coll_0"
-        source_keyspace = "bucket1.scope_0.coll_0"
+        #create primary index on bucket.scope_0.coll_0"
+        source_keyspace = self.bucket_name + ".scope_0.coll_0"
         if create_primary:
-            prim_index_query = f"Create primary index idx1 on {source_keyspace}"
+            index_name = self.bucket_name + "_idx"
+            prim_index_query = f"Create primary index {index_name} on {source_keyspace}"
             try:
                 status, results, queryResult = self._execute_query(prim_index_query)
                 if status is not None:
@@ -1522,7 +1522,7 @@ class FTSIndexManager:
         coll_list.remove("_default._default")
         coll_list.remove("scope_0.coll_0")
         for coll in coll_list:
-            query = f'upsert into bucket1.{coll} (key _k, value _v) select meta().id _k, _v from {source_keyspace} _v'
+            query = f'upsert into {self.bucket_name}.{coll} (key _k, value _v) select meta().id _k, _v from {source_keyspace} _v'
             self.log.info(f'query: {query}')
             try:
                 status, results, queryResult = self._execute_query(query)
