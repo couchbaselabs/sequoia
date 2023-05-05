@@ -177,6 +177,7 @@ class APIManager:
         else:
             bucket_config['backupSchedule'] = backup_config
         resp = self.api_obj.create_bucket(tenant_id, project_id, cluster_id, bucket_config)
+        self.log.debug("Response from create_bucket is {}".format(resp.json()))
         self.log.info("Create Bucket status:{}".format(resp.status_code))
 
     def delete_bucket(self, bucket_name):
@@ -304,9 +305,9 @@ class APIManager:
             raise Exception("Create cluster operation failure")
 
     def get_free_cidr_range(self):
-        deployment_options = json.loads(self.api_obj.get_deployment_options(self.tenant_id).content)
-        self.log.debug("Fetching deployment options:{}".format(deployment_options))
-        return deployment_options['suggestedCidr']
+        first = random.randint(0, 255)
+        second = random.randint(0, 15) * 16
+        return f"10.{first}.{second}.0/20"
 
     def create_cluster_customAMI(self, image_name, cluster_name, project_id, tenant_id, override_token,
                                  region, timeout=30, cluster_configuration=None):
