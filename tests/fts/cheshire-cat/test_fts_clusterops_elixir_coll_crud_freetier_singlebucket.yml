@@ -1,9 +1,9 @@
-# FTS TENANT DENSITY PLAN
+# FTS TENANT DENSITY PLAN FOR SINGLE BUCKET
 #  Scale = 4
 #  Total indexes to make= 400 (800 partitions) -> 1 partition per index
 #  Scopes = 20
 #  Total buckets = 1
-#  Collection per bucket = scaleX200 =  800 || Collection per scope = 800/20 = 40
+#  Collection per bucket = scaleX100 =  400 || Collection per scope = 400/20 = 20
 
 - include: tests/templates/kv.yml, tests/templates/rebalance.yml, tests/templates/fts.yml, tests/templates/util.yml
 
@@ -22,7 +22,7 @@
 ############### create 20 scopes and 200 collections across 3 buckets as scope_1,scope_2 ... ###############
 -
   image: sequoiatools/collections:1.0
-  command: "-i {{.Orchestrator}}:8091 -b {{.Bucket}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count=20 --collection_count={{.Scale 200}} --collection_distribution=uniform"
+  command: "-i {{.Orchestrator}}:8091 -b {{.Bucket}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count=20 --collection_count={{.Scale 100}} --collection_distribution=uniform"
   wait: true
 
 ############### Sleep for some time to allow collections manifest to sync ###############
