@@ -177,7 +177,7 @@ class APIManager:
         else:
             bucket_config['backupSchedule'] = backup_config
         resp = self.api_obj.create_bucket(tenant_id, project_id, cluster_id, bucket_config)
-        self.log.debug("Response from create_bucket is {}".format(resp.json()))
+        self.log.debug("Response from create_bucket is {}".format(resp.content))
         self.log.info("Create Bucket status:{}".format(resp.status_code))
 
     def delete_bucket(self, bucket_name):
@@ -311,24 +311,20 @@ class APIManager:
 
     def create_cluster_customAMI(self, image_name, cluster_name, project_id, tenant_id, override_token,
                                  region, timeout=30, cluster_configuration=None):
-        try:
-            if cluster_configuration is None:
-                with open(os.path.join(os.path.dirname(__file__), 'cluster_config_ami.json')) as f:
-                    cluster_configuration = json.load(f)
+        if cluster_configuration is None:
+            with open(os.path.join(os.path.dirname(__file__), 'cluster_config_ami.json')) as f:
+                cluster_configuration = json.load(f)
 
-            cluster_configuration["cidr"] = self.get_free_cidr_range()
-            cluster_configuration["region"] = region
-            cluster_configuration["name"] = cluster_name
-            cluster_configuration["projectId"] = project_id
-            cluster_configuration["overRide"]["image"] = image_name
-            cluster_configuration["overRide"]["token"] = override_token
-            self.log.info("Payload used for cluster creation:{}".format(cluster_configuration))
+        cluster_configuration["cidr"] = self.get_free_cidr_range()
+        cluster_configuration["region"] = region
+        cluster_configuration["name"] = cluster_name
+        cluster_configuration["projectId"] = project_id
+        cluster_configuration["overRide"]["image"] = image_name
+        cluster_configuration["overRide"]["token"] = override_token
+        self.log.info("Payload used for cluster creation:{}".format(cluster_configuration))
 
-            resp = self.api_obj.create_cluster_customAMI(tenant_id, cluster_configuration)
-            self.log.info(" Json response for Create cluster using AMI : {}".format(resp.json()))
-        except Exception as ex:
-            self.log.info("Got exception while submitting for cluster creation using AMI: {}".format(ex))
-
+        resp = self.api_obj.create_cluster_customAMI(tenant_id, cluster_configuration)
+        self.log.info(" Json response for Create cluster using AMI : {}".format(resp.json()))
         try:
             time.sleep(60)
             cluster_status = self.get_cluster_status(cluster_name)

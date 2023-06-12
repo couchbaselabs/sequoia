@@ -1,5 +1,6 @@
 import time
-
+import logging
+logging.basicConfig()
 import requests
 import json
 import sys
@@ -11,6 +12,8 @@ class WaitForAllIndexBuildComplete:
     def __init__(self):
         if len(sys.argv) < 4:
             raise Exception("This script expects 3 arguments - index node ip, username, password")
+        self.log = logging.getLogger(__file__)
+        self.log.setLevel(logging.INFO)
         self.node_addr = sys.argv[1]
         self.cluster_username = sys.argv[2]
         self.cluster_password = sys.argv[3]
@@ -29,37 +32,55 @@ class WaitForAllIndexBuildComplete:
                 self.rest_url = self.fetch_rest_url(self.node_addr)
                 self.index_url = "{}://".format(self.scheme) + self.rest_url + ":" + self.node_port_index
                 self.url = "{}://".format(self.scheme) + self.rest_url + ":" + self.port
+                self.index_host_name = self.fetch_index_node_hostname(self.rest_url)
             else:
-                self.index_url = "{}://".format(self.scheme) + self.node_addr + ":" + self.node_port_index
+                self.index_host_name = self.fetch_index_node_hostname(self.node_addr)
+                self.index_url = "{}://".format(self.scheme) + self.index_host_name + ":" + self.node_port_index
                 self.url = "{}://".format(self.scheme) + self.node_addr + ":" + self.port
         else:
             self.node_port_index = '9102'
             self.port = '8091'
             self.scheme = "http"
-            self.index_url = "{}://".format(self.scheme) + self.node_addr + ":" + self.node_port_index
-            self.url = "{}://".format(self.scheme) + self.node_addr + ":" + self.port
-        print("TLS flag:{} Capella run flag arguments:{}".format(self.tls, self.capella_run, sys.argv))
-        print("URL used for rest calls:{0}".format(self.url))
+            self.url = "{}://{}:{}".format(self.scheme, self.node_addr, self.port)
+            self.index_host_name = self.fetch_index_node_hostname(self.node_addr)
+            self.index_url = "{}://{}:{}".format(self.scheme, self.index_host_name, self.node_port_index)
+
+        self.log.info("TLS flag:{} Capella run flag:{} arguments:{}".format(self.tls, self.capella_run, sys.argv))
+        self.log.info("URL used for rest calls:{}".format(self.url))
         if len(sys.argv) < 4:
             raise Exception("This script expects 3 arguments - index node ip, username, password")
+
+    def fetch_index_node_hostname(self, url):
+        cluster_config_endpoint = "{}://{}:{}/pools/default".format(self.scheme, url, self.port)
+        response = requests.get(cluster_config_endpoint, auth=(self.cluster_username, self.cluster_password),
+                                verify=False)
+
+        if response.ok:
+            response = json.loads(response.content)
+            for nodes in response['nodes']:
+                if "index" in nodes['services']:
+                    node_name = nodes['hostname'].split(":")[0]
+                    return node_name
+        else:
+            response.raise_for_status()
 
     def fetch_rest_url(self, url):
         """
         meant to find the srv record for Capella runs
         """
-        print("This is a Capella run. Finding the srv domain for {}".format(url))
+        self.log.info("This is a Capella run. Finding the srv domain for {}".format(url))
         srv_info = {}
         srv_records = dns.resolver.query('_couchbases._tcp.' + url, 'SRV')
         for srv in srv_records:
             srv_info['host'] = str(srv.target).rstrip('.')
             srv_info['port'] = srv.port
-        print("This is a Capella run. Srv info {}".format(srv_info))
+        self.log.info("This is a Capella run. Srv info {}".format(srv_info))
         return srv_info['host']
 
     def check_index_status(self):
         index_status_endpoint = "{}/getIndexStatus".format(self.index_url)
         # Buckets to be skipped for checking build status
-        print("Index endpoint API is {}".format(index_status_endpoint))
+        self.log.info("Index endpoint API is {}".format(index_status_endpoint))
         excluded_buckets = []
 
         # Get status for all indexes
@@ -71,7 +92,7 @@ class WaitForAllIndexBuildComplete:
                 all_indexes_built = True
 
                 for index in response["status"]:
-                    print(index["name"] + "," + index["status"])
+                    self.log.debug(index["name"] + "," + index["status"])
                     if index["status"] == "Ready":
                         all_indexes_built &= True
                     else:
@@ -93,7 +114,6 @@ class WaitForAllIndexBuildComplete:
         index_node_list = []
         index_host_list = []
         cluster_config_endpoint = "{}/pools/default".format(self.url)
-
         index_status_endpoint = "{}/getIndexStatus".format(self.index_url)
 
         # Get status for all indexes
@@ -128,7 +148,7 @@ class WaitForAllIndexBuildComplete:
 
         timedout = self.check_index_nodes(index_node_list,timeout)
 
-        print ("Sleep for 120 seconds to see if indexes are fully done being built")
+        self.log.info ("Sleep for 120 seconds to see if indexes are fully done being built")
         # Sleep for some time and then again make sure that there are no docs_pending in any indexes
         if not timedout:
             time.sleep(120)
@@ -205,8 +225,8 @@ if __name__ == '__main__':
             try:
                 all_indexes_built = index_obj.check_index_status()
             except Exception as e:
-                print (str(e))
-                print ("Error getting index status")
+                print(str(e))
+                print("Error getting index status")
                 break
 
             # Sleep for 1 min

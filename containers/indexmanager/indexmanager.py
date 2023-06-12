@@ -91,12 +91,12 @@ class IndexManager:
                                      "drop_index_loop", "alter_indexes", "enable_cbo", "delete_statistics",
                                      "item_count_check",
                                      "random_recovery", "create_udf", "drop_udf", "create_n1ql_udf", "validate_tenant_affinity", "set_fast_rebalance_config",
-                                     "create_n_indexes_on_buckets", "validate_s3_cleanup", "copy_aws_keys", "cleanup_s3"],
+                                     "create_n_indexes_on_buckets", "validate_s3_cleanup", "copy_aws_keys", "cleanup_s3", "poll_total_requests_during_rebalance"],
                             help="Choose an action to be performed. Valid actions : create_index | build_deferred_index | drop_all_indexes | create_index_loop | "
                                  "drop_index_loop | alter_indexes | enable_cbo | delete_statistics "
                                  "| item_count_check | random_recovery | create_udf | drop_udf | create_n1ql_udf "
                                  "| validate_tenant_affinity | set_fast_rebalance_config | create_n_indexes_on_buckets "
-                                 "| copy_aws_keys | cleanup_s3 | validate_s3_cleanup",
+                                 "| copy_aws_keys | cleanup_s3 | validate_s3_cleanup | poll_total_requests_during_rebalance",
                             default="create_index")
         parser.add_argument("-m", "--build_max_collections", type=int, default=0,
                             help="Build Indexes on max number of collections")
@@ -127,6 +127,12 @@ class IndexManager:
         parser.add_argument("--storage_prefix", help="Storage prefix for S3 bucket used for fast rebalance", default="indexing-system-test")
         parser.add_argument("--bucket_list", help="List of buckets to be used for index creation")
         parser.add_argument("--num_of_indexes_per_bucket", type=int, default=20, help="Number of indexes per bucket you want to create")
+        parser.add_argument("--num_of_batches", default=None,help="Number of batch of indexes to be created")
+        parser.add_argument("--sleep_before_polling", default=None, help="Duration (in seconds) to sleep before polling for total requests")
+        parser.add_argument("--capella_cluster_id", default=None)
+        parser.add_argument("--sbx", default=None)
+        parser.add_argument("--token", default=None)
+        parser.add_argument("--skip_default_collection", default="true")
         args = parser.parse_args()
         self.log = logging.getLogger("indexmanager")
         self.log.setLevel(logging.INFO)
@@ -152,6 +158,12 @@ class IndexManager:
         self.aws_secret_access_key = args.aws_secret_access_key
         self.region = args.region
         self.num_of_indexes_per_bucket = args.num_of_indexes_per_bucket
+        self.num_of_batches = args.num_of_batches
+        self.sleep_before_polling = args.sleep_before_polling
+        self.capella_cluster_id = args.capella_cluster_id
+        self.sbx = args.sbx
+        self.token = args.token
+        self.skip_default_collection = True if args.skip_default_collection == 'true' else False
         if self.cbo_enable_ratio > 100:
             self.cbo_enable_ratio = 25
         self.cbo_interval = args.cbo_interval
@@ -189,10 +201,7 @@ class IndexManager:
 
         # If there are more datasets supported, this can be expanded.
         if self.dataset == "hotel":
-            if self.capella_run:
-                self.idx_def_templates = HOTEL_DS_INDEX_TEMPLATES
-            else:
-                self.idx_def_templates = HOTEL_DS_INDEX_TEMPLATES + HOTEL_DS_INDEX_TEMPLATES_NEW
+            self.idx_def_templates = HOTEL_DS_INDEX_TEMPLATES + HOTEL_DS_INDEX_TEMPLATES_NEW
             self.cbo_fields = HOTEL_DS_CBO_FIELDS
         # Initialize connections to the cluster
             # Logging configuration
@@ -501,8 +510,11 @@ class IndexManager:
     def create_n_indexes_on_buckets(self):
         num_of_indexes_per_bucket = self.num_of_indexes_per_bucket
         self.log.info(f"Configuration used: Bucket_list {self.bucket_list}. Num of indexes per bucket {num_of_indexes_per_bucket}")
+        self.log.info(f"Skip default collection flag {self.skip_default_collection}")
         for bucket_name in self.bucket_list:
             keyspaces = []
+            if not self.skip_default_collection:
+                keyspaces.append(f"`{bucket_name}`._default._default")
             bucket_obj = self.cluster.bucket(bucket_name)
             scopes = bucket_obj.collections().get_all_scopes()
             self.log.info("Bucket name {}".format(bucket_name))
@@ -517,37 +529,50 @@ class IndexManager:
             total_idx_created = 0
             create_index_statements = []
             self.log.info(f"Starting to create indexes. Will create a total of {num_of_indexes_per_bucket} indexes on these collections {keyspace_name_list}")
+            keyspace_list = []
             while total_idx_created < num_of_indexes_per_bucket:
-                keyspace = random.choice(keyspaces)
-                idx_template = random.choice(self.idx_def_templates)
-                idx_statement = idx_template['statement']
-                idx_prefix = ''.join(random.choices(string.ascii_letters + string.digits, k=random.randint(4, 8)))
-                idx_name = f"{idx_template['indexname']}_{idx_prefix}"
-                is_partitioned_idx = bool(random.getrandbits(1))
-                is_defer_idx = bool(random.getrandbits(1))
-                with_clause_list = []
-                idx_statement = idx_statement.replace("keyspacenameplaceholder", keyspace)
-                idx_statement = idx_statement.replace('idxprefix', idx_prefix)
-                keyspace_name = keyspace.replace("`", "")
-                if self.install_mode == "ee":
-                    idx_statement = idx_statement + " partition by hash(meta().id) "
-                    if self.capella_run:
-                        reference_index_map[keyspace_name][idx_name]['num_partition'] = 8
+                keyspace = random.choice(list(set(keyspaces) - set(keyspace_list)))
+                keyspace_list.append(keyspace)
+                for idx_template in self.idx_def_templates:
+                    idx_statement = idx_template['statement']
+                    idx_prefix = ''.join(random.choices(string.ascii_letters + string.digits, k=random.randint(4, 8)))
+                    idx_name = f"{idx_template['indexname']}_{idx_prefix}"
+                    # create partitioned indexes for all array indexes on Capella clusters. For the rest, it's randomised
+                    if self.capella_run or self.use_tls:
+                        if idx_template['indexname'] in ["idx3", "idx4", "idx6", "idx7", "idx12", "idx13"]:
+                            is_partitioned_idx = bool(random.getrandbits(1))
+                        else:
+                            is_partitioned_idx = True
                     else:
-                        num_partition = random.randint(2, 8)
-                        with_clause_list.append("\'num_partition\':%s" % num_partition)
-                if self.install_mode == "ee" and self.max_num_replica > 0:
-                    num_replica = 1
-                    with_clause_list.append("\'num_replica\':%s" % num_replica)
-                if is_defer_idx:
-                    with_clause_list.append("\'defer_build\':true")
+                        is_partitioned_idx = bool(random.getrandbits(1))
+                    is_defer_idx = bool(random.getrandbits(1))
+                    with_clause_list = []
+                    idx_statement = idx_statement.replace("keyspacenameplaceholder", keyspace)
+                    idx_statement = idx_statement.replace('idxprefix', idx_prefix)
+                    keyspace_name = keyspace.replace("`", "")
+                    if self.install_mode == "ee":
+                        if is_partitioned_idx:
+                            idx_statement = idx_statement + " partition by hash(meta().id) "
+                        if self.capella_run and is_partitioned_idx:
+                            reference_index_map[keyspace_name][idx_name]['num_partition'] = 8
+                        else:
+                            if is_partitioned_idx:
+                                num_partition = random.randint(2, 8)
+                                with_clause_list.append("\'num_partition\':%s" % num_partition)
+                    if self.install_mode == "ee" and self.max_num_replica > 0:
+                        num_replica = 1
+                        with_clause_list.append("\'num_replica\':%s" % num_replica)
+                    if is_defer_idx:
+                        with_clause_list.append("\'defer_build\':true")
 
-                if (is_partitioned_idx and not self.disable_partitioned_indexes) or (
-                        self.max_num_replica > 0) or is_defer_idx:
-                    idx_statement = idx_statement + " with {"
-                    idx_statement = idx_statement + ','.join(with_clause_list) + "}"
-                    create_index_statements.append(idx_statement)
-                total_idx_created += 1
+                    if (is_partitioned_idx and not self.disable_partitioned_indexes) or (
+                            self.max_num_replica > 0) or is_defer_idx:
+                        idx_statement = idx_statement + " with {"
+                        idx_statement = idx_statement + ','.join(with_clause_list) + "}"
+                        create_index_statements.append(idx_statement)
+                    total_idx_created += 1
+                    if total_idx_created == num_of_indexes_per_bucket:
+                        break
             self.log.info("Create index statements: {}".format(create_index_statements))
             for num, create_index_statement in enumerate(create_index_statements):
                 self.log.info(f"Creating index number {num} on bucket {bucket_name}. Index statement: {create_index_statement}")
@@ -999,6 +1024,7 @@ class IndexManager:
                     clusternode["cpuUsage"] = round(
                         node["systemStats"]["cpu_utilization_rate"], 2)
                     clusternode["status"] = node["status"]
+                    clusternode["clusterMembership"] = node["clusterMembership"]
                     node_map.append(clusternode)
             else:
                 response.raise_for_status()
@@ -1426,7 +1452,7 @@ class IndexManager:
         self.log.info(f"Services map is {service_map}")
         indexer_nodes_list = []
         for node in service_map:
-            if "index" in node['services']:
+            if "index" in node['services'] and node['status'] == 'healthy' and node['clusterMembership'] == 'active':
                 indexer_nodes_list.append(node['hostname'])
         return indexer_nodes_list
     
@@ -1503,7 +1529,71 @@ class IndexManager:
         response = requests.post(url=api, data=json.dumps(setting_json), timeout=120, auth=(
             self.username, self.password), verify=False)
         response.raise_for_status()
-        
+
+    def get_total_requests_metric(self, node):
+        endpoint = f"{self.scheme}://{node}:{self.node_port_index}/stats"
+        self.log.info(f"Endpoint used for get_total_requests_metric {endpoint}")
+        response = requests.get(endpoint, auth=(
+            self.username, self.password), verify=False, timeout=300)
+        if response.ok:
+            response = json.loads(response.text)
+            return response['total_requests']
+        self.log.info(f"Error while fetching get_total_requests_metric - {endpoint}")
+
+
+    def is_rebalance_running(self):
+        endpoint = f"{self.url}/pools/default/rebalanceProgress"
+        self.log.info(f"Endpoint used for is_rebalance_running {endpoint}")
+        response = requests.get(endpoint, auth=(
+            self.username, self.password), verify=False, timeout=300)
+        if response.ok:
+            response = json.loads(response.text)
+            rebalance_progress = response['status']
+            self.log.info(f"Rebalance_progress {rebalance_progress}")
+            if rebalance_progress != 'none':
+                return True
+            return False
+        self.log.info(f"Error while fetching rebalanceProgress - {endpoint}")
+
+    def poll_total_requests_during_rebalance(self):
+        nodes_list = self.get_indexer_nodes()
+        self.log.info(f"List of nodes with index service{nodes_list}")
+        if self.sleep_before_polling:
+            self.log.info(f"Sleeping for {self.sleep_before_polling} seconds before polling")
+            time.sleep(int(self.sleep_before_polling))
+        is_rebalance_running = True
+        while is_rebalance_running:
+            new_nodes = []
+            for node in nodes_list:
+                try:
+                    total_requests = self.get_total_requests_metric(node=node)
+                    if total_requests == 0:
+                        new_nodes.append(node)
+                    self.log.info(f"Total requests param on node {node}: {total_requests}")
+                except:
+                    pass
+            time.sleep(300)
+            # this is a hack. Need to switch to use_capella flag once things are stable.
+            if self.use_tls:
+                if self.get_capella_cluster_status() == 'scaling':
+                    is_rebalance_running = True
+                else:
+                    is_rebalance_running = False
+            else:
+                is_rebalance_running = self.is_rebalance_running()
+        raise Exception("Dummy exception statement. Ignore. Throwing an exception to print docker logs to console.")
+
+    def get_capella_cluster_status(self):
+        response = requests.get(
+            f"https://api.{self.sbx}/internal/support/clusters/{self.capella_cluster_id}",
+            headers={"Authorization": f"Bearer {self.token}"})
+        if response.status_code != 200:
+            raise Exception("Response when trying to fetch cluster status")
+        resp_json = response.json()
+        self.log.info(f"Response get_capella_cluster_status {resp_json}")
+        cluster_status = resp_json['meta']['status']['state']
+        return cluster_status
+
 class NestedDict(dict):
     """Implementation of perl's autovivification feature."""
 
@@ -1576,6 +1666,8 @@ if __name__ == '__main__':
         indexMgr.validate_s3_cleanup()
     elif indexMgr.action == "cleanup_s3":
         indexMgr.cleanup_s3()
+    elif indexMgr.action == "poll_total_requests_during_rebalance":
+        indexMgr.poll_total_requests_during_rebalance()
     else:
         print("Invalid choice for action. Choose from the following - "
               "create_index | build_deferred_index | drop_all_indexes | create_index_loop | alter_indexes | "

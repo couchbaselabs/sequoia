@@ -1,33 +1,47 @@
 {
-  "cidr": "<enter a unique CIDR value>",
-  "name": "<enter_cluster_name>",
-  "description": "Cluster created via automation",
-  "overRide": {"token": "<enter_token",
-               "image": "<enter_image_id",
-               "server": "7.1.0"},
-  "projectId": "<enter_project_id>",
-  "provider": "hostedAWS",
-  "region": "<enter the name of the region>",
-  "singleAZ": false,
-  "specs": [
-      {"count": 3,
-       "services": [
-         {"type": "fts"},
-         {"type": "index"},
-         {"type": "kv"},
-         {"type": "n1ql"},
-         {"type": "cbas"}
-       ],
-       "compute": {
-         "type": "m5.xlarge",
-         "cpu": 0,
-         "memoryInGb": 0
-       },
-       "disk": {
-         "type": "gp3",
-         "sizeInGb": 50,
-         "iops": 3000}
-      }
-  ],
-  "package": "enterprise"
+	"cidr": "<enter a unique CIDR value>",
+	"name": "<enter_cluster_name>",
+	"description": "Cluster created via automation",
+	"overRide": {
+		"token": "<enter_token",
+		"image": "<enter_image_id",
+		"server": "7.1.0"
+	},
+	"projectId": "<enter_project_id>",
+	"provider": "hostedAWS",
+	"region": "<enter the name of the region>",
+	"singleAZ": false,
+	"specs": [{
+		"count": 3,
+		"diskAutoScaling": {
+			"enabled": true
+		},
+		"services": [{
+				"type": "fts"
+			},
+			{
+				"type": "index"
+			},
+			{
+				"type": "kv"
+			},
+			{
+				"type": "n1ql"
+			},
+			{
+				"type": "cbas"
+			}
+		],
+		"compute": {
+			"type": "m5.xlarge",
+			"cpu": 0,
+			"memoryInGb": 0
+		},
+		"disk": {
+			"type": "gp3",
+			"sizeInGb": 50,
+			"iops": 3000
+		}
+	}],
+	"package": "enterprise"
 }

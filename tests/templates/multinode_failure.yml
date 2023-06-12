@@ -291,6 +291,9 @@
     command: "300"
     wait: true
 
+  - template: wait_for_rebalance
+    wait: true
+
   - template: add_node
     args: "$0, index"
   - template: rebalance
