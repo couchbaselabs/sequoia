@@ -110,7 +110,7 @@ buckets:
       compression: active
   -
       name: WAREHOUSE
-      ram: 5%
+      ram: 15%
       storage: magma
       eviction: fullEviction
   -
@@ -137,12 +137,12 @@ buckets:
       eviction: fullEviction
   -
       name: bucket6
-      ram: 10%
+      ram: 5%
       storage: magma
       eviction: fullEviction
   -
       name: bucket7
-      ram: 10%
+      ram: 5%
       storage: magma
       eviction: fullEviction
   -
