@@ -59,7 +59,7 @@
   command: "-X POST -u {{.RestUsername}}:{{.RestPassword}} -H Content-Type:application/json http://{{.Orchestrator}}:8091/_p/backup/api/v1/plan/my_plan -d '{\"name\":\"my_plan\",\"description\":\"This plan does backups every 2 days\",\"services\":[\"data\",\"gsi\",\"views\",\"ft\",\"eventing\",\"cbas\",\"query\"],\"default\":false,\"tasks\":[{\"name\":\"backup-1\",\"task_type\":\"BACKUP\",\"schedule\":{\"job_type\":\"BACKUP\",\"frequency\":24,\"period\":\"HOURS\",\"start_now\":false},\"full_backup\":true},{\"name\":\"merge\",\"task_type\":\"MERGE\",\"schedule\":{\"job_type\":\"MERGE\",\"frequency\":2,\"period\":\"DAYS\",\"time\":\"12:00\",\"start_now\":false},\"merge_options\":{\"offset_start\":0,\"offset_end\":2},\"full_backup\":true}]}'"
   wait: true
 -
-  command: "-u {{.RestUsername}}:{{.RestPassword}} -X POST http://{{.Orchestrator}}:8091/_p/backup/api/v1/cluster/self/repository/active/my_repo -H Content-Type:application/json -d '{\"plan\": \"my_plan\", \"archive\": \"/data/archive\"}'"
+  command: "-u {{.RestUsername}}:{{.RestPassword}} -X POST http://{{.Orchestrator}}:8091/_p/backup/api/v1/cluster/self/repository/active/my_repo -H Content-Type:application/json -d '{\"plan\": \"my_plan\", \"archive\": \"/data/archive\", \"bucket_name\":\"bucket5\"}'"
   wait: true
 
 ### create (scale * 10) scopes and (scale * 80) collections in local cluster across 6 buckets as scope_1,scope_2 ... ######
