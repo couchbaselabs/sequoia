@@ -113,7 +113,7 @@ buckets:
       enablehistoryretentionbydefault : 1
   -
       name: WAREHOUSE
-      ram: 5%
+      ram: 15%
       storage: magma
       eviction: fullEviction
       historyretentionbytes: 268435456000
@@ -155,7 +155,7 @@ buckets:
       enablehistoryretentionbydefault: 1
   -
       name: bucket6
-      ram: 10%
+      ram: 5%
       storage: magma
       eviction: fullEviction
       historyretentionbytes: 2147483648
@@ -163,7 +163,7 @@ buckets:
       enablehistoryretentionbydefault: 1
   -
       name: bucket7
-      ram: 10%
+      ram: 5%
       storage: magma
       eviction: fullEviction
       historyretentionbytes: 2147483648
