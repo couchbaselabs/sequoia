@@ -1,0 +1,227 @@
+---
+users:
+  -
+    name: default
+    password: password
+    roles: admin
+    auth_domain: local
+  -
+    name: WAREHOUSE
+    password: password
+    roles: admin
+    auth_domain: local
+  -
+    name: NEW_ORDER
+    password: password
+    roles: admin
+    auth_domain: local
+  -
+    name: ITEM
+    password: password
+    roles: admin
+    auth_domain: local
+  -
+    name: bucket4
+    password: password
+    roles: admin
+    auth_domain: local
+  -
+    name: bucket5
+    password: password
+    roles: admin
+    auth_domain: local
+  -
+    name: bucket6
+    password: password
+    roles: admin
+    auth_domain: local
+  -
+    name: bucket7
+    password: password
+    roles: admin
+    auth_domain: local
+  -
+    name: bucket8
+    password: password
+    roles: admin
+    auth_domain: local
+  -
+    name: bucket9
+    password: password
+    roles: admin
+    auth_domain: local
+  -
+    name: remote
+    password: password
+    roles: admin
+    auth_domain: local
+
+servers: # each server tag represents a cluster
+  -
+      name: local
+      count: 31
+      ram: 50%
+      index_ram: 80%
+      fts_ram: 80%
+      eventing_ram: 90%
+      analytics_ram: 90%
+      index_storage: default
+      services:
+        index: 6
+        query: 2
+        backup: 1
+        fts: 3
+        eventing: 3
+        analytics: 3
+      rest_username: Administrator
+      rest_password: password
+      ssh_username: root
+      ssh_password: couchbase
+      data_path: "/data/couchbase"
+      index_path: "/data/couchbase"
+      analytics_path: "/data/couchbase"
+      rest_port: 8091
+      query_port: 8093
+      init_nodes: 29
+      buckets: default,WAREHOUSE,NEW_ORDER,ITEM,bucket4,bucket5,bucket6,bucket7,bucket8,bucket9
+      users: default,WAREHOUSE,NEW_ORDER,ITEM,bucket4,bucket5,bucket6,bucket7,bucket8,bucket9
+  -
+      name: remote
+      count: 6
+      ram: 60%
+      rest_username: Administrator
+      rest_password: password
+      data_path: "/data/couchbase"
+      index_path: "/data/couchbase"
+      analytics_path: "/data/couchbase"
+      rest_port: 8091
+      init_nodes: 6
+      buckets: remote,bucket4,bucket8,bucket9
+      users: remote,bucket4,bucket8,bucket9
+
+
+buckets:
+  -
+      name: default
+      ram: 35%
+      storage: magma
+      eviction: fullEviction
+      ddocs: scale
+      compression: active
+      historyretentionbytes : 134217728000
+      historyretentionseconds : 86400
+      enablehistoryretentionbydefault : 1
+  -
+      name: WAREHOUSE
+      ram: 15%
+      storage: magma
+      eviction: fullEviction
+      historyretentionbytes: 268435456000
+      historyretentionseconds: 43200
+      enablehistoryretentionbydefault: 1
+  -
+      name: NEW_ORDER
+      ram: 5%
+      storage: magma
+      eviction: fullEviction
+      ttl: 10800
+      historyretentionbytes: 2147483648
+      historyretentionseconds: 3600
+      enablehistoryretentionbydefault: 1
+  -
+      name: ITEM
+      ram: 5%
+      storage: magma
+      eviction: fullEviction
+      ddocs: all
+      historyretentionbytes: 53687091200
+      historyretentionseconds: 7200
+      enablehistoryretentionbydefault: 1
+  -
+      name: bucket4
+      ram: 5%
+      storage: magma
+      eviction: fullEviction
+      historyretentionbytes: 2147483648
+      historyretentionseconds: 14440
+      enablehistoryretentionbydefault: 1
+  -
+      name: bucket5
+      ram: 5%
+      storage: magma
+      eviction: fullEviction
+      historyretentionbytes: 2147483648
+      historyretentionseconds: 86400
+      enablehistoryretentionbydefault: 1
+  -
+      name: bucket6
+      ram: 5%
+      storage: magma
+      eviction: fullEviction
+      historyretentionbytes: 2147483648
+      historyretentionseconds: 86400
+      enablehistoryretentionbydefault: 1
+  -
+      name: bucket7
+      ram: 5%
+      storage: magma
+      eviction: fullEviction
+      historyretentionbytes: 2147483648
+      historyretentionseconds: 86400
+      enablehistoryretentionbydefault: 1
+  -
+      name: bucket8
+      ram: 5%
+      storage: magma
+      eviction: fullEviction
+      historyretentionbytes: 2147483648
+      historyretentionseconds: 86400
+      enablehistoryretentionbydefault: 1
+  -
+      name: bucket9
+      ram: 5%
+      storage: magma
+      eviction: fullEviction
+      historyretentionbytes: 2147483648
+      historyretentionseconds: 86400
+      enablehistoryretentionbydefault: 1
+  -
+      name: remote
+      ram: 80%
+      storage: magma
+      eviction: fullEviction
+      historyretentionbytes: 2147483648
+      historyretentionseconds: 86400
+      enablehistoryretentionbydefault: 1
+
+ddocs:
+  -
+   name: scale
+   views: stats, padd, array
+  -
+   name: all
+   views: all_ids
+
+
+views:
+  -
+    name: stats
+    map: "if(doc.profile){ if((doc.rating > 500) && (doc.rating < 520)){ emit(meta.id, doc.ops_sec); }}"
+    reduce: "_stats"
+  -
+    name: padd
+    map: "if(doc.profile){ if (doc.rating < 200){ emit(meta.id, doc.padding); }}"
+  -
+    name: array
+    map: "if(doc.profile){ if((doc.rating > 200) && (doc.rating< 300)){ emit(doc.active_hosts, null); }}"
+  -
+    name: all_ids
+    map: "emit(meta.id, null)"
+
+syncgateways:
+  -
+    name: sg
+    cluster: local
+    count: 1
+    bucket: bucket7
+    bucketuser: bucket7
