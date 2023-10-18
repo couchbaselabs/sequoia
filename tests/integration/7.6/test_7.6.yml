@@ -9,6 +9,11 @@
   command: "setting-compaction -c {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}} --metadata-purge-interval .04 --compaction-db-percentage 30 --compaction-view-percentage 30"
   wait: true
 
+############### Enable file based rebalance for indexing ################
+- template: set_gsi_config
+  args: "{{.ActiveIndexNode 0}}, 'indexer.settings.enableShardAffinity':true"
+  requires:  "{{eq true .DoOnce }}"
+
 ###### enable n2n encryption & ipv4only ######
 -
   template: disable_autofailover
