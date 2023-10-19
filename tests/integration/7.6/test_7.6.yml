@@ -11,7 +11,7 @@
 
 ############### Enable file based rebalance for indexing ################
 - template: set_gsi_config
-  args: "{{.ActiveIndexNode 0}}, 'indexer.settings.enableShardAffinity':true"
+  args: "{{.ActiveIndexNode 0}}, 'indexer.settings.enable_shard_affinity':true"
   requires:  "{{eq true .DoOnce }}"
 
 ###### enable n2n encryption & ipv4only ######
