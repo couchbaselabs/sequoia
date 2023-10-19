@@ -245,11 +245,6 @@
   wait: true
 
 ###############  build all deferred indexes ################
-
-- image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}} -a build_deferred_index -m 2"
-  wait: true
-
 - command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 5}} -a build_deferred_index -m 2"
   wait: true
 
