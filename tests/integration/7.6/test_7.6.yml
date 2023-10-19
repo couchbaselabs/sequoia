@@ -235,10 +235,6 @@
   wait: true
 
 # Create indexes on the collections
-- image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}} -i {{.Scale 1}} -a create_index"
-  wait: true
-
 - command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 5}} -i {{.Scale 1}} -a create_index"
   wait: true
 
