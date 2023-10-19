@@ -111,6 +111,7 @@ buckets:
       historyretentionbytes : 134217728000
       historyretentionseconds : 86400
       enablehistoryretentionbydefault : 1
+      rank : 3
   -
       name: WAREHOUSE
       ram: 15%
@@ -119,6 +120,7 @@ buckets:
       historyretentionbytes: 268435456000
       historyretentionseconds: 43200
       enablehistoryretentionbydefault: 1
+      rank : 4
   -
       name: NEW_ORDER
       ram: 5%
@@ -128,6 +130,7 @@ buckets:
       historyretentionbytes: 2147483648
       historyretentionseconds: 3600
       enablehistoryretentionbydefault: 1
+      rank : 1
   -
       name: ITEM
       ram: 5%
@@ -137,6 +140,7 @@ buckets:
       historyretentionbytes: 53687091200
       historyretentionseconds: 7200
       enablehistoryretentionbydefault: 1
+      rank : 2
   -
       name: bucket4
       ram: 5%

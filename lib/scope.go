@@ -755,6 +755,9 @@ func (s *Scope) CreateBuckets() {
 				if bucket.EnableHistoryRetentionByDefault != "" {
 					command = append(command, "--enable-history-retention-by-default", bucket.EnableHistoryRetentionByDefault)
 				}
+				if bucket.Rank != "" {
+					command = append(command, "--rank", bucket.Rank)
+				}
 
 				desc := "bucket create " + bucketName
 				task := ContainerTask{
