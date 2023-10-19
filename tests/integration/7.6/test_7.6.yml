@@ -35,7 +35,7 @@
   wait: true
 -
   template: enable_autofailover
-  args: "120,1"
+  args: "1,1"
   requires:  "{{eq true .DoOnce }}"
 
 ############### Enable Plasma Bloom Filter ################
