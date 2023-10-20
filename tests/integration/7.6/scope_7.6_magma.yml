@@ -120,7 +120,7 @@ buckets:
       historyretentionbytes: 268435456000
       historyretentionseconds: 43200
       enablehistoryretentionbydefault: 1
-      rank : 4
+      rank : 3
   -
       name: NEW_ORDER
       ram: 5%
@@ -130,7 +130,7 @@ buckets:
       historyretentionbytes: 2147483648
       historyretentionseconds: 3600
       enablehistoryretentionbydefault: 1
-      rank : 1
+      rank : 2
   -
       name: ITEM
       ram: 5%
@@ -149,6 +149,7 @@ buckets:
       historyretentionbytes: 2147483648
       historyretentionseconds: 14440
       enablehistoryretentionbydefault: 1
+      rank : 1
   -
       name: bucket5
       ram: 5%
@@ -157,6 +158,7 @@ buckets:
       historyretentionbytes: 2147483648
       historyretentionseconds: 86400
       enablehistoryretentionbydefault: 1
+      rank : 1
   -
       name: bucket6
       ram: 5%
@@ -165,6 +167,7 @@ buckets:
       historyretentionbytes: 2147483648
       historyretentionseconds: 86400
       enablehistoryretentionbydefault: 1
+      rank : 1
   -
       name: bucket7
       ram: 5%
@@ -173,6 +176,7 @@ buckets:
       historyretentionbytes: 2147483648
       historyretentionseconds: 86400
       enablehistoryretentionbydefault: 1
+      rank : 1
   -
       name: bucket8
       ram: 5%
@@ -181,6 +185,7 @@ buckets:
       historyretentionbytes: 2147483648
       historyretentionseconds: 86400
       enablehistoryretentionbydefault: 1
+      rank : 1
   -
       name: bucket9
       ram: 5%
