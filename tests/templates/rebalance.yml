@@ -4,7 +4,7 @@
   name: rebalance
   actions:
     -
-      image: sequoiatools/couchbase-cli:7.1
+      image: sequoiatools/couchbase-cli:7.6
       command:  "rebalance
                 -c {{if gt (len `$0`) 2}}$0{{else}}{{.Orchestrator}}{{end}}:{{.RestPort}}
                 -u  {{.RestUsername}} -p  {{.RestPassword}}"
@@ -25,7 +25,7 @@
   name: rebalance_out
   actions:
     -
-      image: sequoiatools/couchbase-cli:7.1
+      image: sequoiatools/couchbase-cli:7.6
       command: "rebalance -c  {{.Orchestrator}}:{{.RestPort}} --server-remove $0  -u  {{.RestUsername}} -p  {{.RestPassword}}"
       condwait: "{{if eq `windows` .Platform }}
                     false
@@ -57,7 +57,7 @@
   name: add_node
   actions:
     -
-      image: sequoiatools/couchbase-cli:7.1
+      image: sequoiatools/couchbase-cli:7.6
       command: "server-add
            -c {{if gt (len `$2`) 2}}$2{{else}}{{.Orchestrator}}{{end}}:{{.RestPort}}
            --server-add https://$0
@@ -86,7 +86,7 @@
   name: add_node_wo_https
   actions:
     -
-      image: sequoiatools/couchbase-cli:7.1
+      image: sequoiatools/couchbase-cli:7.6
       command: "server-add
            -c {{if gt (len `$2`) 2}}$2{{else}}{{.Orchestrator}}{{end}}:{{.RestPort}}
            --server-add $0
@@ -178,7 +178,7 @@
   name: failover_node
   actions:
     -
-      image: sequoiatools/couchbase-cli:7.1
+      image: sequoiatools/couchbase-cli:7.6
       command: "failover -c {{.Orchestrator}}:{{.RestPort}}
           --server-failover $0:{{.RestPort}}
           -u  {{.RestUsername}} -p  {{.RestPassword}}"
@@ -189,7 +189,7 @@
   name: failover_node_forced
   actions:
     -
-      image: sequoiatools/couchbase-cli:7.1
+      image: sequoiatools/couchbase-cli:7.6
       command: "failover -c {{.Orchestrator}}:{{.RestPort}}
           --server-failover $0:{{.RestPort}}
           -u  {{.RestUsername}} -p  {{.RestPassword}} --force --hard"
@@ -200,7 +200,7 @@
   name: hard_failover_node
   actions:
     -
-      image: sequoiatools/couchbase-cli:7.1
+      image: sequoiatools/couchbase-cli:7.6
       command: "failover -c {{.Orchestrator}}:{{.RestPort}}
           --server-failover $0:{{.RestPort}}
           -u  {{.RestUsername}} -p  {{.RestPassword}} --hard"
@@ -213,7 +213,7 @@
   name: recover_node
   actions:
     -
-      image: sequoiatools/couchbase-cli:7.1
+      image: sequoiatools/couchbase-cli:7.6
       command: "recovery -c {{.Orchestrator}}:{{.RestPort}}
           --server-recovery $0:{{.RestPort}}
           --recovery-type $1
@@ -277,7 +277,7 @@
   name: rebalance_stop
   actions:
     -
-      image: sequoiatools/couchbase-cli:7.1
+      image: sequoiatools/couchbase-cli:7.6
       command:  "rebalance-stop -c  {{.Orchestrator}}:{{.RestPort}}
                 -u  {{.RestUsername}} -p  {{.RestPassword}}"
       wait: true
@@ -289,7 +289,7 @@
   name: rebalance_by_ip
   actions:
     -
-      image: sequoiatools/couchbase-cli:7.1
+      image: sequoiatools/couchbase-cli:7.6
       command:  "rebalance -c  $0:{{.RestPort}}
                 -u  {{.RestUsername}} -p  {{.RestPassword}}"
       condwait: "{{if eq `windows` .Platform }}
@@ -306,7 +306,7 @@
   name: enable_autofailover
   actions:
     -
-      image: sequoiatools/couchbase-cli:7.1
+      image: sequoiatools/couchbase-cli:7.6
       command: "setting-autofailover -c  {{.Orchestrator}}:{{.RestPort}}
                 -u  {{.RestUsername}} -p  {{.RestPassword}}
                 --enable-auto-failover=1 --auto-failover-timeout=$0 --max-failovers=$1"
@@ -318,7 +318,7 @@
   name: enable_autofailover_servergroup
   actions:
     -
-      image: sequoiatools/couchbase-cli:7.1
+      image: sequoiatools/couchbase-cli:7.6
       command: "setting-autofailover -c  {{.Orchestrator}}:{{.RestPort}}
                 -u  {{.RestUsername}} -p  {{.RestPassword}} --enable-auto-failover=1
                 --enable-failover-of-server-groups=1 --auto-failover-timeout=$0"
@@ -329,7 +329,7 @@
   name: disable_autofailover
   actions:
     -
-      image: sequoiatools/couchbase-cli:7.1
+      image: sequoiatools/couchbase-cli:7.6
       command: "setting-autofailover -c  {{.Orchestrator}}:{{.RestPort}}
                 -u  {{.RestUsername}} -p  {{.RestPassword}}
                 --enable-auto-failover=0"
@@ -411,7 +411,7 @@
   name: rebalance_witout_wait
   actions:
     -
-      image: sequoiatools/couchbase-cli:7.1
+      image: sequoiatools/couchbase-cli:7.6
       command:  "rebalance
                 -c {{if gt (len `$0`) 2}}$0{{else}}{{.Orchestrator}}{{end}}:{{.RestPort}}
                 -u  {{.RestUsername}} -p  {{.RestPassword}}"
@@ -439,7 +439,7 @@
   name: rebalance_out_wo_wait
   actions:
     -
-      image: sequoiatools/couchbase-cli:7.1
+      image: sequoiatools/couchbase-cli:7.6
       command: "rebalance -c  {{.Orchestrator}}:{{.RestPort}} --server-remove $0  -u  {{.RestUsername}} -p  {{.RestPassword}}"
       condwait: "{{if eq `windows` .Platform }}
                     false
