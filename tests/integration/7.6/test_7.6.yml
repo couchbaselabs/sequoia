@@ -35,7 +35,7 @@
   wait: true
 -
   template: enable_autofailover
-  args: "1,3"
+  args: "120,1"
   requires:  "{{eq true .DoOnce }}"
 
 ############### Enable Plasma Bloom Filter ################
@@ -245,13 +245,13 @@
   wait: true
 
 ###############  build all deferred indexes ################
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 5}} -a build_deferred_index -m 2"
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 5}} -a build_deferred_index -m 5"
   wait: true
 
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 6}} -a build_deferred_index -m 2"
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 6}} -a build_deferred_index -m 5"
   wait: true
 
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 7}} -a build_deferred_index -m 2"
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 7}} -a build_deferred_index -m 5"
   wait: true
 
 
