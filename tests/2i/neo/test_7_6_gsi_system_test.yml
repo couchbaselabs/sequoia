@@ -301,11 +301,11 @@
 -
   template: wait_for_rebalance
   wait: true
-# Sleep for some more time after rebalance completes
+#TODO Remove this and poll :9102/rebalanceCleanupStatus for cleanup status.
 -
    image: sequoiatools/cmd
    entrypoint: sleep
-   command: "320"
+   command: "900"
    wait: true
 
 ###############  Complete the rebalance ################
@@ -338,6 +338,13 @@
    command: "440"
    wait: true
 
+#TODO Remove this and poll :9102/rebalanceCleanupStatus for cleanup status.
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "900"
+   wait: true
+
 # Wait for rebalance to complete
 -
   template: wait_for_rebalance
@@ -363,7 +370,7 @@
 -
    image: sequoiatools/cmd
    entrypoint: sleep
-   command: "340"
+   command: "901"
    wait: true
 
 ###############  Swap single index node ################
@@ -374,7 +381,7 @@
 -
    image: sequoiatools/cmd
    entrypoint: sleep
-   command: "323"
+   command: "902"
    wait: true
 
 ############### Kill indexer ################
@@ -386,7 +393,7 @@
 -
    image: sequoiatools/cmd
    entrypoint: sleep
-   command: "421"
+   command: "903"
    wait: true
 
 # Wait for rebalance to complete
@@ -399,7 +406,14 @@
 -
    image: sequoiatools/cmd
    entrypoint: sleep
-   command: "305"
+   command: "509"
+   wait: true
+
+#TODO Remove this and poll :9102/rebalanceCleanupStatus for cleanup status.
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "900"
    wait: true
 
 ###############  Complete the rebalance ################
@@ -642,6 +656,62 @@
   wait: true
 
 - section_end: change_indexer_topologies
+
+
+############### KV node failover/recovery ###############
+
+- template: failover_and_recover
+  args: "{{.ActiveDataNode 2}}, full"
+  wait: true
+
+###############  Complete the rebalance ################
+- template: rebalance
+
+- template: wait_for_rebalance
+  wait: true
+
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "543"
+   wait: true
+
+###############  Hard failover KV node and rebalance out ################
+- template: hard_failover_node
+  args: "{{.ActiveDataNode 2}}"
+
+###############  Complete the rebalance ################
+- template: rebalance
+
+- template: wait_for_rebalance
+  wait: true
+
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "332"
+   wait: true
+
+
+# ###############  Rebalance in a KV node ################
+- template: rebalance_in
+  args: "{{.InActiveNode}}, data"
+  wait: true
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "534"
+   wait: true
+
+############### Start creating indexes in a loop on bucket4 & bucket5 (Collection CRUD workload) ###############
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -d hotel -a create_index_loop --interval 30 --timeout {{.Scale 1200}}"
+  alias: index_loop1
+
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a build_deferred_index -m 5"
+  wait: true
+
 
 # change the topologies on the query nodes
 - test: tests/2i/neo/test_idx_neo_integration.yml
