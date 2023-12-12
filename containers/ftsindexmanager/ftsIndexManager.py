@@ -5,16 +5,19 @@ import socket
 import string
 import sys
 import threading
+import os
 from concurrent.futures import as_completed
 from concurrent.futures.thread import ThreadPoolExecutor
 from datetime import datetime
 from http.client import RemoteDisconnected, IncompleteRead
 
 from couchbase.cluster import Cluster, ClusterOptions, QueryOptions, ClusterTimeoutOptions
-from couchbase.exceptions import QueryException, QueryIndexAlreadyExistsException, TimeoutException
-from couchbase_core.cluster import PasswordAuthenticator
+from couchbase.exceptions import CouchbaseException, QueryIndexAlreadyExistsException, TimeoutException
+from couchbase.auth import PasswordAuthenticator
 from couchbase.management.collections import *
-from couchbase.management.admin import *
+
+from vectorloader.vectorloader import HDF5_FORMATTED_DATASETS, VectorDataset
+
 import random
 import argparse
 import logging
@@ -200,6 +203,42 @@ HOTEL_DS_FIELDS = [
         "flex_queries": ["ANY v in reviews.date SATISFIES v > \"2001-10-09\" and v < \"2020-12-18\" END"]
     }
 ]
+
+VECTOR_DS_FIELDS = [
+    {
+        "name": "vector_data",
+        "type": "vector",
+        "is_nested_object": False,
+        "field_code": "vector_data"
+    },
+    {
+        "name": "sname",
+        "type": "text",
+        "is_nested_object": False,
+        "field_code": "sname",
+        "queries": [
+            {
+                "wildcard": "ab*",
+                "field": "sname"
+            },
+            {
+                "prefix": "pq",
+                "field": "sname"
+            }
+        ]
+    }
+]
+
+VECTOR_DS_SINGLE_FIELD = [
+    {
+        "name": "vector_data",
+        "type": "vector",
+        "is_nested_object": False,
+        "field_code": "vector_data"
+    }
+]
+
+
 NUM_WORKERS = 2  # Max number of worker threads to execute queries
 FTS_PORT = 8094
 
@@ -239,12 +278,14 @@ class FTSIndexManager:
                             help="Timeout for create index loop. 0 (default) is infinite")
         parser.add_argument("-vt", "--validation_timeout", type=int, default=1200,
                             help="Timeout for item_count_check")
+        parser.add_argument("-k", "--knn_value", type=int, default=3,
+                            help="k value for knn queries")
         parser.add_argument("-a", "--action",
                             choices=["create_index", "create_index_from_map", "run_queries", "delete_all_indexes",
                                      "create_index_loop", "item_count_check", "active_queries_check", "run_flex_queries",
                                      "create_index_from_map_on_bucket", "create_index_for_each_collection",
                                      "run_queries_on_each_index","copy_docs_from_source_collection",
-                                     "update_docs_on_all_collections"],
+                                     "update_docs_on_all_collections", "run_knn_queries"],
                             help="Choose an action to be performed. Valid actions : create_index, run_queries, "
                                  "delete_all_indexes, create_index_loop, item_count_check",
                             default="create_index")
@@ -271,6 +312,7 @@ class FTSIndexManager:
         self.scope = args.scope
         self.num_queries_per_worker = args.num_queries_per_worker
         self.validation_timeout = args.validation_timeout
+        self.knn_value = args.knn_value
 
         self.idx_def_templates = HOTEL_DS_FIELDS
         if self.use_https:
@@ -290,9 +332,30 @@ class FTSIndexManager:
         # If there are more datasets supported, this can be expanded.
         if self.dataset == "hotel":
             self.idx_def_templates = HOTEL_DS_FIELDS
-
-        if self.dataset == "hotel_single_field":
+        elif self.dataset == "hotel_single_field":
             self.idx_def_templates = copy.deepcopy(HOTEL_DS_SINGLE_FIELD)
+        elif self.dataset == "siftsmall":
+            self.idx_def_templates = copy.deepcopy(VECTOR_DS_SINGLE_FIELD)
+        else:
+            self.idx_def_templates = copy.deepcopy(VECTOR_DS_FIELDS)
+
+        self.knn_query = {
+            "query": {
+                "match_none": {}
+            },
+            "explain": True,
+            "fields": ["*"],
+            "knn": [
+                {
+                    "field": "vector_data",
+                    "k": self.knn_value,
+                    "vector": []
+                }
+            ]
+        }
+
+        if self.action == "run_knn_and_fts_queries":
+            self.knn_query["query"] = random.choice(VECTOR_DS_FIELDS[1]["queries"])
 
             # Initialize connections to the cluster
         count = 0
@@ -300,8 +363,7 @@ class FTSIndexManager:
             try:
                 #self.cb_admin = Admin(self.username, self.password, self.node_addr, self.node_port)
                 #self.cb_coll_mgr = CollectionManager(self.cb_admin, self.bucket_name)
-                timeout_options = ClusterTimeoutOptions(kv_timeout=timedelta(seconds=120), query_timeout=timedelta(seconds=10))
-                options = ClusterOptions(PasswordAuthenticator(self.username, self.password), timeout_options=timeout_options)
+                options = ClusterOptions(PasswordAuthenticator(self.username, self.password))
                 if self.use_https:
                     self.log.info("This is Capella run.")
                     self.cluster = Cluster('couchbases://' + self.node_addr + '?ssl=no_verify',
@@ -337,7 +399,7 @@ class FTSIndexManager:
         self.max_num_replica = 0
         self.max_num_partitions = 20
         self.set_max_num_replica()
-    
+
     def fetch_rest_url(self, url):
         """
         meant to find the srv record for Capella runs
@@ -451,10 +513,10 @@ class FTSIndexManager:
     Item Count Check
     1. Get all fts index names
     2. for each index
-        a. extract items_count for index 
+        a. extract items_count for index
         b. extact all collections index created on
         c. Run a count(*) query against all the collection to get the KV item count and add them
-        d. Compare result from a & c and raiseException if not matching 
+        d. Compare result from a & c and raiseException if not matching
     """
 
     def item_count_check(self):
@@ -767,7 +829,7 @@ class FTSIndexManager:
     2. Select field dictionary based on the dataset
     3. Get input on number of indexes to be created
     4. For each index to be created, select between single and multi-collection index
-    5. For each index, randomize the following : 
+    5. For each index, randomize the following :
        - single or multi-collection index
        - collection(s) on which the index has to be created
        - Fields from the field dictionary
@@ -775,20 +837,25 @@ class FTSIndexManager:
        - num partitions
     6. Create a index definition payload based on the fields selected.
     7. Create index
-    
+
     """
 
     def create_fts_index_on_collections(self, collections, count=None, num_replica=None, num_partitions=None):
         random.seed(datetime.now())
         # Randomly select fields to create the index on
-        ds_fields = copy.deepcopy(HOTEL_DS_FIELDS)
         if self.dataset == "hotel":
             ds_fields = copy.deepcopy(HOTEL_DS_FIELDS)
-
-        if self.dataset == "hotel_single_field":
+        elif self.dataset == "hotel_single_field":
             ds_fields = copy.deepcopy(HOTEL_DS_SINGLE_FIELD)
+        elif self.dataset == "siftsmall":
+            ds_fields = copy.deepcopy(VECTOR_DS_SINGLE_FIELD)
+        else:
+            ds_fields = copy.deepcopy(VECTOR_DS_FIELDS)
 
-        num_fields = random.randint(1, len(ds_fields))
+        if ds_fields == VECTOR_DS_FIELDS:
+            num_fields = len(ds_fields)
+        else:
+            num_fields = random.randint(1, len(ds_fields))
         index_fields = []
         for i in range(num_fields):
             field = random.choice(ds_fields)
@@ -885,6 +952,12 @@ class FTSIndexManager:
                     field_dict["index"] = True
                     field_dict["name"] = field["name"]
                     field_dict["type"] = field["type"]
+                    if field["type"] == "vector":
+                        if self.dataset == "siftsmall":
+                            field_dict["dims"] = 128
+                        else:
+                            field_dict["dims"] = HDF5_FORMATTED_DATASETS[self.dataset]["dimension"]
+                        field_dict["similarity"] = random.choice(["dot_product", "l2_norm"])
                     index_def_dict["params"]["mapping"]["types"][collection]["properties"][field_name]["fields"].append(
                         field_dict)
 
@@ -944,12 +1017,17 @@ class FTSIndexManager:
 
         return status, content, response, idx_name
 
-    def create_fts_index_on_bucket(self, count=None, num_replica=None, num_partitions=None):
+    def create_fts_index_on_bucket(self, count=None, num_replica=None, num_partitions=None, vector_field=None):
         random.seed(datetime.now())
         # Randomly select fields to create the index on
-        ds_fields = copy.deepcopy(HOTEL_DS_FIELDS)
         if self.dataset == "hotel":
             ds_fields = copy.deepcopy(HOTEL_DS_FIELDS)
+        elif self.dataset == "hotel_single_field":
+            ds_fields = copy.deepcopy(HOTEL_DS_SINGLE_FIELD)
+        elif self.dataset == "siftsmall":
+            ds_fields = copy.deepcopy(VECTOR_DS_SINGLE_FIELD)
+        else:
+            ds_fields = copy.deepcopy(VECTOR_DS_FIELDS)
 
         num_fields = random.randint(1, len(ds_fields))
         index_fields = []
@@ -1162,7 +1240,7 @@ class FTSIndexManager:
 
 
     """
-    Method to execute a query statement 
+    Method to execute a query statement
     """
 
     def _execute_query(self, statement):
@@ -1189,7 +1267,7 @@ class FTSIndexManager:
                 pass
 
 
-        except QueryException as qerr:
+        except CouchbaseException as qerr:
             self.log.debug("qerr")
             self.log.error(qerr)
         except HTTPException as herr:
@@ -1435,7 +1513,7 @@ class FTSIndexManager:
     Run single FTS query
     """
 
-    def run_fts_query(self, index_name, query, score_none=False):
+    def run_fts_query(self, index_name, query, score_none=False, knn=None):
         uri = "/api/index/" + index_name + "/query"
 
         body = {}
@@ -1447,6 +1525,9 @@ class FTSIndexManager:
 
         if score_none:
             body["score"] = "none"
+
+        if knn:
+            body["knn"] = knn
 
         # Randomize size (not more than 1000)
         size = random.randint(10, 20)
@@ -1500,6 +1581,26 @@ class FTSIndexManager:
                           format(flex_query, str(e)))
 
         return status
+
+    def run_knn_queries(self):
+        vector_index_names = self.get_fts_index_list(self.bucket_name)
+        for index in vector_index_names:
+            queries = self.get_query_vectors()
+            for count, q in enumerate(queries):
+                self.knn_query['knn'][0]['vector'] = q.tolist()
+                self.run_fts_query(index_name=index, query=self.knn_query['query'], knn=self.knn_query['knn'])
+
+
+
+
+    def get_query_vectors(self):
+        ds = VectorDataset(self.dataset)
+        use_hdf5_datasets = True
+        if ds.dataset_name in ds.supported_sift_datasets:
+            use_hdf5_datasets = False
+        ds.extract_vectors_from_file(use_hdf5_datasets=use_hdf5_datasets, type_of_vec="query")
+        print(f"First Query vector:{str(ds.query_vecs[0])}")
+        return ds.query_vecs
 
     def copy_docs_source_collection(self, create_primary=True):
         #create primary index on bucket.scope_0.coll_0"
@@ -1672,6 +1773,8 @@ if __name__ == '__main__':
         ftsIndexMgr.copy_docs_source_collection()
     elif ftsIndexMgr.action == "update_docs_on_all_collections":
         ftsIndexMgr.update_docs()
+    elif ftsIndexMgr.action == "run_knn_queries" or ftsIndexMgr.action == "run_knn_and_fts_queries":
+        ftsIndexMgr.run_knn_queries()
     else:
         print(
             "Invalid choice for action. Choose from the following - create_index | build_deferred_index | drop_all_indexes")

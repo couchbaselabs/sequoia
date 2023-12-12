@@ -17,6 +17,8 @@ import numpy as np
 import wget
 import concurrent.futures
 import uuid
+import json
+import paramiko
 from functools import partial
 from couchbase.exceptions import (
     BucketAlreadyExistsException,
@@ -471,6 +473,18 @@ class VectorDataset:
             return "Error: dataset name" + dataset_name + "is not supported"
 
 
+def get_json_body(counter, vector):
+    id = str(uuid.uuid4())
+    sno = counter
+    sname = number_to_alphabetic(counter)
+    data_record = {
+        "sno": sno,
+        "sname": sname,
+        "id": id,
+        "vector_data": vector.tolist()
+    }
+    return data_record
+
 ########################################################################################
 # Func to upsert vector to couchbase collection.
 def upsert_vector(collection, counter, vector, dataset_name):
@@ -497,6 +511,7 @@ def upsert_vector(collection, counter, vector, dataset_name):
             retry += 1
             print(f"{e} Retrying after 1sec.. {retry} {id}")
             time.sleep(5)
+    return data_record
 
 
 def number_to_alphabetic(n):
@@ -514,6 +529,55 @@ def number_to_alphabetic(n):
         result = chr(remainder + ord('a')) + result
     return result
 
+def execute_command(command, hostname, ssh_username, ssh_password):
+    ssh = paramiko.SSHClient()
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    ssh.connect(hostname, username=ssh_username, password=ssh_password,
+                timeout=120, banner_timeout=120)
+
+    channel = ssh.get_transport().open_session()
+    channel.get_pty()
+    channel.settimeout(900)
+    stdin = channel.makefile('wb')
+    stdout = channel.makefile('rb')
+    stderro = channel.makefile_stderr('rb')
+
+    channel.exec_command(command)
+    data = channel.recv(1024)
+    temp = ""
+    while data:
+        temp += str(data)
+        data = channel.recv(1024)
+    channel.close()
+    stdin.close()
+
+    output = []
+    error = []
+    for line in stdout.read().splitlines():
+        if "No such file or directory" not in line:
+            output.append(line)
+    for line in stderro.read().splitlines():
+        error.append(line)
+    if temp:
+        line = temp.splitlines()
+        output.extend(line)
+    stdout.close()
+    stderro.close()
+
+    ssh.close()
+    return output, error
+
+def move_file_to_remote(local_path, remote_path, hostname, username, password):
+    ssh = paramiko.SSHClient()
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    ssh.connect(hostname, username=username, password=password,
+                timeout=120, banner_timeout=120)
+    sftp = ssh.open_sftp()
+    print(local_path, remote_path)
+    sftp.put(local_path, remote_path)
+    sftp.close()
+    ssh.close()
+    print(f"File '{local_path}' successfully moved to '{remote_path}' on the remote server.")
 
 ########################################################################################
 
@@ -544,7 +608,8 @@ class CouchbaseOps:
             scope_name="",
             collection_name="",
             capella_run=False,
-            cbs=False
+            cbs=False,
+            cbimport=False
     ):
         self.couchbase_endpoint_ip = couchbase_endpoint_ip
         self.username = username
@@ -570,6 +635,7 @@ class CouchbaseOps:
             self.collection_name = collection_name
         self.capella_run = capella_run
         self.cbs = cbs
+        self.cbimport = cbimport
 
     def create_bucket(self, cluster):
         bucket_manager = cluster.buckets()
@@ -741,16 +807,34 @@ class CouchbaseOps:
                         ds.train_vecs[index] = vector[:dim]
 
         if ds.train_vecs is not None and len(ds.train_vecs) > 0:
-            print(f"Spawning {MAX_THREADS} threads to speedup the upsert.")
-            with concurrent.futures.ThreadPoolExecutor(MAX_THREADS) as executor:
-                upsert_partial = partial(upsert_vector, collection, dataset_name=self.dataset_name)
-                futures = {executor.submit(upsert_partial, counter, d): d for counter, d in
-                           enumerate(ds.train_vecs, start=1)}
-                for future in concurrent.futures.as_completed(futures):
-                    try:
-                        future.result()
-                    except Exception as e:
-                        print(f"Error: {e}")
+            if not self.cbimport:
+                print(f"Spawning {MAX_THREADS} threads to speedup the upsert.")
+                with concurrent.futures.ThreadPoolExecutor(MAX_THREADS) as executor:
+                    upsert_partial = partial(upsert_vector, collection, dataset_name=self.dataset_name)
+                    futures = {executor.submit(upsert_partial, counter, d): d for counter, d in
+                            enumerate(ds.train_vecs, start=1)}
+                    for future in concurrent.futures.as_completed(futures):
+                        try:
+                            future.result()
+                        except Exception as e:
+                            print(f"Error: {e}")
+            else:
+                filename = f"{uuid.uuid4().hex}.json"
+                with open(filename, "w") as json_file:
+                    for counter, d in enumerate(ds.train_vecs, start=1):
+                        json_obj = json.dumps(get_json_body(counter, d))
+                        json_file.write(json_obj + "\n")
+
+                move_file_to_remote(os.getcwd() + "/" + filename, "/tmp/" + filename, self.couchbase_endpoint_ip, "root", "couchbase")
+
+                cbimport_command = f"/opt/couchbase/bin/cbimport json --cluster {self.couchbase_endpoint_ip} --bucket {self.bucket_name} " \
+                          f"--dataset /tmp/{filename} --format lines --username {self.username} --password {self.password} " \
+                          f"--scope-collection-exp '{self.scope_name}.{self.collection_name}' --generate-key '%id%'"
+                stdout, stderr = execute_command(cbimport_command, self.couchbase_endpoint_ip, "root", "couchbase")
+                print(stdout, stderr)
+
+                rm_file_command = f"rm -f /tmp/{filename}"
+                execute_command(rm_file_command, self.couchbase_endpoint_ip, "root", "couchbase")
         else:
             print("Error: train vectors data structure is empty, please check the dataset")
 
@@ -773,6 +857,7 @@ class VectorLoader:
         parser.add_argument("-cbs", "--create_bucket_structure", default=True)
         parser.add_argument("-per", "--percentages_to_resize", nargs='*', type=float, default=[])
         parser.add_argument("-dims", "--dimensions_for_resize", nargs='*', type=int, default=[])
+        parser.add_argument("-i", "--cbimport", help="Use cbimport to load documents", default=False)
 
         args = parser.parse_args()
         self.node = args.node
@@ -784,6 +869,7 @@ class VectorLoader:
             self.dataset = [self.dataset]
         self.scope = args.scope
         self.collection = args.collection
+        self.cbimport = args.cbimport
         self.capella_run = args.capella
         self.dim_for_resize = args.dimensions_for_resize
         self.percentage_to_resize = args.percentages_to_resize
@@ -825,7 +911,8 @@ class VectorLoader:
                 dataset_name=dataset_name,
                 scope_name=self.scope, collection_name=self.collection,
                 capella_run=self.capella_run,
-                cbs=self.cbs
+                cbs=self.cbs,
+                cbimport=self.cbimport
             )
 
             cbops.upsert(dims=self.dim_for_resize, percentages=self.percentage_to_resize)
