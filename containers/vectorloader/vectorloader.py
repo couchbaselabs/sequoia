@@ -647,14 +647,10 @@ class CouchbaseOps:
         collection = bucket.scope(self.scope_name).collection(self.collection_name)
         return collection
 
-    def upsert(self, use_hdf5_datasets=False):
+    def upsert(self):
         """
         Dumps train vectors into Couchbase collection which is created
         automatically
-
-        Args:
-            use_hdf5_datasets (bool, optional): To choose tar.gz or hdf5 files .
-            Defaults to False.
         """
 
         # create Bucket, Scope and Collection.
@@ -665,6 +661,9 @@ class CouchbaseOps:
 
         # initialize the needed vectors.
         ds = SiftDataset(self.dataset_name)
+        use_hdf5_datasets = True
+        if self.dataset_name in ds.supported_sift_datasets:
+            use_hdf5_datasets = False
         ds.extract_vectors_from_file(use_hdf5_datasets, type_of_vec="train")
 
         # dump train vectors into couchbase collection in vector data
@@ -683,6 +682,7 @@ class CouchbaseOps:
         else:
             print("Error: train vectors data structure is empty, please check the dataset")
 
+
 class VectorLoader:
 
     def __init__(self):
@@ -694,7 +694,8 @@ class VectorLoader:
         parser.add_argument("-p", "--password", help="Couchbase Server Cluster Password", required=True)
         parser.add_argument("-b", "--bucket", help="Bucket name on which indexes are to be created", default="")
         parser.add_argument("-sc", "--scope", help="Scope name on which indexes are to be created", default="")
-        parser.add_argument("-coll", "--collection", help="Collection name on which indexes are to be created", default="")
+        parser.add_argument("-coll", "--collection", help="Collection name on which indexes are to be created",
+                            default="")
         parser.add_argument("-ds", "--dataset", help=f"Choose one of: {', '.join(valid_choices)}",
                             default=valid_choices)
 
@@ -720,7 +721,7 @@ class VectorLoader:
                 dataset_name=dataset_name,
                 scope_name=self.scope, collection_name=self.collection
             )
-            cbops.upsert(use_hdf5_datasets=True)
+            cbops.upsert()
             break
 
 
