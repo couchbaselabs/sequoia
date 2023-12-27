@@ -91,12 +91,12 @@ class IndexManager:
                                      "drop_index_loop", "alter_indexes", "enable_cbo", "delete_statistics",
                                      "item_count_check",
                                      "random_recovery", "create_udf", "drop_udf", "create_n1ql_udf", "validate_tenant_affinity", "set_fast_rebalance_config",
-                                     "create_n_indexes_on_buckets", "validate_s3_cleanup", "copy_aws_keys", "cleanup_s3", "poll_total_requests_during_rebalance"],
+                                     "create_n_indexes_on_buckets", "validate_s3_cleanup", "copy_aws_keys", "cleanup_s3", "poll_total_requests_during_rebalance", "wait_until_rebalance_cleanup_done"],
                             help="Choose an action to be performed. Valid actions : create_index | build_deferred_index | drop_all_indexes | create_index_loop | "
                                  "drop_index_loop | alter_indexes | enable_cbo | delete_statistics "
                                  "| item_count_check | random_recovery | create_udf | drop_udf | create_n1ql_udf "
                                  "| validate_tenant_affinity | set_fast_rebalance_config | create_n_indexes_on_buckets "
-                                 "| copy_aws_keys | cleanup_s3 | validate_s3_cleanup | poll_total_requests_during_rebalance",
+                                 "| copy_aws_keys | cleanup_s3 | validate_s3_cleanup | poll_total_requests_during_rebalance | wait_until_rebalance_cleanup_done",
                             default="create_index")
         parser.add_argument("-m", "--build_max_collections", type=int, default=0,
                             help="Build Indexes on max number of collections")
@@ -1555,6 +1555,26 @@ class IndexManager:
             return False
         self.log.info(f"Error while fetching rebalanceProgress - {endpoint}")
 
+    def wait_until_rebalance_cleanup_done(self, timeout=3600):
+        nodes_list = self.get_indexer_nodes()
+        time_end, all_nodes_cleaned_up = time.time() + timeout, False
+        while time.time() < time_end and not all_nodes_cleaned_up:
+            nodes_cleaned_up = []
+            for node in nodes_list:
+                endpoint = f"{self.scheme}://{node}:{self.node_port_index}/rebalanceCleanupStatus"
+                self.log.info(f"Endpoint used for is_rebalance_running {endpoint}")
+                response = requests.get(endpoint, auth=(
+                        self.username, self.password), verify=False, timeout=300)
+                if response.ok:
+                    status = response.text
+                    self.log.info(f"Cleanup status {status}")
+                    if status == 'done':
+                        nodes_cleaned_up.append(node)
+                time.sleep(10)
+            if len(nodes_cleaned_up) == len(nodes_list):
+                all_nodes_cleaned_up = True
+            time.sleep(30)
+
     def poll_total_requests_during_rebalance(self):
         nodes_list = self.get_indexer_nodes()
         self.log.info(f"List of nodes with index service{nodes_list}")
@@ -1668,6 +1688,8 @@ if __name__ == '__main__':
         indexMgr.cleanup_s3()
     elif indexMgr.action == "poll_total_requests_during_rebalance":
         indexMgr.poll_total_requests_during_rebalance()
+    elif indexMgr.action == 'wait_until_rebalance_cleanup_done':
+        indexMgr.wait_until_rebalance_cleanup_done()
     else:
         print("Invalid choice for action. Choose from the following - "
               "create_index | build_deferred_index | drop_all_indexes | create_index_loop | alter_indexes | "
