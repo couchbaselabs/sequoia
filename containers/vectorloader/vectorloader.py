@@ -25,9 +25,13 @@ from couchbase.exceptions import (
 )
 from couchbase.management.buckets import BucketType, CreateBucketSettings, ConflictResolutionType
 from couchbase.management.collections import CollectionSpec
+
 import requests
 import argparse
 import time
+import dns.resolver
+from couchbase.cluster import ClusterTimeoutOptions
+from datetime import timedelta
 
 ########################################################################################
 # Global Variables
@@ -80,7 +84,7 @@ HDF5_FORMATTED_DATASETS = {
 
 ########################################################################################
 
-class SiftDataset:
+class VectorDataset:
     """
     Deals with SIFT/GIST data set at http://corpus-texmex.irisa.fr/
     """
@@ -479,15 +483,19 @@ def upsert_vector(collection, counter, vector, dataset_name):
         "vector_data": vector.tolist()
     }
 
+    last_print_time = time.time()
     for retry in range(3):
         try:
-            print(f"From dataset {dataset_name} Uploading vector no: {counter} with id: {id} to {collection.name}")
+            elapsed_time = time.time() - last_print_time
+            if elapsed_time >= 0:
+                print(f"From dataset {dataset_name} Uploading vector no: {counter} with ID: {id} to {collection.name}")
+                last_print_time = time.time()
             collection.upsert(id, data_record)
         except Exception as e:
             print(f"{e} Error uploading vector no: {counter} with id: {id} to collection: {collection.name}")
             retry += 1
             print(f"{e} Retrying after 1sec.. {retry} {id}")
-            time.sleep(1)
+            time.sleep(5)
 
 
 def number_to_alphabetic(n):
@@ -533,7 +541,9 @@ class CouchbaseOps:
             dataset_name="sift",
             bucket_name="",
             scope_name="",
-            collection_name=""
+            collection_name="",
+            capella_run=False,
+            cbs=False
     ):
         self.couchbase_endpoint_ip = couchbase_endpoint_ip
         self.username = username
@@ -557,6 +567,8 @@ class CouchbaseOps:
             )
         else:
             self.collection_name = collection_name
+        self.capella_run = capella_run
+        self.cbs = cbs
 
     def create_bucket(self, cluster):
         bucket_manager = cluster.buckets()
@@ -600,21 +612,14 @@ class CouchbaseOps:
             print(
                 f"Failed to create collection. Status code: {response.status_code}, Response: {response.text}")
 
-    def create_bucket_scope_collection(self):
+    def create_bucket_scope_collection(self, cluster, couchbase_endpoint):
         """
         Creates couchbase bucket, scope and collection
 
         Returns:
             couchbase collection object
         """
-        couchbase_endpoint = "couchbase://" + self.couchbase_endpoint_ip
 
-        # Check if the scope exists, create it if not
-        print(
-            f"user:{self.username} pass: {self.password} endpoint: {couchbase_endpoint} bucket_name: {self.bucket_name} {self.scope_name}   {self.collection_name} "
-        )
-        auth = PasswordAuthenticator(self.username, self.password)
-        cluster = Cluster(couchbase_endpoint, ClusterOptions(auth))
         print(f"Creating bucket on {couchbase_endpoint} with bucket name:{self.bucket_name}")
         self.create_bucket(cluster)
         time.sleep(5)
@@ -643,7 +648,7 @@ class CouchbaseOps:
             print(f"Collection with name {self.collection_name} exists already, skipping creation again")
         except Exception as e:
             print(f"Error: Collection Creation failed, collection name: {self.collection_name}")
-
+        time.sleep(10)
         collection = bucket.scope(self.scope_name).collection(self.collection_name)
         return collection
 
@@ -651,19 +656,45 @@ class CouchbaseOps:
         """
         Dumps train vectors into Couchbase collection which is created
         automatically
+
+        Args:
+            use_hdf5_datasets (bool, optional): To choose tar.gz or hdf5 files .
+            Defaults to False.
         """
+        auth = PasswordAuthenticator(self.username, self.password)
+        if not self.capella_run:
+            couchbase_endpoint = "couchbase://" + self.couchbase_endpoint_ip
+            cluster = Cluster(couchbase_endpoint, ClusterOptions(auth))
+        else:
+            timeout_options = ClusterTimeoutOptions(kv_timeout=timedelta(seconds=120),
+                                                    query_timeout=timedelta(seconds=10))
+            options = ClusterOptions(PasswordAuthenticator(self.username, self.password),
+                                     timeout_options=timeout_options)
+            cluster = Cluster('couchbases://' + self.couchbase_endpoint_ip + '?ssl=no_verify',
+                              options)
+            couchbase_endpoint = f"couchbases://{self.couchbase_endpoint_ip}"
+
+        print(
+            f"user:{self.username} pass: {self.password} endpoint: {couchbase_endpoint} bucket_name: {self.bucket_name} {self.scope_name}   {self.collection_name} "
+        )
 
         # create Bucket, Scope and Collection.
-        collection = self.create_bucket_scope_collection()
-        if collection is None:
-            print(f"Error: collection object cannot be None")
-            return
+        if self.cbs:
+            time.sleep(10)
+            collection = self.create_bucket_scope_collection(cluster, couchbase_endpoint)
+            if collection is None:
+                print(f"Error: collection object cannot be None")
+                return
+        else:
+            bucket = cluster.bucket(self.bucket_name)
+            collection = bucket.scope(self.scope_name).collection(self.collection_name)
 
         # initialize the needed vectors.
-        ds = SiftDataset(self.dataset_name)
+        ds = VectorDataset(self.dataset_name)
         use_hdf5_datasets = True
         if self.dataset_name in ds.supported_sift_datasets:
             use_hdf5_datasets = False
+
         ds.extract_vectors_from_file(use_hdf5_datasets, type_of_vec="train")
 
         # dump train vectors into couchbase collection in vector data
@@ -688,8 +719,7 @@ class VectorLoader:
     def __init__(self):
         parser = argparse.ArgumentParser()
         valid_choices = ["fashion-mnist", "mnist", "gist"]
-        parser.add_argument("-n", "--node", help="Couchbase Server Node Address", required=True)
-        parser.add_argument("-c", "--capella", help="Set to True for Capella system tests run", default=False)
+        parser.add_argument("-n", "--node", help="Couchbase Server Node Address/ host", required=True)
         parser.add_argument("-u", "--username", help="Couchbase Server Cluster Username", required=True)
         parser.add_argument("-p", "--password", help="Couchbase Server Cluster Password", required=True)
         parser.add_argument("-b", "--bucket", help="Bucket name on which indexes are to be created", default="")
@@ -698,6 +728,8 @@ class VectorLoader:
                             default="")
         parser.add_argument("-ds", "--dataset", help=f"Choose one of: {', '.join(valid_choices)}",
                             default=valid_choices)
+        parser.add_argument("-c", "--capella", default=False)
+        parser.add_argument("-cbs", "--create_bucket_structure", default=True)
 
         args = parser.parse_args()
         self.node = args.node
@@ -705,22 +737,48 @@ class VectorLoader:
         self.password = args.password
         self.bucket = args.bucket
         self.dataset = args.dataset
-        print(type(self.dataset))
         if not isinstance(self.dataset, list):
             self.dataset = [self.dataset]
         self.scope = args.scope
         self.collection = args.collection
         self.capella_run = args.capella
+        if self.capella_run == 'True' or self.capella_run == 'true':
+            self.capella_run = True
+        else:
+            self.capella_run = False
+        self.cbs = args.create_bucket_structure
+        if self.cbs == 'True' or self.cbs == 'true':
+            self.cbs = True
+        else:
+            self.cbs = False
+    def fetch_rest_url(self, url):
+
+        """
+        meant to find the srv record for Capella runs
+        """
+        print("This is a Capella run. Finding the srv domain for {}".format(url))
+        srv_info = {}
+        srv_records = dns.resolver.query('_couchbases._tcp.' + url, 'SRV')
+        for srv in srv_records:
+            srv_info['host'] = str(srv.target).rstrip('.')
+            srv_info['port'] = srv.port
+        print("This is a Capella run. Srv info {}".format(srv_info))
+        return srv_info['host']
 
     def load_data(self):
+        if self.capella_run and self.cbs:
+            print("creating bucket isn't allowed with capella clusters using SDK, aborting")
+            return
         for dataset_name in self.dataset:
-            print(self.dataset, dataset_name)
             cbops = CouchbaseOps(
                 couchbase_endpoint_ip=self.node, username=self.username, password=self.password,
                 bucket_name=self.bucket,
                 dataset_name=dataset_name,
-                scope_name=self.scope, collection_name=self.collection
+                scope_name=self.scope, collection_name=self.collection,
+                capella_run=self.capella_run,
+                cbs=self.cbs
             )
+
             cbops.upsert()
             break
 
