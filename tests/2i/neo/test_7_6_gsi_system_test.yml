@@ -10,14 +10,14 @@
   args: "{{.ActiveIndexNode 0}}, 'indexer.settings.num_replica':1"
   requires:  "{{eq true .DoOnce }}"
 
-## To test file based rebalance improvements
-############### useSharedLSS ################
+### To test file based rebalance improvements
+############### shardAffinity ################
 - template: set_gsi_config
   args: "{{.ActiveIndexNode 0}}, 'indexer.settings.enable_shard_affinity':true"
   requires:  "{{eq true .DoOnce }}"
 
 ## To test file based rebalance improvements
-############### maxHeapThreshold ################
+############### shardAffinity ################
 - template: set_gsi_config
   args: "{{.ActiveIndexNode 0}}, 'indexer.settings.provisioned.enable_shard_affinity':true"
   requires:  "{{eq true .DoOnce }}"
@@ -269,7 +269,7 @@
 -
    image: sequoiatools/cmd
    entrypoint: sleep
-   command: "600"
+   command: "3600"
    wait: true
 
 - section_start: change_indexer_topologies
