@@ -29,6 +29,7 @@ from couchbase.management.collections import CollectionSpec
 import requests
 import argparse
 import time
+import random
 import dns.resolver
 from couchbase.cluster import ClusterTimeoutOptions
 from datetime import timedelta
@@ -652,7 +653,7 @@ class CouchbaseOps:
         collection = bucket.scope(self.scope_name).collection(self.collection_name)
         return collection
 
-    def upsert(self):
+    def upsert(self, dims = 0, percentages = 0):
         """
         Dumps train vectors into Couchbase collection which is created
         automatically
@@ -699,6 +700,46 @@ class CouchbaseOps:
 
         # dump train vectors into couchbase collection in vector data
         # type fomat.
+        if ds.train_vecs is not None:
+
+            total_vectors = len(ds.train_vecs)
+
+            # Get random indices for vectors to resize
+            indices_to_resize = random.sample(range(total_vectors), total_vectors)
+
+            if len(percentages) != len(dims):
+                raise ValueError("percentages and dims lists must have the same length")
+
+            total_percentage = 0
+            for per in percentages:
+                total_percentage += per
+
+            if total_percentage > 1:
+                raise ValueError("Total percentage of docs to update should be less than 1")
+
+            for percentage, dim in zip(percentages, dims):
+                vectors_to_resize = int(percentage * total_vectors)
+
+                current_indices = indices_to_resize[:vectors_to_resize]
+                indices_to_resize = indices_to_resize[vectors_to_resize:]
+                ds.train_vecs = list(ds.train_vecs)
+                print("Number of docs resized with dimension {} is {}".format(dim, len(current_indices)))
+
+                for index in current_indices:
+
+                    vector = ds.train_vecs[index]
+                    current_dim = len(vector)
+
+                    # Resize the vector to the desired dimension
+                    if current_dim < dim:
+                        # If the current dimension is less than the desired dimension, repeat the values
+                        repeat_values = dim - current_dim
+                        repeated_values = np.tile(vector, ((dim + current_dim - 1) // current_dim))
+                        ds.train_vecs[index] = repeated_values[:dim]
+                    elif current_dim > dim:
+                        # If the current dimension is greater than the desired dimension, truncate the vector
+                        ds.train_vecs[index] = vector[:dim]
+
         if ds.train_vecs is not None and len(ds.train_vecs) > 0:
             print(f"Spawning {MAX_THREADS} threads to speedup the upsert.")
             with concurrent.futures.ThreadPoolExecutor(MAX_THREADS) as executor:
@@ -730,6 +771,8 @@ class VectorLoader:
                             default=valid_choices)
         parser.add_argument("-c", "--capella", default=False)
         parser.add_argument("-cbs", "--create_bucket_structure", default=True)
+        parser.add_argument("-per", "--percentages_to_resize", nargs='*', type=float, default=[])
+        parser.add_argument("-dims", "--dimensions_for_resize", nargs='*', type=int, default=[])
 
         args = parser.parse_args()
         self.node = args.node
@@ -742,6 +785,12 @@ class VectorLoader:
         self.scope = args.scope
         self.collection = args.collection
         self.capella_run = args.capella
+        self.dim_for_resize = args.dimensions_for_resize
+        self.percentage_to_resize = args.percentages_to_resize
+        print("Type of dims to resize: {}".format(type(self.dim_for_resize)))
+        print(self.dim_for_resize)
+        print("Type of perc to resize: {}".format(type(self.percentage_to_resize)))
+        print(self.percentage_to_resize)
         if self.capella_run == 'True' or self.capella_run == 'true':
             self.capella_run = True
         else:
@@ -779,7 +828,7 @@ class VectorLoader:
                 cbs=self.cbs
             )
 
-            cbops.upsert()
+            cbops.upsert(dims=self.dim_for_resize, percentages=self.percentage_to_resize)
             break
 
 
