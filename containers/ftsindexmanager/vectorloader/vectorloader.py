@@ -719,7 +719,7 @@ class CouchbaseOps:
         collection = bucket.scope(self.scope_name).collection(self.collection_name)
         return collection
 
-    def upsert(self, dims = 0, percentages = 0):
+    def upsert(self, dims = 0, percentages = 0, iterations=1):
         """
         Dumps train vectors into Couchbase collection which is created
         automatically
@@ -833,11 +833,12 @@ class CouchbaseOps:
 
                 move_file_to_remote(os.getcwd() + "/" + filename, "/tmp/" + filename, node_ip, "root", "couchbase")
 
-                cbimport_command = f"/opt/couchbase/bin/cbimport json --cluster {hostname} --bucket {self.bucket_name} " \
-                          f"--dataset /tmp/{filename} --format lines --username {self.username} --password {self.password} " \
-                          f"--scope-collection-exp '{self.scope_name}.{self.collection_name}' --generate-key '%id%'"
-                stdout, stderr = execute_command(cbimport_command, node_ip, "root", "couchbase")
-                print(stdout, stderr)
+                for i in range(iterations):
+                    cbimport_command = f"/opt/couchbase/bin/cbimport json --cluster {hostname} --bucket {self.bucket_name} " \
+                            f"--dataset /tmp/{filename} --format lines --username {self.username} --password {self.password} " \
+                            f"--scope-collection-exp '{self.scope_name}.{self.collection_name}' --generate-key '%id%-{i}'"
+                    stdout, stderr = execute_command(cbimport_command, node_ip, "root", "couchbase")
+                    print(stdout, stderr)
 
                 rm_file_command = f"rm -f /tmp/{filename}"
                 execute_command(rm_file_command, node_ip, "root", "couchbase")
@@ -864,6 +865,7 @@ class VectorLoader:
         parser.add_argument("-per", "--percentages_to_resize", nargs='*', type=float, default=[])
         parser.add_argument("-dims", "--dimensions_for_resize", nargs='*', type=int, default=[])
         parser.add_argument("-i", "--cbimport", help="Use cbimport to load documents", default=False)
+        parser.add_argument("-iter", "--iterations", help="Number of iterations of cbimport to run", type=int, default=1)
 
         args = parser.parse_args()
         self.node = args.node
@@ -879,6 +881,9 @@ class VectorLoader:
         self.capella_run = args.capella
         self.dim_for_resize = args.dimensions_for_resize
         self.percentage_to_resize = args.percentages_to_resize
+        self.iterations = args.iterations
+        print("Iterations: {}".format(self.iterations))
+        print(type(self.iterations))
         print("Type of dims to resize: {}".format(type(self.dim_for_resize)))
         print(self.dim_for_resize)
         print("Type of perc to resize: {}".format(type(self.percentage_to_resize)))
@@ -921,7 +926,8 @@ class VectorLoader:
                 cbimport=self.cbimport
             )
 
-            cbops.upsert(dims=self.dim_for_resize, percentages=self.percentage_to_resize)
+            cbops.upsert(dims=self.dim_for_resize, percentages=self.percentage_to_resize,
+                         iterations=self.iterations)
             break
 
 
