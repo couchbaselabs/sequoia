@@ -825,16 +825,22 @@ class CouchbaseOps:
                         json_obj = json.dumps(get_json_body(counter, d))
                         json_file.write(json_obj + "\n")
 
-                move_file_to_remote(os.getcwd() + "/" + filename, "/tmp/" + filename, self.couchbase_endpoint_ip, "root", "couchbase")
+                hostname = self.couchbase_endpoint_ip
+                node_ip = self.couchbase_endpoint_ip
+                if self.capella_run:
+                    hostname = f"couchbases://{self.couchbase_endpoint_ip}"
+                    node_ip = "172.23.105.211"
 
-                cbimport_command = f"/opt/couchbase/bin/cbimport json --cluster {self.couchbase_endpoint_ip} --bucket {self.bucket_name} " \
+                move_file_to_remote(os.getcwd() + "/" + filename, "/tmp/" + filename, node_ip, "root", "couchbase")
+
+                cbimport_command = f"/opt/couchbase/bin/cbimport json --cluster {hostname} --bucket {self.bucket_name} " \
                           f"--dataset /tmp/{filename} --format lines --username {self.username} --password {self.password} " \
                           f"--scope-collection-exp '{self.scope_name}.{self.collection_name}' --generate-key '%id%'"
-                stdout, stderr = execute_command(cbimport_command, self.couchbase_endpoint_ip, "root", "couchbase")
+                stdout, stderr = execute_command(cbimport_command, node_ip, "root", "couchbase")
                 print(stdout, stderr)
 
                 rm_file_command = f"rm -f /tmp/{filename}"
-                execute_command(rm_file_command, self.couchbase_endpoint_ip, "root", "couchbase")
+                execute_command(rm_file_command, node_ip, "root", "couchbase")
         else:
             print("Error: train vectors data structure is empty, please check the dataset")
 
