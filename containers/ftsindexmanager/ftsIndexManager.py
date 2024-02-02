@@ -59,7 +59,6 @@ HOTEL_DS_SINGLE_FIELD = [
     }
 ]
 
-
 # Some constants
 HOTEL_DS_FIELDS = [
     {
@@ -238,7 +237,6 @@ VECTOR_DS_SINGLE_FIELD = [
     }
 ]
 
-
 NUM_WORKERS = 2  # Max number of worker threads to execute queries
 FTS_PORT = 8094
 
@@ -283,13 +281,16 @@ class FTSIndexManager:
         parser.add_argument("-dims", "--vector_index_dimension", type=int, default=128)
         parser.add_argument("-a", "--action",
                             choices=["create_index", "create_index_from_map", "run_queries", "delete_all_indexes",
-                                     "create_index_loop", "item_count_check", "active_queries_check", "run_flex_queries",
+                                     "create_index_loop", "item_count_check", "active_queries_check",
+                                     "run_flex_queries",
                                      "create_index_from_map_on_bucket", "create_index_for_each_collection",
-                                     "run_queries_on_each_index","copy_docs_from_source_collection",
+                                     "run_queries_on_each_index", "copy_docs_from_source_collection",
                                      "update_docs_on_all_collections", "run_knn_queries"],
                             help="Choose an action to be performed. Valid actions : create_index, run_queries, "
                                  "delete_all_indexes, create_index_loop, item_count_check",
                             default="create_index")
+        parser.add_argument("-skip_def", "--skip_default", default=False,
+                            help="skip default scope and collection")
 
         args = parser.parse_args()
         self.log = logging.getLogger("ftsindexmanager")
@@ -316,6 +317,7 @@ class FTSIndexManager:
         self.knn_value = args.knn_value
         self.vector_index_dimension = args.vector_index_dimension
 
+        self.skip_default = args.skip_default
         self.idx_def_templates = HOTEL_DS_FIELDS
         if self.use_https:
             self.fts_port = 18094
@@ -365,8 +367,8 @@ class FTSIndexManager:
         count = 0
         while True:
             try:
-                #self.cb_admin = Admin(self.username, self.password, self.node_addr, self.node_port)
-                #self.cb_coll_mgr = CollectionManager(self.cb_admin, self.bucket_name)
+                # self.cb_admin = Admin(self.username, self.password, self.node_addr, self.node_port)
+                # self.cb_coll_mgr = CollectionManager(self.cb_admin, self.bucket_name)
                 options = ClusterOptions(PasswordAuthenticator(self.username, self.password))
                 if self.use_https:
                     self.log.info("This is Capella run.")
@@ -380,7 +382,7 @@ class FTSIndexManager:
                 break
             except Exception as Ex:
                 print(str(Ex))
-                count+=1
+                count += 1
                 if count == 5:
                     raise
 
@@ -453,7 +455,6 @@ class FTSIndexManager:
 
     def get_all_scopes_with_multiple_collections(self):
         cb_scopes = self.cb.collections().get_all_scopes()
-        print(cb_scopes)
 
         multi_coll_scopes = []
 
@@ -557,7 +558,8 @@ class FTSIndexManager:
                 if index_name not in indexes_validated:
                     index_item_count = self.get_fts_index_doc_count(index_name)
                     all_index_col_count = self.get_fts_index_collections_count(index_name)
-                    self.log.info(f'{index_name} : index_count : {index_item_count}, all_index_col_count : {all_index_col_count}')
+                    self.log.info(
+                        f'{index_name} : index_count : {index_item_count}, all_index_col_count : {all_index_col_count}')
                     if all_index_col_count is None:
                         indexes_validated.append(index_name)
                         break
@@ -580,6 +582,9 @@ class FTSIndexManager:
 
     def create_fts_indexes_from_map_for_bucket(self):
         coll_list = self.get_all_collections()
+        if self.skip_default:
+            if '_default._default' in coll_list:
+                coll_list.remove('_default._default')
         multi_coll_scopes = self.get_all_scopes_with_multiple_collections()
         partition_map_list = self.index_partition_map.split(",")
         for index_map in partition_map_list:
@@ -595,7 +600,7 @@ class FTSIndexManager:
                     index_type = "single"
 
                 if index_type == "single":
-                    collections.append(random.choice(coll_list))
+                    collections.append(coll_list[i % len(coll_list)])
                 else:
                     # Select a scope with multiple collections first
                     scope_obj = random.choice(multi_coll_scopes)
@@ -606,8 +611,10 @@ class FTSIndexManager:
 
                 self.log.info("===== Creating {1} FTS index on {0} =====".format(collections, index_type))
                 status, content, response, idx_name = self.create_fts_index_on_collections(collections,
-                                                                                           num_replica=int(num_replicas),
-                                                                                           num_partitions=int(num_partitions))
+                                                                                           num_replica=int(
+                                                                                               num_replicas),
+                                                                                           num_partitions=int(
+                                                                                               num_partitions))
 
                 if not status:
                     self.log.info("Content = {0} \nResponse = {1}".format(content, response))
@@ -615,7 +622,8 @@ class FTSIndexManager:
 
                 # Remove the scope or collection on which the index was created
                 if index_type == "single":
-                    coll_list.remove(collections[0])
+                    # coll_list.remove(collections[0])
+                    pass
                 else:
                     multi_coll_scopes.remove(scope_obj)
 
@@ -633,7 +641,8 @@ class FTSIndexManager:
 
                 self.log.info("===== Creating FTS index on {0} =====".format(self.bucket_name))
                 status, content, response, idx_name = self.create_fts_index_on_bucket(num_replica=int(num_replicas),
-                                                                                      num_partitions=int(num_partitions))
+                                                                                      num_partitions=int(
+                                                                                          num_partitions))
 
                 if not status:
                     self.log.info("Content = {0} \nResponse = {1}".format(content, response))
@@ -641,13 +650,11 @@ class FTSIndexManager:
 
     def create_fts_index_for_each_collection(self):
         coll_list = self.get_all_collections()
-        print(coll_list)
         coll_list.remove("_default._default")
         count = 0
         for coll in coll_list:
-            print(coll)
             if self.scope:
-                if self.scope+"." not in coll:
+                if self.scope + "." not in coll:
                     continue
             collections = [coll]
             self.log.info("===== Creating {1} FTS index on {0} =====".format(collections, "single"))
@@ -747,8 +754,8 @@ class FTSIndexManager:
                 if not status:
                     self.log.info("Content = {0} \nResponse = {1}".format(content, response))
                     self.log.info("Index creation on {0} did not succeed. Pls check logs.".format(collections))
-                    #command = f'yum install tcpdump -y;timeout 600 tcpdump -W 1 -G 300 -w tcp_dump_file_{idx_name}.pcap -s 0 port 8094'
-                    #self.execute_command(command, self.node_addr, "root", "couchbase")
+                    # command = f'yum install tcpdump -y;timeout 600 tcpdump -W 1 -G 300 -w tcp_dump_file_{idx_name}.pcap -s 0 port 8094'
+                    # self.execute_command(command, self.node_addr, "root", "couchbase")
                 else:
                     self.log.info(f'Index creation on {idx_name} succeeded. Content = {content}, Response = {response}')
 
@@ -784,8 +791,8 @@ class FTSIndexManager:
             if not status:
                 self.log.info("Content = {0} \nResponse = {1}".format(content, response))
                 self.log.info("Index creation on {0} did not succeed. Pls check logs.".format(self.bucket_name))
-                #command = f'yum install tcpdump -y;timeout 600 tcpdump -W 1 -G 300 -w tcp_dump_file_{idx_name}.pcap -s 0 port 8094'
-                #self.execute_command(command, self.node_addr, "root", "couchbase")
+                # command = f'yum install tcpdump -y;timeout 600 tcpdump -W 1 -G 300 -w tcp_dump_file_{idx_name}.pcap -s 0 port 8094'
+                # self.execute_command(command, self.node_addr, "root", "couchbase")
             else:
                 self.log.info(f'Index creation on {idx_name} succeeded. Content = {content}, Response = {response}')
 
@@ -864,7 +871,7 @@ class FTSIndexManager:
     """
 
     def create_fts_index_on_collections(self, collections, count=None, num_replica=None, num_partitions=None):
-        random.seed(datetime.now())
+        # random.seed(datetime.now())
         # Randomly select fields to create the index on
         if self.dataset == "hotel":
             ds_fields = copy.deepcopy(HOTEL_DS_FIELDS)
@@ -895,7 +902,8 @@ class FTSIndexManager:
 
         # Generate index name. Index names will also have field codes so that the query runner can decode the fields used in the index.
         for i in range(5):
-            idx_name = "bucket_"+self.bucket_name+"_idx_" + ''.join(random.choice(string.ascii_lowercase) for i in range(5))
+            idx_name = "bucket_" + self.bucket_name + "_idx_" + ''.join(
+                random.choice(string.ascii_lowercase) for i in range(5))
             if count:
                 idx_name += "_" + str(count)
             for field in index_fields:
@@ -933,7 +941,7 @@ class FTSIndexManager:
 
         # Index mapping common properties
         index_def_dict["params"]["mapping"] = {}
-        #index_def_dict["params"]["mapping"]["default_analyzer"] = "keyword"
+        # index_def_dict["params"]["mapping"]["default_analyzer"] = "keyword"
         index_def_dict["params"]["mapping"]["default_datetime_parser"] = "dateTimeOptional"
         index_def_dict["params"]["mapping"]["default_field"] = "_all"
         index_def_dict["params"]["mapping"]["default_mapping"] = {}
@@ -1029,7 +1037,7 @@ class FTSIndexManager:
         # Create FTS index via REST
         index_definition = json.dumps(index_def_dict)
 
-        #check if collections exists
+        # check if collections exists
         all_collections = self.get_all_collections()
         for collection in collections:
             if collection not in all_collections:
@@ -1069,7 +1077,8 @@ class FTSIndexManager:
 
         # Generate index name. Index names will also have field codes so that the query runner can decode the fields used in the index.
         for i in range(5):
-            idx_name = "bucket_"+self.bucket_name+"_idx_" + ''.join(random.choice(string.ascii_lowercase) for i in range(5))
+            idx_name = "bucket_" + self.bucket_name + "_idx_" + ''.join(
+                random.choice(string.ascii_lowercase) for i in range(5))
             for field in index_fields:
                 idx_name += "-" + field["field_code"]
             if count:
@@ -1078,9 +1087,10 @@ class FTSIndexManager:
             if idx_name not in cur_indexes:
                 break
 
-        self.log.info("Creating FTS index {0} on {1} with {2} replicas and {3} partitions".format(idx_name, self.bucket_name,
-                                                                                                  num_replica,
-                                                                                                  num_partitions))
+        self.log.info(
+            "Creating FTS index {0} on {1} with {2} replicas and {3} partitions".format(idx_name, self.bucket_name,
+                                                                                        num_replica,
+                                                                                        num_partitions))
 
         # Generate the index definition payload
         # Index common properties
@@ -1203,7 +1213,7 @@ class FTSIndexManager:
         if status:
             try:
                 index_names = list(content["indexDefs"]["indexDefs"].keys())
-            # self.log.info("FTS indexes in cluster - \n : ".format(list(content["indexDefs"]["indexDefs"].keys())))
+                # self.log.info("FTS indexes in cluster - \n : ".format(list(content["indexDefs"]["indexDefs"].keys())))
                 if bucket:
                     index_names = list(filter(lambda a: bucket in a, index_names))
                 self.log.info("FTS indexes in cluster - : \n{0}".format(index_names))
@@ -1216,12 +1226,14 @@ class FTSIndexManager:
     """
     Given index name, Retrieve item count in the index
     """
+
     def get_fts_index_doc_count(self, name):
         """ get number of docs indexed"""
         count = 0
         content = ""
         try:
-            status, content, response = self.http_request(self.rest_url, self.fts_port, "/api/index/{0}/count".format(name))
+            status, content, response = self.http_request(self.rest_url, self.fts_port,
+                                                          "/api/index/{0}/count".format(name))
             count = content['count']
         except TypeError as err:
             self.log.info(f'error: {err} while retrieving count for index {name}, content : {content}')
@@ -1240,9 +1252,8 @@ class FTSIndexManager:
                 keyspace_name_for_query = "`" + bucket_name + "`.`" + scope + "`.`" + collection + "`"
             except Exception as e:
                 self.log.info(f'Could not get scope and collection for {col}')
-                #keyspace_name_for_query = "`" + bucket_name + "`.`_default`.`_default`"
+                # keyspace_name_for_query = "`" + bucket_name + "`.`_default`.`_default`"
                 return None
-
 
             # Get Collection item count from KV via N1QL
             kv_item_count_query = "select raw count(*) from {0};".format(keyspace_name_for_query)
@@ -1261,7 +1272,6 @@ class FTSIndexManager:
 
         return tot_index_col_count
 
-
     """
     Method to execute a query statement
     """
@@ -1276,7 +1286,7 @@ class FTSIndexManager:
                                            ClusterOptions(PasswordAuthenticator(self.username, self.password)))
         else:
             query_node = Cluster('couchbase://{0}'.format(nodelist[0]),
-                               ClusterOptions(PasswordAuthenticator(self.username, self.password)))
+                                 ClusterOptions(PasswordAuthenticator(self.username, self.password)))
 
         try:
             timeout = timedelta(minutes=5)
@@ -1541,8 +1551,8 @@ class FTSIndexManager:
 
         body = {}
         body["explain"] = True
-        #body["fields"] = ["*"]
-        #body["highlight"] = {}
+        # body["fields"] = ["*"]
+        # body["highlight"] = {}
         body["query"] = query
         body["explain"] = random.choice([True, False])
 
@@ -1572,7 +1582,8 @@ class FTSIndexManager:
         # Randomize FTS host on which the query has to be run for load distribution
         fts_node_list = self.find_nodes_with_service(self.get_services_map(), "fts")
         query_host = random.choice(fts_node_list)
-        status, content, response = self.http_request(query_host, self.fts_port, uri, method="POST", body=json.dumps(body))
+        status, content, response = self.http_request(query_host, self.fts_port, uri, method="POST",
+                                                      body=json.dumps(body))
 
         return status, content, response
 
@@ -1613,9 +1624,6 @@ class FTSIndexManager:
                 self.knn_query['knn'][0]['vector'] = q.tolist()
                 self.run_fts_query(index_name=index, query=self.knn_query['query'], knn=self.knn_query['knn'])
 
-
-
-
     def get_query_vectors(self):
         ds = VectorDataset(self.dataset)
         use_hdf5_datasets = True
@@ -1626,7 +1634,7 @@ class FTSIndexManager:
         return ds.query_vecs
 
     def copy_docs_source_collection(self, create_primary=True):
-        #create primary index on bucket.scope_0.coll_0"
+        # create primary index on bucket.scope_0.coll_0"
         source_keyspace = self.bucket_name + ".scope_0.coll_0"
         if create_primary:
             index_name = self.bucket_name + "_idx"
@@ -1690,7 +1698,7 @@ class FTSIndexManager:
                    'Accept': '*/*',
                    'Cache-Control': 'no-cache'}
 
-        url = self.protocol+"://" + host + ":" + str(port) + uri
+        url = self.protocol + "://" + host + ":" + str(port) + uri
         http = httplib2.Http(timeout=600, disable_ssl_certificate_validation=True)
         http.add_credentials(self.username, self.password)
         print(body)
