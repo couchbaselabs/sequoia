@@ -321,6 +321,8 @@ class FTSIndexManager:
             self.protocol = "https"
             if self.capella_run:
                 self.rest_url = self.fetch_rest_url(self.node_addr)
+                if "svc-d-node" in self.rest_url:
+                    self.rest_url = self.get_fts_node_addr()
             else:
                 self.rest_url = self.node_addr
         else:
@@ -412,6 +414,21 @@ class FTSIndexManager:
             srv_info['port'] = srv.port
         self.log.info("This is a Capella run. Srv info {}".format(srv_info))
         return srv_info['host']
+
+    def get_fts_node_addr(self):
+        cluster_url = self.protocol + "://" + self.rest_url + ":" + str(self.node_port) + "/pools/default"
+        node_map = []
+
+        # Get map of nodes in the cluster
+        response = requests.get(cluster_url, auth=(
+            self.username, self.password), verify=False, )
+
+        if (response.ok):
+            response = json.loads(response.text)
+
+            for node in response["nodes"]:
+                if "svc-qs-node" in node["hostname"] or "svc-s-node" in node["hostname"]:
+                    return node["hostname"][:-5]
 
     def get_all_collections(self):
         """
