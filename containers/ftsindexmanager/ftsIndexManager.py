@@ -438,8 +438,9 @@ class FTSIndexManager:
 
         keyspace_name_list = []
         for scope in cb_scopes:
-            for coll in scope.collections:
-                keyspace_name_list.append(scope.name + "." + coll.name)
+            if scope.name != "_system":
+                for coll in scope.collections:
+                    keyspace_name_list.append(scope.name + "." + coll.name)
         return (keyspace_name_list)
 
     """
@@ -453,13 +454,14 @@ class FTSIndexManager:
         multi_coll_scopes = []
 
         for scope in cb_scopes:
-            scope_obj = {}
-            collections = []
-            for coll in scope.collections:
-                collections.append(scope.name + "." + coll.name)
-            if len(collections) > 1:
-                scope_obj[scope.name] = collections
-                multi_coll_scopes.append(scope_obj)
+            if scope.name != "_system":
+                scope_obj = {}
+                collections = []
+                for coll in scope.collections:
+                    collections.append(scope.name + "." + coll.name)
+                if len(collections) > 1:
+                    scope_obj[scope.name] = collections
+                    multi_coll_scopes.append(scope_obj)
         return multi_coll_scopes
 
     def active_queries_check(self):
@@ -974,7 +976,10 @@ class FTSIndexManager:
                             field_dict["dims"] = 128
                         else:
                             field_dict["dims"] = HDF5_FORMATTED_DATASETS[self.dataset]["dimension"]
-                        field_dict["similarity"] = random.choice(["dot_product", "l2_norm"])
+                        if len(collections) > 1:
+                            field_dict["similarity"] = "dot_product"
+                        else:
+                            field_dict["similarity"] = random.choice(["dot_product", "l2_norm"])
                     index_def_dict["params"]["mapping"]["types"][collection]["properties"][field_name]["fields"].append(
                         field_dict)
 
