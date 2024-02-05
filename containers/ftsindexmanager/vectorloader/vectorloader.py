@@ -6,6 +6,7 @@ import glob
 import os
 import re
 import shutil
+import socket
 import struct
 import tarfile
 from urllib.request import urlretrieve
@@ -19,6 +20,7 @@ import concurrent.futures
 import uuid
 import json
 import paramiko
+import threading
 from functools import partial
 from couchbase.exceptions import (
     BucketAlreadyExistsException,
@@ -35,6 +37,7 @@ import random
 import dns.resolver
 from couchbase.cluster import ClusterTimeoutOptions
 from datetime import timedelta
+import faiss
 
 ########################################################################################
 # Global Variables
@@ -103,11 +106,21 @@ class VectorDataset:
     supported_sift_datasets = ["sift", "siftsmall", "gist"]
     local_base_dir = "/tmp/vectordb_datasets"
 
+    sift_dataset_dims = {
+        "sift": 128,
+        "siftsmall": 128
+    }
+
     train_vecs = None
     query_vecs = None
     learn_vecs = None
     neighbors_vecs = None
     distances_vecs = None
+    num_train_vecs = 0
+    num_query_vecs = 0
+    num_learn_vecs = 0
+    num_neighbors_vecs = 0
+    num_distances_vecs = 0
 
     def __init__(self, dataset_name):
         self.dataset_name = dataset_name
@@ -282,7 +295,7 @@ class VectorDataset:
         )
         return True
 
-    def extract_vectors_from_file(self, use_hdf5_datasets, type_of_vec="train"):
+    def extract_vectors_from_file(self, use_hdf5_datasets, type_of_vec="train", batch_size=0):
         """
         Extracts the vectors either from tar.gz files or from hdf5 files based
         use_hdf5_datasets Initialize the necessary vector datastructures as
@@ -307,6 +320,8 @@ class VectorDataset:
                 print(f"Error: Could not extract vectors from hdf5 file for dataset: {self.dataset_name}")
             else:
                 print(f"{type_of_vec} vectors are initialized")
+
+            yield 0
         else:
             print(f"Extracting needed vectors of type: {type_of_vec} from tar.gz files for dataset {self.dataset_name}")
             filepath = ""
@@ -333,29 +348,44 @@ class VectorDataset:
                         # bytes of size "dimension" number of 4bytes will
                         # give us the full vector.
                         num_vectors = os.path.getsize(filepath) // (4 + 4 * dimension)
+
+                        if batch_size == 0:
+                            batch_size = num_vectors
+                        num_batches = num_vectors // batch_size
                         print(
                             f"Total number of vectors in {type_of_vec} dataset: {num_vectors}"
                         )
-                        file.seek(0)  # move the cursor back to first position to start with first vector.
-                        out_vector = np.zeros(
-                            (num_vectors, dimension)
-                        )
+                        print(f"Total number of batches of size {batch_size}: {num_batches}")
 
-                        for i in range(num_vectors):
-                            file.read(
-                                4
-                            )  # To move cursor by 4 bytes to ignore dimension of the vector.
-                            # Read float values of size 4bytes of length "dimension"
-                            out_vector[i] = struct.unpack(
-                                "f" * dimension, file.read(dimension * 4)
+                        file.seek(0)  # move the cursor back to first position to start with first vector.
+
+                        for j in range(num_batches):
+                            out_vector = np.zeros(
+                            (batch_size, dimension)
                             )
-                    if type_of_vec == "train":
-                        self.train_vecs = out_vector
-                    if type_of_vec == "query":
-                        self.query_vecs = out_vector
-                    if type_of_vec == "learn":
-                        self.learn_vecs = out_vector
-                    print(f"{type_of_vec} vectors are initialized")
+
+                            for i in range(batch_size):
+                                file.read(
+                                    4
+                                )  # To move cursor by 4 bytes to ignore dimension of the vector.
+                                # Read float values of size 4bytes of length "dimension"
+                                out_vector[i] = struct.unpack(
+                                    "f" * dimension, file.read(dimension * 4)
+                                )
+
+                            if type_of_vec == "train":
+                                self.train_vecs = out_vector
+                                self.num_train_vecs = num_vectors
+                            if type_of_vec == "query":
+                                self.query_vecs = out_vector
+                                self.num_query_vecs = num_vectors
+                            if type_of_vec == "learn":
+                                self.learn_vecs = out_vector
+                                self.num_learn_vecs = num_vectors
+                            print(f"{type_of_vec} vectors are initialized")
+                            print(f"Shape of initialized vectors: {self.train_vecs.shape}")
+
+                            yield j
                 else:
                     # For "groundtruth" vector data dataformat is different.
                     # Vector values are integers of train vectors.
@@ -379,7 +409,11 @@ class VectorDataset:
                             print(
                                 f"First 100 neighours using Squared Eucleadean distance in increasing order:{out_vector[i]}")
                     self.neighbors_vecs = out_vector
+                    self.num_neighbors_vecs = number_of_vectors
                     print(f"{type_of_vec} vectors are initialized")
+
+                    yield 0
+
             except FileNotFoundError:
                 print(f"Error: File '{filepath}' not found.")
             except Exception as e:
@@ -472,11 +506,33 @@ class VectorDataset:
             print(f"Error: dataset name {dataset_name} is not supported")
             return "Error: dataset name" + dataset_name + "is not supported"
 
+class DocKey:
+    def __init__(self, prefix=""):
+        self.counter = 0
+        self.prefix = prefix
+        self.key_lock = threading.Lock()
 
-def get_json_body(counter, vector):
-    id = str(uuid.uuid4())
-    sno = counter
-    sname = number_to_alphabetic(counter)
+    def get_next_key(self):
+        with self.key_lock:
+            self.counter += 1
+            # Adding 1 to counter because of the way cbimport works.
+            # cmbimport MONOINCR start from 1
+            doc_key = self.prefix + str(self.counter + 1)
+            return doc_key, self.counter
+
+    def get_key(self, doc_index):
+        # Adding 1 to doc_index because of the way cbimport works.
+        # cmbimport MONOINCR start from 1
+        doc_key = self.prefix + str(doc_index + 1)
+        return doc_key
+
+    def get_current_index(self):
+        with self.key_lock:
+            return self.counter
+
+def get_json_body(doc_key_gen, vector):
+    id, sno = doc_key_gen.get_next_key()
+    sname = number_to_alphabetic(sno)
     data_record = {
         "sno": sno,
         "sname": sname,
@@ -487,10 +543,9 @@ def get_json_body(counter, vector):
 
 ########################################################################################
 # Func to upsert vector to couchbase collection.
-def upsert_vector(collection, counter, vector, dataset_name):
-    id = str(uuid.uuid4())
-    sno = counter
-    sname = number_to_alphabetic(counter)
+def upsert_vector(collection, doc_key_gen, vector, dataset_name):
+    id, sno = doc_key_gen.get_next_key()
+    sname = number_to_alphabetic(sno)
     data_record = {
         "sno": sno,
         "sname": sname,
@@ -503,11 +558,38 @@ def upsert_vector(collection, counter, vector, dataset_name):
         try:
             elapsed_time = time.time() - last_print_time
             if elapsed_time >= 0:
-                print(f"From dataset {dataset_name} Uploading vector no: {counter} with ID: {id} to {collection.name}")
+                print(f"From dataset {dataset_name} Uploading vector no: {sno} with ID: {id} to {collection.name}")
                 last_print_time = time.time()
             collection.upsert(id, data_record)
         except Exception as e:
-            print(f"{e} Error uploading vector no: {counter} with id: {id} to collection: {collection.name}")
+            print(f"{e} Error uploading vector no: {sno} with id: {id} to collection: {collection.name}")
+            retry += 1
+            print(f"{e} Retrying after 1sec.. {retry} {id}")
+            time.sleep(5)
+    return data_record
+
+def update_doc_vector(collection, doc_key_gen, doc_index, vector, dataset_name):
+    last_print_time = time.time()
+    doc_key = doc_key_gen.get_key(doc_index)
+    id = doc_key
+    sno = doc_index
+    sname = number_to_alphabetic(sno)
+    data_record = {
+        "sno": sno,
+        "sname": sname,
+        "id": id,
+        "vector_data": vector.tolist()
+    }
+    for retry in range(3):
+        try:
+            elapsed_time = time.time() - last_print_time
+            if elapsed_time >= 0:
+                print(f"From dataset {dataset_name} Updating vector no: {doc_index} with ID: {id} in {collection.name}" \
+                      f" with vector of length {len(vector)}")
+                last_print_time = time.time()
+            collection.upsert(id, data_record)
+        except Exception as e:
+            print(f"{e} Error uploading vector no: {doc_index} with id: {id} to collection: {collection.name}")
             retry += 1
             print(f"{e} Retrying after 1sec.. {retry} {id}")
             time.sleep(5)
@@ -609,7 +691,11 @@ class CouchbaseOps:
             collection_name="",
             capella_run=False,
             cbs=False,
-            cbimport=False
+            cbimport=False,
+            doc_key_generator=None,
+            batch_size=0,
+            faiss_index_names=None,
+            faiss_node="172.23.120.96"
     ):
         self.couchbase_endpoint_ip = couchbase_endpoint_ip
         self.username = username
@@ -636,6 +722,19 @@ class CouchbaseOps:
         self.capella_run = capella_run
         self.cbs = cbs
         self.cbimport = cbimport
+        self.doc_key_gen = doc_key_generator
+        if not self.doc_key_gen:
+            self.doc_key_gen = DocKey()
+        self.batch_size = batch_size
+        self.faiss_index_names = None
+        if faiss_index_names:
+            self.faiss_indexes = []
+            self.faiss_index_names = faiss_index_names
+        else:
+            self.faiss_indexes = None
+        self.faiss_node = faiss_node
+
+        print("Faiss indexes: {}".format(self.faiss_indexes))
 
     def create_bucket(self, cluster):
         bucket_manager = cluster.buckets()
@@ -719,7 +818,30 @@ class CouchbaseOps:
         collection = bucket.scope(self.scope_name).collection(self.collection_name)
         return collection
 
-    def upsert(self, dims = 0, percentages = 0, iterations=1):
+    def update_vector_dimension(self, vector, current_dim, dim):
+        # Resize the vector to the desired dimension
+        if current_dim < dim:
+            # If the current dimension is less than the desired dimension, repeat the values
+            repeat_values = dim - current_dim
+            repeated_values = np.tile(vector, ((dim + current_dim - 1) // current_dim))
+            return repeated_values[:dim]
+        elif current_dim > dim:
+            # If the current dimension is greater than the desired dimension, truncate the vector
+            return vector[:dim]
+
+    def update_vector(self, vector, perturbation_range = 1):
+        num_changes = np.random.randint(1, len(vector) + 1)
+        indices_to_change = np.random.choice(len(vector), num_changes, replace=False)
+
+        for index_to_change in indices_to_change:
+            perturbation = np.random.uniform(-perturbation_range, perturbation_range)
+            new_value = vector[index_to_change] + perturbation
+
+            vector[index_to_change] = new_value
+
+        return vector
+
+    def upsert(self, dims = 0, percentages = 0, iterations=1, update=False):
         """
         Dumps train vectors into Couchbase collection which is created
         automatically
@@ -762,89 +884,173 @@ class CouchbaseOps:
         if self.dataset_name in ds.supported_sift_datasets:
             use_hdf5_datasets = False
 
-        ds.extract_vectors_from_file(use_hdf5_datasets, type_of_vec="train")
+        if self.faiss_index_names:
 
-        # dump train vectors into couchbase collection in vector data
-        # type fomat.
-        if ds.train_vecs is not None:
+            for i in range(0, len(self.faiss_index_names)):
+                if i >= len(dims):
+                    print(f"Creating faiss index with dimension {ds.sift_dataset_dims[self.dataset_name]}")
+                    self.faiss_indexes.append(faiss.IndexFlatL2(ds.sift_dataset_dims[self.dataset_name]))
+                else:
+                    print(f"Creating faiss index with dimension {dims[i]}")
+                    self.faiss_indexes.append(faiss.IndexFlatL2(dims[i]))
 
-            total_vectors = len(ds.train_vecs)
+            default_dim_faiss_index = None
+            if len(self.faiss_index_names) > len(dims):
+                default_dim_faiss_index = self.faiss_indexes[len(dims)]
 
-            # Get random indices for vectors to resize
-            indices_to_resize = random.sample(range(total_vectors), total_vectors)
+        dataset_generator = ds.extract_vectors_from_file(use_hdf5_datasets, type_of_vec="train", batch_size=self.batch_size)
 
-            if len(percentages) != len(dims):
-                raise ValueError("percentages and dims lists must have the same length")
+        for batch in dataset_generator:
 
-            total_percentage = 0
-            for per in percentages:
-                total_percentage += per
+            # dump train vectors into couchbase collection in vector data
+            # type fomat.
+            print(f"Processing batch no. {batch}")
+            if ds.train_vecs is not None:
 
-            if total_percentage > 1:
-                raise ValueError("Total percentage of docs to update should be less than 1")
+                total_vectors = len(ds.train_vecs)
 
-            for percentage, dim in zip(percentages, dims):
-                vectors_to_resize = int(percentage * total_vectors)
+                # Get random indices for vectors to resize
+                indices_to_resize = random.sample(range(total_vectors), total_vectors)
+                indices_to_update = indices_to_resize.copy()
 
-                current_indices = indices_to_resize[:vectors_to_resize]
-                indices_to_resize = indices_to_resize[vectors_to_resize:]
-                ds.train_vecs = list(ds.train_vecs)
-                print("Number of docs resized with dimension {} is {}".format(dim, len(current_indices)))
+                # if len(percentages) != len(dims):
+                #     raise ValueError("percentages and dims lists must have the same length")
 
-                for index in current_indices:
+                total_percentage = 0
+                for per in percentages:
+                    total_percentage += per
 
-                    vector = ds.train_vecs[index]
-                    current_dim = len(vector)
+                if total_percentage > 1:
+                    raise ValueError("Total percentage of docs to update should be less than 1")
 
-                    # Resize the vector to the desired dimension
-                    if current_dim < dim:
-                        # If the current dimension is less than the desired dimension, repeat the values
-                        repeat_values = dim - current_dim
-                        repeated_values = np.tile(vector, ((dim + current_dim - 1) // current_dim))
-                        ds.train_vecs[index] = repeated_values[:dim]
-                    elif current_dim > dim:
-                        # If the current dimension is greater than the desired dimension, truncate the vector
-                        ds.train_vecs[index] = vector[:dim]
+                if len(dims) > 0:
 
-        if ds.train_vecs is not None and len(ds.train_vecs) > 0:
-            if not self.cbimport:
-                print(f"Spawning {MAX_THREADS} threads to speedup the upsert.")
-                with concurrent.futures.ThreadPoolExecutor(MAX_THREADS) as executor:
-                    upsert_partial = partial(upsert_vector, collection, dataset_name=self.dataset_name)
-                    futures = {executor.submit(upsert_partial, counter, d): d for counter, d in
-                            enumerate(ds.train_vecs, start=1)}
-                    for future in concurrent.futures.as_completed(futures):
-                        try:
-                            future.result()
-                        except Exception as e:
-                            print(f"Error: {e}")
+                    changed_indices = []
+                    for idx, (percentage, dim) in enumerate(zip(percentages, dims)):
+                        vectors_to_resize = int(percentage * total_vectors)
+
+                        current_indices = indices_to_resize[:vectors_to_resize]
+                        indices_to_resize = indices_to_resize[vectors_to_resize:]
+                        ds.train_vecs = list(ds.train_vecs)
+                        # print("Number of docs resized with dimension {} is {}".format(dim, len(current_indices)))
+
+                        if self.faiss_index_names:
+                            faiss_index = self.faiss_indexes[idx]
+
+
+                        for index in current_indices:
+
+                            vector = ds.train_vecs[index]
+                            current_dim = len(vector)
+
+                            updated_vector = self.update_vector_dimension(vector, current_dim, dim)
+                            ds.train_vecs[index] = updated_vector
+
+                            if self.faiss_index_names:
+                                index_vector = np.array([updated_vector]).astype('float32')
+                                faiss.normalize_L2(index_vector)
+                                faiss_index.add(index_vector)
+
+                        changed_indices += current_indices
+
+                    if self.faiss_index_names:
+                        if default_dim_faiss_index:
+                            default_dim_vectors = [vector for i, vector in enumerate(ds.train_vecs) if i not in changed_indices]
+                            index_vectors = np.array(default_dim_vectors).astype('float32')
+                            faiss.normalize_L2(index_vectors)
+                            default_dim_faiss_index.add(index_vectors)
+
+                elif update:
+                    for idx, percentage in enumerate(percentages):
+                        vectors_to_resize = int(percentage * total_vectors)
+
+                        current_indices = indices_to_resize[:vectors_to_resize]
+                        indices_to_resize = indices_to_resize[vectors_to_resize:]
+                        ds.train_vecs = list(ds.train_vecs)
+
+                        if self.faiss_index_names:
+                            faiss_index = default_dim_faiss_index
+
+                        for index in current_indices:
+                            vector = ds.train_vecs[index]
+                            # print(f"Changing values for vector {index}")
+                            updated_vector = self.update_vector(vector)
+                            ds.train_vecs[index] = updated_vector
+
+
+                    if self.faiss_index_names:
+                        index_vectors = np.array(ds.train_vecs).astype('float32')
+                        faiss.normalize_L2(index_vectors)
+                        faiss_index.add(index_vectors)
+
+            if ds.train_vecs is not None and len(ds.train_vecs) > 0:
+                if not self.cbimport:
+                    if not update:
+                        print(f"Spawning {MAX_THREADS} threads to speedup the upsert.")
+                        with concurrent.futures.ThreadPoolExecutor(MAX_THREADS) as executor:
+                            upsert_partial = partial(upsert_vector, collection, dataset_name=self.dataset_name)
+                            futures = {executor.submit(upsert_partial, self.doc_key_gen, d): d for counter, d in
+                                    enumerate(ds.train_vecs, start=1)}
+                            for future in concurrent.futures.as_completed(futures):
+                                try:
+                                    future.result()
+                                except Exception as e:
+                                    print(f"Error: {e}")
+                    else:
+                        for percentage in percentages:
+                            vectors_to_resize = int(percentage * total_vectors)
+
+                            current_indices = indices_to_update[:vectors_to_resize]
+                            indices_to_update = indices_to_update[vectors_to_resize:]
+                            with concurrent.futures.ThreadPoolExecutor(MAX_THREADS) as executor:
+                                upsert_partial = partial(update_doc_vector, collection, dataset_name=self.dataset_name)
+                                futures = {executor.submit(upsert_partial, self.doc_key_gen, (batch * self.batch_size + d), ds.train_vecs[d]): ds.train_vecs[d] for counter, d in
+                                        enumerate(current_indices, start=0)}
+                                for future in concurrent.futures.as_completed(futures):
+                                    try:
+                                        future.result()
+                                    except Exception as e:
+                                        print(f"Error: {e}")
+
+
+                else:
+                    filename = f"{uuid.uuid4().hex}.json"
+                    with open(filename, "w") as json_file:
+                        for counter, d in enumerate(ds.train_vecs, start=1):
+                            json_obj = json.dumps(get_json_body(self.doc_key_gen, d))
+                            json_file.write(json_obj + "\n")
+
+                    hostname = self.couchbase_endpoint_ip
+                    node_ip = self.couchbase_endpoint_ip
+                    if self.capella_run:
+                        hostname = f"couchbases://{self.couchbase_endpoint_ip}"
+                        node_ip = "172.23.105.211"
+
+                    move_file_to_remote(os.getcwd() + "/" + filename, "/tmp/" + filename, node_ip, "root", "couchbase")
+                    num_items = ds.num_train_vecs
+                    num_batch_items = len(ds.train_vecs)
+                    for i in range(iterations):
+                        key_offset = (i * num_items) + 1 + (batch * num_batch_items)
+                        key_str = f'{self.doc_key_gen.prefix}#MONO_INCR[{key_offset}]#'
+                        cbimport_command = f"/opt/couchbase/bin/cbimport json --cluster {hostname} --bucket {self.bucket_name} " \
+                                f"--dataset /tmp/{filename} --format lines --username {self.username} --password {self.password} " \
+                                f"--scope-collection-exp '{self.scope_name}.{self.collection_name}' --generate-key '{key_str}'"
+                        stdout, stderr = execute_command(cbimport_command, node_ip, "root", "couchbase")
+                        print(stdout, stderr)
+
+                    rm_file_command = f"rm -f /tmp/{filename}"
+                    execute_command(rm_file_command, node_ip, "root", "couchbase")
             else:
-                filename = f"{uuid.uuid4().hex}.json"
-                with open(filename, "w") as json_file:
-                    for counter, d in enumerate(ds.train_vecs, start=1):
-                        json_obj = json.dumps(get_json_body(counter, d))
-                        json_file.write(json_obj + "\n")
+                print("Error: train vectors data structure is empty, please check the dataset")
 
-                hostname = self.couchbase_endpoint_ip
-                node_ip = self.couchbase_endpoint_ip
-                if self.capella_run:
-                    hostname = f"couchbases://{self.couchbase_endpoint_ip}"
-                    node_ip = "172.23.105.211"
-
-                move_file_to_remote(os.getcwd() + "/" + filename, "/tmp/" + filename, node_ip, "root", "couchbase")
-
-                for i in range(iterations):
-                    cbimport_command = f"/opt/couchbase/bin/cbimport json --cluster {hostname} --bucket {self.bucket_name} " \
-                            f"--dataset /tmp/{filename} --format lines --username {self.username} --password {self.password} " \
-                            f"--scope-collection-exp '{self.scope_name}.{self.collection_name}' --generate-key '%id%-{i}'"
-                    stdout, stderr = execute_command(cbimport_command, node_ip, "root", "couchbase")
-                    print(stdout, stderr)
-
-                rm_file_command = f"rm -f /tmp/{filename}"
-                execute_command(rm_file_command, node_ip, "root", "couchbase")
-        else:
-            print("Error: train vectors data structure is empty, please check the dataset")
-
+        if self.faiss_index_names:
+            node_ip = self.faiss_node
+            print("Node IP: {}".format(node_ip))
+            for idx, index in enumerate(self.faiss_indexes):
+                index_file = self.faiss_index_names[idx] + ".index"
+                print("Length of faiss index: {}".format(index.ntotal))
+                faiss.write_index(index, index_file)
+                move_file_to_remote(os.getcwd() + "/" + index_file, "/tmp/" + index_file, node_ip, "root", "couchbase")
 
 class VectorLoader:
 
@@ -866,6 +1072,10 @@ class VectorLoader:
         parser.add_argument("-dims", "--dimensions_for_resize", nargs='*', type=int, default=[])
         parser.add_argument("-i", "--cbimport", help="Use cbimport to load documents", default=False)
         parser.add_argument("-iter", "--iterations", help="Number of iterations of cbimport to run", type=int, default=1)
+        parser.add_argument("-update", "--update_docs", default=False)
+        parser.add_argument("-bs", "--batch_size", help="Batch size(in term of number of docs)", type=int, default=0)
+        parser.add_argument("-indexes", "--faiss_indexes",  nargs='*', type=str, default=None)
+        parser.add_argument("-fn", "--faiss_node", help="Faiss Node Address where faiss indexes will be created", default="")
 
         args = parser.parse_args()
         self.node = args.node
@@ -882,12 +1092,14 @@ class VectorLoader:
         self.dim_for_resize = args.dimensions_for_resize
         self.percentage_to_resize = args.percentages_to_resize
         self.iterations = args.iterations
+        self.batch_size = args.batch_size
+        self.faiss_indexes = args.faiss_indexes
+        self.faiss_node = args.faiss_node
         print("Iterations: {}".format(self.iterations))
-        print(type(self.iterations))
-        print("Type of dims to resize: {}".format(type(self.dim_for_resize)))
-        print(self.dim_for_resize)
-        print("Type of perc to resize: {}".format(type(self.percentage_to_resize)))
-        print(self.percentage_to_resize)
+        print("Batch size: {}".format(self.batch_size))
+        print("dims to resize: {}".format(self.dim_for_resize))
+        print("perc to resize: {}".format(self.percentage_to_resize))
+        print("Faiss indexes to create: {}".format(self.faiss_indexes))
         if self.capella_run == 'True' or self.capella_run == 'true':
             self.capella_run = True
         else:
@@ -897,6 +1109,12 @@ class VectorLoader:
             self.cbs = True
         else:
             self.cbs = False
+        self.update = args.update_docs
+        if self.update == 'True' or self.update == 'true':
+            self.update = True
+        else:
+            self.update = False
+
     def fetch_rest_url(self, url):
 
         """
@@ -923,11 +1141,15 @@ class VectorLoader:
                 scope_name=self.scope, collection_name=self.collection,
                 capella_run=self.capella_run,
                 cbs=self.cbs,
-                cbimport=self.cbimport
+                cbimport=self.cbimport,
+                doc_key_generator=DocKey("vect"),
+                batch_size=self.batch_size,
+                faiss_index_names=self.faiss_indexes,
+                faiss_node=self.faiss_node
             )
 
             cbops.upsert(dims=self.dim_for_resize, percentages=self.percentage_to_resize,
-                         iterations=self.iterations)
+                         iterations=self.iterations, update=self.update)
             break
 
 
