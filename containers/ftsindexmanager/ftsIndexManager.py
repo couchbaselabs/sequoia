@@ -406,6 +406,8 @@ class FTSIndexManager:
         """
         meant to find the srv record for Capella runs
         """
+        if "cb." not in url:
+            return url
         self.log.info("This is a Capella run. Finding the srv domain for {}".format(url))
         srv_info = {}
         srv_records = dns.resolver.query('_couchbases._tcp.' + url, 'SRV')
