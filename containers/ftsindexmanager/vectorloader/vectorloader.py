@@ -537,6 +537,7 @@ def get_json_body(doc_key_gen, vector):
         "sno": sno,
         "sname": sname,
         "id": id,
+        "dim": len(vector.tolist()),
         "vector_data": vector.tolist()
     }
     return data_record
@@ -550,6 +551,7 @@ def upsert_vector(collection, doc_key_gen, vector, dataset_name):
         "sno": sno,
         "sname": sname,
         "id": id,
+        "dim": len(vector.tolist()),
         "vector_data": vector.tolist()
     }
 
@@ -578,6 +580,7 @@ def update_doc_vector(collection, doc_key_gen, doc_index, vector, dataset_name):
         "sno": sno,
         "sname": sname,
         "id": id,
+        "dim": len(vector.tolist()),
         "vector_data": vector.tolist()
     }
     for retry in range(3):
