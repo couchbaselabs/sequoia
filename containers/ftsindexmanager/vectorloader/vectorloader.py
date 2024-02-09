@@ -698,7 +698,8 @@ class CouchbaseOps:
             doc_key_generator=None,
             batch_size=0,
             faiss_index_names=None,
-            faiss_node="172.23.120.96"
+            faiss_node="172.23.120.96",
+            slave_ip="172.23.105.211"
     ):
         self.couchbase_endpoint_ip = couchbase_endpoint_ip
         self.username = username
@@ -736,6 +737,7 @@ class CouchbaseOps:
         else:
             self.faiss_indexes = None
         self.faiss_node = faiss_node
+        self.slave_ip = slave_ip
 
         print("Faiss indexes: {}".format(self.faiss_indexes))
 
@@ -1027,7 +1029,7 @@ class CouchbaseOps:
                     node_ip = self.couchbase_endpoint_ip
                     if self.capella_run:
                         hostname = f"couchbases://{self.couchbase_endpoint_ip}"
-                        node_ip = "172.23.105.211"
+                        node_ip = self.slave_ip
 
                     move_file_to_remote(os.getcwd() + "/" + filename, "/tmp/" + filename, node_ip, "root", "couchbase")
                     num_items = ds.num_train_vecs
@@ -1079,6 +1081,7 @@ class VectorLoader:
         parser.add_argument("-bs", "--batch_size", help="Batch size(in term of number of docs)", type=int, default=0)
         parser.add_argument("-indexes", "--faiss_indexes",  nargs='*', type=str, default=None)
         parser.add_argument("-fn", "--faiss_node", help="Faiss Node Address where faiss indexes will be created", default="")
+        parser.add_argument("-slave_ip", "--slave_ip", help="Faiss Node Address where faiss indexes will be created", default="")
 
         args = parser.parse_args()
         self.node = args.node
@@ -1098,6 +1101,7 @@ class VectorLoader:
         self.batch_size = args.batch_size
         self.faiss_indexes = args.faiss_indexes
         self.faiss_node = args.faiss_node
+        self.slave_ip = args.slave_ip
         print("Iterations: {}".format(self.iterations))
         print("Batch size: {}".format(self.batch_size))
         print("dims to resize: {}".format(self.dim_for_resize))
@@ -1148,7 +1152,8 @@ class VectorLoader:
                 doc_key_generator=DocKey("vect"),
                 batch_size=self.batch_size,
                 faiss_index_names=self.faiss_indexes,
-                faiss_node=self.faiss_node
+                faiss_node=self.faiss_node,
+                slave_ip=self.slave_ip
             )
 
             cbops.upsert(dims=self.dim_for_resize, percentages=self.percentage_to_resize,
