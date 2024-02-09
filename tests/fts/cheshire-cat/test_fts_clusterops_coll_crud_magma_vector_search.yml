@@ -84,7 +84,7 @@
   command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -d sift -a create_index_for_each_collection"
 
 - image: sequoiatools/ftsindexmanager
-  command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 3}} -d mnist -a create_index_for_each_collection"
+  command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 3}} -d mnist -a create_index_for_each_collection -dims 784"
 
 ############### Create vector indexes on bucket5 #################
 - image: sequoiatools/ftsindexmanager

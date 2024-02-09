@@ -280,6 +280,7 @@ class FTSIndexManager:
                             help="Timeout for item_count_check")
         parser.add_argument("-k", "--knn_value", type=int, default=3,
                             help="k value for knn queries")
+        parser.add_argument("-dims", "--vector_index_dimension", type=int, default=128)
         parser.add_argument("-a", "--action",
                             choices=["create_index", "create_index_from_map", "run_queries", "delete_all_indexes",
                                      "create_index_loop", "item_count_check", "active_queries_check", "run_flex_queries",
@@ -313,6 +314,7 @@ class FTSIndexManager:
         self.num_queries_per_worker = args.num_queries_per_worker
         self.validation_timeout = args.validation_timeout
         self.knn_value = args.knn_value
+        self.vector_index_dimension = args.vector_index_dimension
 
         self.idx_def_templates = HOTEL_DS_FIELDS
         if self.use_https:
@@ -974,10 +976,7 @@ class FTSIndexManager:
                     field_dict["name"] = field["name"]
                     field_dict["type"] = field["type"]
                     if field["type"] == "vector":
-                        if self.dataset == "siftsmall":
-                            field_dict["dims"] = 128
-                        else:
-                            field_dict["dims"] = HDF5_FORMATTED_DATASETS[self.dataset]["dimension"]
+                        field_dict["dims"] = self.vector_index_dimension
                         if len(collections) > 1:
                             field_dict["similarity"] = "dot_product"
                         else:
