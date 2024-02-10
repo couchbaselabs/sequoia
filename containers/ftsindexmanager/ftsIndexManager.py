@@ -1272,7 +1272,7 @@ class FTSIndexManager:
         queryResult = None
         nodelist = self.find_nodes_with_service(self.get_services_map(), "n1ql")
         if self.use_https:
-            query_node = Cluster('couchbases://{0}'.format(self.node_addr),
+            query_node = Cluster('couchbases://{0}?ssl=no_verify'.format(self.node_addr),
                                            ClusterOptions(PasswordAuthenticator(self.username, self.password)))
         else:
             query_node = Cluster('couchbase://{0}'.format(nodelist[0]),
