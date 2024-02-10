@@ -507,8 +507,9 @@ class VectorDataset:
             return "Error: dataset name" + dataset_name + "is not supported"
 
 class DocKey:
-    def __init__(self, prefix=""):
-        self.counter = 0
+    def __init__(self, prefix="", start=0):
+        self.start_key = start
+        self.counter = start
         self.prefix = prefix
         self.key_lock = threading.Lock()
 
@@ -523,7 +524,7 @@ class DocKey:
     def get_key(self, doc_index):
         # Adding 1 to doc_index because of the way cbimport works.
         # cmbimport MONOINCR start from 1
-        doc_key = self.prefix + str(doc_index + 1)
+        doc_key = self.prefix + str(doc_index + 1 + self.start_key)
         return doc_key
 
     def get_current_index(self):
@@ -846,7 +847,7 @@ class CouchbaseOps:
 
         return vector
 
-    def upsert(self, dims = 0, percentages = 0, iterations=1, update=False):
+    def upsert(self, dims = [], percentages = [], iterations=1, update=False, current_dims = []):
         """
         Dumps train vectors into Couchbase collection which is created
         automatically
@@ -915,7 +916,7 @@ class CouchbaseOps:
                 total_vectors = len(ds.train_vecs)
 
                 # Get random indices for vectors to resize
-                indices_to_resize = random.sample(range(total_vectors), total_vectors)
+                indices_to_resize = list(range(total_vectors))
                 indices_to_update = indices_to_resize.copy()
 
                 # if len(percentages) != len(dims):
@@ -965,7 +966,7 @@ class CouchbaseOps:
                             faiss.normalize_L2(index_vectors)
                             default_dim_faiss_index.add(index_vectors)
 
-                elif update:
+                elif update and (len(current_dims) == 0):
                     for idx, percentage in enumerate(percentages):
                         vectors_to_resize = int(percentage * total_vectors)
 
@@ -987,6 +988,25 @@ class CouchbaseOps:
                         index_vectors = np.array(ds.train_vecs).astype('float32')
                         faiss.normalize_L2(index_vectors)
                         faiss_index.add(index_vectors)
+
+                elif update and len(current_dims) > 0:
+
+                    for idx, (percentage, dim) in enumerate(zip(percentages, current_dims)):
+                        vectors_to_resize = int(percentage * total_vectors)
+
+                        current_indices = indices_to_resize[:vectors_to_resize]
+                        indices_to_resize = indices_to_resize[vectors_to_resize:]
+                        ds.train_vecs = list(ds.train_vecs)
+                        # print("Number of docs resized with dimension {} is {}".format(dim, len(current_indices)))
+
+                        for index in current_indices:
+
+                            vector = ds.train_vecs[index]
+                            current_dim = len(vector)
+
+                            updated_vector = self.update_vector_dimension(vector, current_dim, dim)
+                            updated_vector = self.update_vector(updated_vector)
+                            ds.train_vecs[index] = updated_vector
 
             if ds.train_vecs is not None and len(ds.train_vecs) > 0:
                 if not self.cbimport:
@@ -1035,7 +1055,7 @@ class CouchbaseOps:
                     num_items = ds.num_train_vecs
                     num_batch_items = len(ds.train_vecs)
                     for i in range(iterations):
-                        key_offset = (i * num_items) + 1 + (batch * num_batch_items)
+                        key_offset = (i * num_items) + 1 + (batch * num_batch_items) + self.doc_key_gen.start_key
                         key_str = f'{self.doc_key_gen.prefix}#MONO_INCR[{key_offset}]#'
                         cbimport_command = f"/opt/couchbase/bin/cbimport json --cluster {hostname} --bucket {self.bucket_name} " \
                                 f"--dataset /tmp/{filename} --format lines --username {self.username} --password {self.password} " \
@@ -1075,6 +1095,7 @@ class VectorLoader:
         parser.add_argument("-cbs", "--create_bucket_structure", default=True)
         parser.add_argument("-per", "--percentages_to_resize", nargs='*', type=float, default=[])
         parser.add_argument("-dims", "--dimensions_for_resize", nargs='*', type=int, default=[])
+        parser.add_argument("-curr_dims", "--current_dimensions", nargs='*', type=int, default=[])
         parser.add_argument("-i", "--cbimport", help="Use cbimport to load documents", default=False)
         parser.add_argument("-iter", "--iterations", help="Number of iterations of cbimport to run", type=int, default=1)
         parser.add_argument("-update", "--update_docs", default=False)
@@ -1082,6 +1103,7 @@ class VectorLoader:
         parser.add_argument("-indexes", "--faiss_indexes",  nargs='*', type=str, default=None)
         parser.add_argument("-fn", "--faiss_node", help="Faiss Node Address where faiss indexes will be created", default="")
         parser.add_argument("-slave_ip", "--slave_ip", help="Faiss Node Address where faiss indexes will be created", default="")
+        parser.add_argument("-sk", "--start_key", help="Start index for doc Id's", type=int, default=0)
 
         args = parser.parse_args()
         self.node = args.node
@@ -1096,12 +1118,14 @@ class VectorLoader:
         self.cbimport = args.cbimport
         self.capella_run = args.capella
         self.dim_for_resize = args.dimensions_for_resize
+        self.curr_dims = args.current_dimensions
         self.percentage_to_resize = args.percentages_to_resize
         self.iterations = args.iterations
         self.batch_size = args.batch_size
         self.faiss_indexes = args.faiss_indexes
         self.faiss_node = args.faiss_node
         self.slave_ip = args.slave_ip
+        self.start_key = args.start_key
         print("Iterations: {}".format(self.iterations))
         print("Batch size: {}".format(self.batch_size))
         print("dims to resize: {}".format(self.dim_for_resize))
@@ -1149,7 +1173,7 @@ class VectorLoader:
                 capella_run=self.capella_run,
                 cbs=self.cbs,
                 cbimport=self.cbimport,
-                doc_key_generator=DocKey("vect"),
+                doc_key_generator=DocKey("vect", start=self.start_key),
                 batch_size=self.batch_size,
                 faiss_index_names=self.faiss_indexes,
                 faiss_node=self.faiss_node,
@@ -1157,7 +1181,7 @@ class VectorLoader:
             )
 
             cbops.upsert(dims=self.dim_for_resize, percentages=self.percentage_to_resize,
-                         iterations=self.iterations, update=self.update)
+                         iterations=self.iterations, update=self.update, current_dims=self.curr_dims)
             break
 
 
