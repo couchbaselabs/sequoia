@@ -1102,7 +1102,7 @@ class VectorLoader:
         parser.add_argument("-bs", "--batch_size", help="Batch size(in term of number of docs)", type=int, default=0)
         parser.add_argument("-indexes", "--faiss_indexes",  nargs='*', type=str, default=None)
         parser.add_argument("-fn", "--faiss_node", help="Faiss Node Address where faiss indexes will be created", default="")
-        parser.add_argument("-slave_ip", "--slave_ip", help="Faiss Node Address where faiss indexes will be created", default="")
+        parser.add_argument("-slave_ip", "--slave_ip", help="Faiss Node Address where faiss indexes will be created", default="172.23.105.211")
         parser.add_argument("-sk", "--start_key", help="Start index for doc Id's", type=int, default=0)
 
         args = parser.parse_args()
