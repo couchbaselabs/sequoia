@@ -65,15 +65,15 @@
 
 ############### initial data loading ################
 - image: sequoiatools/catapult
-  command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -n {{.Scale 120000}} -pc 100
+  command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -n {{.Scale 80000}} -pc 100
     -dt Hotel -ds 1000 -ac True -dpx test1"
   requires:  "{{eq true .DoOnce }}"
   alias: collection_bucket1_doc_ops1
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -n {{.Scale 120000}} -pc 100
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -n {{.Scale 80000}} -pc 100
     -dt Hotel -ds 1000 -ac True -dpx test2"
   requires:  "{{eq true .DoOnce }}"
   alias: collection_bucket1_doc_ops3
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -n {{.Scale 120000}} -pc 100
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -n {{.Scale 80000}} -pc 100
     -dt Hotel -ds 1000 -ac True -dpx test3"
   requires:  "{{eq true .DoOnce }}"
   alias: collection_bucket1_doc_ops4
@@ -89,15 +89,15 @@
     -dt Hotel -ds 1000 -ac True -dpx test3"
   requires:  "{{eq true .DoOnce }}"
   alias: collection_bucket2_doc_ops4
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 2}} -n {{.Scale 100000}} -pc 100
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 2}} -n {{.Scale 80000}} -pc 100
     -dt Hotel -ds 1000 -ac True -dpx test1"
   requires:  "{{eq true .DoOnce }}"
   alias: collection_bucket3_doc_ops1
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 2}} -n {{.Scale 100000}} -pc 100
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 2}} -n {{.Scale 80000}} -pc 100
     -dt Hotel -ds 1000 -ac True -dpx test2"
   requires:  "{{eq true .DoOnce }}"
   alias: collection_bucket3_doc_ops3
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 2}} -n {{.Scale 100000}} -pc 100
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 2}} -n {{.Scale 80000}} -pc 100
     -dt Hotel -ds 1000 -ac True -dpx test3"
   requires:  "{{eq true .DoOnce }}"
   alias: collection_bucket3_doc_ops4
@@ -307,7 +307,7 @@
 -
    image: sequoiatools/cmd
    entrypoint: sleep
-   command: "900"
+   command: "1800"
    wait: true
 
 ###############  Complete the rebalance ################
@@ -345,7 +345,7 @@
 -
    image: sequoiatools/cmd
    entrypoint: sleep
-   command: "900"
+   command: "1800"
    wait: true
 
 # Wait for rebalance to complete

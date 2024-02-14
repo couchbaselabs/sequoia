@@ -91,12 +91,12 @@ class IndexManager:
                                      "drop_index_loop", "alter_indexes", "enable_cbo", "delete_statistics",
                                      "item_count_check",
                                      "random_recovery", "create_udf", "drop_udf", "create_n1ql_udf", "validate_tenant_affinity", "set_fast_rebalance_config",
-                                     "create_n_indexes_on_buckets", "validate_s3_cleanup", "copy_aws_keys", "cleanup_s3", "poll_total_requests_during_rebalance", "wait_until_rebalance_cleanup_done"],
+                                     "create_n_indexes_on_buckets", "validate_s3_cleanup", "copy_aws_keys", "cleanup_s3", "poll_total_requests_during_rebalance", "wait_until_rebalance_cleanup_done", "print_stats"],
                             help="Choose an action to be performed. Valid actions : create_index | build_deferred_index | drop_all_indexes | create_index_loop | "
                                  "drop_index_loop | alter_indexes | enable_cbo | delete_statistics "
                                  "| item_count_check | random_recovery | create_udf | drop_udf | create_n1ql_udf "
                                  "| validate_tenant_affinity | set_fast_rebalance_config | create_n_indexes_on_buckets "
-                                 "| copy_aws_keys | cleanup_s3 | validate_s3_cleanup | poll_total_requests_during_rebalance | wait_until_rebalance_cleanup_done",
+                                 "| copy_aws_keys | cleanup_s3 | validate_s3_cleanup | poll_total_requests_during_rebalance | wait_until_rebalance_cleanup_done | print_stats",
                             default="create_index")
         parser.add_argument("-m", "--build_max_collections", type=int, default=0,
                             help="Build Indexes on max number of collections")
@@ -127,6 +127,8 @@ class IndexManager:
         parser.add_argument("--storage_prefix", help="Storage prefix for S3 bucket used for fast rebalance", default="indexing-system-test")
         parser.add_argument("--bucket_list", help="List of buckets to be used for index creation")
         parser.add_argument("--num_of_indexes_per_bucket", type=int, default=20, help="Number of indexes per bucket you want to create")
+        parser.add_argument("--limit_total_index_count_in_cluster", type=int, default=10000,
+                            help="Number of indexes per bucket you want to create")
         parser.add_argument("--num_of_batches", default=None,help="Number of batch of indexes to be created")
         parser.add_argument("--sleep_before_polling", default=None, help="Duration (in seconds) to sleep before polling for total requests")
         parser.add_argument("--capella_cluster_id", default=None)
@@ -158,6 +160,7 @@ class IndexManager:
         self.aws_secret_access_key = args.aws_secret_access_key
         self.region = args.region
         self.num_of_indexes_per_bucket = args.num_of_indexes_per_bucket
+        self.limit_total_index_count_in_cluster = args.limit_total_index_count_in_cluster
         self.num_of_batches = args.num_of_batches
         self.sleep_before_polling = args.sleep_before_polling
         self.capella_cluster_id = args.capella_cluster_id
@@ -509,6 +512,7 @@ class IndexManager:
     
     def create_n_indexes_on_buckets(self):
         num_of_indexes_per_bucket = self.num_of_indexes_per_bucket
+        limit_total_index_count_in_cluster = self.limit_total_index_count_in_cluster
         self.log.info(f"Configuration used: Bucket_list {self.bucket_list}. Num of indexes per bucket {num_of_indexes_per_bucket}")
         self.log.info(f"Skip default collection flag {self.skip_default_collection}")
         for bucket_name in self.bucket_list:
@@ -527,12 +531,15 @@ class IndexManager:
                             keyspaces.append("`" + bucket_name + "`.`" + scope.name + "`.`" + coll.name + "`")
             self.log.info("Keyspaces that will be used: {}".format(keyspaces))
             total_idx_created = 0
-            create_index_statements = []
             self.log.info(f"Starting to create indexes. Will create a total of {num_of_indexes_per_bucket} indexes on these collections {keyspace_name_list}")
             keyspace_list = []
             while total_idx_created < num_of_indexes_per_bucket:
+                create_index_statements = []
                 keyspace = random.choice(list(set(keyspaces) - set(keyspace_list)))
                 keyspace_list.append(keyspace)
+                total_index_count_in_cluster = self.fetch_total_index_count_in_the_cluster()
+                if total_index_count_in_cluster >= limit_total_index_count_in_cluster:
+                    break
                 for idx_template in self.idx_def_templates:
                     idx_statement = idx_template['statement']
                     idx_prefix = ''.join(random.choices(string.ascii_letters + string.digits, k=random.randint(4, 8)))
@@ -542,7 +549,7 @@ class IndexManager:
                         if idx_template['indexname'] in ["idx3", "idx4", "idx6", "idx7", "idx12", "idx13"]:
                             is_partitioned_idx = bool(random.getrandbits(1))
                         else:
-                            is_partitioned_idx = True
+                            is_partitioned_idx = False
                     else:
                         is_partitioned_idx = bool(random.getrandbits(1))
                     is_defer_idx = bool(random.getrandbits(1))
@@ -571,22 +578,61 @@ class IndexManager:
                         idx_statement = idx_statement + ','.join(with_clause_list) + "}"
                         create_index_statements.append(idx_statement)
                     total_idx_created += 1
+                    self.log.info("Create index statements: {}".format(create_index_statements))
+                for num, create_index_statement in enumerate(create_index_statements):
+                    self.log.info(f"Creating index number {num} on bucket {bucket_name}. Index statement: {create_index_statement}")
+                    try:
+                        self._execute_query(create_index_statement)
+                        sleep(10)
+                    except Exception as err:
+                        self.log.error(f"Index creation failed for statement: {create_index_statement}")
+                        self.log.error(err)
+                        if "Planner not able to find any node" in str(err):
+                            break
                     if total_idx_created == num_of_indexes_per_bucket:
                         break
-            self.log.info("Create index statements: {}".format(create_index_statements))
-            for num, create_index_statement in enumerate(create_index_statements):
-                self.log.info(f"Creating index number {num} on bucket {bucket_name}. Index statement: {create_index_statement}")
-                try:
-                    self._execute_query(create_index_statement)
-                    sleep(10)
-                except Exception as err:
-                    self.log.error(f"Index creation failed for statement: {create_index_statement}")
-                    self.log.error(err)
-                    if "Planner not able to find any node" in str(err):
-                        break
-    """
-    Alter indexes
-    """
+
+    def fetch_total_index_count_in_the_cluster(self):
+        idx_nodes = self.find_nodes_with_service(self.get_services_map(), "index")
+        index_count_total = 0
+        for idx_node in idx_nodes:
+            endpoint = f"{self.scheme}://{idx_node}:{self.node_port_index}/stats"
+            self.log.debug(f"Endpoint used for stats {endpoint}")
+            response = requests.get(endpoint, auth=(
+                self.username, self.password), verify=False, timeout=300)
+            response_temp = json.loads(response.text)
+            index_count_node = response_temp['num_indexes']
+            self.log.info(f"Index count on - {idx_node} is {index_count_node}")
+            index_count_total += index_count_node
+        self.log.info(f"Total index count as of now - {index_count_total}")
+        return index_count_total
+
+    def fetch_stats(self):
+        idx_nodes = self.find_nodes_with_service(self.get_services_map(), "index")
+        for idx_node in idx_nodes:
+            endpoint = f"{self.scheme}://{idx_node}:{self.node_port_index}/stats"
+            self.log.debug(f"Endpoint used for stats {endpoint}")
+            response = requests.get(endpoint, auth=(
+                self.username, self.password), verify=False, timeout=300)
+            response_temp = json.loads(response.text)
+            index_count_node, rr, memory_rss = response_temp['num_indexes'], \
+                                               response_temp['avg_resident_percent'], response_temp['memory_rss'] / (1024*1024*1024)
+            total_data_size, total_disk_size  = response_temp['total_data_size']/ (1024*1024*1024), \
+                                                response_temp['total_disk_size'] / (1024*1024*1024)
+            self.log.info(f"Node in question {idx_node}\nIndex count- {index_count_node}.\nRR {rr} "
+                          f"\nData size {total_data_size} GB \nDisk Size {total_disk_size} GB"
+                          f"\nMemory RSS {memory_rss} GB")
+
+    def print_stats(self):
+        if self.timeout:
+            self.log.info(f"Will collect logs for {self.timeout} seconds")
+            time_end = time.time() + self.timeout
+            while time.time() < time_end:
+                self.fetch_stats()
+                self.log.info(f"Will sleep for {self.interval} seconds before the next iteration")
+                time.sleep(self.interval)
+        else:
+            self.fetch_stats()
 
     def alter_indexes(self, timeout, interval=900):
 
@@ -1000,7 +1046,9 @@ class IndexManager:
         """
         Populate the service map for all nodes in the cluster.
         """
-        cluster_url = self.url + "/pools/default"
+        rest_url = self.fetch_rest_url(self.node_addr)
+        url = "{}://".format(self.scheme) + rest_url + ":" + self.port
+        cluster_url = url + "/pools/default"
         self.log.info(f"Rest URL is {cluster_url}")
         node_map = []
 
@@ -1690,6 +1738,8 @@ if __name__ == '__main__':
         indexMgr.poll_total_requests_during_rebalance()
     elif indexMgr.action == 'wait_until_rebalance_cleanup_done':
         indexMgr.wait_until_rebalance_cleanup_done()
+    elif indexMgr.action == 'print_stats':
+        indexMgr.print_stats()
     else:
         print("Invalid choice for action. Choose from the following - "
               "create_index | build_deferred_index | drop_all_indexes | create_index_loop | alter_indexes | "
