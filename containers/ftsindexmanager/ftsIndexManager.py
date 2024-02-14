@@ -1618,19 +1618,46 @@ class FTSIndexManager:
 
     def run_knn_queries(self):
         vector_index_names = self.get_fts_index_list(self.bucket_name)
+        dimension = None
+        if self.vector_index_dimension != 128:
+            dimension = self.vector_index_dimension
         for index in vector_index_names:
-            queries = self.get_query_vectors()
+            queries = self.get_query_vectors(dimension=dimension)
             for count, q in enumerate(queries):
                 self.knn_query['knn'][0]['vector'] = q.tolist()
                 self.run_fts_query(index_name=index, query=self.knn_query['query'], knn=self.knn_query['knn'])
 
-    def get_query_vectors(self):
+    def get_query_vectors(self, dimension=None):
         ds = VectorDataset(self.dataset)
         use_hdf5_datasets = True
         if ds.dataset_name in ds.supported_sift_datasets:
             use_hdf5_datasets = False
-        ds.extract_vectors_from_file(use_hdf5_datasets=use_hdf5_datasets, type_of_vec="query")
-        print(f"First Query vector:{str(ds.query_vecs[0])}")
+        dataset_generator = ds.extract_vectors_from_file(use_hdf5_datasets=use_hdf5_datasets, type_of_vec="query")
+
+        for batch in dataset_generator:
+            print("Loading batch {}".format(batch))
+
+        if dimension:
+            import numpy as np
+            ds.query_vecs = list(ds.query_vecs)
+
+            for index in range(len(ds.query_vecs)):
+                vector = ds.query_vecs[index]
+                current_dim = len(vector)
+
+                # Resize the vector to the desired dimension
+                if current_dim < dimension:
+                    # If the current dimension is less than the desired dimension, repeat the values
+                    repeat_values = dimension - current_dim
+                    repeated_values = np.tile(vector, ((dimension + current_dim - 1) // current_dim))
+                    ds.query_vecs[index] = repeated_values[:dimension]
+                elif current_dim > dimension:
+                    # If the current dimension is greater than the desired dimension, truncate the vector
+                    ds.query_vecs[index] = vector[:dimension]
+
+        print("Total number of queries:  {}".format(len(ds.query_vecs)))
+        print(f"First Query vector: {str(ds.query_vecs[0])}")
+        print(f"Length of first query vector: {len(ds.query_vecs[0])}")
         return ds.query_vecs
 
     def copy_docs_source_collection(self, create_primary=True):
