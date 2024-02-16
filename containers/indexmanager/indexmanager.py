@@ -1046,9 +1046,12 @@ class IndexManager:
         """
         Populate the service map for all nodes in the cluster.
         """
-        rest_url = self.fetch_rest_url(self.node_addr)
-        url = "{}://".format(self.scheme) + rest_url + ":" + self.port
-        cluster_url = url + "/pools/default"
+        if self.capella_run:
+            rest_url = self.fetch_rest_url(self.node_addr)
+            url = "{}://".format(self.scheme) + rest_url + ":" + self.port
+            cluster_url = url + "/pools/default"
+        else:
+            cluster_url = self.url + "/pools/default"
         self.log.info(f"Rest URL is {cluster_url}")
         node_map = []
 
