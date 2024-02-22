@@ -1059,7 +1059,8 @@ class CouchbaseOps:
                         key_str = f'{self.doc_key_gen.prefix}#MONO_INCR[{key_offset}]#'
                         cbimport_command = f"/opt/couchbase/bin/cbimport json --cluster {hostname} --bucket {self.bucket_name} " \
                                 f"--dataset /tmp/{filename} --format lines --username {self.username} --password {self.password} " \
-                                f"--scope-collection-exp '{self.scope_name}.{self.collection_name}' --generate-key '{key_str}'"
+                                f"--scope-collection-exp '{self.scope_name}.{self.collection_name}' --generate-key '{key_str}' " \
+                                f"--no-ssl-verify"
                         stdout, stderr = execute_command(cbimport_command, node_ip, "root", "couchbase")
                         print(stdout, stderr)
 
