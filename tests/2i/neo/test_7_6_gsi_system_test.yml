@@ -825,6 +825,52 @@
 - command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}}  -a delete_statistics"
   wait: true
 
+###############  Rebalance-in single node ################
+- template: rebalance_in
+  args: "{{.InActiveNode}}, index"
+
+# Sleep after starting rebalance
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "310"
+   wait: true
+
+# Sleep before starting to poll for rebalance progress
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "430"
+   wait: true
+
+# Wait for rebalance to complete
+-
+  template: wait_for_rebalance
+  wait: true
+
+###############  Rebalance-in single node ################
+- template: rebalance_in
+  args: "{{.InActiveNode}}, index"
+
+# Sleep after starting rebalance
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "310"
+   wait: true
+
+# Sleep before starting to poll for rebalance progress
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "430"
+   wait: true
+
+# Wait for rebalance to complete
+-
+  template: wait_for_rebalance
+  wait: true
+
 ###############  Drop all Indexes ################
 - section_start: drop_all_indexes
 - image: sequoiatools/indexmanager
