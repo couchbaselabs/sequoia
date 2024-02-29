@@ -133,7 +133,7 @@ buckets:
       rank : 2
   -
       name: ITEM
-      ram: 10%
+      ram: 5%
       storage: magma
       eviction: fullEviction
       ddocs: all

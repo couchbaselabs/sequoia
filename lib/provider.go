@@ -7,13 +7,13 @@ package sequoia
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
+	"net"
 	"strconv"
 	"strings"
 	"time"
-	"io/ioutil"
 	"github.com/docker/docker/api/types/swarm"
 	docker "github.com/fsouza/go-dockerclient"
-	"net"
 )
 
 type ProviderLabel int

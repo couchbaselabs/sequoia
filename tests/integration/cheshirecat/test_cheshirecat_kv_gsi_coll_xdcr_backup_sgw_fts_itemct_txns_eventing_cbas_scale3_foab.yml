@@ -281,9 +281,9 @@
   requires:  "{{eq true .DoOnce }}"
 
 # replica data loading for eventing source with docs that will expire after 1 hour
-- image: sequoiatools/gideon2
-  command: "kv --ops {{.Scale 150}} --create 80 --delete 20 --get 82 --sizes 64 96  --expire 100 --ttl 3600  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --scope event_0 --collection coll0"
-- command: "kv --ops {{.Scale 150}} --create 80 --delete 20 --get 82 --sizes 64 96  --expire 100 --ttl 3600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}} --scope event_0 --collection coll0"
+- image: sequoiatools/gideon_latest
+  command: "kv --ops {{.Scale 150}} --create 80 --delete 20 --get 82 --sizes 64 96  --expire 100 --ttl 3600  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --scope event_0 --collection coll0 --user {{.RestUsername}} --password {{.RestPassword}}"
+- command: "kv --ops {{.Scale 150}} --create 80 --delete 20 --get 82 --sizes 64 96  --expire 100 --ttl 3600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}} --scope event_0 --collection coll0 --user {{.RestUsername}} --password {{.RestPassword}}"
 
 ############### incremental data loading to collections ################
 - image: sequoiatools/catapult

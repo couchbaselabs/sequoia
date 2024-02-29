@@ -8,11 +8,11 @@ package sequoia
 import (
 	"bytes"
 	"fmt"
+	"net"
 	"reflect"
 	"strconv"
 	"strings"
 	"text/template"
-	"net"
 )
 
 type TemplateResolver struct {

@@ -250,12 +250,12 @@
   requires:  "{{eq true .DoOnce }}"
 
 # replica data loading for 30 minutes with docs that will expire after 1 hour
-- image: sequoiatools/gideon
-  command: "kv --ops {{.Scale 500}} --create 10 --delete 8 --get 82 --sizes 64 96  --expire 100 --ttl 3600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
+- image: sequoiatools/gideon_latest
+  command: "kv --ops {{.Scale 500}} --create 10 --delete 8 --get 82 --sizes 64 96  --expire 100 --ttl 3600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}} --user {{.RestUsername}} --password {{.RestPassword}}"
   duration: 1800
-- command: "kv --ops {{.Scale 500}} --create 10 --delete 8 --get 82 --sizes 64 96  --expire 100 --ttl 3600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}}"
+- command: "kv --ops {{.Scale 500}} --create 10 --delete 8 --get 82 --sizes 64 96  --expire 100 --ttl 3600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}} --user {{.RestUsername}} --password {{.RestPassword}}"
   duration: 1800
-- command: "kv --ops {{.Scale 500}} --create 10 --delete 8 --get 82 --sizes 64 96  --expire 100 --ttl 3600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}}"
+- command: "kv --ops {{.Scale 500}} --create 10 --delete 8 --get 82 --sizes 64 96  --expire 100 --ttl 3600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}} --user {{.RestUsername}} --password {{.RestPassword}}"
   duration: 1800
 
 ############### data loading to collections ################
@@ -313,11 +313,11 @@
         delete from default where rating > 0 limit {{$.Scale 10}}"
 
 # more json docs on default bucket
-- image: sequoiatools/gideon
-  command: "kv --ops {{.Scale 500}} --create 10 --delete 8 --get 92 --expire 100 --ttl 660  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes  512 128 1024 2048 16000"
-- command: "kv --ops {{.Scale 500}} --create 100  --expire 100 --ttl 660 --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 64"
+- image: sequoiatools/gideon_latest
+  command: "kv --ops {{.Scale 500}} --create 10 --delete 8 --get 92 --expire 100 --ttl 660  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes  512 128 1024 2048 16000 --user {{.RestUsername}} --password {{.RestPassword}}"
+- command: "kv --ops {{.Scale 500}} --create 100  --expire 100 --ttl 660 --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 64 --user {{.RestUsername}} --password {{.RestPassword}}"
   duration: 600
-- command: "kv --ops {{.Scale 600}} --create 15 --get 80 --delete 5  --expire 100 --ttl 660 --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 128"
+- command: "kv --ops {{.Scale 600}} --create 15 --get 80 --delete 5  --expire 100 --ttl 660 --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 128 --user {{.RestUsername}} --password {{.RestPassword}}"
   duration: 7200
 
 # Change the topology (performs rebalance in/out/swap eventing nodes)
@@ -447,8 +447,8 @@
   wait: true
 
 # load some new docs
-- image: sequoiatools/gideon
-  command: "kv --ops {{.Scale 500}} --create 100  --expire 100 --ttl 660 --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 64"
+- image: sequoiatools/gideon_latest
+  command: "kv --ops {{.Scale 500}} --create 100  --expire 100 --ttl 660 --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 64 --user {{.RestUsername}} --password {{.RestPassword}}"
   duration: 1800
 
 # quick update batch

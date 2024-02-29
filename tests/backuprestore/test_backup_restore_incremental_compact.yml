@@ -3,13 +3,13 @@
 
 ############### data loading ################
 -
-  image: sequoiatools/gideon
-  command: "kv --ops {{.Scale 1500}} --create 55 --update 25 --delete 20 --expire 15 --ttl 600 --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+  image: sequoiatools/gideon_latest
+  command: "kv --ops {{.Scale 1500}} --create 55 --update 25 --delete 20 --expire 15 --ttl 600 --hosts {{.Orchestrator}} --bucket {{.Bucket}}  --user {{.RestUsername}} --password {{.RestPassword}}"
   #command: "kv --ops {{.Scale 2000}} --create 65 --update 25 --delete 10 --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
   concurrency: 2
   alias: GideonContainer1
 -
-  command: "kv --ops {{.Scale 750}} --create 55 --update 25 --delete 20 --expire 15 --ttl 600 --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
+  command: "kv --ops {{.Scale 750}} --create 55 --update 25 --delete 20 --expire 15 --ttl 600 --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}} --user {{.RestUsername}} --password {{.RestPassword}}"
   #command: "kv --ops {{.Scale 2000}} --create 65 --update 25 --delete 10 --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
   alias: GideonContainer2
 -

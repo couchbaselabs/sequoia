@@ -202,6 +202,7 @@ if __name__ == '__main__':
     all_indexes_built = False
     check_index_stats = False
     all_indexes_caught_up = False
+    hard_all_index_built_timeout = 43200
     index_obj = WaitForAllIndexBuildComplete()
     capella_run = False
     if len(sys.argv) > 4:
@@ -221,7 +222,9 @@ if __name__ == '__main__':
             print("Error while waiting for ingestion")
             print(str(e))
     else:
-        while not all_indexes_built:
+        cr_time = time.time()
+        while (not all_indexes_built) and (cr_time +
+                                           hard_all_index_built_timeout > time.time()):
             try:
                 all_indexes_built = index_obj.check_index_status()
             except Exception as e:

@@ -188,7 +188,6 @@ func NewTest(flags TestFlags, cm *ContainerManager) Test {
 }
 
 func (t *Test) Run(scope Scope) {
-
 	// do optional setup
 	if *t.Flags.SkipSetup == false {
 		// if in default mode purge all containers
@@ -269,7 +268,6 @@ func (t *Test) Run(scope Scope) {
 		for {
 			duration_start := time.Now().Unix()
 			cycle_start := t.Cm.TapHandle.Count()
-			fmt.Println("Test cycle started:", loops+1)
 			t.runRepeatableActions(scope, loops, t.Actions)
 			// kill test containers
 			t.DoContainerCleanup(scope)
@@ -298,7 +296,6 @@ func (t *Test) Run(scope Scope) {
 		for loops = 0; loops < repeat; loops++ {
 			duration_start := time.Now().Unix()
 			cycle_start := t.Cm.TapHandle.Count()
-			fmt.Println("Test cycle started:", loops+1)
 			t.runRepeatableActions(scope, loops, t.Actions)
 			// kill test containers
 			if *t.Flags.SkipCleanup == false {
@@ -746,7 +743,6 @@ func (t *Test) runActions(scope Scope, loop int, actions []ActionSpec) {
 }
 
 func (t *Test) runTask(scope *Scope, task *ContainerTask, action *ActionSpec) {
-
 	actionBefore := action.Before
 	repeat := action.Repeat
 	rChan := make(chan bool) // repeat chan
@@ -760,7 +756,6 @@ func (t *Test) runTask(scope *Scope, task *ContainerTask, action *ActionSpec) {
 		// parse alias
 		aliasKey = ParseTemplate(scope, aliasKey)
 	}
-
 	// if command has 'before' then cannot start processing until ready
 	if actionBefore != "" {
 		var ready = false

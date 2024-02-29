@@ -2,27 +2,28 @@
 
 ####### runing constant ops #################
 -
-  image: sequoiatools/gideon
-  command: "kv --ops {{.Scale 100}} --create 100 --expire 80 --ttl 300  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 64 96 "
-- command: "kv --ops {{.Scale 100}} --create 100 --expire 80 --ttl 300  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}} --sizes 64 96 "
-- command: "kv --ops {{.Scale 100}} --create 100 --expire 80 --ttl 300  --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}} --sizes 64 96 "
-- command: "kv --ops {{.Scale 100}} --create 100 --expire 80 --ttl 300  --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}} --sizes 64 96 "
-- command: "kv --ops {{.Scale 100}} --create 100 --expire 80 --ttl 300  --hosts {{.Orchestrator}} --bucket {{.NthBucket 4}} --sizes 64 96 "
-- command: "kv --ops {{.Scale 100}} --create 100 --expire 80 --ttl 300  --hosts {{.Orchestrator}} --bucket {{.NthBucket 5}} --sizes 64 96 "
-- command: "kv --ops {{.Scale 100}} --create 100 --expire 80 --ttl 300  --hosts {{.Orchestrator}} --bucket {{.NthBucket 6}} --sizes 64 96 "
-- command: "kv --ops {{.Scale 100}} --create 100 --expire 80 --ttl 300  --hosts {{.Orchestrator}} --bucket {{.NthBucket 7}} --sizes 64 96 "
-- command: "kv --ops {{.Scale 100}} --create 100 --expire 80 --ttl 300  --hosts {{.Orchestrator}} --bucket {{.NthBucket 8}} --sizes 64 96 "
-- command: "kv --ops {{.Scale 100}} --create 100 --expire 80 --ttl 300  --hosts {{.Orchestrator}} --bucket {{.NthBucket 9}} --sizes 64 96 "
-- command: "kv --ops {{.Scale 100}} --create 100 --expire 80 --ttl 300  --hosts {{.Orchestrator}} --bucket {{.NthBucket 10}} --sizes 64 96 "
-- command: "kv --ops {{.Scale 100}} --create 100 --expire 80 --ttl 300  --hosts {{.Orchestrator}} --bucket {{.NthBucket 11}} --sizes 64 96 "
-- command: "kv --ops {{.Scale 100}} --create 100 --expire 80 --ttl 300  --hosts {{.Orchestrator}} --bucket {{.NthBucket 12}} --sizes 64 96 "
-- command: "kv --ops {{.Scale 100}} --create 100 --expire 80 --ttl 300  --hosts {{.Orchestrator}} --bucket {{.NthBucket 13}} --sizes 64 96 "
-- command: "kv --ops {{.Scale 100}} --create 100 --expire 80 --ttl 300  --hosts {{.Orchestrator}} --bucket {{.NthBucket 14}} --sizes 64 96 "
-- command: "kv --ops {{.Scale 100}} --create 100 --expire 80 --ttl 300  --hosts {{.Orchestrator}} --bucket {{.NthBucket 15}} --sizes 64 96 "
-- command: "kv --ops {{.Scale 100}} --create 100 --expire 80 --ttl 300  --hosts {{.Orchestrator}} --bucket {{.NthBucket 16}} --sizes 64 96 "
-- command: "kv --ops {{.Scale 100}} --create 100 --expire 80 --ttl 300  --hosts {{.Orchestrator}} --bucket {{.NthBucket 17}} --sizes 64 96 "
-- command: "kv --ops {{.Scale 100}} --create 100 --expire 80 --ttl 300  --hosts {{.Orchestrator}} --bucket {{.NthBucket 18}} --sizes 64 96 "
-- command: "kv --ops {{.Scale 100}} --create 100 --expire 80 --ttl 300  --hosts {{.Orchestrator}} --bucket {{.NthBucket 19}} --sizes 64 96 "
+  image: sequoiatools/gideon_latest
+  command: "kv --ops {{.Scale 100}} --create 100 --expire 80 --ttl 300  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 64 96 --user {{.RestUsername}} --password {{.RestPassword}}"
+- command: "kv --ops {{.Scale 100}} --create 100 --expire 80 --ttl 300  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}} --sizes 64 96 --user {{.RestUsername}} --password {{.RestPassword}}"
+- command: "kv --ops {{.Scale 100}} --create 100 --expire 80 --ttl 300  --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}} --sizes 64 96 --user {{.RestUsername}} --password {{.RestPassword}}"
+- command: "kv --ops {{.Scale 100}} --create 100 --expire 80 --ttl 300  --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}} --sizes 64 96 --user {{.RestUsername}} --password {{.RestPassword}}"
+- command: "kv --ops {{.Scale 100}} --create 100 --expire 80 --ttl 300  --hosts {{.Orchestrator}} --bucket {{.NthBucket 4}} --sizes 64 96 --user {{.RestUsername}} --password {{.RestPassword}}"
+- command: "kv --ops {{.Scale 100}} --create 100 --expire 80 --ttl 300  --hosts {{.Orchestrator}} --bucket {{.NthBucket 5}} --sizes 64 96 --user {{.RestUsername}} --password {{.RestPassword}}"
+- command: "kv --ops {{.Scale 100}} --create 100 --expire 80 --ttl 300  --hosts {{.Orchestrator}} --bucket {{.NthBucket 6}} --sizes 64 96 --user {{.RestUsername}} --password {{.RestPassword}}"
+- command: "kv --ops {{.Scale 100}} --create 100 --expire 80 --ttl 300  --hosts {{.Orchestrator}} --bucket {{.NthBucket 7}} --sizes 64 96 --user {{.RestUsername}} --password {{.RestPassword}}"
+- command: "kv --ops {{.Scale 100}} --create 100 --expire 80 --ttl 300  --hosts {{.Orchestrator}} --bucket {{.NthBucket 8}} --sizes 64 96 --user {{.RestUsername}} --password {{.RestPassword}}"
+- command: "kv --ops {{.Scale 100}} --create 100 --expire 80 --ttl 300  --hosts {{.Orchestrator}} --bucket {{.NthBucket 9}} --sizes 64 96 --user {{.RestUsername}} --password {{.RestPassword}}"
+- command: "kv --ops {{.Scale 100}} --create 100 --expire 80 --ttl 300  --hosts {{.Orchestrator}} --bucket {{.NthBucket 10}} --sizes 64 96 --user {{.RestUsername}} --password {{.RestPassword}}"
+- command: "kv --ops {{.Scale 100}} --create 100 --expire 80 --ttl 300  --hosts {{.Orchestrator}} --bucket {{.NthBucket 11}} --sizes 64 96 --user {{.RestUsername}} --password {{.RestPassword}}"
+- command: "kv --ops {{.Scale 100}} --create 100 --expire 80 --ttl 300  --hosts {{.Orchestrator}} --bucket {{.NthBucket 12}} --sizes 64 96 --user {{.RestUsername}} --password {{.RestPassword}}"
+- command: "kv --ops {{.Scale 100}} --create 100 --expire 80 --ttl 300  --hosts {{.Orchestrator}} --bucket {{.NthBucket 13}} --sizes 64 96 --user {{.RestUsername}} --password {{.RestPassword}}"
+- command: "kv --ops {{.Scale 100}} --create 100 --expire 80 --ttl 300  --hosts {{.Orchestrator}} --bucket {{.NthBucket 14}} --sizes 64 96 --user {{.RestUsername}} --password {{.RestPassword}}"
+- command: "kv --ops {{.Scale 100}} --create 100 --expire 80 --ttl 300  --hosts {{.Orchestrator}} --bucket {{.NthBucket 15}} --sizes 64 96 --user {{.RestUsername}} --password {{.RestPassword}}"
+- command: "kv --ops {{.Scale 100}} --create 100 --expire 80 --ttl 300  --hosts {{.Orchestrator}} --bucket {{.NthBucket 16}} --sizes 64 96 --user {{.RestUsername}} --password {{.RestPassword}}"
+- command: "kv --ops {{.Scale 100}} --create 100 --expire 80 --ttl 300  --hosts {{.Orchestrator}} --bucket {{.NthBucket 17}} --sizes 64 96 --user {{.RestUsername}} --password {{.RestPassword}}"
+- command: "kv --ops {{.Scale 100}} --create 100 --expire 80 --ttl 300  --hosts {{.Orchestrator}} --bucket {{.NthBucket 18}} --sizes 64 96 --user {{.RestUsername}} --password {{.RestPassword}}"
+- command: "kv --ops {{.Scale 100}} --create 100 --expire 80 --ttl 300  --hosts {{.Orchestrator}} --bucket {{.NthBucket 19}} --sizes 64 96 --user {{.RestUsername}} --password {{.RestPassword}}"
+
 
 -
   image: sequoiatools/cmd

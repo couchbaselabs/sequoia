@@ -7,12 +7,12 @@
   wait: true
 ############### data loading ################
 -
-  image: sequoiatools/gideon
-  command: "kv --ops {{.Scale 2000}} --create 100 --hosts {{.Orchestrator}} --bucket {{.Bucket}}"
+  image: sequoiatools/gideon_latest
+  command: "kv --ops {{.Scale 2000}} --create 100 --hosts {{.Orchestrator}} --bucket {{.Bucket}} --user {{.RestUsername}} --password {{.RestPassword}}"
   alias: GideonContainer1
   duration: 14400
 -
-  command: "kv --ops {{.Scale 2000}} --create 100  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}"
+  command: "kv --ops {{.Scale 2000}} --create 100  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}} --user {{.RestUsername}} --password {{.RestPassword}}"
   alias: GideonContainer2
   duration: 14400
   wait: true

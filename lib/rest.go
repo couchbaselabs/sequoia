@@ -3,10 +3,9 @@ package sequoia
 import (
 	"fmt"
 	"time"
-
-	cmap "github.com/streamrail/concurrent-map"
-	"strings"
 	"strconv"
+	"strings"
+	cmap "github.com/streamrail/concurrent-map"
 )
 
 type RestClient struct {
@@ -218,6 +217,7 @@ func (r *RestClient) getPoolNode(host string) PoolNode {
     	r.cacheSet("pool/node/", host, n)
     	return n
 }
+
 
 func (r *RestClient) GetHostNodeStatuses(host string) NodeStatuses {
 
