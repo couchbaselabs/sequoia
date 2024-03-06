@@ -509,7 +509,7 @@ class IndexManager:
                         self.log.error(f"Index status for {index['name']} is not matching with expected value"
                                    f"Expected: Created, Actual: {index['status']}")
             self.log.info("Validation completed")
-    
+
     def create_n_indexes_on_buckets(self):
         num_of_indexes_per_bucket = self.num_of_indexes_per_bucket
         limit_total_index_count_in_cluster = self.limit_total_index_count_in_cluster
@@ -561,7 +561,7 @@ class IndexManager:
                         if is_partitioned_idx:
                             idx_statement = idx_statement + " partition by hash(meta().id) "
                         if self.capella_run and is_partitioned_idx:
-                            reference_index_map[keyspace_name][idx_name]['num_partition'] = 8
+                            with_clause_list.append("\'num_partition\':8")
                         else:
                             if is_partitioned_idx:
                                 num_partition = random.randint(2, 8)
@@ -1496,7 +1496,7 @@ class IndexManager:
                 raise Exception("Tenant affinity check fail")
             else:
                 self.log.info(f"Tenant affinity honoured for bucket {bucket}")
-                
+
 
     def get_indexer_nodes(self):
         service_map = self.get_services_map()
@@ -1506,7 +1506,7 @@ class IndexManager:
             if "index" in node['services'] and node['status'] == 'healthy' and node['clusterMembership'] == 'active':
                 indexer_nodes_list.append(node['hostname'])
         return indexer_nodes_list
-    
+
     def set_fast_rebalance_config(self):
         indexer_nodes = self.get_indexer_nodes()
         self.log.info("The indexer nodes are {}".format(indexer_nodes))
