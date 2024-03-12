@@ -86,6 +86,11 @@ class IndexManager:
                                  "If action=drop_index, number of indexes to be dropped per collection of bucket")
         parser.add_argument("-d", "--dataset", help="Dataset to be used for the test. Choices are - hotel",
                             default="hotel")
+        parser.add_argument("--user_specified_prefix", help="Use this prefix to append to index name creation",
+                            default="")
+        parser.add_argument("--allow_equivalent_indexes",
+                            help="Enable this flag if you want to create equivalent indexes across bucket",
+                            default=False)
         parser.add_argument("-a", "--action",
                             choices=["create_index", "build_deferred_index", "drop_all_indexes", "create_index_loop",
                                      "drop_index_loop", "alter_indexes", "enable_cbo", "delete_statistics",
@@ -157,6 +162,8 @@ class IndexManager:
         self.aws_access_key_id = args.aws_access_key_id
         self.s3_bucket = args.s3_bucket
         self.storage_prefix = args.storage_prefix
+        self.user_specified_prefix = args.user_specified_prefix
+        self.allow_equivalent_indexes = args.allow_equivalent_indexes
         self.aws_secret_access_key = args.aws_secret_access_key
         self.region = args.region
         self.num_of_indexes_per_bucket = args.num_of_indexes_per_bucket
@@ -395,8 +402,10 @@ class IndexManager:
                 self.log.info(f"Index chosen randomly from the templates:{idx_def_templates}")
                 for idx_template in idx_def_templates:
                     idx_statement = idx_template['statement']
-
-                    idx_prefix = ''.join(random.choices(string.ascii_letters + string.digits, k=random.randint(4, 8)))
+                    if self.user_specified_prefix:
+                        idx_prefix = self.user_specified_prefix + ''.join(random.choices(string.ascii_letters + string.digits, k=random.randint(4, 8)))
+                    else:
+                        idx_prefix = ''.join(random.choices(string.ascii_letters + string.digits, k=random.randint(4, 8)))
                     idx_name = f"{idx_template['indexname']}_{idx_prefix}"
 
                     is_partitioned_idx = bool(random.getrandbits(1))
@@ -542,8 +551,10 @@ class IndexManager:
                     break
                 for idx_template in self.idx_def_templates:
                     idx_statement = idx_template['statement']
-                    idx_prefix = ''.join(random.choices(string.ascii_letters + string.digits, k=random.randint(4, 8)))
-                    idx_name = f"{idx_template['indexname']}_{idx_prefix}"
+                    if self.user_specified_prefix:
+                        idx_prefix = self.user_specified_prefix + ''.join(random.choices(string.ascii_letters + string.digits, k=random.randint(4, 8)))
+                    else:
+                        idx_prefix = ''.join(random.choices(string.ascii_letters + string.digits, k=random.randint(4, 8)))
                     # create partitioned indexes for all array indexes on Capella clusters. For the rest, it's randomised
                     if self.capella_run or self.use_tls:
                         if idx_template['indexname'] in ["idx3", "idx4", "idx6", "idx7", "idx12", "idx13"]:
@@ -556,7 +567,6 @@ class IndexManager:
                     with_clause_list = []
                     idx_statement = idx_statement.replace("keyspacenameplaceholder", keyspace)
                     idx_statement = idx_statement.replace('idxprefix', idx_prefix)
-                    keyspace_name = keyspace.replace("`", "")
                     if self.install_mode == "ee":
                         if is_partitioned_idx:
                             idx_statement = idx_statement + " partition by hash(meta().id) "
@@ -577,12 +587,12 @@ class IndexManager:
                         idx_statement = idx_statement + " with {"
                         idx_statement = idx_statement + ','.join(with_clause_list) + "}"
                         create_index_statements.append(idx_statement)
-                    total_idx_created += 1
                     self.log.info("Create index statements: {}".format(create_index_statements))
                 for num, create_index_statement in enumerate(create_index_statements):
                     self.log.info(f"Creating index number {num} on bucket {bucket_name}. Index statement: {create_index_statement}")
                     try:
                         self._execute_query(create_index_statement)
+                        total_idx_created += 1
                         sleep(10)
                     except Exception as err:
                         self.log.error(f"Index creation failed for statement: {create_index_statement}")
@@ -590,6 +600,12 @@ class IndexManager:
                         if "Planner not able to find any node" in str(err):
                             break
                     if total_idx_created == num_of_indexes_per_bucket:
+                        break
+                # if all the keyspaces are covered and equivalent indexes are not allowed then break the code
+                if not list(set(keyspaces) - set(keyspace_list)):
+                    if self.allow_equivalent_indexes:
+                        keyspace_list = []
+                    else:
                         break
 
     def fetch_total_index_count_in_the_cluster(self):
@@ -1248,9 +1264,15 @@ class IndexManager:
         """
         Drop all indexes in the cluster
         """
-        drop_idx_query_gen_template = "SELECT RAW 'DROP INDEX `' || name || '` on keyspacename;'  " \
-                                      "FROM system:all_indexes WHERE '`' || `bucket_id` || '`.`' || `scope_id` " \
-                                      "|| '`.`' || `keyspace_id` || '`' = 'keyspacename';"
+        if self.user_specified_prefix:
+            drop_idx_query_gen_template = "SELECT RAW 'DROP INDEX `' || name || '` on keyspacename;'  " \
+                                          "FROM system:all_indexes WHERE '`' || `bucket_id` || '`.`' || `scope_id` " \
+                                          "|| '`.`' || `keyspace_id` || '`' = 'keyspacename' " \
+                                          f"and name like '%{self.user_specified_prefix}%';"
+        else:
+            drop_idx_query_gen_template = "SELECT RAW 'DROP INDEX `' || name || '` on keyspacename;'  " \
+                                          "FROM system:all_indexes WHERE '`' || `bucket_id` || '`.`' || `scope_id` " \
+                                          "|| '`.`' || `keyspace_id` || '`' = 'keyspacename';"
 
         self.log.info("Starting to drop all indexes ")
         for keyspace in keyspace_name_list:
@@ -1271,6 +1293,21 @@ class IndexManager:
                 if keyspace in index_map_from_system_indexes:
                     self.log.error(f"All indexes not dropped for keyspace:{keyspace}")
             self.log.info("Validation completed")
+
+    def drop_indexes_with_keywords(self, ):
+        """
+        Drop all the indexes with a particular keyword in the index name for given namespaces
+        if namespaces are none, then we will delete indexes from all the keyspaces
+        """
+        get_index_names_query = f"SELECT name,`namespace_id`,bucket_id,scope_id,keyspace_id from system:indexes where name like '%{self.user_specified_prefix}%'"
+        result = self._execute_query(get_index_names_query)
+        drop_index_query_list = [f"drop index {item['name']} on default:`{item['bucket_id']}`.`{item['scope_id']}`.`{item['keyspace_id']}`" for item in result[1]]
+        for drop_query in drop_index_query_list:
+            try:
+                self._execute_query(drop_query)
+            except Exception as err:
+                self.log.error(err)
+
 
     def drop_indexes_in_a_loop(self, timeout, interval):
         """
