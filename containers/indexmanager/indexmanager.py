@@ -1294,21 +1294,6 @@ class IndexManager:
                     self.log.error(f"All indexes not dropped for keyspace:{keyspace}")
             self.log.info("Validation completed")
 
-    def drop_indexes_with_keywords(self, ):
-        """
-        Drop all the indexes with a particular keyword in the index name for given namespaces
-        if namespaces are none, then we will delete indexes from all the keyspaces
-        """
-        get_index_names_query = f"SELECT name,`namespace_id`,bucket_id,scope_id,keyspace_id from system:indexes where name like '%{self.user_specified_prefix}%'"
-        result = self._execute_query(get_index_names_query)
-        drop_index_query_list = [f"drop index {item['name']} on default:`{item['bucket_id']}`.`{item['scope_id']}`.`{item['keyspace_id']}`" for item in result[1]]
-        for drop_query in drop_index_query_list:
-            try:
-                self._execute_query(drop_query)
-            except Exception as err:
-                self.log.error(err)
-
-
     def drop_indexes_in_a_loop(self, timeout, interval):
         """
         Drop random indexes in a loop
