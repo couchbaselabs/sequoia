@@ -12,6 +12,7 @@ import tarfile
 from urllib.request import urlretrieve
 from pathlib import Path
 from couchbase.cluster import Cluster, ClusterOptions
+import couchbase.subdocument as SD
 from couchbase.auth import PasswordAuthenticator
 import h5py
 import numpy as np
@@ -361,7 +362,7 @@ class VectorDataset:
 
                         for j in range(num_batches):
                             out_vector = np.zeros(
-                            (batch_size, dimension)
+                                (batch_size, dimension)
                             )
 
                             for i in range(batch_size):
@@ -506,6 +507,7 @@ class VectorDataset:
             print(f"Error: dataset name {dataset_name} is not supported")
             return "Error: dataset name" + dataset_name + "is not supported"
 
+
 class DocKey:
     def __init__(self, prefix="", start=0):
         self.start_key = start
@@ -518,7 +520,7 @@ class DocKey:
             self.counter += 1
             # Adding 1 to counter because of the way cbimport works.
             # cmbimport MONOINCR start from 1
-            doc_key = self.prefix + str(self.counter + 1)
+            doc_key = self.prefix + str(self.counter)
             return doc_key, self.counter
 
     def get_key(self, doc_index):
@@ -531,30 +533,35 @@ class DocKey:
         with self.key_lock:
             return self.counter
 
-def get_json_body(doc_key_gen, vector):
+
+def get_json_body(doc_key_gen, vector, skip_vector=False):
     id, sno = doc_key_gen.get_next_key()
     sname = number_to_alphabetic(sno)
     data_record = {
         "sno": sno,
         "sname": sname,
-        "id": id,
-        "dim": len(vector.tolist()),
-        "vector_data": vector.tolist()
+        "id": id
     }
+    if not skip_vector:
+        data_record["dim"] = len(vector.tolist())
+        data_record["vector_data"] = vector.tolist()
     return data_record
+
 
 ########################################################################################
 # Func to upsert vector to couchbase collection.
-def upsert_vector(collection, doc_key_gen, vector, dataset_name):
+def upsert_vector(collection, doc_key_gen, vector, dataset_name,
+                  skip_vector=False):
     id, sno = doc_key_gen.get_next_key()
     sname = number_to_alphabetic(sno)
     data_record = {
         "sno": sno,
         "sname": sname,
-        "id": id,
-        "dim": len(vector.tolist()),
-        "vector_data": vector.tolist()
+        "id": id
     }
+    if not skip_vector:
+        data_record["dim"] = len(vector.tolist())
+        data_record["vector_data"] = vector.tolist()
 
     last_print_time = time.time()
     for retry in range(3):
@@ -571,7 +578,9 @@ def upsert_vector(collection, doc_key_gen, vector, dataset_name):
             time.sleep(5)
     return data_record
 
-def update_doc_vector(collection, doc_key_gen, doc_index, vector, dataset_name):
+
+def update_doc_vector(collection, doc_key_gen, doc_index, vector, dataset_name,
+                      skip_vector=False, xattr=False):
     last_print_time = time.time()
     doc_key = doc_key_gen.get_key(doc_index)
     id = doc_key
@@ -580,10 +589,12 @@ def update_doc_vector(collection, doc_key_gen, doc_index, vector, dataset_name):
     data_record = {
         "sno": sno,
         "sname": sname,
-        "id": id,
-        "dim": len(vector.tolist()),
-        "vector_data": vector.tolist()
+        "id": id
     }
+    if not skip_vector:
+        data_record["dim"] = len(vector.tolist())
+        data_record["vector_data"] = vector.tolist()
+
     for retry in range(3):
         try:
             elapsed_time = time.time() - last_print_time
@@ -591,12 +602,16 @@ def update_doc_vector(collection, doc_key_gen, doc_index, vector, dataset_name):
                 print(f"From dataset {dataset_name} Updating vector no: {doc_index} with ID: {id} in {collection.name}" \
                       f" with vector of length {len(vector)}")
                 last_print_time = time.time()
-            collection.upsert(id, data_record)
+            if xattr:
+                collection.mutate_in(id, [SD.upsert('vector', vector.tolist(), xattr=True, create_parents=True)])
+            else:
+                collection.upsert(id, data_record)
         except Exception as e:
             print(f"{e} Error uploading vector no: {doc_index} with id: {id} to collection: {collection.name}")
             retry += 1
             print(f"{e} Retrying after 1sec.. {retry} {id}")
             time.sleep(5)
+
     return data_record
 
 
@@ -614,6 +629,7 @@ def number_to_alphabetic(n):
         n, remainder = divmod(n - 1, 26)
         result = chr(remainder + ord('a')) + result
     return result
+
 
 def execute_command(command, hostname, ssh_username, ssh_password):
     ssh = paramiko.SSHClient()
@@ -653,6 +669,7 @@ def execute_command(command, hostname, ssh_username, ssh_password):
     ssh.close()
     return output, error
 
+
 def move_file_to_remote(local_path, remote_path, hostname, username, password):
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -664,6 +681,7 @@ def move_file_to_remote(local_path, remote_path, hostname, username, password):
     sftp.close()
     ssh.close()
     print(f"File '{local_path}' successfully moved to '{remote_path}' on the remote server.")
+
 
 ########################################################################################
 
@@ -739,7 +757,7 @@ class CouchbaseOps:
             self.faiss_indexes = None
         self.faiss_node = faiss_node
         self.slave_ip = slave_ip
-
+        self.doc_ids = None
         print("Faiss indexes: {}".format(self.faiss_indexes))
 
     def create_bucket(self, cluster):
@@ -826,7 +844,7 @@ class CouchbaseOps:
 
     def update_vector_dimension(self, vector, current_dim, dim):
         # Resize the vector to the desired dimension
-        if current_dim < dim:
+        if current_dim <= dim:
             # If the current dimension is less than the desired dimension, repeat the values
             repeat_values = dim - current_dim
             repeated_values = np.tile(vector, ((dim + current_dim - 1) // current_dim))
@@ -835,7 +853,7 @@ class CouchbaseOps:
             # If the current dimension is greater than the desired dimension, truncate the vector
             return vector[:dim]
 
-    def update_vector(self, vector, perturbation_range = 1):
+    def update_vector(self, vector, perturbation_range=1):
         num_changes = np.random.randint(1, len(vector) + 1)
         indices_to_change = np.random.choice(len(vector), num_changes, replace=False)
 
@@ -847,7 +865,8 @@ class CouchbaseOps:
 
         return vector
 
-    def upsert(self, dims = [], percentages = [], iterations=1, update=False, current_dims = []):
+    def upsert(self, dims=[], percentages=[], iterations=1, update=False, current_dims=[],
+               skip_vector=False, xattr=False):
         """
         Dumps train vectors into Couchbase collection which is created
         automatically
@@ -904,7 +923,8 @@ class CouchbaseOps:
             if len(self.faiss_index_names) > len(dims):
                 default_dim_faiss_index = self.faiss_indexes[len(dims)]
 
-        dataset_generator = ds.extract_vectors_from_file(use_hdf5_datasets, type_of_vec="train", batch_size=self.batch_size)
+        dataset_generator = ds.extract_vectors_from_file(use_hdf5_datasets, type_of_vec="train",
+                                                         batch_size=self.batch_size)
 
         for batch in dataset_generator:
 
@@ -943,7 +963,6 @@ class CouchbaseOps:
                         if self.faiss_index_names:
                             faiss_index = self.faiss_indexes[idx]
 
-
                         for index in current_indices:
 
                             vector = ds.train_vecs[index]
@@ -961,7 +980,8 @@ class CouchbaseOps:
 
                     if self.faiss_index_names:
                         if default_dim_faiss_index:
-                            default_dim_vectors = [vector for i, vector in enumerate(ds.train_vecs) if i not in changed_indices]
+                            default_dim_vectors = [vector for i, vector in enumerate(ds.train_vecs) if
+                                                   i not in changed_indices]
                             index_vectors = np.array(default_dim_vectors).astype('float32')
                             faiss.normalize_L2(index_vectors)
                             default_dim_faiss_index.add(index_vectors)
@@ -983,7 +1003,6 @@ class CouchbaseOps:
                             updated_vector = self.update_vector(vector)
                             ds.train_vecs[index] = updated_vector
 
-
                     if self.faiss_index_names:
                         index_vectors = np.array(ds.train_vecs).astype('float32')
                         faiss.normalize_L2(index_vectors)
@@ -1000,7 +1019,6 @@ class CouchbaseOps:
                         # print("Number of docs resized with dimension {} is {}".format(dim, len(current_indices)))
 
                         for index in current_indices:
-
                             vector = ds.train_vecs[index]
                             current_dim = len(vector)
 
@@ -1013,9 +1031,10 @@ class CouchbaseOps:
                     if not update:
                         print(f"Spawning {MAX_THREADS} threads to speedup the upsert.")
                         with concurrent.futures.ThreadPoolExecutor(MAX_THREADS) as executor:
-                            upsert_partial = partial(upsert_vector, collection, dataset_name=self.dataset_name)
+                            upsert_partial = partial(upsert_vector, collection, dataset_name=self.dataset_name,
+                                                     skip_vector=skip_vector)
                             futures = {executor.submit(upsert_partial, self.doc_key_gen, d): d for counter, d in
-                                    enumerate(ds.train_vecs, start=1)}
+                                       enumerate(ds.train_vecs, start=1)}
                             for future in concurrent.futures.as_completed(futures):
                                 try:
                                     future.result()
@@ -1028,9 +1047,12 @@ class CouchbaseOps:
                             current_indices = indices_to_update[:vectors_to_resize]
                             indices_to_update = indices_to_update[vectors_to_resize:]
                             with concurrent.futures.ThreadPoolExecutor(MAX_THREADS) as executor:
-                                upsert_partial = partial(update_doc_vector, collection, dataset_name=self.dataset_name)
-                                futures = {executor.submit(upsert_partial, self.doc_key_gen, (batch * self.batch_size + d), ds.train_vecs[d]): ds.train_vecs[d] for counter, d in
-                                        enumerate(current_indices, start=0)}
+                                upsert_partial = partial(update_doc_vector, collection, dataset_name=self.dataset_name,
+                                                         skip_vector=skip_vector, xattr=xattr)
+                                futures = {
+                                    executor.submit(upsert_partial, self.doc_key_gen, (batch * self.batch_size + d),
+                                                    ds.train_vecs[d]): ds.train_vecs[d] for counter, d in
+                                    enumerate(current_indices, start=1)}
                                 for future in concurrent.futures.as_completed(futures):
                                     try:
                                         future.result()
@@ -1042,7 +1064,8 @@ class CouchbaseOps:
                     filename = f"{uuid.uuid4().hex}.json"
                     with open(filename, "w") as json_file:
                         for counter, d in enumerate(ds.train_vecs, start=1):
-                            json_obj = json.dumps(get_json_body(self.doc_key_gen, d))
+                            json_obj = json.dumps(get_json_body(self.doc_key_gen, d,
+                                                                skip_vector=skip_vector))
                             json_file.write(json_obj + "\n")
 
                     hostname = self.couchbase_endpoint_ip
@@ -1058,9 +1081,9 @@ class CouchbaseOps:
                         key_offset = (i * num_items) + 1 + (batch * num_batch_items) + self.doc_key_gen.start_key
                         key_str = f'{self.doc_key_gen.prefix}#MONO_INCR[{key_offset}]#'
                         cbimport_command = f"/opt/couchbase/bin/cbimport json --cluster {hostname} --bucket {self.bucket_name} " \
-                                f"--dataset /tmp/{filename} --format lines --username {self.username} --password {self.password} " \
-                                f"--scope-collection-exp '{self.scope_name}.{self.collection_name}' --generate-key '{key_str}' " \
-                                f"--no-ssl-verify"
+                                           f"--dataset /tmp/{filename} --format lines --username {self.username} --password {self.password} " \
+                                           f"--scope-collection-exp '{self.scope_name}.{self.collection_name}' --generate-key '{key_str}' " \
+                                           f"--no-ssl-verify"
                         stdout, stderr = execute_command(cbimport_command, node_ip, "root", "couchbase")
                         print(stdout, stderr)
 
@@ -1077,6 +1100,37 @@ class CouchbaseOps:
                 print("Length of faiss index: {}".format(index.ntotal))
                 faiss.write_index(index, index_file)
                 move_file_to_remote(os.getcwd() + "/" + index_file, "/tmp/" + index_file, node_ip, "root", "couchbase")
+
+    def run_n1ql_query(self, query):
+        url = f"http://{self.couchbase_endpoint_ip}:8093/query/service"
+        payload = {'statement': query}
+        response = requests.post(url, auth=(self.username, self.password), data=payload)
+        self.doc_ids = response.json()['results']
+
+
+    def load_vector_data_to_xattr(self):
+        from couchbase.mutation_state import MutationState
+
+        self.run_n1ql_query("SELECT META().id FROM default")
+        auth = PasswordAuthenticator(self.username, self.password)
+        if not self.capella_run:
+            couchbase_endpoint = "couchbase://" + self.couchbase_endpoint_ip
+            cluster = Cluster(couchbase_endpoint, ClusterOptions(auth))
+        else:
+            timeout_options = ClusterTimeoutOptions(kv_timeout=timedelta(seconds=120),
+                                                    query_timeout=timedelta(seconds=10))
+            options = ClusterOptions(PasswordAuthenticator(self.username, self.password),
+                                     timeout_options=timeout_options)
+            cluster = Cluster('couchbases://' + self.couchbase_endpoint_ip + '?ssl=no_verify',
+                              options)
+            couchbase_endpoint = f"couchbases://{self.couchbase_endpoint_ip}"
+
+        cb = cluster.bucket(self.bucket_name)
+        collection = cb.default_collection()
+        for doc in self.doc_ids:
+            print(self.doc_ids)
+            collection.mutate_in(doc["id"], [SD.upsert('vector', 0, xattr=True, create_parents=True)])
+
 
 class VectorLoader:
 
@@ -1098,14 +1152,17 @@ class VectorLoader:
         parser.add_argument("-dims", "--dimensions_for_resize", nargs='*', type=int, default=[])
         parser.add_argument("-curr_dims", "--current_dimensions", nargs='*', type=int, default=[])
         parser.add_argument("-i", "--cbimport", help="Use cbimport to load documents", default=False)
-        parser.add_argument("-iter", "--iterations", help="Number of iterations of cbimport to run", type=int, default=1)
+        parser.add_argument("-iter", "--iterations", help="Number of iterations of cbimport to run", type=int,
+                            default=1)
         parser.add_argument("-update", "--update_docs", default=False)
         parser.add_argument("-bs", "--batch_size", help="Batch size(in term of number of docs)", type=int, default=0)
-        parser.add_argument("-indexes", "--faiss_indexes",  nargs='*', type=str, default=None)
-        parser.add_argument("-fn", "--faiss_node", help="Faiss Node Address where faiss indexes will be created", default="")
-        parser.add_argument("-slave_ip", "--slave_ip", help="Faiss Node Address where faiss indexes will be created", default="172.23.105.211")
+        parser.add_argument("-indexes", "--faiss_indexes", nargs='*', type=str, default=None)
+        parser.add_argument("-fn", "--faiss_node", help="Faiss Node Address where faiss indexes will be created",
+                            default="")
+        parser.add_argument("-slave_ip", "--slave_ip", help="Faiss Node Address where faiss indexes will be created",
+                            default="172.23.105.211")
         parser.add_argument("-sk", "--start_key", help="Start index for doc Id's", type=int, default=0)
-
+        parser.add_argument("-xattr", "--xattr", help="if you want to push documents in xattr metdata", type=bool, default=False)
         args = parser.parse_args()
         self.node = args.node
         self.username = args.username
@@ -1146,6 +1203,7 @@ class VectorLoader:
             self.update = True
         else:
             self.update = False
+        self.xattr = args.xattr
 
     def fetch_rest_url(self, url):
 
@@ -1180,9 +1238,37 @@ class VectorLoader:
                 faiss_node=self.faiss_node,
                 slave_ip=self.slave_ip
             )
+            if self.xattr:
+                cbops.upsert(dims=self.dim_for_resize, percentages=self.percentage_to_resize,
+                             iterations=self.iterations, update=self.update, current_dims=self.curr_dims,
+                             skip_vector=True)
+                cbops = CouchbaseOps(
+                    couchbase_endpoint_ip=self.node, username=self.username, password=self.password,
+                    bucket_name=self.bucket,
+                    dataset_name=dataset_name,
+                    scope_name=self.scope, collection_name=self.collection,
+                    capella_run=self.capella_run,
+                    cbs=self.cbs,
+                    cbimport=self.cbimport,
+                    doc_key_generator=DocKey("vect", start=self.start_key),
+                    batch_size=self.batch_size,
+                    faiss_index_names=self.faiss_indexes,
+                    faiss_node=self.faiss_node,
+                    slave_ip=self.slave_ip
+                )
+                if len(self.dim_for_resize) == 0:
+                    self.dim_for_resize.append(128)
+                if len(self.percentage_to_resize) == 0:
+                    self.percentage_to_resize.append(1.0)
 
-            cbops.upsert(dims=self.dim_for_resize, percentages=self.percentage_to_resize,
-                         iterations=self.iterations, update=self.update, current_dims=self.curr_dims)
+                print("Dimension to resize xattr: {}".format(self.dim_for_resize))
+                print("Percentages to resize xattr: {}".format(self.percentage_to_resize))
+                cbops.upsert(dims=self.dim_for_resize, percentages=self.percentage_to_resize,
+                             iterations=self.iterations, update=True, current_dims=self.curr_dims,
+                             skip_vector=True, xattr=True)
+            else:
+                cbops.upsert(dims=self.dim_for_resize, percentages=self.percentage_to_resize,
+                             iterations=self.iterations, update=self.update, current_dims=self.curr_dims)
             break
 
 
