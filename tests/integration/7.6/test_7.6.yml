@@ -6,7 +6,7 @@
 -
   image: sequoiatools/couchbase-cli:7.6
   requires:  "{{eq true .DoOnce }}"
-  command: "setting-compaction -c {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}} --metadata-purge-interval 0.04 --compaction-db-percentage 30 --compaction-view-percentage 30"
+  command: "setting-compaction -c {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}} --metadata-purge-interval 0.25 --compaction-db-percentage 30 --compaction-view-percentage 30"
   wait: true
 
 ############### Enable file based rebalance for indexing ################
