@@ -4,7 +4,7 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 RUN apt-get update
 RUN apt-get install -y git git-all python3-dev python3-pip python3-setuptools cmake build-essential
 RUN apt-get install libssl-dev
-RUN python3 -m  pip install requests six future couchbase==3.2.7 httplib2 paramiko dnspython wget h5py faiss-cpu
+RUN python3 -m  pip install requests six future couchbase==3.2.7 httplib2 paramiko packaging dnspython wget h5py faiss-cpu
 
 COPY ftsIndexManager.py /ftsIndexManager.py
 COPY vectorloader/* vectorloader/
