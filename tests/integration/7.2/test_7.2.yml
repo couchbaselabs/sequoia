@@ -132,22 +132,22 @@
 
 ############### Initial data loading to collections - no doc expiry, only creates ################
 - image: sequoiatools/catapult_dgm
-  command: "-i {{.Orchestrator}} -r 80 -u Administrator -p password -b {{.NthBucket 4}} -n {{.Scale 2000}} -pc 100 -dt Hotel -ds 1000 -ac True"
+  command: "-i {{.Orchestrator}} -r 80 -u Administrator -p password -b {{.NthBucket 4}} -n {{.Scale 500}} -pc 100 -dt Hotel -ds 1000 -ac True"
   requires:  "{{eq true .DoOnce }}"
   alias: catapult_bucket4_doc_ops1
-- command: "-i {{.Orchestrator}} -r 80 -u Administrator -p password -b {{.NthBucket 5}} -n {{.Scale 2000}} -pc 100 -dt Hotel -ds 1000 -ac True"
+- command: "-i {{.Orchestrator}} -r 80 -u Administrator -p password -b {{.NthBucket 5}} -n {{.Scale 500}} -pc 100 -dt Hotel -ds 1000 -ac True"
   requires:  "{{eq true .DoOnce }}"
   alias: catapult_bucket5_doc_ops1
-- command: "-i {{.Orchestrator}} -r 80 -u Administrator -p password -b {{.NthBucket 6}} -n {{.Scale 2000}} -pc 100 -dt Hotel -ds 1000 -ac True"
+- command: "-i {{.Orchestrator}} -r 80 -u Administrator -p password -b {{.NthBucket 6}} -n {{.Scale 500}} -pc 100 -dt Hotel -ds 1000 -ac True"
   requires:  "{{eq true .DoOnce }}"
   alias: catapult_bucket6_doc_ops1
-- command: "-i {{.Orchestrator}} -r 80 -u Administrator -p password -b {{.NthBucket 7}} -n {{.Scale 2000}} -pc 100 -dt Hotel -ds 1000 -ac True"
+- command: "-i {{.Orchestrator}} -r 80 -u Administrator -p password -b {{.NthBucket 7}} -n {{.Scale 500}} -pc 100 -dt Hotel -ds 1000 -ac True"
   requires:  "{{eq true .DoOnce }}"
   alias: catapult_bucket7_doc_ops1
-- command: "-i {{.Orchestrator}} -r 80 -u Administrator -p password -b {{.NthBucket 8}} -n {{.Scale 2000}} -pc 100 -dt Hotel -ds 1000 -ac True"
+- command: "-i {{.Orchestrator}} -r 80 -u Administrator -p password -b {{.NthBucket 8}} -n {{.Scale 500}} -pc 100 -dt Hotel -ds 1000 -ac True"
   requires:  "{{eq true .DoOnce }}"
   alias: catapult_bucket8_doc_ops1
-- command: "-i {{.Orchestrator}} -r 80 -u Administrator -p password -b {{.NthBucket 9}} -n {{.Scale 2000}} -pc 100 -dt Hotel -ds 1000 -ac True"
+- command: "-i {{.Orchestrator}} -r 80 -u Administrator -p password -b {{.NthBucket 9}} -n {{.Scale 500}} -pc 100 -dt Hotel -ds 1000 -ac True"
   requires:  "{{eq true .DoOnce }}"
   alias: catapult_bucket9_doc_ops1
 
@@ -168,25 +168,25 @@
 
 # continous kv loading
 - template: pillowfight_durability
-  args: "{{.Orchestrator}}, {{.Bucket}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1 --json"
+  args: "{{.Orchestrator}}, {{.Bucket}}, -M 512 -I {{.Scale 500}} -B {{.Scale 100}} -t 1  --rate-limit {{.Scale 500}}, {{.AuthPassword}} --durability majority -c -1 --json"
 - template: pillowfight_durability
-  args: "{{.Orchestrator}}, {{.NthBucket 1}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1 --json"
+  args: "{{.Orchestrator}}, {{.NthBucket 1}}, -M 512 -I {{.Scale 500}} -B {{.Scale 100}} -t 1  --rate-limit {{.Scale 500}}, {{.AuthPassword}} --durability majority -c -1 --json"
 - template: pillowfight_durability
-  args: "{{.Orchestrator}}, {{.NthBucket 2}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1 --json"
+  args: "{{.Orchestrator}}, {{.NthBucket 2}}, -M 512 -I {{.Scale 500}} -B {{.Scale 100}} -t 1  --rate-limit {{.Scale 500}}, {{.AuthPassword}} --durability majority -c -1 --json"
 - template: pillowfight_durability
-  args: "{{.Orchestrator}}, {{.NthBucket 3}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1 --json"
+  args: "{{.Orchestrator}}, {{.NthBucket 3}}, -M 512 -I {{.Scale 500}} -B {{.Scale 100}} -t 1  --rate-limit {{.Scale 500}}, {{.AuthPassword}} --durability majority -c -1 --json"
 - template: pillowfight_durability
-  args: "{{.Orchestrator}}, {{.NthBucket 4}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1 --json"
+  args: "{{.Orchestrator}}, {{.NthBucket 4}}, -M 512 -I {{.Scale 500}} -B {{.Scale 100}} -t 1  --rate-limit {{.Scale 500}}, {{.AuthPassword}} --durability majority -c -1 --json"
 - template: pillowfight_durability
-  args: "{{.Orchestrator}}, {{.NthBucket 5}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1 --json"
+  args: "{{.Orchestrator}}, {{.NthBucket 5}}, -M 512 -I {{.Scale 500}} -B {{.Scale 100}} -t 1  --rate-limit {{.Scale 500}}, {{.AuthPassword}} --durability majority -c -1 --json"
 - template: pillowfight_durability
-  args: "{{.Orchestrator}}, {{.NthBucket 6}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1 --json"
+  args: "{{.Orchestrator}}, {{.NthBucket 6}}, -M 512 -I {{.Scale 500}} -B {{.Scale 100}} -t 1  --rate-limit {{.Scale 500}}, {{.AuthPassword}} --durability majority -c -1 --json"
 - template: pillowfight_durability
-  args: "{{.Orchestrator}}, {{.NthBucket 7}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1 --json"
+  args: "{{.Orchestrator}}, {{.NthBucket 7}}, -M 512 -I {{.Scale 500}} -B {{.Scale 100}} -t 1  --rate-limit {{.Scale 500}}, {{.AuthPassword}} --durability majority -c -1 --json"
 - template: pillowfight_durability
-  args: "{{.Orchestrator}}, {{.NthBucket 8}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1 --json"
+  args: "{{.Orchestrator}}, {{.NthBucket 8}}, -M 512 -I {{.Scale 500}} -B {{.Scale 100}} -t 1  --rate-limit {{.Scale 500}}, {{.AuthPassword}} --durability majority -c -1 --json"
 - template: pillowfight_durability
-  args: "{{.Orchestrator}}, {{.NthBucket 9}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1 --json"
+  args: "{{.Orchestrator}}, {{.NthBucket 9}}, -M 512 -I {{.Scale 500}} -B {{.Scale 100}} -t 1  --rate-limit {{.Scale 500}}, {{.AuthPassword}} --durability majority -c -1 --json"
 
 # Sleep for some time to allow some docs to be loaded to the collections
 -
@@ -306,18 +306,18 @@
 
 # replica data loading for eventing source with docs that will expire after 1 hour
 - image: sequoiatools/gideon_latest
-  command: "kv --ops {{.Scale 150}} --create 80 --delete 20 --get 82 --sizes 64 96  --expire 100 --ttl 3600  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --scope event_0 --user {{.RestUsername}} --password {{.RestPassword}}  --collection coll0"
-- command: "kv --ops {{.Scale 150}} --create 80 --delete 20 --get 82 --sizes 64 96  --expire 100 --ttl 3600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}} --scope event_0 --user {{.RestUsername}} --password {{.RestPassword}}  --collection coll0"
+  command: "kv --ops {{.Scale 75}} --create 80 --delete 20 --get 82 --sizes 64 96  --expire 100 --ttl 3600  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --scope event_0 --user {{.RestUsername}} --password {{.RestPassword}}  --collection coll0"
+- command: "kv --ops {{.Scale 75}} --create 80 --delete 20 --get 82 --sizes 64 96  --expire 100 --ttl 3600  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}} --scope event_0 --user {{.RestUsername}} --password {{.RestPassword}}  --collection coll0"
 
 ############### incremental data loading to collections ################
 - image: sequoiatools/catapult
-  command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 4}} -n {{.Scale 7000}} -pc 100 -pu 25 -pd 25 -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 300 -fu price,free_parking -ac True --num_threads 1"
+  command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 4}} -n {{.Scale 3000}} -pc 100 -pu 25 -pd 25 -dt Hotel -de {{.Scale 3000}} -ds 1000 -lf True -li 300 -fu price,free_parking -ac True --num_threads 1"
   alias: catapult_bucket4_doc_ops2
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 5}} -n {{.Scale 7000}} -pc 100 -pu 25 -pd 25 -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 300 -fu price,free_parking -ac True --num_threads 1"
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 5}} -n {{.Scale 3000}} -pc 100 -pu 25 -pd 25 -dt Hotel -de {{.Scale 3000}} -ds 1000 -lf True -li 300 -fu price,free_parking -ac True --num_threads 1"
   alias: catapult_bucket5_doc_ops2
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 6}} -n {{.Scale 7000}} -pc 100 -pu 25 -pd 25 -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 300 -fu price,free_parking -ac True --num_threads 1"
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 6}} -n {{.Scale 3000}} -pc 100 -pu 25 -pd 25 -dt Hotel -de {{.Scale 3000}} -ds 1000 -lf True -li 300 -fu price,free_parking -ac True --num_threads 1"
   alias: catapult_bucket6_doc_ops2
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 7}} -n {{.Scale 7000}} -pc 100 -pu 25 -pd 25 -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 300 -fu price,free_parking -ac True --num_threads 1"
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 7}} -n {{.Scale 3000}} -pc 100 -pu 25 -pd 25 -dt Hotel -de {{.Scale 3000}} -ds 1000 -lf True -li 300 -fu price,free_parking -ac True --num_threads 1"
   alias: catapult_bucket7_doc_ops2
 
 
@@ -363,10 +363,10 @@
 
 # more json docs on default bucket
 - image: sequoiatools/gideon_latest
-  command: "kv --ops {{.Scale 500}} --create 10 --delete 8 --get 92 --expire 100 --ttl 660  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes  512 128 1024 2048 16000 --user {{.RestUsername}} --password {{.RestPassword}}"
-- command: "kv --ops {{.Scale 500}} --create 100  --expire 100 --ttl 660 --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 64 --user {{.RestUsername}} --password {{.RestPassword}}"
+  command: "kv --ops {{.Scale 250}} --create 10 --delete 8 --get 92 --expire 100 --ttl 660  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes  512 128 1024 2048 16000 --user {{.RestUsername}} --password {{.RestPassword}}"
+- command: "kv --ops {{.Scale 250}} --create 100  --expire 100 --ttl 660 --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 64 --user {{.RestUsername}} --password {{.RestPassword}}"
   duration: 600
-- command: "kv --ops {{.Scale 600}} --create 15 --get 80 --delete 5  --expire 100 --ttl 660 --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 128 --user {{.RestUsername}} --password {{.RestPassword}}"
+- command: "kv --ops {{.Scale 300}} --create 15 --get 80 --delete 5  --expire 100 --ttl 660 --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 128 --user {{.RestUsername}} --password {{.RestPassword}}"
   duration: 7200
 
 # Change the topology (performs rebalance in/out/swap eventing nodes)
@@ -491,7 +491,7 @@
 
 # load some new docs
 - image: sequoiatools/gideon_latest
-  command: "kv --ops {{.Scale 500}} --create 100  --expire 100 --ttl 660 --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 64 --user {{.RestUsername}} --password {{.RestPassword}}"
+  command: "kv --ops {{.Scale 250}} --create 100  --expire 100 --ttl 660 --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 64 --user {{.RestUsername}} --password {{.RestPassword}}"
   duration: 1800
 
 # quick update batch
@@ -669,16 +669,16 @@
 
 ###############  GSI Item Count Check ################
 - image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}} -a item_count_check --sample_size {{.Scale 10}}"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}} -a item_count_check --sample_size {{.Scale 5}}"
   wait: true
 
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 5}} -a item_count_check --sample_size {{.Scale 10}}"
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 5}} -a item_count_check --sample_size {{.Scale 5}}"
   wait: true
 
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 6}} -a item_count_check --sample_size {{.Scale 10}}"
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 6}} -a item_count_check --sample_size {{.Scale 5}}"
   wait: true
 
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 7}} -a item_count_check --sample_size {{.Scale 10}}"
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 7}} -a item_count_check --sample_size {{.Scale 5}}"
   wait: true
 
 # Drop GSI indexes
