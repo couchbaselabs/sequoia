@@ -131,23 +131,23 @@
   wait: true
 
 ############### Initial data loading to collections - no doc expiry, only creates ################
-- image: sequoiatools/catapult_dgm
-  command: "-i {{.Orchestrator}} -r 80 -u Administrator -p password -b {{.NthBucket 4}} -n {{.Scale 500}} -pc 100 -dt Hotel -ds 1000 -ac True"
+- image: sequoiatools/catapult
+  command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 4}} -n {{.Scale 500}} -pc 100 -dt Hotel -ds 1000 -ac True"
   requires:  "{{eq true .DoOnce }}"
   alias: catapult_bucket4_doc_ops1
-- command: "-i {{.Orchestrator}} -r 80 -u Administrator -p password -b {{.NthBucket 5}} -n {{.Scale 500}} -pc 100 -dt Hotel -ds 1000 -ac True"
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 5}} -n {{.Scale 500}} -pc 100 -dt Hotel -ds 1000 -ac True"
   requires:  "{{eq true .DoOnce }}"
   alias: catapult_bucket5_doc_ops1
-- command: "-i {{.Orchestrator}} -r 80 -u Administrator -p password -b {{.NthBucket 6}} -n {{.Scale 500}} -pc 100 -dt Hotel -ds 1000 -ac True"
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 6}} -n {{.Scale 500}} -pc 100 -dt Hotel -ds 1000 -ac True"
   requires:  "{{eq true .DoOnce }}"
   alias: catapult_bucket6_doc_ops1
-- command: "-i {{.Orchestrator}} -r 80 -u Administrator -p password -b {{.NthBucket 7}} -n {{.Scale 500}} -pc 100 -dt Hotel -ds 1000 -ac True"
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 7}} -n {{.Scale 500}} -pc 100 -dt Hotel -ds 1000 -ac True"
   requires:  "{{eq true .DoOnce }}"
   alias: catapult_bucket7_doc_ops1
-- command: "-i {{.Orchestrator}} -r 80 -u Administrator -p password -b {{.NthBucket 8}} -n {{.Scale 500}} -pc 100 -dt Hotel -ds 1000 -ac True"
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 8}} -n {{.Scale 500}} -pc 100 -dt Hotel -ds 1000 -ac True"
   requires:  "{{eq true .DoOnce }}"
   alias: catapult_bucket8_doc_ops1
-- command: "-i {{.Orchestrator}} -r 80 -u Administrator -p password -b {{.NthBucket 9}} -n {{.Scale 500}} -pc 100 -dt Hotel -ds 1000 -ac True"
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 9}} -n {{.Scale 500}} -pc 100 -dt Hotel -ds 1000 -ac True"
   requires:  "{{eq true .DoOnce }}"
   alias: catapult_bucket9_doc_ops1
 

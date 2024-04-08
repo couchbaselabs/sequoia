@@ -136,23 +136,23 @@
   wait: true
 
 ############### Initial data loading to collections - no doc expiry, only creates ################
-- image: sequoiatools/catapult_dgm
-  command: "-i {{.Orchestrator}} -r 80 -u Administrator -p password -b {{.NthBucket 4}} -n {{.Scale 2000}} -pc 100 -dt Hotel -ds 1000 -ac True"
+- image: sequoiatools/catapult
+  command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 4}} -n {{.Scale 2000}} -pc 100 -dt Hotel -ds 1000 -ac True"
   requires:  "{{eq true .DoOnce }}"
   alias: catapult_bucket4_doc_ops1
-- command: "-i {{.Orchestrator}} -r 80 -u Administrator -p password -b {{.NthBucket 5}} -n {{.Scale 2000}} -pc 100 -dt Hotel -ds 1000 -ac True"
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 5}} -n {{.Scale 2000}} -pc 100 -dt Hotel -ds 1000 -ac True"
   requires:  "{{eq true .DoOnce }}"
   alias: catapult_bucket5_doc_ops1
-- command: "-i {{.Orchestrator}} -r 80 -u Administrator -p password -b {{.NthBucket 6}} -n {{.Scale 2000}} -pc 100 -dt Hotel -ds 1000 -ac True"
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 6}} -n {{.Scale 2000}} -pc 100 -dt Hotel -ds 1000 -ac True"
   requires:  "{{eq true .DoOnce }}"
   alias: catapult_bucket6_doc_ops1
-- command: "-i {{.Orchestrator}} -r 80 -u Administrator -p password -b {{.NthBucket 7}} -n {{.Scale 2000}} -pc 100 -dt Hotel -ds 1000 -ac True"
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 7}} -n {{.Scale 2000}} -pc 100 -dt Hotel -ds 1000 -ac True"
   requires:  "{{eq true .DoOnce }}"
   alias: catapult_bucket7_doc_ops1
-- command: "-i {{.Orchestrator}} -r 80 -u Administrator -p password -b {{.NthBucket 8}} -n {{.Scale 2000}} -pc 100 -dt Hotel -ds 1000 -ac True"
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 8}} -n {{.Scale 2000}} -pc 100 -dt Hotel -ds 1000 -ac True"
   requires:  "{{eq true .DoOnce }}"
   alias: catapult_bucket8_doc_ops1
-- command: "-i {{.Orchestrator}} -r 80 -u Administrator -p password -b {{.NthBucket 9}} -n {{.Scale 2000}} -pc 100 -dt Hotel -ds 1000 -ac True"
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 9}} -n {{.Scale 2000}} -pc 100 -dt Hotel -ds 1000 -ac True"
   requires:  "{{eq true .DoOnce }}"
   alias: catapult_bucket9_doc_ops1
 
@@ -306,28 +306,28 @@
 - command: "kv --ops {{.Scale 150}} --create 80 --delete 20 --get 82 --sizes 64 96  --expire 100 --ttl 3600  --hosts {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 1}} --scope event_0 --collection coll0"
 
 ################# incremental data loading to collections ################
-#- image: sequoiatools/catapult
-#  command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 4}} -n {{.Scale 7000}} -pc 100 -pu 25 -pd 25 -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 300 -fu price,free_parking -ac True --num_threads 1"
-#  alias: catapult_bucket4_doc_ops2
-#- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 5}} -n {{.Scale 7000}} -pc 100 -pu 25 -pd 25 -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 300 -fu price,free_parking -ac True --num_threads 1"
-#  alias: catapult_bucket5_doc_ops2
-#- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 6}} -n {{.Scale 7000}} -pc 100 -pu 25 -pd 25 -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 300 -fu price,free_parking -ac True --num_threads 1"
-#  alias: catapult_bucket6_doc_ops2
-#- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 7}} -n {{.Scale 7000}} -pc 100 -pu 25 -pd 25 -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 300 -fu price,free_parking -ac True --num_threads 1"
-#  alias: catapult_bucket7_doc_ops2
-#
+- image: sequoiatools/catapult
+  command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 4}} -n {{.Scale 2000}} -pc 100 -pu 25 -pd 25 -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 300 -fu price,free_parking -ac True --num_threads 1"
+  alias: catapult_bucket4_doc_ops2
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 5}} -n {{.Scale 2000}} -pc 100 -pu 25 -pd 25 -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 300 -fu price,free_parking -ac True --num_threads 1"
+  alias: catapult_bucket5_doc_ops2
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 6}} -n {{.Scale 2000}} -pc 100 -pu 25 -pd 25 -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 300 -fu price,free_parking -ac True --num_threads 1"
+  alias: catapult_bucket6_doc_ops2
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 7}} -n {{.Scale 2000}} -pc 100 -pu 25 -pd 25 -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 300 -fu price,free_parking -ac True --num_threads 1"
+  alias: catapult_bucket7_doc_ops2
 
-## query replica indexes
-#- image: sequoiatools/queryapp
-#  command: "-J-Xms256m -J-Xmx512m -J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.7.61/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 0 --print_duration=3600 --bucket {{.NthBucket 4}} --querycount {{.Scale 1}} --threads {{.Scale 1}} --n1ql True --query_timeout=600 --scan_consistency NOT_BOUNDED --bucket_names [{{.NthBucket 4}},{{.NthBucket 5}},{{.NthBucket 6}},{{.NthBucket 7}}] --collections_mode --dataset hotel"
-#- command: "-J-Xms256m -J-Xmx512m -J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.7.61/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 0 --print_duration=3600 --bucket {{.NthBucket 5}} --querycount {{.Scale 3}} --threads {{.Scale 3}} --n1ql True --query_timeout=600 --scan_consistency REQUEST_PLUS --bucket_names [{{.NthBucket 4}},{{.NthBucket 5}},{{.NthBucket 6}},{{.NthBucket 7}}] --collections_mode --dataset hotel"
-#- command: "-J-Xms256m -J-Xmx512m -J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.7.61/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 0 --print_duration=3600 --bucket {{.NthBucket 6}} --querycount {{.Scale 3}} --threads {{.Scale 3}} --n1ql True --query_timeout=600 --scan_consistency REQUEST_PLUS --bucket_names [{{.NthBucket 4}},{{.NthBucket 5}},{{.NthBucket 6}},{{.NthBucket 7}}] --collections_mode --dataset hotel"
-#- command: "-J-Xms256m -J-Xmx512m -J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.7.61/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 0 --print_duration=3600 --bucket {{.NthBucket 7}} --querycount {{.Scale 3}} --threads {{.Scale 3}} --n1ql True --query_timeout=600 --scan_consistency REQUEST_PLUS --bucket_names [{{.NthBucket 4}},{{.NthBucket 5}},{{.NthBucket 6}},{{.NthBucket 7}}] --txns True --dataset hotel"
-#
-# query FTS indexes
-#- image: sequoiatools/ftsindexmanager
-#  command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}} --print_interval 600 -a run_queries -t 0 -nq 1"
-#- command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 5}} --print_interval 600 -a run_flex_queries -t 0 -nq 1"
+
+# query replica indexes
+- image: sequoiatools/queryapp
+  command: "-J-Xms256m -J-Xmx512m -J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.7.61/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 0 --print_duration=3600 --bucket {{.NthBucket 4}} --querycount {{.Scale 1}} --threads {{.Scale 1}} --n1ql True --query_timeout=600 --scan_consistency NOT_BOUNDED --bucket_names [{{.NthBucket 4}},{{.NthBucket 5}},{{.NthBucket 6}},{{.NthBucket 7}}] --collections_mode --dataset hotel"
+- command: "-J-Xms256m -J-Xmx512m -J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.7.61/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 0 --print_duration=3600 --bucket {{.NthBucket 5}} --querycount {{.Scale 3}} --threads {{.Scale 3}} --n1ql True --query_timeout=600 --scan_consistency REQUEST_PLUS --bucket_names [{{.NthBucket 4}},{{.NthBucket 5}},{{.NthBucket 6}},{{.NthBucket 7}}] --collections_mode --dataset hotel"
+- command: "-J-Xms256m -J-Xmx512m -J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.7.61/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 0 --print_duration=3600 --bucket {{.NthBucket 6}} --querycount {{.Scale 3}} --threads {{.Scale 3}} --n1ql True --query_timeout=600 --scan_consistency REQUEST_PLUS --bucket_names [{{.NthBucket 4}},{{.NthBucket 5}},{{.NthBucket 6}},{{.NthBucket 7}}] --collections_mode --dataset hotel"
+- command: "-J-Xms256m -J-Xmx512m -J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.7.61/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 0 --print_duration=3600 --bucket {{.NthBucket 7}} --querycount {{.Scale 3}} --threads {{.Scale 3}} --n1ql True --query_timeout=600 --scan_consistency REQUEST_PLUS --bucket_names [{{.NthBucket 4}},{{.NthBucket 5}},{{.NthBucket 6}},{{.NthBucket 7}}] --txns True --dataset hotel"
+
+ query FTS indexes
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}} --print_interval 600 -a run_queries -t 0 -nq 1"
+- command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 5}} --print_interval 600 -a run_flex_queries -t 0 -nq 1"
 
 # Sleep for some time to allow some queries to be run against the collections
 -
