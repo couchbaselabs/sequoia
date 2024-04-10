@@ -1101,37 +1101,6 @@ class CouchbaseOps:
                 faiss.write_index(index, index_file)
                 move_file_to_remote(os.getcwd() + "/" + index_file, "/tmp/" + index_file, node_ip, "root", "couchbase")
 
-    def run_n1ql_query(self, query):
-        url = f"http://{self.couchbase_endpoint_ip}:8093/query/service"
-        payload = {'statement': query}
-        response = requests.post(url, auth=(self.username, self.password), data=payload)
-        self.doc_ids = response.json()['results']
-
-
-    def load_vector_data_to_xattr(self):
-        from couchbase.mutation_state import MutationState
-
-        self.run_n1ql_query("SELECT META().id FROM default")
-        auth = PasswordAuthenticator(self.username, self.password)
-        if not self.capella_run:
-            couchbase_endpoint = "couchbase://" + self.couchbase_endpoint_ip
-            cluster = Cluster(couchbase_endpoint, ClusterOptions(auth))
-        else:
-            timeout_options = ClusterTimeoutOptions(kv_timeout=timedelta(seconds=120),
-                                                    query_timeout=timedelta(seconds=10))
-            options = ClusterOptions(PasswordAuthenticator(self.username, self.password),
-                                     timeout_options=timeout_options)
-            cluster = Cluster('couchbases://' + self.couchbase_endpoint_ip + '?ssl=no_verify',
-                              options)
-            couchbase_endpoint = f"couchbases://{self.couchbase_endpoint_ip}"
-
-        cb = cluster.bucket(self.bucket_name)
-        collection = cb.default_collection()
-        for doc in self.doc_ids:
-            print(self.doc_ids)
-            collection.mutate_in(doc["id"], [SD.upsert('vector', 0, xattr=True, create_parents=True)])
-
-
 class VectorLoader:
 
     def __init__(self):
@@ -1249,7 +1218,6 @@ class VectorLoader:
                     scope_name=self.scope, collection_name=self.collection,
                     capella_run=self.capella_run,
                     cbs=self.cbs,
-                    cbimport=self.cbimport,
                     doc_key_generator=DocKey("vect", start=self.start_key),
                     batch_size=self.batch_size,
                     faiss_index_names=self.faiss_indexes,
