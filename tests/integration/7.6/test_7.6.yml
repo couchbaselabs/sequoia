@@ -173,7 +173,7 @@
 
 # continous kv loading
 - template: pillowfight_durability
-  args: "{{.Orchestrator}}, {{.Bucket}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1 --json"
+  args: "{{.Orchestrator}}, {{.Bucket}}, -M 256 -I {{.Scale 1000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1 --json"
 - template: pillowfight_durability
   args: "{{.Orchestrator}}, {{.NthBucket 1}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1 --json"
 - template: pillowfight_durability
