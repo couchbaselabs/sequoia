@@ -4,6 +4,9 @@ import dns.resolver
 import argparse
 import subprocess
 import logging
+import time
+import random
+from string import ascii_letters, digits
 
 class MagmaLoader:
     def __init__(self):
@@ -31,6 +34,7 @@ class MagmaLoader:
         self.pc = 100
         self.tls = False
         self.port = 8091
+        self.indexer_port = 9102
         self.protocol = "http"
         self.skip_default = False
         self.log = logging.getLogger("indexmanager")
@@ -59,6 +63,8 @@ class MagmaLoader:
         parser.add_argument("--tls", dest="tls", help="Set to true if host is SRV", default="false")
         parser.add_argument("--skip_default", dest="skip_default", help="True if dataload needs to be skipped on default collection",
                             default="false")
+        parser.add_argument("--rr", dest="rr", help='Incremental data loading until indexer hits a specific resident ratio')
+        parser.add_argument("--bucket_list", dest="bucket_list", help='A list of buckets passed in a comma seperated manner for data loading till a rr')
         args = parser.parse_args()
         self.host = args.host
         self.username = args.username
@@ -75,6 +81,11 @@ class MagmaLoader:
         self.scope = args.scope
         self.collection = args.collection
         self.bucket_name = args.bucket
+        if args.rr is None:
+            self.rr = None
+        else:
+            self.rr = int(args.rr)
+            self.bucket_list = args.bucket_list.split(",")
         self.all_coll = True if args.all_coll.lower() == 'true' else False
         self.skip_default = True if args.skip_default.lower() == 'true' else False
         self.ops_rate = 10000 if not args.ops_rate else int(args.ops_rate)
@@ -85,7 +96,10 @@ class MagmaLoader:
             self.log.info("Hostname is mandatory")
             parser.print_help()
             exit(1)
-        self.load_data()
+        if self.rr is None:
+            self.load_data()
+        else:
+            self.load_data_till_rr()
 
     def get_all_collections(self, bucket_name):
         if self.srv:
@@ -103,6 +117,25 @@ class MagmaLoader:
             scope_coll_map[scope] = coll_list
         return scope_coll_map
 
+    def get_indexer_stats(self,node):
+        url = f"{self.protocol}://{node}:{self.indexer_port}/stats"
+        response = requests.get(url, verify=False, auth=(self.username, self.password))
+        json_parsed = response.json()
+        index_map = {}
+        for key in list(json_parsed.keys()):
+            tokens = key.split(":")
+            val = json_parsed[key]
+            if len(tokens) == 1:
+                field = tokens[0]
+                index_map[field] = val
+            if len(tokens) == 3:
+                if tokens[0] not in index_map:
+                    index_map[tokens[0]] = dict()
+                if tokens[1] not in index_map[tokens[0]]:
+                    index_map[tokens[0]][tokens[1]] = dict()
+                index_map[tokens[0]][tokens[1]][tokens[2]] = val
+        return index_map
+
     def fetch_rest_url(self, url):
         """
         returns the hostname for the srv domain
@@ -114,12 +147,52 @@ class MagmaLoader:
             srv_info['port'] = srv.port
         return srv_info['host']
 
-    def load_data(self):
+    def rr_reached(self):
+        index_nodes = self.get_nodes_from_service_map()
+        index_rr = []
+        for node in index_nodes:
+            index_rr.append(int(self.get_indexer_stats(node)['avg_resident_percent']))
+        self.log.info(f"Current Resident Ratios of Index nodes - {index_rr}")
+        value = any(self.rr >= x for x in index_rr)
+        return value
+
+    def load_data_till_rr(self):
+        while not self.rr_reached():
+            for bucket in self.bucket_list:
+                self.load_data(random_key_prefix=True,bucket_name=bucket)
+            time.sleep(60)
+            self.log.info("Giving some time to Resident Ratio to settle down")
+
+
+    def get_nodes_from_service_map(self, service='index', all_nodes=True):
+        service_nodes = []
+        url = f"{self.protocol}://{self.host}:{self.port}/pools/default"
+        self.log.info(f"url is {url}")
+        response = requests.get(url, verify=False, auth=(self.username, self.password))
+        resp_json = response.json()
+        for node in resp_json['nodes']:
+            if service in node["services"]:
+                service_nodes.append(node["otpNode"].split('@')[1])
+        try:
+            if not all_nodes:
+                return service_nodes[0]
+            else:
+                return service_nodes
+        except:
+            raise Exception("service node list is empty")
+
+    def load_data(self, random_key_prefix=False, bucket_name="default"):
+        if bucket_name != "default":
+            self.bucket_name = bucket_name
+        if random_key_prefix:
+            self.key_prefix = ''.join(random.choices(ascii_letters + digits, k=10))
         if self.all_coll:
             scope_coll_map = self.get_all_collections(self.bucket_name)
         else:
             scope_coll_map = {self.scope: [self.collection]}
         for scope in scope_coll_map:
+            if scope == '_system':
+                continue
             coll_list = scope_coll_map[scope]
             for coll in coll_list:
                 if coll == '_default' and self.skip_default:
