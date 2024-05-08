@@ -1,3 +1,4 @@
+
 ---
 users:
   -
@@ -5,55 +6,12 @@ users:
       password: password
       roles: admin
       auth_domain: local
-  -
-      name: bucket2
-      password: password
-      roles: admin
-      auth_domain: local
-  -
-      name: bucket3
-      password: password
-      roles: admin
-      auth_domain: local
-  -
-      name: bucket4
-      password: password
-      roles: admin
-      auth_domain: local
-  -
-      name: bucket5
-      password: password
-      roles: admin
-      auth_domain: local
-
 buckets:
   -
       name: bucket1
-      ram: 20%
+      ram: 100%
       eviction: fullEviction
       storage: magma
-  -
-      name: bucket2
-      ram: 20%
-      eviction: fullEviction
-      storage: magma
-  -
-      name: bucket3
-      ram: 20%
-      eviction: fullEviction
-      storage: magma
-  -
-      name: bucket4
-      ram: 20%
-      eviction: fullEviction
-      storage: magma
-  -
-      name: bucket5
-      ram: 20%
-      eviction: fullEviction
-      storage: magma
-
-
 servers: # each server tag represents a cluster
   -
       name: local
@@ -70,5 +28,5 @@ servers: # each server tag represents a cluster
       data_path: "/data"
       index_path: "/data"
       init_nodes: 11
-      buckets: bucket1, bucket2, bucket3, bucket4, bucket5
-      users: bucket1, bucket2, bucket3, bucket4, bucket5
+      buckets: bucket1
+      users: bucket1

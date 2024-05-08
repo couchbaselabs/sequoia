@@ -10,14 +10,11 @@ from concurrent.futures import as_completed
 from concurrent.futures.thread import ThreadPoolExecutor
 from datetime import datetime
 from http.client import RemoteDisconnected, IncompleteRead
-
 from couchbase.cluster import Cluster, ClusterOptions, QueryOptions, ClusterTimeoutOptions
 from couchbase.exceptions import CouchbaseException, QueryIndexAlreadyExistsException, TimeoutException
 from couchbase.auth import PasswordAuthenticator
 from couchbase.management.collections import *
-
 from vectorloader.vectorloader import HDF5_FORMATTED_DATASETS, VectorDataset
-
 import random
 import argparse
 import logging
@@ -27,9 +24,10 @@ import httplib2
 import json
 import paramiko
 import dns.resolver
-
+import concurrent.futures
+import uuid
+import struct
 ## Constants
-
 HOTEL_DS_SINGLE_FIELD = [
     {
         "name": "country",
@@ -58,7 +56,6 @@ HOTEL_DS_SINGLE_FIELD = [
                          ]
     }
 ]
-
 # Some constants
 HOTEL_DS_FIELDS = [
     {
@@ -202,7 +199,6 @@ HOTEL_DS_FIELDS = [
         "flex_queries": ["ANY v in reviews.date SATISFIES v > \"2001-10-09\" and v < \"2020-12-18\" END"]
     }
 ]
-
 VECTOR_DS_FIELDS = [
     {
         "name": "vector_data",
@@ -227,7 +223,6 @@ VECTOR_DS_FIELDS = [
         ]
     }
 ]
-
 VECTOR_DS_SINGLE_FIELD = [
     {
         "name": "vector_data",
@@ -236,13 +231,48 @@ VECTOR_DS_SINGLE_FIELD = [
         "field_code": "vector_data"
     }
 ]
+VECTOR_XATTRS_SINGLE_FIELD = [
+    {
+        "vector_data": {
+            "dynamic": False,
+            "enabled": True,
+            "fields": [
+                {
+                    "dims": 128,
+                    "docvalues": False,
+                    "include_in_all": False,
+                    "include_term_vectors": False,
+                    "index": True,
+                    "name": "vector_data",
+                    "similarity": "dot_product",
+                    "store": False,
+                    "type": "vector",
+                    "vector_index_optimized_for": "recall"
+                }
+            ]
+        }
+    }
+]
+VECTOR_BASE_64_SINGLE_FIELD = [
+    {
+     "name": "vector_data_base64",
+     "type": "vector_base64",
+     "store": False,
+     "index": True,
+     "include_term_vectors": False,
+     "include_in_all": False,
+     "docvalues": False,
+     "similarity": "dot_product",
+     "vector_index_optimized_for": "recall",
+     "dims": 128,
+     "field_code": "vector_base64",
+     "is_nested_object": False
+    }
+]
 
 NUM_WORKERS = 2  # Max number of worker threads to execute queries
 FTS_PORT = 8094
-
-
 class FTSIndexManager:
-
     def __init__(self):
         parser = argparse.ArgumentParser()
         parser.add_argument("-n", "--node", help="Couchbase Server Node Address")
@@ -260,6 +290,7 @@ class FTSIndexManager:
         parser.add_argument("-d", "--dataset", help="Dataset to be used for the test. Choices are - hotel",
                             default="hotel")
         parser.add_argument("-sc", "--scope", help="Scope to create indexes on", default=None)
+        parser.add_argument("-coll", "--collection", help="Collection to create indexes on", default=None)
         parser.add_argument("-t", "--duration", type=int,
                             help="Duration for queries to be run for. 0 (default) is infinite",
                             default="0")
@@ -285,12 +316,15 @@ class FTSIndexManager:
                                      "run_flex_queries",
                                      "create_index_from_map_on_bucket", "create_index_for_each_collection",
                                      "run_queries_on_each_index", "copy_docs_from_source_collection",
-                                     "update_docs_on_all_collections", "run_knn_queries"],
+                                     "update_docs_on_all_collections", "run_knn_queries",
+                                     "run_knn_queries_parallely"],
                             help="Choose an action to be performed. Valid actions : create_index, run_queries, "
                                  "delete_all_indexes, create_index_loop, item_count_check",
                             default="create_index")
         parser.add_argument("-skip_def", "--skip_default", default=False,
                             help="skip default scope and collection")
+        parser.add_argument("-xattr", "--xattr", help="if you want to push documents in xattr metdata", type=bool, default=False)
+        parser.add_argument("-base_64", "--base_64", help="if you want to push documents in base_64 encoded format", type=bool, default=False)
         parser.add_argument("-maxSegmentFileSize", "--maxSegmentFileSize", default=-1,
                             help="maxSegmentFileSize")
         parser.add_argument("-concurrentMergeLimit", "--concurrentMergeLimit", default=-1,
@@ -316,12 +350,15 @@ class FTSIndexManager:
         self.index_partition_map = args.index_partition_map
         self.scale = args.scale
         self.scope = args.scope
+        self.collection = args.collection
         self.num_queries_per_worker = args.num_queries_per_worker
         self.validation_timeout = args.validation_timeout
         self.knn_value = args.knn_value
         self.vector_index_dimension = args.vector_index_dimension
         self.maxSegmentFileSize = args.maxSegmentFileSize
         self.concurrentMergeLimit = args.concurrentMergeLimit
+        self.store_in_xattr = args.xattr
+        self.base_64 = args.base_64
 
         self.skip_default = args.skip_default
         self.idx_def_templates = HOTEL_DS_FIELDS
@@ -350,7 +387,6 @@ class FTSIndexManager:
             self.idx_def_templates = copy.deepcopy(VECTOR_DS_SINGLE_FIELD)
         else:
             self.idx_def_templates = copy.deepcopy(VECTOR_DS_FIELDS)
-
         self.knn_query = {
             "query": {
                 "match_none": {}
@@ -365,10 +401,8 @@ class FTSIndexManager:
                 }
             ]
         }
-
         if self.action == "run_knn_and_fts_queries":
             self.knn_query["query"] = random.choice(VECTOR_DS_FIELDS[1]["queries"])
-
             # Initialize connections to the cluster
         count = 0
         while True:
@@ -391,9 +425,7 @@ class FTSIndexManager:
                 count += 1
                 if count == 5:
                     raise
-
         self.cluster.search_indexes()
-
         # Logging configuration
         self.log.setLevel(logging.INFO)
         ch = logging.StreamHandler()
@@ -406,7 +438,6 @@ class FTSIndexManager:
         fh = logging.FileHandler("./ftsindexmanager-{0}.log".format(timestamp))
         fh.setFormatter(formatter)
         self.log.addHandler(fh)
-
         # Set max number of replica for the test. For that, fetch the number of indexer nodes in the cluster.
         self.max_num_replica = 0
         self.max_num_partitions = 20
@@ -430,14 +461,11 @@ class FTSIndexManager:
     def get_fts_node_addr(self):
         cluster_url = self.protocol + "://" + self.rest_url + ":" + str(self.node_port) + "/pools/default"
         node_map = []
-
         # Get map of nodes in the cluster
         response = requests.get(cluster_url, auth=(
             self.username, self.password), verify=False, )
-
         if (response.ok):
             response = json.loads(response.text)
-
             for node in response["nodes"]:
                 if "svc-qs-node" in node["hostname"] or "svc-s-node" in node["hostname"]:
                     return node["hostname"][:-5]
@@ -458,12 +486,9 @@ class FTSIndexManager:
     """
     Fetch list of all scopes that have multiple collections
     """
-
     def get_all_scopes_with_multiple_collections(self):
         cb_scopes = self.cb.collections().get_all_scopes()
-
         multi_coll_scopes = []
-
         for scope in cb_scopes:
             if scope.name != "_system":
                 scope_obj = {}
@@ -492,10 +517,8 @@ class FTSIndexManager:
             print_time = 0
             if self.duration > 0:
                 end_time = time.time() + self.duration
-
             if self.print_interval > 0:
                 print_time = time.time() + self.print_interval
-
             while True:
                 random.seed(datetime.now())
                 for i in range(self.num_queries_per_worker):
@@ -512,7 +535,6 @@ class FTSIndexManager:
                 except Exception as e:
                     self.log.info(str(e))
                     queries_failed += 1
-
                 # Print result summary if the print interval has passed
                 if self.print_interval > 0 and time.time() > print_time:
                     self.log.info(
@@ -520,11 +542,9 @@ class FTSIndexManager:
                             queries_run, queries_passed, queries_failed))
                     # Set next time to print result summary
                     print_time = time.time() + self.print_interval
-
                 # Exit if timed out
                 if self.duration > 0 and time.time() > end_time:
                     break
-
                 # Wait for 1 min before submitting next set of threads
                 alive_threads = len(threading.enumerate())
                 if alive_threads > 5:
@@ -548,7 +568,6 @@ class FTSIndexManager:
         c. Run a count(*) query against all the collection to get the KV item count and add them
         d. Compare result from a & c and raiseException if not matching
     """
-
     def item_count_check(self):
         stat_time = time.time()
         end_time = stat_time + self.validation_timeout
@@ -559,7 +578,6 @@ class FTSIndexManager:
             if len(index_list) == len(indexes_validated):
                 break
             errors = []
-
             for index_name in index_list:
                 if index_name not in indexes_validated:
                     index_item_count = self.get_fts_index_doc_count(index_name)
@@ -575,12 +593,10 @@ class FTSIndexManager:
                         errors.append(errors_obj)
                     else:
                         indexes_validated.append(index_name)
-
             if len(errors) > 0:
                 self.log.info("There were errors in the item count check phase - \n{0}".format(errors))
             else:
                 self.log.info("Item check count passed. No discrepancies seen.")
-
         if len(errors) > 0:
             raise Exception("There were errors in the item count check phase - \n{0}".format(errors))
         else:
@@ -604,7 +620,6 @@ class FTSIndexManager:
                     index_type = random.choice(["single", "single", "single", "multi"])
                 else:
                     index_type = "single"
-
                 if index_type == "single":
                     collections.append(coll_list[i % len(coll_list)])
                 else:
@@ -614,18 +629,18 @@ class FTSIndexManager:
                     num_coll = len(scope_obj[scope_name])
                     # Now randomly select a subset of random number collections from that scope
                     collections = random.sample(population=scope_obj[scope_name], k=random.randint(1, num_coll))
-
+                if self.collection is not None:
+                    coll = self.scope + '.' + self.collection
+                    collections = [coll]
                 self.log.info("===== Creating {1} FTS index on {0} =====".format(collections, index_type))
                 status, content, response, idx_name = self.create_fts_index_on_collections(collections,
                                                                                            num_replica=int(
                                                                                                num_replicas),
                                                                                            num_partitions=int(
                                                                                                num_partitions))
-
                 if not status:
                     self.log.info("Content = {0} \nResponse = {1}".format(content, response))
                     self.log.info("Index creation on {0} did not succeed. Pls check logs.".format(collections))
-
                 # Remove the scope or collection on which the index was created
                 if index_type == "single":
                     # coll_list.remove(collections[0])
@@ -647,12 +662,10 @@ class FTSIndexManager:
             num_indexes = int(self.scale) * int(num_indexes)
             for i in range(num_indexes):
                 random.seed(datetime.now())
-
                 self.log.info("===== Creating FTS index on {0} =====".format(self.bucket_name))
                 status, content, response, idx_name = self.create_fts_index_on_bucket(num_replica=int(num_replicas),
                                                                                       num_partitions=int(
                                                                                           num_partitions))
-
                 if not status:
                     self.log.info("Content = {0} \nResponse = {1}".format(content, response))
                     self.log.info("Index creation on {0} did not succeed. Pls check logs.".format(self.bucket_name))
@@ -674,7 +687,6 @@ class FTSIndexManager:
                                                                                        num_replica=0,
                                                                                        num_partitions=1,
                                                                                        count=count)
-
             if not status:
                 self.log.info("Content = {0} \nResponse = {1}".format(content, response))
                 self.log.info("Index creation on {0} did not succeed. Pls check logs.".format(collections))
@@ -686,7 +698,6 @@ class FTSIndexManager:
     """
     Create n number of indexes for the specified bucket. These indexes could be on a single or multiple collections
     """
-
     def create_fts_indexes_for_bucket(self):
         coll_list = self.get_all_collections()
         multi_coll_scopes = self.get_all_scopes_with_multiple_collections()
@@ -698,7 +709,6 @@ class FTSIndexManager:
                 index_type = random.choice(["single", "single", "single", "multi"])
             else:
                 index_type = "single"
-
             if index_type == "single":
                 collections.append(random.choice(coll_list))
             else:
@@ -708,14 +718,11 @@ class FTSIndexManager:
                 num_coll = len(scope_obj[scope_name])
                 # Now randomly select a subset of random number collections from that scope
                 collections = random.sample(population=scope_obj[scope_name], k=random.randint(1, num_coll))
-
             self.log.info("===== Creating {1} FTS index on {0} =====".format(collections, index_type))
             status, content, response, idx_name = self.create_fts_index_on_collections(collections)
-
             if not status:
                 self.log.info("Content = {0} \nResponse = {1}".format(content, response))
                 self.log.info("Index creation on {0} did not succeed. Pls check logs.".format(collections))
-
             # Remove the scope or collection on which the index was created
             if index_type == "single":
                 coll_list.remove(collections[0])
@@ -739,7 +746,6 @@ class FTSIndexManager:
     """
         Create n number of indexes for the specified bucket. These indexes could be on a single or multiple collections
         """
-
     def create_fts_indexes_in_a_loop(self, timeout, interval):
         # Establish timeout. If timeout > 0, run in infinite loop
         end_time = 0
@@ -748,13 +754,10 @@ class FTSIndexManager:
         count = 0
         while True:
             try:
-
                 coll_list = self.get_all_collections()
                 multi_coll_scopes = self.get_all_scopes_with_multiple_collections()
-
                 coll_list = list(filter(lambda a: "_default" not in a, coll_list))
                 multi_coll_scopes = list(filter(lambda a: "_default" not in a, multi_coll_scopes))
-
                 collections = []
                 random.seed(datetime.now())
                 if len(multi_coll_scopes) > 0:
@@ -762,7 +765,6 @@ class FTSIndexManager:
                     index_type = random.choice(["single", "single", "single", "multi"])
                 else:
                     index_type = "single"
-
                 if index_type == "single":
                     collections.append(random.choice(coll_list))
                 else:
@@ -772,10 +774,8 @@ class FTSIndexManager:
                     num_coll = len(scope_obj[scope_name])
                     # Now randomly select a subset of random number collections from that scope
                     collections = random.sample(population=scope_obj[scope_name], k=random.randint(1, num_coll))
-
                 self.log.info("===== Creating {1} FTS index on {0} =====".format(collections, index_type))
                 status, content, response, idx_name = self.create_fts_index_on_collections(collections, count)
-
                 if not status:
                     self.log.info("Content = {0} \nResponse = {1}".format(content, response))
                     self.log.info("Index creation on {0} did not succeed. Pls check logs.".format(collections))
@@ -783,7 +783,6 @@ class FTSIndexManager:
                     # self.execute_command(command, self.node_addr, "root", "couchbase")
                 else:
                     self.log.info(f'Index creation on {idx_name} succeeded. Content = {content}, Response = {response}')
-
                 time.sleep(240)
                 cur_indexes = self.get_fts_index_list()
                 if idx_name in cur_indexes:
@@ -793,14 +792,12 @@ class FTSIndexManager:
                     if not status:
                         self.log.info("Status : {0} \nResponse : {1} \nContent : {2}".format(status, response, content))
                         self.log.info("Index {0} not deleted".format(idx_name))
-
                 # Exit if timed out
                 if timeout > 0 and time.time() > end_time:
                     break
             except Exception as e:
                 self.log.info(str(e))
             count += 1
-
             # Wait for the interval before doing the next CRUD operation
             time.sleep(interval)
 
@@ -815,7 +812,6 @@ class FTSIndexManager:
         count = 0
         while True:
             status, content, response, idx_name = self.create_fts_index_on_bucket(count)
-
             if not status:
                 self.log.info("Content = {0} \nResponse = {1}".format(content, response))
                 self.log.info("Index creation on {0} did not succeed. Pls check logs.".format(self.bucket_name))
@@ -823,7 +819,6 @@ class FTSIndexManager:
                 # self.execute_command(command, self.node_addr, "root", "couchbase")
             else:
                 self.log.info(f'Index creation on {idx_name} succeeded. Content = {content}, Response = {response}')
-
             time.sleep(240)
             cur_indexes = self.get_fts_index_list()
             if idx_name in cur_indexes:
@@ -833,12 +828,10 @@ class FTSIndexManager:
                 if not status:
                     self.log.info("Status : {0} \nResponse : {1} \nContent : {2}".format(status, response, content))
                     self.log.info("Index {0} not deleted".format(idx_name))
-
             # Exit if timed out
             if timeout > 0 and time.time() > end_time:
                 break
             count += 1
-
             # Wait for the interval before doing the next CRUD operation
             time.sleep(interval)
 
@@ -849,14 +842,12 @@ class FTSIndexManager:
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         ssh.connect(hostname, username=ssh_username, password=ssh_password,
                     timeout=120, banner_timeout=120)
-
         channel = ssh.get_transport().open_session()
         channel.get_pty()
         channel.settimeout(900)
         stdin = channel.makefile('wb')
         stdout = channel.makefile('rb')
         stderro = channel.makefile_stderr('rb')
-
         self.log.info(f'Running {command} on node {hostname}')
         channel.exec_command(command)
         data = channel.recv(1024)
@@ -866,7 +857,6 @@ class FTSIndexManager:
             data = channel.recv(1024)
         channel.close()
         stdin.close()
-
         output = []
         error = []
         for line in stdout.read().splitlines():
@@ -879,7 +869,6 @@ class FTSIndexManager:
             output.extend(line)
         stdout.close()
         stderro.close()
-
         ssh.close()
         return len(output), output, error
 
@@ -897,9 +886,7 @@ class FTSIndexManager:
        - num partitions
     6. Create a index definition payload based on the fields selected.
     7. Create index
-
     """
-
     def create_fts_index_on_collections(self, collections, count=None, num_replica=None, num_partitions=None):
         # random.seed(datetime.now())
         # Randomly select fields to create the index on
@@ -909,9 +896,12 @@ class FTSIndexManager:
             ds_fields = copy.deepcopy(HOTEL_DS_SINGLE_FIELD)
         elif self.dataset == "siftsmall":
             ds_fields = copy.deepcopy(VECTOR_DS_SINGLE_FIELD)
+        elif self.store_in_xattr:
+            ds_fields = copy.deepcopy(VECTOR_XATTRS_SINGLE_FIELD)
+        elif self.base_64:
+            ds_fields = copy.deepcopy(VECTOR_BASE_64_SINGLE_FIELD)
         else:
             ds_fields = copy.deepcopy(VECTOR_DS_FIELDS)
-
         if ds_fields == VECTOR_DS_FIELDS:
             num_fields = len(ds_fields)
         else:
@@ -921,15 +911,12 @@ class FTSIndexManager:
             field = random.choice(ds_fields)
             ds_fields.remove(field)
             index_fields.append(field)
-
         self.log.debug("***********  Fields selected for index : {0}".format(index_fields))
-
         # Randomly choose number of partitions and replicas
         if not num_partitions:
             num_partitions = random.randint(2, self.max_num_partitions)
         if not num_replica and num_replica != 0:
             num_replica = random.randint(0, self.max_num_replica)
-
         # Generate index name. Index names will also have field codes so that the query runner can decode the fields used in the index.
         for i in range(5):
             idx_name = "bucket_" + self.bucket_name + "_idx_" + ''.join(
@@ -937,15 +924,18 @@ class FTSIndexManager:
             if count:
                 idx_name += "_" + str(count)
             for field in index_fields:
-                idx_name += "-" + field["field_code"]
+                if self.store_in_xattr:
+                    idx_name += '-' + 'xattr'
+                elif self.base_64:
+                    idx_name += '-' + 'base64'
+                else:
+                    idx_name += "-" + field["field_code"] + '-vector_data'
             cur_indexes = self.get_fts_index_list()
             if idx_name not in cur_indexes:
                 break
-
         self.log.info("Creating FTS index {0} on {1} with {2} replicas and {3} partitions".format(idx_name, collections,
                                                                                                   num_replica,
                                                                                                   num_partitions))
-
         # Generate the index definition payload
         # Index common properties
         index_def_dict = {}
@@ -957,8 +947,8 @@ class FTSIndexManager:
         index_def_dict["planParams"] = {}
         index_def_dict["planParams"]["maxPartitionsPerPIndex"] = 512
         index_def_dict["planParams"]["indexPartitions"] = num_partitions
-        if num_replica > 0:
-            index_def_dict["planParams"]["numReplicas"] = num_replica
+        # if num_replica > 0:
+        index_def_dict["planParams"]["numReplicas"] = num_replica
 
         index_def_dict["store"] = {}
         index_def_dict["store"]["indexType"] = "scorch"
@@ -966,12 +956,14 @@ class FTSIndexManager:
             index_def_dict["scorchMergePlanOptions"] = {}
             index_def_dict["scorchMergePlanOptions"]["maxSegmentFileSize"] = self.maxSegmentFileSize
         index_def_dict["params"] = {}
+        index_def_dict["params"]["store"] = {}
+        index_def_dict["params"]["store"]["indexType"] = "scorch"
+        index_def_dict["params"]["store"]["kvStoreName"] = ""
         index_def_dict["params"]["doc_config"] = {}
         index_def_dict["params"]["doc_config"]["docid_prefix_delim"] = ""
         index_def_dict["params"]["doc_config"]["docid_regexp"] = ""
         index_def_dict["params"]["doc_config"]["mode"] = "scope.collection.type_field"
         index_def_dict["params"]["doc_config"]["type_field"] = "type"
-
         # Index mapping common properties
         index_def_dict["params"]["mapping"] = {}
         # index_def_dict["params"]["mapping"]["default_analyzer"] = "keyword"
@@ -981,104 +973,146 @@ class FTSIndexManager:
         index_def_dict["params"]["mapping"]["default_mapping"]["dynamic"] = True
         index_def_dict["params"]["mapping"]["default_mapping"]["enabled"] = False
         index_def_dict["params"]["mapping"]["default_type"] = "_default"
-        index_def_dict["params"]["mapping"]["docvalues_dynamic"] = True
+        index_def_dict["params"]["mapping"]["docvalues_dynamic"] = False
         index_def_dict["params"]["mapping"]["index_dynamic"] = True
         index_def_dict["params"]["mapping"]["store_dynamic"] = False
-        index_def_dict["params"]["mapping"]["type_field"] = "_type"
+        # index_def_dict["params"]["mapping"]["type_field"] = "_type"
         index_def_dict["params"]["mapping"]["types"] = {}
-
         for collection in collections:
             # Index type mapping - 1 per collection
             index_def_dict["params"]["mapping"]["types"][collection] = {}
-            index_def_dict["params"]["mapping"]["types"][collection]["dynamic"] = False
+            index_def_dict["params"]["mapping"]["types"][collection]["dynamic"] = True
             index_def_dict["params"]["mapping"]["types"][collection]["enabled"] = True
             index_def_dict["params"]["mapping"]["types"][collection]["properties"] = {}
 
-            # For each field selected to be indexed, add it to the type mapping
-            for field in index_fields:
-                if field["is_nested_object"] == False:
-                    field_name = field["name"]
-                else:
-                    field_name_parts = field["name"].split(".")
-                    field_name = field_name_parts[0]
-                if field_name not in index_def_dict["params"]["mapping"]["types"][collection]["properties"]:
-                    index_def_dict["params"]["mapping"]["types"][collection]["properties"][field_name] = {}
-                    index_def_dict["params"]["mapping"]["types"][collection]["properties"][field_name][
-                        "dynamic"] = False
-                    index_def_dict["params"]["mapping"]["types"][collection]["properties"][field_name]["enabled"] = True
-                else:
-                    self.log.info("Field {0} already exists".format(field_name))
+            if self.store_in_xattr:
+                index_def_dict["params"]["mapping"]["default_analyzer"] = "standard"
+                index_def_dict['params']['mapping']['types'][collection]['properties'][
+                    '_$xattrs'] = {}
+                index_def_dict['params']['mapping']['types'][collection]['properties'][
+                    '_$xattrs']['enabled'] = True
+                index_def_dict['params']['mapping']['types'][collection]['properties'][
+                    '_$xattrs']['dynamic'] = True
+                index_def_dict['params']['mapping']['types'][collection]['properties'][
+                    '_$xattrs']['properties'] = {}
+                index_def_dict['params']['mapping']['types'][collection]['properties'][
+                    '_$xattrs']['properties']['vector_data'] = {}
 
-                if field["is_nested_object"] == False:
-                    index_def_dict["params"]["mapping"]["types"][collection]["properties"][field_name]["fields"] = []
+                index_def_dict['params']['mapping']['types'][collection]['properties'][
+                    '_$xattrs']['properties']['vector_data']['dynamic'] = False
+                index_def_dict['params']['mapping']['types'][collection]['properties'][
+                    '_$xattrs']['properties']['vector_data']['enabled'] = True
 
-                    field_dict = {}
-                    field_dict["index"] = True
-                    field_dict["name"] = field["name"]
-                    field_dict["type"] = field["type"]
-                    if field["type"] == "vector":
-                        field_dict["dims"] = self.vector_index_dimension
-                        if len(collections) > 1:
-                            field_dict["similarity"] = "dot_product"
-                        else:
-                            field_dict["similarity"] = random.choice(["dot_product", "l2_norm"])
-                    index_def_dict["params"]["mapping"]["types"][collection]["properties"][field_name]["fields"].append(
-                        field_dict)
+                index_def_dict['params']['mapping']['types'][collection]['properties'][
+                    '_$xattrs']['properties']['vector_data']['fields'] = []
 
-                else:
-                    field_name_parts = field["name"].split(".")
-                    mapping = {}
+                index_def_dict['params']['mapping']['types'][collection]['properties'][
+                    '_$xattrs']['properties']['vector_data']['fields'].append({})
+                index_def_dict['params']['mapping']['types'][collection]['properties'][
+                    '_$xattrs']['properties']['vector_data']['fields'][0][
+                    'dims'] = self.vector_index_dimension
+                index_def_dict['params']['mapping']['types'][collection]['properties'][
+                    '_$xattrs']['properties']['vector_data']['fields'][0][
+                    'docvalues'] = False
+                index_def_dict['params']['mapping']['types'][collection]['properties'][
+                    '_$xattrs']['properties']['vector_data']['fields'][0][
+                    'include_in_all'] = False
+                index_def_dict['params']['mapping']['types'][collection]['properties'][
+                    '_$xattrs']['properties']['vector_data']['fields'][0][
+                    'include_term_vectors'] = False
+                index_def_dict['params']['mapping']['types'][collection]['properties'][
+                    '_$xattrs']['properties']['vector_data']['fields'][0][
+                    'index'] = True
+                index_def_dict['params']['mapping']['types'][collection]['properties'][
+                    '_$xattrs']['properties']['vector_data']['fields'][0][
+                    'name'] = 'vector_data'
+                index_def_dict['params']['mapping']['types'][collection]['properties'][
+                    '_$xattrs']['properties']['vector_data']['fields'][0][
+                    'similarity'] = random.choice(["dot_product", "l2_norm"])
+                index_def_dict['params']['mapping']['types'][collection]['properties'][
+                    '_$xattrs']['properties']['vector_data']['fields'][0][
+                    'store'] = False
+                index_def_dict['params']['mapping']['types'][collection]['properties'][
+                    '_$xattrs']['properties']['vector_data']['fields'][0][
+                    'type'] = 'vector'
+                index_def_dict['params']['mapping']['types'][collection]['properties'][
+                    '_$xattrs']['properties']['vector_data']['fields'][0][
+                    'vector_index_optimized_for'] = "recall"
 
-                    j = 1
-                    while j < len(field_name_parts):
-
-                        child_mapping = {}
-                        child_mapping[field_name_parts[j]] = {}
-                        child_mapping[field_name_parts[j]]["dynamic"] = False
-                        child_mapping[field_name_parts[j]]["enabled"] = True
-
-                        if j == len(field_name_parts) - 1:
-                            child_mapping[field_name_parts[j]]["fields"] = []
-                            field_dict = {}
-                            field_dict["index"] = True
-                            field_dict["name"] = field_name_parts[j]
-                            field_dict["type"] = field["type"]
-                            child_mapping[field_name_parts[j]]["fields"].append(field_dict)
-                        else:
-                            child_mapping[field_name_parts[j]]["properties"] = {}
-
-                        if mapping == {}:
-                            mapping = copy.deepcopy(child_mapping)
-                        else:
-                            if field_name_parts[j - 1] in mapping:
-                                mapping[field_name_parts[j - 1]]["properties"] = child_mapping
-
-                        j += 1
-
-                    if "properties" not in index_def_dict["params"]["mapping"]["types"][collection]["properties"][
-                        field_name]:
-                        index_def_dict["params"]["mapping"]["types"][collection]["properties"][field_name][
-                            "properties"] = {}
-                        index_def_dict["params"]["mapping"]["types"][collection]["properties"][field_name][
-                            "properties"] = mapping
+            else:
+                # For each field selected to be indexed, add it to the type mapping
+                for field in index_fields:
+                    if field["is_nested_object"] == False:
+                        field_name = field["name"]
                     else:
+                        field_name_parts = field["name"].split(".")
+                        field_name = field_name_parts[0]
+                    if field_name not in index_def_dict["params"]["mapping"]["types"][collection]["properties"]:
+                        index_def_dict["params"]["mapping"]["types"][collection]["properties"][field_name] = {}
                         index_def_dict["params"]["mapping"]["types"][collection]["properties"][field_name][
-                            "properties"].update(mapping)
+                            "dynamic"] = False
+                        index_def_dict["params"]["mapping"]["types"][collection]["properties"][field_name]["enabled"] = True
+                    else:
+                        self.log.info("Field {0} already exists".format(field_name))
+                    if field["is_nested_object"] == False:
+                        index_def_dict["params"]["mapping"]["types"][collection]["properties"][field_name]["fields"] = []
+                        field_dict = {}
+                        field_dict["index"] = True
+                        field_dict["name"] = field["name"]
+                        field_dict["type"] = field["type"]
+                        if field["type"] == "vector" or field["type"] == "vector_base64":
+                            field_dict["dims"] = self.vector_index_dimension
+                            if len(collections) > 1:
+                                field_dict["similarity"] = "dot_product"
+                            else:
+                                field_dict["similarity"] = random.choice(["dot_product", "l2_norm"])
+                        index_def_dict["params"]["mapping"]["types"][collection]["properties"][field_name]["fields"].append(
+                            field_dict)
+
+                    else:
+                        field_name_parts = field["name"].split(".")
+                        mapping = {}
+                        j = 1
+                        while j < len(field_name_parts):
+                            child_mapping = {}
+                            child_mapping[field_name_parts[j]] = {}
+                            child_mapping[field_name_parts[j]]["dynamic"] = False
+                            child_mapping[field_name_parts[j]]["enabled"] = True
+                            if j == len(field_name_parts) - 1:
+                                child_mapping[field_name_parts[j]]["fields"] = []
+                                field_dict = {}
+                                field_dict["index"] = True
+                                field_dict["name"] = field_name_parts[j]
+                                field_dict["type"] = field["type"]
+                                child_mapping[field_name_parts[j]]["fields"].append(field_dict)
+                            else:
+                                child_mapping[field_name_parts[j]]["properties"] = {}
+                            if mapping == {}:
+                                mapping = copy.deepcopy(child_mapping)
+                            else:
+                                if field_name_parts[j - 1] in mapping:
+                                    mapping[field_name_parts[j - 1]]["properties"] = child_mapping
+                            j += 1
+                        if "properties" not in index_def_dict["params"]["mapping"]["types"][collection]["properties"][
+                            field_name]:
+                            index_def_dict["params"]["mapping"]["types"][collection]["properties"][field_name][
+                                "properties"] = {}
+                            index_def_dict["params"]["mapping"]["types"][collection]["properties"][field_name][
+                                "properties"] = mapping
+                        else:
+                            index_def_dict["params"]["mapping"]["types"][collection]["properties"][field_name][
+                                "properties"].update(mapping)
 
         self.log.debug("Final index definition - \n{0}".format(index_def_dict))
-
         # Create FTS index via REST
         index_definition = json.dumps(index_def_dict)
-
         # check if collections exists
         all_collections = self.get_all_collections()
         for collection in collections:
             if collection not in all_collections:
                 return False, "Seems like collections did not exist. So did not try to create index", "None"
-
         status, content, response = self.http_request(self.rest_url, self.fts_port, "/api/index/{0}".format(idx_name),
                                                       method="PUT", body=index_definition)
-
         return status, content, response, idx_name
 
     def create_fts_index_on_bucket(self, count=None, num_replica=None, num_partitions=None, vector_field=None):
@@ -1092,22 +1126,18 @@ class FTSIndexManager:
             ds_fields = copy.deepcopy(VECTOR_DS_SINGLE_FIELD)
         else:
             ds_fields = copy.deepcopy(VECTOR_DS_FIELDS)
-
         num_fields = random.randint(1, len(ds_fields))
         index_fields = []
         for i in range(num_fields):
             field = random.choice(ds_fields)
             ds_fields.remove(field)
             index_fields.append(field)
-
         self.log.debug("***********  Fields selected for index : {0}".format(index_fields))
-
         # Randomly choose number of partitions and replicas
         if not num_partitions:
             num_partitions = random.randint(2, self.max_num_partitions)
         if not num_replica:
             num_replica = random.randint(0, self.max_num_replica)
-
         # Generate index name. Index names will also have field codes so that the query runner can decode the fields used in the index.
         for i in range(5):
             idx_name = "bucket_" + self.bucket_name + "_idx_" + ''.join(
@@ -1119,12 +1149,10 @@ class FTSIndexManager:
             cur_indexes = self.get_fts_index_list()
             if idx_name not in cur_indexes:
                 break
-
         self.log.info(
             "Creating FTS index {0} on {1} with {2} replicas and {3} partitions".format(idx_name, self.bucket_name,
                                                                                         num_replica,
                                                                                         num_partitions))
-
         # Generate the index definition payload
         # Index common properties
         index_def_dict = {}
@@ -1135,9 +1163,8 @@ class FTSIndexManager:
         index_def_dict["planParams"] = {}
         index_def_dict["planParams"]["maxPartitionsPerPIndex"] = 512
         index_def_dict["planParams"]["indexPartitions"] = num_partitions
-        if num_replica > 0:
-            index_def_dict["planParams"]["numReplicas"] = num_replica
-
+        # if num_replica > 0:
+        index_def_dict["planParams"]["numReplicas"] = num_replica
         index_def_dict["store"] = {}
         index_def_dict["store"]["indexType"] = "scorch"
         if self.maxSegmentFileSize != -1:
@@ -1149,7 +1176,6 @@ class FTSIndexManager:
         index_def_dict["params"]["doc_config"]["docid_regexp"] = ""
         index_def_dict["params"]["doc_config"]["mode"] = "type_field"
         index_def_dict["params"]["doc_config"]["type_field"] = "type"
-
         # Index mapping common properties
         index_def_dict["params"]["mapping"] = {}
         index_def_dict["params"]["mapping"]["default_analyzer"] = "keyword"
@@ -1164,7 +1190,6 @@ class FTSIndexManager:
         index_def_dict["params"]["mapping"]["docvalues_dynamic"] = True
         index_def_dict["params"]["mapping"]["index_dynamic"] = True
         index_def_dict["params"]["mapping"]["store_dynamic"] = False
-
         for field in index_fields:
             if field["is_nested_object"] == False:
                 field_name = field["name"]
@@ -1174,33 +1199,27 @@ class FTSIndexManager:
             if field_name not in index_def_dict["params"]["mapping"]["default_mapping"]["properties"]:
                 index_def_dict["params"]["mapping"]["default_mapping"]["properties"][field_name] = {}
                 index_def_dict["params"]["mapping"]["default_mapping"]["properties"][field_name][
-                    "dynamic"] = False
+                    "dynamic"] = True
                 index_def_dict["params"]["mapping"]["default_mapping"]["properties"][field_name]["enabled"] = True
             else:
                 self.log.info("Field {0} already exists".format(field_name))
-
             if field["is_nested_object"] == False:
                 index_def_dict["params"]["mapping"]["default_mapping"]["properties"][field_name]["fields"] = []
-
                 field_dict = {}
                 field_dict["index"] = True
                 field_dict["name"] = field["name"]
                 field_dict["type"] = field["type"]
                 index_def_dict["params"]["mapping"]["default_mapping"]["properties"][field_name]["fields"].append(
                     field_dict)
-
             else:
                 field_name_parts = field["name"].split(".")
                 mapping = {}
-
                 j = 1
                 while j < len(field_name_parts):
-
                     child_mapping = {}
                     child_mapping[field_name_parts[j]] = {}
                     child_mapping[field_name_parts[j]]["dynamic"] = False
                     child_mapping[field_name_parts[j]]["enabled"] = True
-
                     if j == len(field_name_parts) - 1:
                         child_mapping[field_name_parts[j]]["fields"] = []
                         field_dict = {}
@@ -1210,15 +1229,12 @@ class FTSIndexManager:
                         child_mapping[field_name_parts[j]]["fields"].append(field_dict)
                     else:
                         child_mapping[field_name_parts[j]]["properties"] = {}
-
                     if mapping == {}:
                         mapping = copy.deepcopy(child_mapping)
                     else:
                         if field_name_parts[j - 1] in mapping:
                             mapping[field_name_parts[j - 1]]["properties"] = child_mapping
-
                     j += 1
-
                 if "properties" not in index_def_dict["params"]["mapping"]["default_mapping"]["properties"][
                     field_name]:
                     index_def_dict["params"]["mapping"]["default_mapping"]["properties"][field_name][
@@ -1228,21 +1244,16 @@ class FTSIndexManager:
                 else:
                     index_def_dict["params"]["mapping"]["default_mapping"]["properties"][field_name][
                         "properties"].update(mapping)
-
         self.log.info("Final index definition - \n{0}".format(index_def_dict))
-
         # Create FTS index via REST
         index_definition = json.dumps(index_def_dict)
-
         status, content, response = self.http_request(self.rest_url, self.fts_port, "/api/index/{0}".format(idx_name),
                                                       method="PUT", body=index_definition)
-
         return status, content, response, idx_name
 
     """
     Retrieve list of FTS indexes in the cluster
     """
-
     def get_fts_index_list(self, bucket=None):
         index_names = []
         status, content, response = self.http_request(self.rest_url, self.fts_port, "/api/index")
@@ -1256,13 +1267,11 @@ class FTSIndexManager:
             except TypeError as err:
                 self.log.info(str(err))
                 index_names = []
-
         return index_names
 
     """
     Given index name, Retrieve item count in the index
     """
-
     def get_fts_index_doc_count(self, name):
         """ get number of docs indexed"""
         count = 0
@@ -1290,7 +1299,6 @@ class FTSIndexManager:
                 self.log.info(f'Could not get scope and collection for {col}')
                 # keyspace_name_for_query = "`" + bucket_name + "`.`_default`.`_default`"
                 return None
-
             # Get Collection item count from KV via N1QL
             kv_item_count_query = "select raw count(*) from {0};".format(keyspace_name_for_query)
             try:
@@ -1305,13 +1313,11 @@ class FTSIndexManager:
             except Exception as e:
                 self.log.info("Got an error retrieving stat from query via n1ql with query - {0}. Exception : {1} ".
                               format(kv_item_count_query, str(e)))
-
         return tot_index_col_count
 
     """
     Method to execute a query statement
     """
-
     def _execute_query(self, statement):
         status = None
         results = None
@@ -1323,7 +1329,6 @@ class FTSIndexManager:
         else:
             query_node = Cluster('couchbase://{0}'.format(nodelist[0]),
                                  ClusterOptions(PasswordAuthenticator(self.username, self.password)))
-
         try:
             timeout = timedelta(minutes=5)
             queryResult = query_node.query(statement, QueryOptions(timeout=timeout))
@@ -1334,8 +1339,6 @@ class FTSIndexManager:
                 self.log.error("Unexpected error :", sys.exc_info()[0])
                 self.log.info("Query didnt return status or results")
                 pass
-
-
         except CouchbaseException as qerr:
             self.log.debug("qerr")
             self.log.error(qerr)
@@ -1350,13 +1353,11 @@ class FTSIndexManager:
             self.log.error(terr)
         except:
             self.log.error("Unexpected error :", sys.exc_info()[0])
-
         return status, results, queryResult
 
     """
     Delete all FTS indexes
     """
-
     def delete_all_indexes(self):
         index_names = self.get_fts_index_list()
         for index in index_names:
@@ -1367,9 +1368,7 @@ class FTSIndexManager:
                 if not status:
                     self.log.info("Status : {0} \nResponse : {1} \nContent : {2}".format(status, response, content))
                     self.log.info("Index {0} not deleted. Trying again".format(index))
-
         index_names = self.get_fts_index_list()
-
         for index in index_names:
             if "bucket_" + self.bucket_name + "_idx" in index:
                 raise Exception("Indexes for the bucket {0} not deleted".format(self.bucket_name))
@@ -1377,11 +1376,9 @@ class FTSIndexManager:
     """
     Retrieve fields for a given index
     """
-
     def get_index_fields(self, indexname):
         field_names = indexname.split("-")[1:]
         idx_fields_details = []
-
         for field in field_names:
             for ds_field in self.idx_def_templates:
                 if field == ds_field["field_code"]:
@@ -1389,15 +1386,12 @@ class FTSIndexManager:
                     break
                 else:
                     pass
-
         return idx_fields_details
 
     """
     Runs FTS queries with multi-threading
     """
-
     def fts_query_runner(self):
-
         threads = []
         queries_run = 0
         queries_passed = 0
@@ -1408,16 +1402,13 @@ class FTSIndexManager:
             print_time = 0
             if self.duration > 0:
                 end_time = time.time() + self.duration
-
             if self.print_interval > 0:
                 print_time = time.time() + self.print_interval
-
             while True:
                 random.seed(datetime.now())
                 for i in range(self.num_queries_per_worker):
                     threads.append(executor.submit(self.generate_and_run_fts_query))
                     time.sleep(5)
-
                 for task in as_completed(threads):
                     result = task.result()
                     queries_run += 1
@@ -1425,7 +1416,6 @@ class FTSIndexManager:
                         queries_passed += 1
                     else:
                         queries_failed += 1
-
                 # Print result summary if the print interval has passed
                 if self.print_interval > 0 and time.time() > print_time:
                     self.log.info(
@@ -1433,11 +1423,9 @@ class FTSIndexManager:
                             queries_run, queries_passed, queries_failed))
                     # Set next time to print result summary
                     print_time = time.time() + self.print_interval
-
                 # Exit if timed out
                 if self.duration > 0 and time.time() > end_time:
                     break
-
                 # Wait for 1 min before submitting next set of threads
                 alive_threads = len(threading.enumerate())
                 if alive_threads > 5:
@@ -1445,7 +1433,6 @@ class FTSIndexManager:
                     time.sleep(60)
 
     def fts_query_runner_on_each_index(self):
-
         threads = []
         queries_run = 0
         queries_passed = 0
@@ -1456,17 +1443,14 @@ class FTSIndexManager:
             print_time = 0
             if self.duration > 0:
                 end_time = time.time() + self.duration
-
             if self.print_interval > 0:
                 print_time = time.time() + self.print_interval
-
             index_names = self.get_fts_index_list(self.bucket_name)
             for index_name in index_names:
                 random.seed(datetime.now())
                 for i in range(self.num_queries_per_worker):
                     threads.append(executor.submit(self.generate_and_run_fts_query, index_name=index_name))
                     time.sleep(5)
-
                 for task in as_completed(threads):
                     result = task.result()
                     queries_run += 1
@@ -1474,7 +1458,6 @@ class FTSIndexManager:
                         queries_passed += 1
                     else:
                         queries_failed += 1
-
                 # Print result summary if the print interval has passed
                 if self.print_interval > 0 and time.time() > print_time:
                     self.log.info(
@@ -1482,11 +1465,9 @@ class FTSIndexManager:
                             queries_run, queries_passed, queries_failed))
                     # Set next time to print result summary
                     print_time = time.time() + self.print_interval
-
                 # Exit if timed out
                 if self.duration > 0 and time.time() > end_time:
                     break
-
                 # Wait for 1 min before submitting next set of threads
                 alive_threads = len(threading.enumerate())
                 if alive_threads > 5:
@@ -1496,10 +1477,8 @@ class FTSIndexManager:
     """
     Run Flex queries on random index with random fields
     """
-
     def generate_and_run_flex_query(self):
         index_names = self.get_fts_index_list(self.bucket_name)
-
         try:
             index_name = random.choice(index_names)
         except Exception as e:
@@ -1520,7 +1499,6 @@ class FTSIndexManager:
         query = random.choice(index_field["flex_queries"])
         self.log.info("--------------- Running query {1} on {0} ---------------".format(index_name, query))
         status = self.run_flex_query(index_name, query)
-
         try:
             if status:
                 self.log.info(f'Index name: {index_name}, Query: {query}, Status: {status}')
@@ -1528,16 +1506,13 @@ class FTSIndexManager:
             self.log.info(str(terr))
         except:
             self.log.error("Unexpected error :", sys.exc_info()[0])
-
         return status
 
     """
     Run FTS queries on random index with random fields
     """
-
     def generate_and_run_fts_query(self, index_name=None):
         index_names = self.get_fts_index_list(self.bucket_name)
-
         try:
             if not index_name:
                 index_name = random.choice(index_names)
@@ -1558,12 +1533,10 @@ class FTSIndexManager:
             return False
         self.log.info("--------------- Running query on {0} field {1} ---------------".format(index_name, index_field))
         query = random.choice(index_field["queries"])
-
         if "score_none" in index_field:
             status, content, response = self.run_fts_query(index_name, query, score_none=True)
         else:
             status, content, response = self.run_fts_query(index_name, query, score_none=False)
-
         try:
             if status:
                 self.log.info(f'Index name: {index_name}, Query: {query}, Status: {status}, '
@@ -1575,35 +1548,27 @@ class FTSIndexManager:
             self.log.info("Content does not have total hits = {0}".format(content))
         except:
             self.log.error("Unexpected error :", sys.exc_info()[0])
-
         return status
 
     """
     Run single FTS query
     """
-
     def run_fts_query(self, index_name, query, score_none=False, knn=None):
         uri = "/api/index/" + index_name + "/query"
-
         body = {}
         body["explain"] = True
         # body["fields"] = ["*"]
         # body["highlight"] = {}
         body["query"] = query
         body["explain"] = random.choice([True, False])
-
         if score_none:
             body["score"] = "none"
-
         if knn:
             body["knn"] = knn
-
         # Randomize size (not more than 1000)
         size = random.randint(10, 20)
-
         # Randomize offset (from)
         offset = random.randint(0, 10000)
-
         body["size"] = size
         body["from"] = offset
         body["ctl"] = {"timeout": 120000}
@@ -1612,21 +1577,17 @@ class FTSIndexManager:
             body["ctl"]["consistency"] = {
                 "level": "at_plus"
             }
-
         self.log.info("URI : {0} body : {1}".format(uri, body))
-
         # Randomize FTS host on which the query has to be run for load distribution
         fts_node_list = self.find_nodes_with_service(self.get_services_map(), "fts")
         query_host = random.choice(fts_node_list)
         status, content, response = self.http_request(query_host, self.fts_port, uri, method="POST",
                                                       body=json.dumps(body))
-
         return status, content, response
 
     """
     Run single Flex query
     """
-
     def run_flex_query(self, index_name, query):
         index_hint = "USE INDEX (USING FTS, USING GSI)"
         status, content, response = self.http_request(self.rest_url, self.fts_port, "/api/index/{0}".format(index_name))
@@ -1636,7 +1597,6 @@ class FTSIndexManager:
         collection_to_query = random.choice(collection_list)
         scope, collection = collection_to_query.split(".")
         keyspace_name_for_query = "`" + bucket_name + "`.`" + scope + "`.`" + collection + "`"
-
         flex_query = f'select meta().id from {keyspace_name_for_query} {index_hint} where {query} limit 1000'
         self.log.info(f'flex query: {flex_query}')
         try:
@@ -1649,7 +1609,6 @@ class FTSIndexManager:
         except Exception as e:
             self.log.info("Got an error retrieving stat from query via n1ql with query - {0}. Exception : {1} ".
                           format(flex_query, str(e)))
-
         return status
 
     def run_knn_queries(self):
@@ -1659,9 +1618,72 @@ class FTSIndexManager:
             dimension = self.vector_index_dimension
         for index in vector_index_names:
             queries = self.get_query_vectors(dimension=dimension)
+            start_time = time.time()
             for count, q in enumerate(queries):
                 self.knn_query['knn'][0]['vector'] = q.tolist()
+                if self.store_in_xattr:
+                    self.knn_query['knn'][0]['field'] = '_$xattrs.vector_data'
+                if self.base_64:
+                    self.knn_query['knn'][0].pop('vector')
+                    self.knn_query['knn'][0]['field'] = 'vector_data_base64'
+                    self.knn_query['knn'][0]['vector_base64'] = self.get_base64_encoding(q)
+                end_time = start_time + self.duration * 60
+                if time.time() > end_time:
+                    break
                 self.run_fts_query(index_name=index, query=self.knn_query['query'], knn=self.knn_query['knn'])
+
+    def run_knn_queries_parallely(self):
+        # Get the list of vector index names
+        vector_index_names = self.get_fts_index_list(self.bucket_name)
+
+        # Determine the dimension if it's not the default value of 128
+        dimension = self.vector_index_dimension if self.vector_index_dimension != 128 else None
+
+        # Function to process a single query
+        def process_query(index, q):
+            self.knn_query['knn'][0]['vector'] = q.tolist()
+
+            # Adjust fields based on configuration
+            if self.store_in_xattr:
+                self.knn_query['knn'][0]['field'] = '_$xattrs.vector_data'
+            if self.base_64:
+                self.knn_query['knn'][0].pop('vector', None)
+                self.knn_query['knn'][0]['field'] = 'vector_data_base64'
+                self.knn_query['knn'][0]['vector_base64'] = self.get_base64_encoding(q)
+
+            # Run the FTS query
+            self.run_fts_query(index_name=index, query=self.knn_query['query'],
+                               knn=self.knn_query['knn'])
+
+        # Use ThreadPoolExecutor to run queries in parallel
+        with concurrent.futures.ThreadPoolExecutor(max_workers=100) as executor:
+            futures = []
+
+            # Submit tasks to the executor
+            for index in vector_index_names:
+                queries = self.get_query_vectors(dimension=dimension)
+                for q in queries:
+                    futures.append(executor.submit(process_query, index, q))
+
+            # Wait for all futures to complete
+            for future in concurrent.futures.as_completed(futures):
+                try:
+                    future.result()  # Get the result to propagate any exceptions
+                except Exception as e:
+                    print(f'Error occurred: {e}')
+
+    def get_base64_encoding(self, array):
+        byte_array = self.floats_to_little_endian_bytes(array)
+        base64_string = base64.b64encode(byte_array).decode('ascii')
+        return base64_string
+
+    def floats_to_little_endian_bytes(self, floats):
+        byte_array = bytearray()
+        for num in floats:
+            float_bytes = struct.pack('<f', num)
+            byte_array.extend(float_bytes)
+
+        return byte_array
 
     def get_query_vectors(self, dimension=None):
         ds = VectorDataset(self.dataset)
@@ -1669,18 +1691,14 @@ class FTSIndexManager:
         if ds.dataset_name in ds.supported_sift_datasets:
             use_hdf5_datasets = False
         dataset_generator = ds.extract_vectors_from_file(use_hdf5_datasets=use_hdf5_datasets, type_of_vec="query")
-
         for batch in dataset_generator:
             print("Loading batch {}".format(batch))
-
         if dimension:
             import numpy as np
             ds.query_vecs = list(ds.query_vecs)
-
             for index in range(len(ds.query_vecs)):
                 vector = ds.query_vecs[index]
                 current_dim = len(vector)
-
                 # Resize the vector to the desired dimension
                 if current_dim < dimension:
                     # If the current dimension is less than the desired dimension, repeat the values
@@ -1690,7 +1708,6 @@ class FTSIndexManager:
                 elif current_dim > dimension:
                     # If the current dimension is greater than the desired dimension, truncate the vector
                     ds.query_vecs[index] = vector[:dimension]
-
         print("Total number of queries:  {}".format(len(ds.query_vecs)))
         print(f"First Query vector: {str(ds.query_vecs[0])}")
         print(f"Length of first query vector: {len(ds.query_vecs[0])}")
@@ -1712,7 +1729,6 @@ class FTSIndexManager:
             except Exception as e:
                 self.log.info("Got an error retrieving stat from query via n1ql with query - {0}. Exception : {1} ".
                               format(prim_index_query, str(e)))
-
         coll_list = self.get_all_collections()
         coll_list.remove("_default._default")
         coll_list.remove("scope_0.coll_0")
@@ -1744,34 +1760,28 @@ class FTSIndexManager:
         except Exception as e:
             self.log.info("Got an error retrieving stat from query via n1ql with query - {0}. Exception : {1} ".
                           format(query, str(e)))
-
         self.copy_docs_source_collection(create_primary=False)
 
     """
     Generic method to perform a REST call
     """
-
     def http_request(self, host, port, uri, method="GET", body=None):
         credentials = '{}:{}'.format(self.username, self.password)
         authorization = base64.encodebytes(credentials.encode('utf-8'))
         authorization = authorization.decode('utf-8').rstrip('\n')
-
         headers = {'Content-Type': 'application/json',
                    'Authorization': 'Basic %s' % authorization,
                    'Accept': '*/*',
                    'Cache-Control': 'no-cache'}
-
         url = self.protocol + "://" + host + ":" + str(port) + uri
         http = httplib2.Http(timeout=600, disable_ssl_certificate_validation=True)
         http.add_credentials(self.username, self.password)
         print(body)
         try:
             response, content = http.request(uri=url, method=method, headers=headers, body=body)
-
         except (RemoteDisconnected, httplib2.HttpLib2Error, socket.error, IncompleteRead) as ex:
             self.log.info(f'{url}, {body}, {ex}')
             return False, None, None
-
         if response['status'] in ['200', '201', '202']:
             return True, json.loads(content), response
         else:
@@ -1780,7 +1790,6 @@ class FTSIndexManager:
     """
     Determine number of fts nodes in the cluster and set max num replica accordingly.
     """
-
     def set_max_num_replica(self):
         nodelist = self.find_nodes_with_service(self.get_services_map(), "fts")
         self.max_num_replica = len(nodelist) - 1  # Max num replica = number of fts nodes in cluster - 1
@@ -1791,18 +1800,14 @@ class FTSIndexManager:
     """
     Populate the service map for all nodes in the cluster.
     """
-
     def get_services_map(self):
         cluster_url = self.protocol + "://" + self.rest_url + ":" + str(self.node_port) + "/pools/default"
         node_map = []
-
         # Get map of nodes in the cluster
         response = requests.get(cluster_url, auth=(
             self.username, self.password), verify=False, )
-
         if (response.ok):
             response = json.loads(response.text)
-
             for node in response["nodes"]:
                 clusternode = {}
                 clusternode["hostname"] = node["hostname"].replace(":8091", "")
@@ -1811,13 +1816,11 @@ class FTSIndexManager:
                 node_map.append(clusternode)
         else:
             response.raise_for_status()
-
         return node_map
 
     """
     From the service map, find all nodes running the specified service and return the node list.
     """
-
     def find_nodes_with_service(self, node_map, service):
         nodelist = []
         for node in node_map:
@@ -1828,7 +1831,6 @@ class FTSIndexManager:
                     nodelist.append(node["hostname"])
         return nodelist
 
-
 """
 Main method
 TODO : 1. Validation to check if indexes are created successfully
@@ -1838,7 +1840,6 @@ TODO : 1. Validation to check if indexes are created successfully
 """
 if __name__ == '__main__':
     ftsIndexMgr = FTSIndexManager()
-
     if ftsIndexMgr.action == "create_index":
         ftsIndexMgr.create_fts_indexes_for_bucket()
     elif ftsIndexMgr.action == "create_index_from_map":
@@ -1869,6 +1870,8 @@ if __name__ == '__main__':
         ftsIndexMgr.update_docs()
     elif ftsIndexMgr.action == "run_knn_queries" or ftsIndexMgr.action == "run_knn_and_fts_queries":
         ftsIndexMgr.run_knn_queries()
+    elif ftsIndexMgr.action == "run_knn_queries_parallely":
+        ftsIndexMgr.run_knn_queries_parallely()
     else:
         print(
             "Invalid choice for action. Choose from the following - create_index | build_deferred_index | drop_all_indexes")

@@ -1,0 +1,227 @@
+- include: tests/templates/kv.yml, tests/templates/rebalance.yml, tests/templates/fts.yml
+
+############### Set FTS bleveMaxResultWindow to 100000 ################
+- template: set_fts_manager_options
+  args: "{{.Nodes | .Service `fts` | net 0}}, 'bleveMaxResultWindow':'100000'"
+
+############### Set FTS bleveMaxClauseCount to 2500 ################
+- template: set_fts_manager_options
+  args: "{{.Nodes | .Service `fts` | net 0}}, 'bleveMaxClauseCount':'2500'"
+
+############### Set FTS bleveMaxClauseCount to 2500 ################
+- template: set_fts_manager_options
+  args: "{{.Nodes | .Service `fts` | net 0}}, 'disableFileTransferRebalance':false"
+
+############### Set FTS seqChecksTimeoutInSec to 20 ################
+- template: set_fts_manager_options
+  args: "{{.Nodes | .Service `fts` | net 0}}, 'seqChecksTimeoutInSec':'20'"
+
+############### create 1 scope and 1 collection across 1 bucket as scope_1 and 4 collections ###############
+- image: sequoiatools/collections:1.0
+  command: "-i {{.Orchestrator}}:8091 -b {{.Bucket}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count=1 --collection_count=4 --collection_distribution=uniform"
+  wait: true
+
+############### Sleep for some time to allow collections manifest to sync ###############
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+############## load vector datasets ################
+- image: sequoiatools/vectorloader
+  command: "-n {{$.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -sc scope_0 -coll coll_0 -ds sift -i True -per 1 -dims 1536 -iter 50"
+  requires: "{{eq true $.DoOnce }}"
+  wait: true
+
+############### load vector datasets with xattrs ################
+- image: sequoiatools/govectorloader
+  command: "-nodeAddress={{$.Orchestrator}} -username=Administrator -password=password -bucketName={{.Bucket}} -scopeName=scope_0 -collectionName=coll_1 -startIndex=0 -endIndex=15000000 -datasetName=sift -xattrFlag=True -percentagesToResize=1 -dimensionsForResize=1536 -provideDefaultDocs=True"
+  requires: "{{eq true $.DoOnce }}"
+  wait: true
+
+############### load vector datasets with xattrs ################
+- image: sequoiatools/govectorloader
+  command: "-nodeAddress={{$.Orchestrator}} -username=Administrator -password=password -bucketName={{.Bucket}} -scopeName=scope_0 -collectionName=coll_2 -startIndex=0 -endIndex=15000000 -datasetName=sift -xattrFlag=True -percentagesToResize=1 -dimensionsForResize=1536 -provideDefaultDocs=True"
+  requires: "{{eq true $.DoOnce }}"
+  wait: true
+
+############### load vector datasets with base_64 ################
+- image: sequoiatools/govectorloader
+  command: "-nodeAddress={{$.Orchestrator}} -username=Administrator -password=password -bucketName={{.Bucket}} -scopeName=scope_0 -collectionName=coll_2 -startIndex=0 -endIndex=15000000 -datasetName=sift -base64Flag=True -percentagesToResize=1 -dimensionsForResize=1536 -provideDefaultDocs=True"
+  requires: "{{eq true $.DoOnce }}"
+  wait: true
+
+############## load vector datasets with 4096 dimensions ################
+- image: sequoiatools/vectorloader
+  command: "-n {{$.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -sc scope_0 -coll coll_3 -ds sift -i True -per 1 -dims 4096 -iter 20"
+  requires: "{{eq true $.DoOnce }}"
+  wait: true
+
+############### Create vector index for vectors on bucket #################
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -sc scope_0 -coll coll_0 -d sift -a create_index_from_map -m 1:0:12 -dims 1536"
+
+############### Create vector index for vectors with xattr on bucket #################
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -sc scope_0 -coll coll_1 -d sift -a create_index_from_map -m 1:0:12 -xattr True -dims 1536"
+
+############### Create vector index for vectors with base_64 encoding on bucket #################
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -sc scope_0 -coll coll_2 -d sift -a create_index_from_map -m 1:0:12 -base_64 True -dims 1536"
+
+############### Create vector index for vectors with 4096 dimensions on bucket #################
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -sc scope_0 -coll coll_3 -d sift -a create_index_from_map -m 1:0:12 -dims 4096"
+
+################# run knn queries for xattr ##############
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a run_knn_queries_parallely -d sift -xattr true -dims 1536"
+
+################# run knn queries for vectors ##############
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a run_knn_queries_parallely -d sift -dims 1536"
+
+################# run knn queries for vector base_64 ##############
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a run_knn_queries_parallely -d sift -base_64 true -dims 1536"
+
+################# run knn queries for vectors with 4096 dimensions ##############
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a run_knn_queries_parallely -d sift -dims 4096"
+
+# Sleep for some time after starting the queries (5 mins)
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+# Perform upsert operations
+- image: sequoiatools/vectorloader
+  command: "-n {{$.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -sc scope_0 -coll coll_0 -ds sift -i True -per 1 -dims 1536 -update True"
+
+################ Mutate vector datasets with xattrs ################
+#- image: sequoiatools/govectorloader
+#  command: "-nodeAddress={{$.Orchestrator}} -username=Administrator -password=password -bucketName={{.Bucket}} -scopeName=scope_0
+#  -collectionName=coll_1 -startIndex=0 -endIndex=100000 -datasetName=sift -dims=1536 -xattrFlag=True -provideDefaultDocs=True"
+#  requires: "{{eq true $.DoOnce }}"
+#  wait: true
+#
+################ Mutate vector datasets with base_64 ################
+#- image: sequoiatools/govectorloader
+#  command: "-nodeAddress={{$.Orchestrator}} -username=Administrator -password=password -bucketName={{.Bucket}} -scopeName=scope_0
+#  -collectionName=coll_2 -startIndex=0 -endIndex=100000 -datasetName=sift -dims=1536 -base64Flag=True -provideDefaultDocs=True"
+#  requires: "{{eq true $.DoOnce }}"
+#  wait: true
+
+# Perform upsert operations
+- image: sequoiatools/vectorloader
+  command: "-n {{$.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -sc scope_0 -coll coll_3 -ds sift -i True -per 1 -dims 4096 -update True"
+
+# Sleep for some time after starting the queries (2 mins)
+#- image: sequoiatools/cmd
+#  entrypoint: sleep
+#  command: "120"
+#  wait: true
+
+################# run knn queries for xattr ##############
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a run_knn_queries_parallely -d sift -xattr true -dims 1536"
+
+################# run knn queries for vectors ##############
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a run_knn_queries_parallely -d sift -dims 1536"
+
+################# run knn queries for vector base_64 ##############
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a run_knn_queries_parallely -d sift -base_64 true -dims 1536"
+
+################# run knn queries for vectors with 4096 dimensions ##############
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a run_knn_queries_parallely -d sift -dims 4096"
+
+# Perform upsert operations
+- image: sequoiatools/vectorloader
+  command: "-n {{$.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -sc scope_0 -coll coll_0 -ds sift -i True -per 1 -dims 1536 -update True"
+
+# Perform upsert operations
+- image: sequoiatools/vectorloader
+  command: "-n {{$.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -sc scope_0 -coll coll_3 -ds sift -i True -per 1 -dims 4096 -update True"
+
+################# run knn queries for xattr ##############
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a run_knn_queries_parallely -d sift -xattr true -dims 1536"
+
+################# run knn queries for vectors ##############
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a run_knn_queries_parallely -d sift -dims 1536"
+
+################# run knn queries for vector base_64 ##############
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a run_knn_queries_parallely -d sift -base_64 true -dims 1536"
+
+################# run knn queries for vectors with 4096 dimensions ##############
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a run_knn_queries_parallely -d sift -dims 4096"
+
+# Sleep for some time after starting the queries (5 mins)
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+# ###############  Rebalance in an FTS node ################
+- template: rebalance_in
+  args: "{{.InActiveNode}}, fts"
+- template: wait_for_rebalance
+  wait: true
+
+# Sleep for 30 seconds after rebalance completes
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "30"
+  wait: true
+
+# Perform upsert operations
+- image: sequoiatools/vectorloader
+  command: "-n {{$.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -sc scope_0 -coll coll_0 -ds sift -i True -per 1 -dims 1536 -update True"
+
+# Perform upsert operations
+- image: sequoiatools/vectorloader
+  command: "-n {{$.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -sc scope_0 -coll coll_3 -ds sift -i True -per 1 -dims 4096 -update True"
+
+################# run knn queries for xattr ##############
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a run_knn_queries_parallely -d sift -xattr true -dims 1536"
+
+################# run knn queries for vectors ##############
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a run_knn_queries_parallely -d sift -dims 1536"
+
+################# run knn queries for vector base_64 ##############
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a run_knn_queries_parallely -d sift -base_64 true -dims 1536"
+
+################# run knn queries for vectors with 4096 dimensions ##############
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a run_knn_queries_parallely -d sift -dims 4096"
+
+# Rebalance out an FTS node
+- template: rebalance_out
+  args: "{{.Nodes | .Service `fts` | net 1}}"
+  wait: true
+
+################ Check for item count #####################################
+- section_start: fts_indexes_item_count_check
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a item_count_check -vt 1200"
+  wait: true
+
+###############  Drop all Indexes ################
+- section_start: drop_all_indexes
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a delete_all_indexes"
+  wait: true
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
