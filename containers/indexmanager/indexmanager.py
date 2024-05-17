@@ -20,6 +20,7 @@ from couchbase.management.collections import CollectionSpec
 import dns.resolver
 import boto3
 from collections import defaultdict
+import re
 ## Constants
 
 # In test mode, how many scopes to be created
@@ -180,6 +181,7 @@ class IndexManager:
         self.sample_size = args.sample_size
         self.num_udf_per_scope = args.num_udf_per_scope
         self.disable_partitioned_indexes = args.no_partitioned_indexes
+        self.create_query_node_pattern = r"create .*?index (.*?) on .*?nodes':.*?\[(.*?)].*?$"
         if args.lib_filename:
             self.lib_filename = "./" + args.lib_filename
         else:
@@ -214,7 +216,7 @@ class IndexManager:
             self.idx_def_templates = HOTEL_DS_INDEX_TEMPLATES + HOTEL_DS_INDEX_TEMPLATES_NEW
             self.cbo_fields = HOTEL_DS_CBO_FIELDS
         # Initialize connections to the cluster
-            # Logging configuration
+             #Logging configuration
 
             ch = logging.StreamHandler()
             ch.setLevel(logging.INFO)
@@ -392,6 +394,7 @@ class IndexManager:
         self.log.info(f"Starting to create indexes. Will create {max_num_idx} indexes on these collections {keyspace_name_list}")
         reference_index_map = NestedDict()
         keyspaceused = []
+        create_queries_with_node_clause = []
         while total_idx_created < max_num_idx:
             for keyspace_name in keyspace_name_list:
                 bucket, scope, collection = keyspace_name.split('.')
@@ -441,6 +444,15 @@ class IndexManager:
                         with_clause_list.append("\'num_replica\':%s" % num_replica)
                         idx_instances *= num_replica + 1
                         reference_index_map[keyspace_name][idx_name]['replica_count'] = num_replica + 1
+                        if random.choice([True, False]):
+                            index_nodes = self.get_indexer_nodes()
+                            nodes_list = random.sample(index_nodes, num_replica+1)
+
+                            deploy_nodes = ",".join([f"\'{node}:{self.port}\'" for node in nodes_list])
+
+                            with_clause_list.append("\'nodes\': [%s]" %deploy_nodes)
+
+
                     if is_defer_idx:
                         with_clause_list.append("\'defer_build\':true")
 
@@ -448,6 +460,8 @@ class IndexManager:
                             self.max_num_replica > 0) or is_defer_idx:
                         idx_statement = idx_statement + " with {"
                         idx_statement = idx_statement + ','.join(with_clause_list) + "}"
+                    if "nodes" in idx_statement:
+                        create_queries_with_node_clause.append(idx_statement)
                     create_index_statements.append(idx_statement)
                     total_idx_created += idx_instances
                     total_idx += num_idx
@@ -461,6 +475,8 @@ class IndexManager:
 
         self.log.debug("Keyspaces used : ")
         self.log.debug(keyspaceused)
+        self.log.debug("create_index_statements ", create_index_statements)
+
         for create_index_statement in create_index_statements:
             self.log.info("Creating index : %s" % create_index_statement)
             try:
@@ -517,7 +533,34 @@ class IndexManager:
                     if index['status'] != 'Ready':
                         self.log.error(f"Index status for {index['name']} is not matching with expected value"
                                    f"Expected: Created, Actual: {index['status']}")
+            if len(create_queries_with_node_clause)>0:
+                self.validate_node_placement_with_nodes_clause(create_queries=create_queries_with_node_clause)
+
+
             self.log.info("Validation completed")
+
+    def validate_node_placement_with_nodes_clause(self, create_queries):
+        indexer_metadata = self.get_indexer_metadata()['status']
+
+        index_map = {}
+        for index_query in create_queries:
+            self.log.info(f"index_query is {index_query}")
+            out = re.search(self.create_query_node_pattern, index_query, re.IGNORECASE)
+
+
+            index_name, nodes = out.groups()
+            nodes = [node.strip("' ") for node in nodes.split(',')]
+            index_map[index_name.strip('`')] = nodes
+
+        for idx in indexer_metadata:
+            if idx['scope'] == '_system':
+                continue
+            idx_name = idx["indexName"]
+            if idx_name not in index_map:
+                continue
+            host = idx['hosts'][0]
+            if host not in index_map[idx_name]:
+                self.log.error(f"index {idx_name} not present on host {host}")
 
     def create_n_indexes_on_buckets(self):
         num_of_indexes_per_bucket = self.num_of_indexes_per_bucket
