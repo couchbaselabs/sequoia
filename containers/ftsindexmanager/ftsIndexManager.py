@@ -291,6 +291,10 @@ class FTSIndexManager:
                             default="create_index")
         parser.add_argument("-skip_def", "--skip_default", default=False,
                             help="skip default scope and collection")
+        parser.add_argument("-maxSegmentFileSize", "--maxSegmentFileSize", default=-1,
+                            help="maxSegmentFileSize")
+        parser.add_argument("-concurrentMergeLimit", "--concurrentMergeLimit", default=-1,
+                            help="concurrentMergeLimit")
 
         args = parser.parse_args()
         self.log = logging.getLogger("ftsindexmanager")
@@ -316,6 +320,8 @@ class FTSIndexManager:
         self.validation_timeout = args.validation_timeout
         self.knn_value = args.knn_value
         self.vector_index_dimension = args.vector_index_dimension
+        self.maxSegmentFileSize = args.maxSegmentFileSize
+        self.concurrentMergeLimit = args.concurrentMergeLimit
 
         self.skip_default = args.skip_default
         self.idx_def_templates = HOTEL_DS_FIELDS
@@ -627,6 +633,9 @@ class FTSIndexManager:
                 else:
                     multi_coll_scopes.remove(scope_obj)
 
+            if self.concurrentMergeLimit != -1:
+                self.set_concurrentMergeLimit()
+
             ### TO - DO
             # Validate if all indexes have been created
             self.get_fts_index_list()
@@ -648,6 +657,9 @@ class FTSIndexManager:
                     self.log.info("Content = {0} \nResponse = {1}".format(content, response))
                     self.log.info("Index creation on {0} did not succeed. Pls check logs.".format(self.bucket_name))
 
+        if self.concurrentMergeLimit != -1:
+            self.set_concurrentMergeLimit()
+
     def create_fts_index_for_each_collection(self):
         coll_list = self.get_all_collections()
         coll_list.remove("_default._default")
@@ -667,6 +679,9 @@ class FTSIndexManager:
                 self.log.info("Content = {0} \nResponse = {1}".format(content, response))
                 self.log.info("Index creation on {0} did not succeed. Pls check logs.".format(collections))
             count += 1
+
+        if self.concurrentMergeLimit != -1:
+            self.set_concurrentMergeLimit()
 
     """
     Create n number of indexes for the specified bucket. These indexes could be on a single or multiple collections
@@ -706,10 +721,20 @@ class FTSIndexManager:
                 coll_list.remove(collections[0])
             else:
                 multi_coll_scopes.remove(scope_obj)
-
+        if self.concurrentMergeLimit != -1:
+            self.set_concurrentMergeLimit()
         ### TO - DO
         # Validate if all indexes have been created
         self.get_fts_index_list()
+
+    def set_concurrentMergeLimit(self):
+        payload = json.dumps({
+            "concurrentMergeLimit": "1"
+        })
+        status, content, response = self.http_request(self.rest_url, self.fts_port, "/api/managerOptions",
+                                                      method="PUT", body=payload)
+
+        print(status, response)
 
     """
         Create n number of indexes for the specified bucket. These indexes could be on a single or multiple collections
@@ -779,6 +804,9 @@ class FTSIndexManager:
             # Wait for the interval before doing the next CRUD operation
             time.sleep(interval)
 
+        if self.concurrentMergeLimit != -1:
+            self.set_concurrentMergeLimit()
+
     def create_fts_indexes_in_a_loop_on_bucket(self, timeout, interval):
         # Establish timeout. If timeout > 0, run in infinite loop
         end_time = 0
@@ -814,6 +842,8 @@ class FTSIndexManager:
             # Wait for the interval before doing the next CRUD operation
             time.sleep(interval)
 
+        if self.concurrentMergeLimit != -1:
+            self.set_concurrentMergeLimit()
     def execute_command(self, command, hostname, ssh_username, ssh_password):
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -932,6 +962,9 @@ class FTSIndexManager:
 
         index_def_dict["store"] = {}
         index_def_dict["store"]["indexType"] = "scorch"
+        if self.maxSegmentFileSize != -1:
+            index_def_dict["scorchMergePlanOptions"] = {}
+            index_def_dict["scorchMergePlanOptions"]["maxSegmentFileSize"] = self.maxSegmentFileSize
         index_def_dict["params"] = {}
         index_def_dict["params"]["doc_config"] = {}
         index_def_dict["params"]["doc_config"]["docid_prefix_delim"] = ""
@@ -1107,6 +1140,9 @@ class FTSIndexManager:
 
         index_def_dict["store"] = {}
         index_def_dict["store"]["indexType"] = "scorch"
+        if self.maxSegmentFileSize != -1:
+            index_def_dict["scorchMergePlanOptions"] = {}
+            index_def_dict["scorchMergePlanOptions"]["maxSegmentFileSize"] = self.maxSegmentFileSize
         index_def_dict["params"] = {}
         index_def_dict["params"]["doc_config"] = {}
         index_def_dict["params"]["doc_config"]["docid_prefix_delim"] = ""
@@ -1283,7 +1319,7 @@ class FTSIndexManager:
         nodelist = self.find_nodes_with_service(self.get_services_map(), "n1ql")
         if self.use_https:
             query_node = Cluster('couchbases://{0}?ssl=no_verify'.format(self.node_addr),
-                                           ClusterOptions(PasswordAuthenticator(self.username, self.password)))
+                                 ClusterOptions(PasswordAuthenticator(self.username, self.password)))
         else:
             query_node = Cluster('couchbase://{0}'.format(nodelist[0]),
                                  ClusterOptions(PasswordAuthenticator(self.username, self.password)))
