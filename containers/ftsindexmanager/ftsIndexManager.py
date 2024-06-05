@@ -648,12 +648,11 @@ class FTSIndexManager:
                 else:
                     multi_coll_scopes.remove(scope_obj)
 
-            if self.concurrentMergeLimit != -1:
-                self.set_concurrentMergeLimit()
-
             ### TO - DO
             # Validate if all indexes have been created
             self.get_fts_index_list()
+        if self.concurrentMergeLimit != -1:
+            self.set_concurrentMergeLimit()
 
     def create_fts_indexes_from_map_on_bucket(self):
         partition_map_list = self.index_partition_map.split(",")
@@ -736,7 +735,7 @@ class FTSIndexManager:
 
     def set_concurrentMergeLimit(self):
         payload = json.dumps({
-            "concurrentMergeLimit": "1"
+            "concurrentMergeLimit": str(self.concurrentMergeLimit)
         })
         status, content, response = self.http_request(self.rest_url, self.fts_port, "/api/managerOptions",
                                                       method="PUT", body=payload)
@@ -954,7 +953,7 @@ class FTSIndexManager:
         index_def_dict["store"]["indexType"] = "scorch"
         if self.maxSegmentFileSize != -1:
             index_def_dict["scorchMergePlanOptions"] = {}
-            index_def_dict["scorchMergePlanOptions"]["maxSegmentFileSize"] = self.maxSegmentFileSize
+            index_def_dict["scorchMergePlanOptions"]["maxSegmentFileSize"] = int(self.maxSegmentFileSize)
         index_def_dict["params"] = {}
         index_def_dict["params"]["store"] = {}
         index_def_dict["params"]["store"]["indexType"] = "scorch"
@@ -1169,7 +1168,7 @@ class FTSIndexManager:
         index_def_dict["store"]["indexType"] = "scorch"
         if self.maxSegmentFileSize != -1:
             index_def_dict["scorchMergePlanOptions"] = {}
-            index_def_dict["scorchMergePlanOptions"]["maxSegmentFileSize"] = self.maxSegmentFileSize
+            index_def_dict["scorchMergePlanOptions"]["maxSegmentFileSize"] = int(self.maxSegmentFileSize)
         index_def_dict["params"] = {}
         index_def_dict["params"]["doc_config"] = {}
         index_def_dict["params"]["doc_config"]["docid_prefix_delim"] = ""
