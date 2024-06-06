@@ -9,7 +9,7 @@ users:
 buckets:
   -
       name: bucket1
-      ram: 100%
+      ram: 80%
       eviction: fullEviction
       storage: magma
 servers: # each server tag represents a cluster
