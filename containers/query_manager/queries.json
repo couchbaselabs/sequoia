@@ -1,0 +1,8 @@
+{
+  "product": [
+    "SELECT c.category, p.product_name, p.num_sold FROM keyspacenameplaceholder p JOIN (SELECT product_category, MAX(num_sold) AS max_sold FROM keyspacenameplaceholder GROUP BY product_category) c ON p.product_category = c.product_category AND p.num_sold = c.max_sold GROUP BY c.category, p.product_name, p.num_sold ORDER BY c.category, p.num_sold DESC;",
+    "SELECT s.seller_name, AVG(p.avg_rating) AS avg_rating, SUM(p.price * p.num_sold) AS total_revenue FROM keyspacenameplaceholder p JOIN (SELECT seller_name, COUNT(*) AS product_count FROM keyspacenameplaceholder GROUP BY seller_name HAVING COUNT(*) >= 10) s ON p.seller_name = s.seller_name GROUP BY s.seller_name ORDER BY total_revenue DESC;",
+    "SELECT c.category, p.product_name, p.price, AVG(r.product_rating.rating_value) AS avg_rating, COUNT(r.product_rating) AS num_reviews FROM keyspacenameplaceholder p LEFT JOIN (SELECT product_name, product_rating FROM keyspacenameplaceholder) r ON p.product_name = r.product_name JOIN (SELECT product_category, MAX(price) AS max_price FROM keyspacenameplaceholder GROUP BY product_category) c ON p.product_category = c.product_category AND p.price = c.max_price GROUP BY c.category, p.product_name, p.price ORDER BY c.category, p.price DESC limit 1000;",
+    "SELECT p.seller_name, p.seller_location, AVG(p.avg_rating) AS avg_rating FROM (SELECT seller_name, seller_location, avg_rating FROM keyspacenameplaceholder WHERE 'Passenger car medium' in product_category ) p GROUP BY p.seller_name, p.seller_location ORDER BY avg_rating DESC;"
+  ]
+}

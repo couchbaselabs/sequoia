@@ -140,3 +140,7 @@ if __name__ == '__main__':
     log_analysis = LogAnalysis(hostname=args.hostname, username=args.username, password=args.password,
                                capella_run=capella_run, test_name=args.customer_name, frequency=int(args.frequency))
     log_analysis.analyze_logs()
+    # sample command to run this image ----
+    # docker run sequoiatools/logcollector --hostname <connection string>
+    # --username <cluster admin user from Secrets manager> --password <cluster admin password from Secrets manager>
+    # --capella_run true --customer_name <Supportal Customer Name> --frequency <log collection frequency>

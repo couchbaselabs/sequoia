@@ -8,6 +8,7 @@ import time
 import random
 from string import ascii_letters, digits
 
+
 class MagmaLoader:
     def __init__(self):
         self.host = None
@@ -37,7 +38,8 @@ class MagmaLoader:
         self.indexer_port = 9102
         self.protocol = "http"
         self.skip_default = False
-        self.log = logging.getLogger("indexmanager")
+        self.doc_template = "Hotel"
+        self.log = logging.getLogger("magmaloader")
         self.log.setLevel(logging.INFO)
 
     def run(self):
@@ -65,6 +67,12 @@ class MagmaLoader:
                             default="false")
         parser.add_argument("--rr", dest="rr", help='Incremental data loading until indexer hits a specific resident ratio')
         parser.add_argument("--bucket_list", dest="bucket_list", help='A list of buckets passed in a comma seperated manner for data loading till a rr')
+        parser.add_argument("--doc_template", dest="doc_template",
+                            help="doc template to be used for loader",
+                            default="Hotel")
+        parser.add_argument("--num_workers", dest="num_workers",
+                            help="True if dataload needs to be skipped on default collection",
+                            default=4)
         args = parser.parse_args()
         self.host = args.host
         self.username = args.username
@@ -86,6 +94,8 @@ class MagmaLoader:
         else:
             self.rr = int(args.rr)
             self.bucket_list = args.bucket_list.split(",")
+        self.doc_template = args.doc_template
+        self.workers = int(args.num_workers)
         self.all_coll = True if args.all_coll.lower() == 'true' else False
         self.skip_default = True if args.skip_default.lower() == 'true' else False
         self.ops_rate = 10000 if not args.ops_rate else int(args.ops_rate)
@@ -203,7 +213,7 @@ class MagmaLoader:
                           f"-cr {self.percent_create} -up {self.percent_update} -rd {self.percent_delete}" \
                           f" -docSize {self.doc_size} -keyPrefix {self.key_prefix} " \
                           f"-scope {scope} -collection {coll} " \
-                          f"-workers {self.workers} -maxTTL 1800 -ops {self.ops_rate} -valueType Hotel"
+                          f"-workers {self.workers} -maxTTL 1800 -ops {self.ops_rate} -valueType {self.doc_template}"
                 self.log.info("Will run this {}".format(command))
                 proc = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True)
                 out = proc.communicate()

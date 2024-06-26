@@ -14,6 +14,8 @@ ENV PATH=${PATH}:/root/maven/bin
 # src
 RUN git clone https://github.com/couchbaselabs/DocLoader.git
 WORKDIR DocLoader
+RUN git pull
+RUN echo git log
 RUN mvn -f pom.xml clean install
 WORKDIR target/magmadocloader
 ENV TZ=US/Pacific

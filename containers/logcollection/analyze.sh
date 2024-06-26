@@ -70,6 +70,56 @@ zgrep -i "exception occurred in runloop" ns_server.babysitter.log
 zgrep -i "failover exited with reason" ns_server.babysitter.log
 zgrep -i "Basic\s[a-zA-Z]\{10,\}" ns_server.babysitter.log
 zgrep -i "Menelaus-Auth-User:\[" ns_server.babysitter.log
+#analytics
+zgrep -i "fata" ns_server.analytics_error* | grep -vE '(HYR0010|HYR0115|ASX3110|HYR0114)'
+zgrep -i "fata" ns_server.analytics_info* | grep -vE '(HYR0010|HYR0115|ASX3110|HYR0114)'
+zgrep -i "Analytics Service is temporarily unavailable" ns_server.analytics_error* | grep -vE '(HYR0010|HYR0115|ASX3110|HYR0114)'
+zgrep -i "Analytics Service is temporarily unavailable" ns_server.analytics_info* | grep -vE '(HYR0010|HYR0115|ASX3110|HYR0114)'
+zgrep -i "Failed during startup task" ns_server.analytics_error* | grep -vE '(HYR0010|HYR0115|ASX3110|HYR0114)'
+zgrep -i "Failed during startup task" ns_server.analytics_info* | grep -vE '(HYR0010|HYR0115|ASX3110|HYR0114)'
+zgrep -i "HYR0" ns_server.analytics_error* | grep -vE '(HYR0010|HYR0115|ASX3110|HYR0114)'
+zgrep -i "HYR0" ns_server.analytics_info* | grep -vE '(HYR0010|HYR0115|ASX3110|HYR0114)'
+zgrep -i "ASX" ns_server.analytics_error* | grep -vE '(HYR0010|HYR0115|ASX3110|HYR0114)'
+zgrep -i "ASX" ns_server.analytics_info* | grep -vE '(HYR0010|HYR0115|ASX3110|HYR0114)'
+zgrep -i "IllegalStateException" ns_server.analytics_error* | grep -vE '(HYR0010|HYR0115|ASX3110|HYR0114)'
+zgrep -i "IllegalStateException" ns_server.analytics_info* | grep -vE '(HYR0010|HYR0115|ASX3110|HYR0114)'
+
+
+zgrep -i "ACIDException" ns_server.analytics_error* | grep -vE '(HYR0010|HYR0115|ASX3110|HYR0114)'
+zgrep -i "ACIDException" ns_server.analytics_info* | grep -vE '(HYR0010|HYR0115|ASX3110|HYR0114)'
+zgrep -i "MetadataException" ns_server.analytics_error* | grep -vE '(HYR0010|HYR0115|ASX3110|HYR0114)'
+zgrep -i "MetadataException" ns_server.analytics_info* | grep -vE '(HYR0010|HYR0115|ASX3110|HYR0114)'
+zgrep -i "OverflowException" ns_server.analytics_error* | grep -vE '(HYR0010|HYR0115|ASX3110|HYR0114)'
+zgrep -i "OverflowException" ns_server.analytics_info* | grep -vE '(HYR0010|HYR0115|ASX3110|HYR0114)'
+zgrep -i "UnderflowException" ns_server.analytics_error* | grep -vE '(HYR0010|HYR0115|ASX3110|HYR0114)'
+zgrep -i "UnderflowException" ns_server.analytics_info* | grep -vE '(HYR0010|HYR0115|ASX3110|HYR0114)'
+zgrep -i "NullPointerException" ns_server.analytics_error* | grep -vE '(HYR0010|HYR0115|ASX3110|HYR0114)'
+zgrep -i "NullPointerException" ns_server.analytics_info* | grep -vE '(HYR0010|HYR0115|ASX3110|HYR0114)'
+zgrep -i "StackOverflowException" ns_server.analytics_error* | grep -vE '(HYR0010|HYR0115|ASX3110|HYR0114)'
+zgrep -i "StackOverflowException" ns_server.analytics_info* | grep -vE '(HYR0010|HYR0115|ASX3110|HYR0114)'
+zgrep -i "Failure closing a closeable resource" ns_server.analytics_error* | grep -vE '(HYR0010|HYR0115|ASX3110|HYR0114)'
+zgrep -i "Failure closing a closeable resource" ns_server.analytics_info* | grep -vE '(HYR0010|HYR0115|ASX3110|HYR0114)'
+
+
+zgrep -i "Basic\s[a-zA-Z]\{10,\}" ns_server.analytics_error* | grep -vE '(HYR0010|HYR0115|ASX3110|HYR0114)'
+zgrep -i "Basic\s[a-zA-Z]\{10,\}" ns_server.analytics_info* | grep -vE '(HYR0010|HYR0115|ASX3110|HYR0114)'
+zgrep -i "Menelaus-Auth-User:\[" ns_server.analytics_error* | grep -vE '(HYR0010|HYR0115|ASX3110|HYR0114)'
+zgrep -i "Menelaus-Auth-User:\[" ns_server.analytics_info* | grep -vE '(HYR0010|HYR0115|ASX3110|HYR0114)'
+zgrep -i "panic" ns_server.analytics_error* | grep -vE '(HYR0010|HYR0115|ASX3110|HYR0114)'
+zgrep -i "panic" ns_server.analytics_info* | grep -vE '(HYR0010|HYR0115|ASX3110|HYR0114)'
+zgrep -i "LEAK: ByteBuf.release() was not called" ns_server.analytics_error* | grep -vE '(HYR0010|HYR0115|ASX3110|HYR0114)'
+zgrep -i "LEAK: ByteBuf.release() was not called" ns_server.analytics_info* | grep -vE '(HYR0010|HYR0115|ASX3110|HYR0114)'
+zgrep -i "failed to migrate metadata partition" ns_server.analytics_error* | grep -vE '(HYR0010|HYR0115|ASX3110|HYR0114)'
+zgrep -i "failed to migrate metadata partition" ns_server.analytics_info* | grep -vE '(HYR0010|HYR0115|ASX3110|HYR0114)'
+zgrep -i "Internal error" ns_server.analytics_error* | grep -vE '(HYR0010|HYR0115|ASX3110|HYR0114)'
+zgrep -i "Internal error" ns_server.analytics_info* | grep -vE '(HYR0010|HYR0115|ASX3110|HYR0114)'
+zgrep -i "CBAS\[number\]" ns_server.analytics_error* | grep -vE '(HYR0010|HYR0115|ASX3110|HYR0114)'
+zgrep -i "CBAS\[number\]" ns_server.analytics_info* | grep -vE '(HYR0010|HYR0115|ASX3110|HYR0114)'
+zgrep -i "IllegalReferenceCountException" ns_server.analytics_error* | grep -vE '(HYR0010|HYR0115|ASX3110|HYR0114)'
+zgrep -i "IllegalReferenceCountException" ns_server.analytics_info* | grep -vE '(HYR0010|HYR0115|ASX3110|HYR0114)'
+zgrep -i "ArrayIndexOutOfBoundsException" ns_server.analytics_error* | grep -vE '(HYR0010|HYR0115|ASX3110|HYR0114)'
+zgrep -i "ArrayIndexOutOfBoundsException" ns_server.analytics_info* | grep -vE '(HYR0010|HYR0115|ASX3110|HYR0114)'
+
 # set +x
 var=$((var+1))
 shift 1

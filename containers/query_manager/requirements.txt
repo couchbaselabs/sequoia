@@ -1,0 +1,3 @@
+couchbase==4.2.1
+dnspython
+requests
