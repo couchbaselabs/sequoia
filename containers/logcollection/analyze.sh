@@ -119,6 +119,8 @@ zgrep -i "IllegalReferenceCountException" ns_server.analytics_error* | grep -vE 
 zgrep -i "IllegalReferenceCountException" ns_server.analytics_info* | grep -vE '(HYR0010|HYR0115|ASX3110|HYR0114)'
 zgrep -i "ArrayIndexOutOfBoundsException" ns_server.analytics_error* | grep -vE '(HYR0010|HYR0115|ASX3110|HYR0114)'
 zgrep -i "ArrayIndexOutOfBoundsException" ns_server.analytics_info* | grep -vE '(HYR0010|HYR0115|ASX3110|HYR0114)'
+zgrep -i "java.lang.OutOfMemoryError" ns_server.analytics_info* | grep -vE '(HYR0010|HYR0115|ASX3110|HYR0114)'
+zgrep -i "java.lang.OutOfMemoryError" ns_server.analytics_error* | grep -vE '(HYR0010|HYR0115|ASX3110|HYR0114)'
 
 # set +x
 var=$((var+1))
