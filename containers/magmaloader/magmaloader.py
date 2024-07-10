@@ -63,9 +63,9 @@ class MagmaLoader:
         parser.add_argument("--pd", dest="percentage_delete", help="Percentage of update mutations")
         parser.add_argument("--ops_rate", dest="ops_rate", help="Rate of mutations")
         parser.add_argument("--model", dest="model", default= "sentence-transformers/all-MiniLM-L6-v2",
-                            help="Rate of mutations")
-        parser.add_argument("--base64", dest="base64", default="false", help="Rate of mutations")
-        parser.add_argument("--value_type", dest="value_type", default="Hotel", help="Rate of mutations")
+                            help="Vector embedding generation model")
+        parser.add_argument("--base64", dest="base64", default="false",
+                            help="Used Base64 encodings for Vector embeddings")
         parser.add_argument("--all_coll", dest="all_coll", help="True if data to be loaded on all collections", default="false")
         parser.add_argument("--srv", dest="srv", help="Set to true if host is SRV", default="false")
         parser.add_argument("--tls", dest="tls", help="Set to true if host is SRV", default="false")
@@ -92,6 +92,7 @@ class MagmaLoader:
         self.scope = args.scope
         self.collection = args.collection
         self.bucket_name = args.bucket
+        self.model = args.model
         if args.rr is None:
             self.rr = None
         else:
@@ -216,7 +217,7 @@ class MagmaLoader:
                           f"-cr {self.percent_create} -up {self.percent_update} -rd {self.percent_delete}" \
                           f" -docSize {self.doc_size} -keyPrefix {self.key_prefix} " \
                           f"-scope {scope} -collection {coll} " \
-                          f"-workers {self.workers} -maxTTL 1800 -ops {self.ops_rate} -valueType {self.value_type} "\
+                          f"-workers {self.workers} -maxTTL 1800 -ops {self.ops_rate} -valueType {self.doc_template} "\
                           f"-model {self.model} -base64 {self.base64}"
                 self.log.info("Will run this {}".format(command))
                 proc = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True)
