@@ -120,7 +120,6 @@ class LogAnalysis:
                 if stdout:
                     self.log.info(f"Analysis complete on {log}.\n")
                     self.log.info(f"Keywords hit - \n {stdout} \n")
-                    self.log.info(f"CbCollect List \n {log_list} \n")
             self.log.info(f"Iteration {counter} log collection and analysis complete. Will sleep for {self.frequency * 60} seconds")
             time.sleep(self.frequency * 60)
             counter += 1
