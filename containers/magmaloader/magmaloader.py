@@ -8,7 +8,6 @@ import time
 import random
 from string import ascii_letters, digits
 
-
 class MagmaLoader:
     def __init__(self):
         self.host = None
@@ -27,6 +26,9 @@ class MagmaLoader:
         self.percent_delete = 0
         self.key_prefix = "doc"
         self.ops_rate = None
+        self.value_type = "Hotel"
+        self.model = None
+        self.base64 = False
         self.workers = 1
         self.doc_size = 1024
         self.all_coll = False
@@ -39,7 +41,7 @@ class MagmaLoader:
         self.protocol = "http"
         self.skip_default = False
         self.doc_template = "Hotel"
-        self.log = logging.getLogger("magmaloader")
+        self.log = logging.getLogger("indexmanager")
         self.log.setLevel(logging.INFO)
 
     def run(self):
@@ -60,6 +62,10 @@ class MagmaLoader:
         parser.add_argument("--pu", dest="percentage_update", help="Percentage of update mutations")
         parser.add_argument("--pd", dest="percentage_delete", help="Percentage of update mutations")
         parser.add_argument("--ops_rate", dest="ops_rate", help="Rate of mutations")
+        parser.add_argument("--model", dest="model", default= "sentence-transformers/all-MiniLM-L6-v2",
+                            help="Rate of mutations")
+        parser.add_argument("--base64", dest="base64", default="false", help="Rate of mutations")
+        parser.add_argument("--value_type", dest="value_type", default="Hotel", help="Rate of mutations")
         parser.add_argument("--all_coll", dest="all_coll", help="True if data to be loaded on all collections", default="false")
         parser.add_argument("--srv", dest="srv", help="Set to true if host is SRV", default="false")
         parser.add_argument("--tls", dest="tls", help="Set to true if host is SRV", default="false")
@@ -67,12 +73,8 @@ class MagmaLoader:
                             default="false")
         parser.add_argument("--rr", dest="rr", help='Incremental data loading until indexer hits a specific resident ratio')
         parser.add_argument("--bucket_list", dest="bucket_list", help='A list of buckets passed in a comma seperated manner for data loading till a rr')
-        parser.add_argument("--doc_template", dest="doc_template",
-                            help="doc template to be used for loader",
-                            default="Hotel")
-        parser.add_argument("--num_workers", dest="num_workers",
-                            help="True if dataload needs to be skipped on default collection",
-                            default=4)
+        parser.add_argument("--doc_template", dest="doc_template", help="doc template to be used for loader", default="Hotel")
+        parser.add_argument("--num_workers", dest="num_workers", help="True if dataload needs to be skipped on default collection", default=4)
         args = parser.parse_args()
         self.host = args.host
         self.username = args.username
@@ -81,6 +83,7 @@ class MagmaLoader:
         self.tls = True if args.tls.lower() == 'true' else False
         self.ops_rate = args.ops_rate
         self.srv = True if args.srv.lower() == 'true' else False
+        self.base64 = True if args.base64.lower() == 'true' else False
         self.pd = args.percentage_delete
         self.pu = args.percentage_update
         self.pc = args.percentage_create
@@ -213,7 +216,8 @@ class MagmaLoader:
                           f"-cr {self.percent_create} -up {self.percent_update} -rd {self.percent_delete}" \
                           f" -docSize {self.doc_size} -keyPrefix {self.key_prefix} " \
                           f"-scope {scope} -collection {coll} " \
-                          f"-workers {self.workers} -maxTTL 1800 -ops {self.ops_rate} -valueType {self.doc_template}"
+                          f"-workers {self.workers} -maxTTL 1800 -ops {self.ops_rate} -valueType {self.value_type} "\
+                          f"-model {self.model} -base64 {self.base64}"
                 self.log.info("Will run this {}".format(command))
                 proc = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True)
                 out = proc.communicate()
