@@ -4,5 +4,40 @@
     "SELECT s.seller_name, AVG(p.avg_rating) AS avg_rating, SUM(p.price * p.num_sold) AS total_revenue FROM keyspacenameplaceholder p JOIN (SELECT seller_name, COUNT(*) AS product_count FROM keyspacenameplaceholder GROUP BY seller_name HAVING COUNT(*) >= 10) s ON p.seller_name = s.seller_name GROUP BY s.seller_name ORDER BY total_revenue DESC;",
     "SELECT c.category, p.product_name, p.price, AVG(r.product_rating.rating_value) AS avg_rating, COUNT(r.product_rating) AS num_reviews FROM keyspacenameplaceholder p LEFT JOIN (SELECT product_name, product_rating FROM keyspacenameplaceholder) r ON p.product_name = r.product_name JOIN (SELECT product_category, MAX(price) AS max_price FROM keyspacenameplaceholder GROUP BY product_category) c ON p.product_category = c.product_category AND p.price = c.max_price GROUP BY c.category, p.product_name, p.price ORDER BY c.category, p.price DESC limit 1000;",
     "SELECT p.seller_name, p.seller_location, AVG(p.avg_rating) AS avg_rating FROM (SELECT seller_name, seller_location, avg_rating FROM keyspacenameplaceholder WHERE 'Passenger car medium' in product_category ) p GROUP BY p.seller_name, p.seller_location ORDER BY avg_rating DESC;"
+  ],
+  "hotel": [
+      "select meta().id from keyspacenameplaceholder where country is not null and `type` is not null and (any r in reviews satisfies r.ratings.`Check in / front desk` is not null end) limit 100",
+      "select price, country from keyspacenameplaceholder where free_breakfast=True and free_parking=True and price is not null and array_count(public_likes)>5 and `type`='Hotel' limit 100",
+      "SELECT h.name, h.city, r.author FROM keyspacenameplaceholder h UNNEST reviews AS r WHERE r.ratings.Rooms = 2 AND h.avg_rating >= 3 LIMIT 100",
+      "SELECT COUNT(1) AS cnt FROM keyspacenameplaceholder WHERE city LIKE 'North%'",
+      "SELECT h.name,h.country,h.city,h.price FROM keyspacenameplaceholder AS h WHERE h.price IS NOT NULL LIMIT 10",
+      "SELECT phone FROM keyspacenameplaceholder where `name` is not null limit 100",
+      "SELECT country FROM keyspacenameplaceholder where city like \"San%\" limit 100",
+      "SELECT email FROM keyspacenameplaceholder AS d WHERE ANY r IN d.reviews SATISFIES  r.author LIKE 'M%' AND r.ratings.Cleanliness = 3 END AND free_parking = TRUE AND country = 'Bulgaria' limit 100",
+      "SELECT meta().id FROM keyspacenameplaceholder AS d WHERE ANY r IN d.reviews SATISFIES r.ratings.Rooms = 3 and  r.ratings.Cleanliness > 1 END AND free_parking = True limit 10000",
+      "SELECT city from keyspacenameplaceholder where phone like \"4%\" limit 100",
+      "select city,country from keyspacenameplaceholder where free_breakfast=True and free_parking=True group by country,city order by country,city limit 100 offset 100",
+      "WITH city_avg AS (SELECT city, AVG(price) AS avgprice FROM keyspacenameplaceholder WHERE country = 'Bulgaria' GROUP BY city limit 10) SELECT h.name, h.price FROM keyspacenameplaceholder h JOIN city_avg ON h.city = city_avg.city WHERE  h.price < city_avg.avgprice AND h.country='Bulgaria' limit 100;",
+      "SELECT meta().id,city from keyspacenameplaceholder where `type` is not null limit 100",
+      "SELECT city from keyspacenameplaceholder where country like \"A%\" limit 100",
+      "SELECT meta().id,city from keyspacenameplaceholder where city like \"A%\" limit 100",
+      "SELECT meta().id,city from keyspacenameplaceholder where city like \"A%\" limit 100",
+      "SELECT meta().id,free_breakfast from keyspacenameplaceholder  where free_breakfast=True ORDER BY ANN(vectors, qvec, \"DIST_ALGO\", nprobe) limit LIMIT_N_VAL;",
+      "SELECT meta().id,country from keyspacenameplaceholder  where country like \"B%\" AND price>100 ORDER BY ANN(vectors, qvec, \"DIST_ALGO\", nprobe);",
+      "SELECT meta().id,type from keyspacenameplaceholder  where type is not null ORDER BY ANN(vectors, qvec, \"DIST_ALGO\", nprobe) limit LIMIT_N_VAL;",
+      "SELECT meta().id,country from keyspacenameplaceholder  where country not like \"Z%\" ORDER BY ANN(vectors, qvec, \"DIST_ALGO\", nprobe);",
+      "SELECT meta().id from keyspacenameplaceholder ORDER BY ANN(vectors, qvec, \"DIST_ALGO\", nprobe) limit LIMIT_N_VAL;",
+      "SELECT meta().id,city,country from keyspacenameplaceholder  where city not like \"Z%\" ORDER BY ANN(vectors, qvec, \"DIST_ALGO\", nprobe);"
+    ],
+  "hotel_vectors_only" : [
+    "SELECT meta().id from keyspacenameplaceholder ORDER BY ANN(vectors, qvec, \"DIST_ALGO\", nprobe) limit LIMIT_N_VAL;",
+    "SELECT meta().id from keyspacenameplaceholder where type is not null ORDER BY ANN(vectors, qvec, \"DIST_ALGO\", nprobe) limit LIMIT_N_VAL;"
+  ],
+  "shoes_50M": [
+    "SELECT id from keyspacenameplaceholder where category=\"Shoes\" AND country=\"USA\" AND brand=\"Nike\" AND color=\"Green\" AND size=5 ORDER BY ANN(embedding, qvec, \"DIST_ALGO\", nprobe) limit 100; idx_1M.ivecs",
+    "SELECT id from keyspacenameplaceholder where category=\"Shoes\" AND country=\"USA\" AND brand=\"Nike\" AND color=\"Green\" ORDER BY ANN(embedding, qvec, \"DIST_ALGO\", nprobe) limit 100; idx_2M.ivecs",
+    "SELECT id from keyspacenameplaceholder where category=\"Shoes\" AND country=\"USA\" AND brand=\"Nike\" ORDER BY ANN(embedding, qvec, \"DIST_ALGO\", nprobe) limit 100; idx_5M.ivecs",
+    "SELECT id from keyspacenameplaceholder where category=\"Shoes\" AND country=\"USA\" ORDER BY ANN(embedding, qvec, \"DIST_ALGO\", nprobe) limit 100; idx_10M.ivecs",
+    "SELECT id from keyspacenameplaceholder where category=\"Shoes\" ORDER BY ANN(embedding, qvec, \"DIST_ALGO\", nprobe) limit 100; idx_20M.ivecs"
   ]
 }

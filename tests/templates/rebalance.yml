@@ -341,18 +341,16 @@
   name: kill_process
   actions:
     -
-      image: "vijayviji/sshpass"
-      command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no
-                  {{.SSHUsername}}@$0 kill -SIGKILL $(pgrep $1)"
+      image: "sequoiatools/cmd"
+      command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0 'kill -SIGKILL $(pgrep $1)'"
 -
 # Fail a node by killing the memcached
 # $0 = Server to fail
   name: memcached_kill
   actions:
     -
-      image: "vijayviji/sshpass"
-      command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no
-                  {{.SSHUsername}}@$0 kill -SIGSTOP $(pgrep memcached)"
+      image: "sequoiatools/cmd"
+      command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0 'kill -SIGSTOP $(pgrep memcached)'"
 
 -
 # Restart memcached process on server
@@ -360,9 +358,8 @@
   name: start_memcached
   actions:
     -
-      image: "vijayviji/sshpass"
-      command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no
-                  {{.SSHUsername}}@$0 kill -SIGCONT $(pgrep memcached)"
+      image: "sequoiatools/cmd"
+      command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0 'kill -SIGCONT $(pgrep memcached)'"
 
 -
 # Enable autofailover and fail a node. Recover the node and disable

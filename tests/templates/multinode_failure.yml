@@ -28,7 +28,7 @@
   -
     image: sequoiatools/cmd
     entrypoint: sleep
-    command: "10"
+    command: "300"
     wait: true
 
   # Wait for failover to complete
@@ -53,7 +53,7 @@
   -
     image: sequoiatools/cmd
     entrypoint: sleep
-    command: "10"
+    command: "300"
     wait: true
 
   # Add back the nodes + rebalance
@@ -94,7 +94,7 @@
   -
     image: sequoiatools/cmd
     entrypoint: sleep
-    command: "10"
+    command: "300"
     wait: true
 
   # Wait for failover to complete
@@ -123,7 +123,7 @@
   -
     image: sequoiatools/cmd
     entrypoint: sleep
-    command: "120"
+    command: "300"
     wait: true
 
   # Add back the nodes + rebalance
@@ -165,7 +165,7 @@
   -
     image: sequoiatools/cmd
     entrypoint: sleep
-    command: "10"
+    command: "300"
     wait: true
 
   -
@@ -216,7 +216,7 @@
   -
     image: sequoiatools/cmd
     entrypoint: sleep
-    command: "10"
+    command: "300"
     wait: true
 
   -
@@ -250,6 +250,9 @@
 
 - name: autofailover1IndexNode
   actions:
+  - template: reset_autofailover_count
+    wait: true
+
   - template: enable_autofailover
     args: "30,1"
     wait: true
@@ -267,7 +270,7 @@
   -
     image: sequoiatools/cmd
     entrypoint: sleep
-    command: "40"
+    command: "300"
     wait: true
 
   -
@@ -277,7 +280,7 @@
   -
     image: sequoiatools/cmd
     entrypoint: sleep
-    command: "180"
+    command: "300"
     wait: true
 
   -
@@ -301,3 +304,8 @@
 
   - template: disable_autofailover
     wait: true
+
+- name: reset_autofailover_count
+  actions:
+    - image: appropriate/curl
+      command: "-X POST -i -u {{.RestUsername}}:{{.RestPassword}} http://{{.Orchestrator}}:{{.RestPort}}/settings/autoFailover/resetCount"

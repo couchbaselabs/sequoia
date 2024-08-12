@@ -234,4 +234,5 @@ if __name__ == '__main__':
 
             # Sleep for 1 min
             time.sleep(60)
-
+    if not all_indexes_built:
+        raise Exception("All indexes were not built after {} seconds".format(hard_all_index_built_timeout))

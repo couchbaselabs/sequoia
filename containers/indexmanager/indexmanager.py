@@ -21,6 +21,7 @@ import dns.resolver
 import boto3
 from collections import defaultdict
 import re
+
 ## Constants
 
 # In test mode, how many scopes to be created
@@ -39,35 +40,99 @@ SCOPENAME_SUFFIX = "_scope"
 # Hotel DS
 HOTEL_DS_INDEX_TEMPLATES = [
     {"indexname": "idx1",
+     "is_vector": False,
      "statement": "CREATE INDEX `idx1_idxprefix` ON keyspacenameplaceholder(country, DISTINCT ARRAY `r`.`ratings`.`Check in / front desk` FOR r in `reviews` END,array_count((`public_likes`)),array_count((`reviews`)) DESC,`type`,`phone`,`price`,`email`,`address`,`name`,`url`) "},
     {"indexname": "idx2",
+     "is_vector": False,
      "statement": "CREATE INDEX `idx2_idxprefix` ON keyspacenameplaceholder(`free_breakfast`,`type`,`free_parking`,array_count((`public_likes`)),`price`,`country`)"},
     {"indexname": "idx3",
+     "is_vector": False,
      "statement": "CREATE INDEX `idx3_idxprefix` ON keyspacenameplaceholder(`free_breakfast`,`free_parking`,`country`,`city`) "},
     {"indexname": "idx4",
+     "is_vector": False,
      "statement": "CREATE INDEX `idx4_idxprefix` ON keyspacenameplaceholder(`price`,`city`,`name`)"},
     {"indexname": "idx5",
+     "is_vector": False,
      "statement": "CREATE INDEX `idx5_idxprefix` ON keyspacenameplaceholder(ALL ARRAY `r`.`ratings`.`Rooms` FOR r IN `reviews` END,`avg_rating`)"},
     {"indexname": "idx6",
+     "is_vector": False,
      "statement": "CREATE INDEX `idx6_idxprefix` ON keyspacenameplaceholder(`city`)"},
     {"indexname": "idx7",
+     "is_vector": False,
      "statement": "CREATE INDEX `idx7_idxprefix` ON keyspacenameplaceholder(`price`,`name`,`city`,`country`)"}
 ]
 HOTEL_DS_INDEX_TEMPLATES_NEW = [
-{"indexname": "idx8",
+    {"indexname": "idx8",
+     "is_vector": False,
      "statement": "CREATE INDEX `idx8_idxprefix` ON keyspacenameplaceholder(DISTINCT ARRAY FLATTEN_KEYS(`r`.`author`,`r`.`ratings`.`Cleanliness`) FOR r IN `reviews` when `r`.`ratings`.`Cleanliness` < 4 END, `country`, `email`, `free_parking`)"},
     {"indexname": "idx9",
+     "is_vector": False,
      "statement": "CREATE INDEX `idx9_idxprefix` ON keyspacenameplaceholder(ALL ARRAY FLATTEN_KEYS(`r`.`author`,`r`.`ratings`.`Rooms`) FOR r IN `reviews` END, `free_parking`)"},
     {"indexname": "idx10",
+     "is_vector": False,
      "statement": "CREATE INDEX `idx10_idxprefix` ON keyspacenameplaceholder((ALL (ARRAY(ALL (ARRAY flatten_keys(n,v) FOR n:v IN (`r`.`ratings`) END)) FOR `r` IN `reviews` END)))"},
     {"indexname": "idx11",
+     "is_vector": False,
      "statement": "CREATE INDEX `idx11_idxprefix` ON keyspacenameplaceholder(ALL ARRAY FLATTEN_KEYS(`r`.`ratings`.`Rooms`,`r`.`ratings`.`Cleanliness`) FOR r IN `reviews` END, `email`, `free_parking`)"},
     {"indexname": "idx12",
+     "is_vector": False,
      "statement": "CREATE INDEX `idx12_idxprefix` ON keyspacenameplaceholder(`name` INCLUDE MISSING DESC,`phone`,`type`)"},
     {"indexname": "idx13",
+     "is_vector": False,
      "statement": "CREATE INDEX `idx13_idxprefix` ON keyspacenameplaceholder(`city` INCLUDE MISSING ASC, `phone`)"}
 ]
 HOTEL_DS_CBO_FIELDS = "`country`, DISTINCT ARRAY `r`.`ratings`.`Check in / front desk`, array_count((`public_likes`)),array_count((`reviews`)) DESC,`type`,`phone`,`price`,`email`,`address`,`name`,`url`,`free_breakfast`,`free_parking`,`city`"
+HOTEL_DS_INDEX_TEMPLATES_VECTORS = [
+    {"indexname": "idxvector1",
+     "is_vector": True,
+     "statement": "CREATE INDEX `idxvector1_idxprefix` ON keyspacenameplaceholder(`free_breakfast`,vectors VECTOR, `free_parking`,`country`,`city`) "},
+    {"indexname": "idxvector2",
+     "is_vector": True,
+     "statement": "CREATE INDEX `idxvector2_idxprefix` ON keyspacenameplaceholder(`price`,`city`,`name`, vectors VECTOR)"},
+    {"indexname": "idxvector3",
+     "is_vector": True,
+     "statement": "CREATE INDEX `idxvector3_idxprefix` ON keyspacenameplaceholder(`name` INCLUDE MISSING DESC,`phone`,`type`, vectors VECTOR)"},
+    {"indexname": "idxvector4",
+     "is_vector": True,
+     "statement": "CREATE INDEX `idxvector4_idxprefix` ON keyspacenameplaceholder(country,vectors VECTOR)"},
+    {"indexname": "idxvector5",
+     "is_vector": True,
+     "statement": "CREATE INDEX `idxvector5_idxprefix` ON keyspacenameplaceholder(vectors VECTOR)"},
+    {"indexname": "idxvector6",
+     "is_vector": True,
+     "statement": "CREATE INDEX `idxvector6_idxprefix` ON keyspacenameplaceholder(vectors VECTOR, city )"}
+]
+HOTEL_DS_INDEX_TEMPLATES_VECTORS_ONLY = [
+    {"indexname": "idxvector1",
+     "is_vector": True,
+     "statement": "CREATE INDEX `idxvector1_idxprefix` ON keyspacenameplaceholder(`type`,vectors VECTOR) "},
+    {"indexname": "idxvector2",
+     "is_vector": True,
+     "statement": "CREATE INDEX `idxvector2_idxprefix` ON keyspacenameplaceholder(vectors VECTOR)"}
+]
+
+SHOES_INDEX_TEMPLATES = [
+    {"indexname": "idxshoesvector1",
+     "is_vector": True,
+     "statement": "CREATE INDEX idxshoesvector1_idxprefix ON keyspacenameplaceholder(`category`,`country`, `brand`, `color`, `size`, `embedding` VECTOR) "},
+    {"indexname": "idxshoesvector2",
+     "is_vector": True,
+     "statement": "CREATE INDEX idxshoesvector2_idxprefix ON keyspacenameplaceholder(`category`,`country`, `brand`, `color`, `embedding` VECTOR) "},
+    {"indexname": "idxshoesvector3",
+     "is_vector": True,
+     "statement": "CREATE INDEX idxshoesvector3_idxprefix ON keyspacenameplaceholder(`category`,`country`, `brand`, `embedding` VECTOR) "},
+    {"indexname": "idxshoesvector4",
+     "is_vector": True,
+     "statement": "CREATE INDEX idxshoesvector4_idxprefix ON keyspacenameplaceholder(`category`,`country`, `embedding` VECTOR) "},
+    {"indexname": "idxshoesvector5",
+     "is_vector": True,
+     "statement": "CREATE INDEX idxshoesvector5_idxprefix ON keyspacenameplaceholder(`category`,`embedding` VECTOR) "}
+]
+
+DISTANCE_SUPPORTED_FUNCTIONS = ["L2", "L2_SQUARED", "DOT", "COSINE", "EUCLIDEAN", "EUCLIDEAN_SQUARED"]
+DESCRIPTION_LIST = ["IVF,PQ8x8", "IVF,SQ8", "IVF,PQ128x8", "IVF,PQ64x8", "IVF,PQ32x8", "IVF,PQ32x4FS", "IVF,SQfp16"]
+SCAN_NPROBE_MIN = 5
+SCAN_NPROBE_MAX = 20
 
 
 class IndexManager:
@@ -96,8 +161,11 @@ class IndexManager:
                             choices=["create_index", "build_deferred_index", "drop_all_indexes", "create_index_loop",
                                      "drop_index_loop", "alter_indexes", "enable_cbo", "delete_statistics",
                                      "item_count_check",
-                                     "random_recovery", "create_udf", "drop_udf", "create_n1ql_udf", "validate_tenant_affinity", "set_fast_rebalance_config",
-                                     "create_n_indexes_on_buckets", "validate_s3_cleanup", "copy_aws_keys", "cleanup_s3", "poll_total_requests_during_rebalance", "wait_until_rebalance_cleanup_done", "print_stats"],
+                                     "random_recovery", "create_udf", "drop_udf", "create_n1ql_udf",
+                                     "validate_tenant_affinity", "set_fast_rebalance_config",
+                                     "create_n_indexes_on_buckets", "validate_s3_cleanup", "copy_aws_keys",
+                                     "cleanup_s3", "poll_total_requests_during_rebalance",
+                                     "wait_until_rebalance_cleanup_done", "print_stats"],
                             help="Choose an action to be performed. Valid actions : create_index | build_deferred_index | drop_all_indexes | create_index_loop | "
                                  "drop_index_loop | alter_indexes | enable_cbo | delete_statistics "
                                  "| item_count_check | random_recovery | create_udf | drop_udf | create_n1ql_udf "
@@ -130,17 +198,36 @@ class IndexManager:
         parser.add_argument("--aws_secret_access_key", help="AWS secret key for fast rebalance")
         parser.add_argument("--region", help="AWS region for fast rebalance", default="us-west-1")
         parser.add_argument("--s3_bucket", help="S3 bucket used for fast rebalance", default="gsi-system-test-onprem-2")
-        parser.add_argument("--storage_prefix", help="Storage prefix for S3 bucket used for fast rebalance", default="indexing-system-test")
+        parser.add_argument("--storage_prefix", help="Storage prefix for S3 bucket used for fast rebalance",
+                            default="indexing-system-test")
         parser.add_argument("--bucket_list", help="List of buckets to be used for index creation")
-        parser.add_argument("--num_of_indexes_per_bucket", type=int, default=20, help="Number of indexes per bucket you want to create")
+        parser.add_argument("--num_of_indexes_per_bucket", type=int, default=20,
+                            help="Number of indexes per bucket you want to create")
         parser.add_argument("--limit_total_index_count_in_cluster", type=int, default=10000,
                             help="Number of indexes per bucket you want to create")
-        parser.add_argument("--num_of_batches", default=None,help="Number of batch of indexes to be created")
-        parser.add_argument("--sleep_before_polling", default=None, help="Duration (in seconds) to sleep before polling for total requests")
+        parser.add_argument("--num_of_batches", default=None, help="Number of batch of indexes to be created")
+        parser.add_argument("--sleep_before_polling", default=None,
+                            help="Duration (in seconds) to sleep before polling for total requests")
         parser.add_argument("--capella_cluster_id", default=None)
         parser.add_argument("--sbx", default=None)
         parser.add_argument("--token", default=None)
         parser.add_argument("--skip_default_collection", default="true")
+        parser.add_argument("-vec", "--create_vector_indexes", help="create_vector_indexes")
+        parser.add_argument("-vo", "--create_vector_indexes_only", help="create_vector_indexes only to measure recall")
+        parser.add_argument("-da", "--distance_algo", help="create_vector_indexes", default=None)
+        parser.add_argument("-num_dimensions", "--num_dimensions", type=int, default=128, help="Num of dimensions")
+        parser.add_argument("--num_vectors", type=int, default=1000000,
+                            help="Number of indexes per bucket you want to create")
+        parser.add_argument("--base64_encoding_vectors",  default="false",
+                            help="are vector embeddings base64 encoded?")
+        parser.add_argument("--defer_build", default="false",
+                            help="are indexes to be deferred?")
+        parser.add_argument("--use_description", default="false",
+                            help="use specific description to create vector indexes")
+        parser.add_argument("--xattrs_vectors", default="false",
+                            help="are vector embeddings part of xattrs?")
+        parser.add_argument("--set_max_replicas", default=None,
+                            help="are vector embeddings part of xattrs?")
         args = parser.parse_args()
         self.log = logging.getLogger("indexmanager")
         self.log.setLevel(logging.INFO)
@@ -173,7 +260,16 @@ class IndexManager:
         self.sleep_before_polling = args.sleep_before_polling
         self.capella_cluster_id = args.capella_cluster_id
         self.sbx = args.sbx
+        self.num_vectors = args.num_vectors
+        self.base64_encoding = args.base64_encoding_vectors == 'true'
+        self.xattrs = args.xattrs_vectors == 'true'
         self.token = args.token
+        self.distance_algo = args.distance_algo
+        self.defer_build = args.defer_build == 'true'
+        if args.use_description != 'false':
+            self.use_description = args.use_description
+        else:
+            self.use_description = None
         self.skip_default_collection = True if args.skip_default_collection == 'true' else False
         if self.cbo_enable_ratio > 100:
             self.cbo_enable_ratio = 25
@@ -182,6 +278,10 @@ class IndexManager:
         self.num_udf_per_scope = args.num_udf_per_scope
         self.disable_partitioned_indexes = args.no_partitioned_indexes
         self.create_query_node_pattern = r"create .*?index (.*?) on .*?nodes':.*?\[(.*?)].*?$"
+        if args.set_max_replicas:
+            self.set_max_replicas = int(args.set_max_replicas)
+        else:
+            self.set_max_replicas = None
         if args.lib_filename:
             self.lib_filename = "./" + args.lib_filename
         else:
@@ -190,6 +290,9 @@ class IndexManager:
         self.use_tls = args.tls
         self.capella_run = args.capella
         self.use_https = False
+        self.create_vector_indexes = args.create_vector_indexes == 'true'
+        self.create_vector_indexes_only = args.create_vector_indexes_only == 'true'
+        self.num_dimensions = args.num_dimensions
         if self.use_tls or self.capella_run:
             self.node_port_index = '19102'
             self.node_port_query = '18093'
@@ -199,7 +302,7 @@ class IndexManager:
             if self.capella_run:
                 self.rest_url = self.fetch_rest_url(self.node_addr)
                 self.index_url = "{}://".format(self.scheme) + self.rest_url + ":" + self.node_port_index
-                self.url = "{}://".format(self.scheme) + self.rest_url  + ":" + self.port
+                self.url = "{}://".format(self.scheme) + self.rest_url + ":" + self.port
             else:
                 self.index_url = "{}://".format(self.scheme) + self.node_addr + ":" + self.node_port_index
                 self.url = "{}://".format(self.scheme) + self.node_addr + ":" + self.port
@@ -213,10 +316,16 @@ class IndexManager:
 
         # If there are more datasets supported, this can be expanded.
         if self.dataset == "hotel":
-            self.idx_def_templates = HOTEL_DS_INDEX_TEMPLATES + HOTEL_DS_INDEX_TEMPLATES_NEW
+            if self.create_vector_indexes_only:
+                self.idx_def_templates = HOTEL_DS_INDEX_TEMPLATES_VECTORS_ONLY
+            elif self.create_vector_indexes:
+                self.idx_def_templates = HOTEL_DS_INDEX_TEMPLATES_VECTORS
+            else:
+                self.idx_def_templates = HOTEL_DS_INDEX_TEMPLATES + HOTEL_DS_INDEX_TEMPLATES_NEW
             self.cbo_fields = HOTEL_DS_CBO_FIELDS
-        # Initialize connections to the cluster
-             #Logging configuration
+
+            # Initialize connections to the cluster
+            # Logging configuration
 
             ch = logging.StreamHandler()
             ch.setLevel(logging.INFO)
@@ -228,6 +337,8 @@ class IndexManager:
             fh = logging.FileHandler("./indexmanager-{0}.log".format(timestamp))
             fh.setFormatter(formatter)
             self.log.addHandler(fh)
+        elif self.dataset == "shoes":
+            self.idx_def_templates = SHOES_INDEX_TEMPLATES
         self.log.info(f"Capella flag is set to {self.capella_run}. Use tls flag is set to {self.use_tls}")
         self.log.info("Indexes will be chosen at random from the sample statements {}".format(self.idx_def_templates))
         if self.use_https:
@@ -263,14 +374,16 @@ class IndexManager:
         self.max_num_replica = 0
         self.max_num_partitions = 4
         ## TODO What should be done with this?
-        #self.set_max_num_replica()
+        # self.set_max_num_replica()
 
         # Node SSH default credentials
         self.ssh_username = "root"
         self.ssh_password = "couchbase"
+
     """
     Create scope and collections in the cluster for the given bucket when the test mode is on.
     """
+
     def create_scopes_collections(self):
         for i in range(0, TOTAL_SCOPES):
             scopename = self.bucket_name + SCOPENAME_SUFFIX + str(i + 1)
@@ -391,7 +504,8 @@ class IndexManager:
         total_idx_created = 0
         total_idx = 0
         create_index_statements = []
-        self.log.info(f"Starting to create indexes. Will create {max_num_idx} indexes on these collections {keyspace_name_list}")
+        self.log.info(
+            f"Starting to create indexes. Will create {max_num_idx} indexes on these collections {keyspace_name_list}")
         reference_index_map = NestedDict()
         keyspaceused = []
         create_queries_with_node_clause = []
@@ -406,9 +520,11 @@ class IndexManager:
                 for idx_template in idx_def_templates:
                     idx_statement = idx_template['statement']
                     if self.user_specified_prefix:
-                        idx_prefix = self.user_specified_prefix + ''.join(random.choices(string.ascii_letters + string.digits, k=random.randint(4, 8)))
+                        idx_prefix = self.user_specified_prefix + ''.join(
+                            random.choices(string.ascii_letters + string.digits, k=random.randint(4, 8)))
                     else:
-                        idx_prefix = ''.join(random.choices(string.ascii_letters + string.digits, k=random.randint(4, 8)))
+                        idx_prefix = ''.join(
+                            random.choices(string.ascii_letters + string.digits, k=random.randint(4, 8)))
                     idx_name = f"{idx_template['indexname']}_{idx_prefix}"
 
                     is_partitioned_idx = bool(random.getrandbits(1))
@@ -446,12 +562,11 @@ class IndexManager:
                         reference_index_map[keyspace_name][idx_name]['replica_count'] = num_replica + 1
                         if random.choice([True, False]):
                             index_nodes = self.get_indexer_nodes()
-                            nodes_list = random.sample(index_nodes, num_replica+1)
+                            nodes_list = random.sample(index_nodes, num_replica + 1)
 
                             deploy_nodes = ",".join([f"\'{node}:{self.port}\'" for node in nodes_list])
 
-                            with_clause_list.append("\'nodes\': [%s]" %deploy_nodes)
-
+                            with_clause_list.append("\'nodes\': [%s]" % deploy_nodes)
 
                     if is_defer_idx:
                         with_clause_list.append("\'defer_build\':true")
@@ -523,19 +638,18 @@ class IndexManager:
                                    f" Expected: {reference_index_map[keyspace_name][index_name]['replica_count']}")
                 if reference_index_map[keyspace_name][index_name]['num_partition'] != index['numPartition']:
                     self.log.error(f"Index Partition no. is not matching with expected value for {index['name']}."
-                               f"Actual: {index['numPartition']},"
-                               f" Expected: {reference_index_map[keyspace_name][index_name]['numPartition']}")
+                                   f"Actual: {index['numPartition']},"
+                                   f" Expected: {reference_index_map[keyspace_name][index_name]['numPartition']}")
                 if reference_index_map[keyspace_name][index_name]['defer']:
                     if index['status'] != 'Created':
                         self.log.error(f"Index status for {index['name']} is not matching with expected value"
-                                   f"Expected: Created, Actual: {index['status']}")
+                                       f"Expected: Created, Actual: {index['status']}")
                 else:
                     if index['status'] != 'Ready':
                         self.log.error(f"Index status for {index['name']} is not matching with expected value"
-                                   f"Expected: Created, Actual: {index['status']}")
-            if len(create_queries_with_node_clause)>0:
+                                       f"Expected: Created, Actual: {index['status']}")
+            if len(create_queries_with_node_clause) > 0:
                 self.validate_node_placement_with_nodes_clause(create_queries=create_queries_with_node_clause)
-
 
             self.log.info("Validation completed")
 
@@ -546,7 +660,6 @@ class IndexManager:
         for index_query in create_queries:
             self.log.info(f"index_query is {index_query}")
             out = re.search(self.create_query_node_pattern, index_query, re.IGNORECASE)
-
 
             index_name, nodes = out.groups()
             nodes = [node.strip("' ") for node in nodes.split(',')]
@@ -565,7 +678,8 @@ class IndexManager:
     def create_n_indexes_on_buckets(self):
         num_of_indexes_per_bucket = self.num_of_indexes_per_bucket
         limit_total_index_count_in_cluster = self.limit_total_index_count_in_cluster
-        self.log.info(f"Configuration used: Bucket_list {self.bucket_list}. Num of indexes per bucket {num_of_indexes_per_bucket}")
+        self.log.info(
+            f"Configuration used: Bucket_list {self.bucket_list}. Num of indexes per bucket {num_of_indexes_per_bucket}")
         self.log.info(f"Skip default collection flag {self.skip_default_collection}")
         for bucket_name in self.bucket_list:
             keyspaces = []
@@ -583,7 +697,8 @@ class IndexManager:
                             keyspaces.append("`" + bucket_name + "`.`" + scope.name + "`.`" + coll.name + "`")
             self.log.info("Keyspaces that will be used: {}".format(keyspaces))
             total_idx_created = 0
-            self.log.info(f"Starting to create indexes. Will create a total of {num_of_indexes_per_bucket} indexes on these collections {keyspace_name_list}")
+            self.log.info(
+                f"Starting to create indexes. Will create a total of {num_of_indexes_per_bucket} indexes on these collections {keyspace_name_list}")
             keyspace_list = []
             while total_idx_created < num_of_indexes_per_bucket:
                 create_index_statements = []
@@ -593,23 +708,35 @@ class IndexManager:
                 if total_index_count_in_cluster >= limit_total_index_count_in_cluster:
                     break
                 for idx_template in self.idx_def_templates:
+                    print(f"idx_template is {idx_template}")
                     idx_statement = idx_template['statement']
                     if self.user_specified_prefix:
-                        idx_prefix = self.user_specified_prefix + ''.join(random.choices(string.ascii_letters + string.digits, k=random.randint(4, 8)))
+                        idx_prefix = self.user_specified_prefix + ''.join(
+                            random.choices(string.ascii_letters + string.digits, k=random.randint(4, 8)))
                     else:
-                        idx_prefix = ''.join(random.choices(string.ascii_letters + string.digits, k=random.randint(4, 8)))
-                    # create partitioned indexes for all array indexes on Capella clusters. For the rest, it's randomised
+                        idx_prefix = ''.join(
+                            random.choices(string.ascii_letters + string.digits, k=random.randint(4, 8)))
+                    # create partitioned indexes for all array indexes on Capella clusters.
+                    # For the rest, it's randomised
                     if self.capella_run or self.use_tls:
                         if idx_template['indexname'] in ["idx3", "idx4", "idx6", "idx7", "idx12", "idx13"]:
                             is_partitioned_idx = bool(random.getrandbits(1))
                         else:
                             is_partitioned_idx = False
                     else:
-                        is_partitioned_idx = bool(random.getrandbits(1))
-                    is_defer_idx = bool(random.getrandbits(1))
+                        # remove after partitioned index sampling fix
+                        if not (self.create_vector_indexes or self.create_vector_indexes_only):
+                            is_partitioned_idx = bool(random.getrandbits(1))
+                        else:
+                            is_partitioned_idx = False
+                    is_defer_idx = bool(random.getrandbits(1)) or self.defer_build
                     with_clause_list = []
                     idx_statement = idx_statement.replace("keyspacenameplaceholder", keyspace)
                     idx_statement = idx_statement.replace('idxprefix', idx_prefix)
+                    if self.xattrs:
+                        idx_statement = idx_statement.replace("vectors", "META().xattrs.vectors ")
+                    if self.base64_encoding:
+                        idx_statement = idx_statement.replace("vectors", "DECODE_VECTOR(vectors, false) ")
                     if self.install_mode == "ee":
                         if is_partitioned_idx:
                             idx_statement = idx_statement + " partition by hash(meta().id) "
@@ -620,19 +747,44 @@ class IndexManager:
                                 num_partition = random.randint(2, 8)
                                 with_clause_list.append("\'num_partition\':%s" % num_partition)
                     if self.install_mode == "ee" and self.max_num_replica > 0:
-                        num_replica = 1
+                        num_replica = random.randint(0, self.max_num_replica)
                         with_clause_list.append("\'num_replica\':%s" % num_replica)
                     if is_defer_idx:
                         with_clause_list.append("\'defer_build\':true")
-
+                    if self.create_vector_indexes or self.create_vector_indexes_only and "is_vector" in idx_template and idx_template['is_vector']:
+                        self.log.info("Creating vector index definitions")
+                        if self.use_description:
+                            description = self.use_description
+                        else:
+                            description = random.choice(DESCRIPTION_LIST)
+                        if self.distance_algo:
+                            similarity = self.distance_algo
+                        else:
+                            similarity = random.choice(DISTANCE_SUPPORTED_FUNCTIONS)
+                        self.num_dimensions = int(self.num_dimensions)
+                        use_custom_nprobes = bool(random.getrandbits(1))
+                        # commented until a decision is made on the custom trainlist number
+                        # use_custom_trainlist = bool(random.getrandbits(1))
+                        use_custom_trainlist = False
+                        with_clause_list.append(f"\"dimension\":{self.num_dimensions}, "
+                                                f"\"description\": \"{description}\","
+                                                f"\"similarity\":\"{similarity}\"")
+                        if use_custom_nprobes:
+                            custom_nprobe = random.randint(SCAN_NPROBE_MIN, SCAN_NPROBE_MAX)
+                            with_clause_list.append(f"\"scan_nprobes\":{custom_nprobe}")
+                        if use_custom_trainlist:
+                            sqrt_val = math.floor(math.sqrt(self.num_vectors))
+                            custom_trainlist = random.randint(sqrt_val * 50, sqrt_val * 100)
+                            with_clause_list.append(f"\"train_list\":{custom_trainlist}")
                     if (is_partitioned_idx and not self.disable_partitioned_indexes) or (
                             self.max_num_replica > 0) or is_defer_idx:
                         idx_statement = idx_statement + " with {"
                         idx_statement = idx_statement + ','.join(with_clause_list) + "}"
                         create_index_statements.append(idx_statement)
-                    self.log.info("Create index statements: {}".format(create_index_statements))
+                self.log.info("Create index statements: {}".format(create_index_statements))
                 for num, create_index_statement in enumerate(create_index_statements):
-                    self.log.info(f"Creating index number {num} on bucket {bucket_name}. Index statement: {create_index_statement}")
+                    self.log.info(f"Creating index number {num + 1} on bucket {bucket_name}. "
+                                  f"Index statement: {create_index_statement}")
                     try:
                         self._execute_query(create_index_statement)
                         total_idx_created += 1
@@ -675,9 +827,10 @@ class IndexManager:
                 self.username, self.password), verify=False, timeout=300)
             response_temp = json.loads(response.text)
             index_count_node, rr, memory_rss = response_temp['num_indexes'], \
-                                               response_temp['avg_resident_percent'], response_temp['memory_rss'] / (1024*1024*1024)
-            total_data_size, total_disk_size  = response_temp['total_data_size']/ (1024*1024*1024), \
-                                                response_temp['total_disk_size'] / (1024*1024*1024)
+                                               response_temp['avg_resident_percent'], response_temp['memory_rss'] / (
+                                                           1024 * 1024 * 1024)
+            total_data_size, total_disk_size = response_temp['total_data_size'] / (1024 * 1024 * 1024), \
+                                               response_temp['total_disk_size'] / (1024 * 1024 * 1024)
             self.log.info(f"Node in question {idx_node}\nIndex count- {index_count_node}.\nRR {rr} "
                           f"\nData size {total_data_size} GB \nDisk Size {total_disk_size} GB"
                           f"\nMemory RSS {memory_rss} GB")
@@ -885,7 +1038,8 @@ class IndexManager:
             for coll in cbo_collections_list:
                 try:
                     self.log.info("Running Update Statistics for {0}".format(coll))
-                    update_stats_query = "UPDATE STATISTICS FOR {0} INDEX ALL WITH {{'update_statistics_timeout': 0}}  ;".format(coll)
+                    update_stats_query = "UPDATE STATISTICS FOR {0} INDEX ALL WITH {{'update_statistics_timeout': 0}}  ;".format(
+                        coll)
                     status, results, queryResult = self._execute_query(update_stats_query)
                     sleep(2)
                 except Exception as e:
@@ -997,10 +1151,11 @@ class IndexManager:
                 errors.append(errors_obj)
 
             self.log.info(
-                "Item count for index {0} on {1} is {2}. Pending Mutations = {3} Total items in collection are {4}".format(index["name"],
-                                                                                                   keyspace_name_for_query,
-                                                                                                   index_item_count, index_pending_mutations,
-                                                                                                   kv_item_count))
+                "Item count for index {0} on {1} is {2}. Pending Mutations = {3} Total items in collection are {4}".format(
+                    index["name"],
+                    keyspace_name_for_query,
+                    index_item_count, index_pending_mutations,
+                    kv_item_count))
             if int(index_item_count) != int(kv_item_count):
                 errors_obj = {}
                 errors_obj["type"] = "item_count_check_failed"
@@ -1049,7 +1204,7 @@ class IndexManager:
                     self.log.info("Stat endpoint request status was not 200 : {0}".format(response))
                     need_retry = True
 
-                if need_retry :
+                if need_retry:
                     retry_count = retry_count - 1
                     if retry_count > 1:
                         self.log.info("Retrying fetching stats. Retries left = {0}".format(str(retry_count)))
@@ -1069,18 +1224,19 @@ class IndexManager:
             except requests.exceptions.RequestException as err:
                 self.log.error("Error getting response from /stats : {0}".format(str(err)))
 
-
     def set_max_num_replica(self):
         """
         Determine number of index nodes in the cluster and set max num replica accordingly.
         """
-        nodelist = self.find_nodes_with_service(self.get_services_map(), "index")
-        if len(nodelist) > 4:
-            self.max_num_replica = 3
+        if self.set_max_replicas:
+            self.max_num_replica = self.set_max_replicas
         else:
-            self.max_num_replica = len(nodelist) - 1  # Max num replica = number of idx nodes in cluster - 1
-        self.log.info("Setting Max Replica for this test to : {0}".format(self.max_num_replica))
-
+            nodelist = self.find_nodes_with_service(self.get_services_map(), "index")
+            if len(nodelist) > 4:
+                self.max_num_replica = 3
+            else:
+                self.max_num_replica = len(nodelist) - 1  # Max num replica = number of idx nodes in cluster - 1
+            self.log.info("Setting Max Replica for this test to : {0}".format(self.max_num_replica))
 
     def get_index_map(self, bucket, index_node_addr):
         """
@@ -1163,16 +1319,20 @@ class IndexManager:
         # Create JS function
         self.log.info("Create JS Function")
         query_node = self.find_nodes_with_service(self.get_services_map(), "n1ql")[0]
-        api1 = "{}://".format(self.scheme) + query_node + ':{}/functions/v1/libraries/math/functions/add'.format(self.node_port_query)
+        api1 = "{}://".format(self.scheme) + query_node + ':{}/functions/v1/libraries/math/functions/add'.format(
+            self.node_port_query)
         data1 = {"name": "add", "code": "function add(a, b) { let data = a + b; return data; }"}
 
-        api2 = "{}://".format(self.scheme) + query_node + ':{}/functions/v1/libraries/math/functions/sub'.format(self.node_port_query)
+        api2 = "{}://".format(self.scheme) + query_node + ':{}/functions/v1/libraries/math/functions/sub'.format(
+            self.node_port_query)
         data2 = {"name": "add", "code": "function sub(a, b) { let data = a - b; return data; }"}
 
-        api3 = "{}://".format(self.scheme) + query_node + ':{}/functions/v1/libraries/math/functions/mul'.format(self.node_port_query)
+        api3 = "{}://".format(self.scheme) + query_node + ':{}/functions/v1/libraries/math/functions/mul'.format(
+            self.node_port_query)
         data3 = {"name": "add", "code": "function mul(a, b) { let data = a * b; return data; }"}
 
-        api4 = "{}://".format(self.scheme) + query_node + ':{}/functions/v1/libraries/math/functions/div'.format(self.node_port_query)
+        api4 = "{}://".format(self.scheme) + query_node + ':{}/functions/v1/libraries/math/functions/div'.format(
+            self.node_port_query)
         data4 = {"name": "add", "code": "function div(a, b) { let data = a / b; return data; }"}
 
         auth = (self.username, self.password)
@@ -1407,34 +1567,38 @@ class IndexManager:
 
         try:
             self.log.debug("Will execute the statement:{}".format(statement))
-            timeout = timedelta(minutes=5)
+            if self.timeout:
+                timeout = timedelta(minutes=self.timeout)
+            else:
+                timeout = timedelta(minutes=5)
             queryResult = self.cluster.query(statement, QueryOptions(timeout=timeout))
             try:
                 status = queryResult.metadata().status()
                 results = queryResult.rows()
             except Exception as e:
                 self.log.info("Query didnt return status or results")
-                self.log.error(f"Unexpected error during execution of query. Query is {statement}. Exception is {str(e)}", )
+                self.log.error(
+                    f"Unexpected error during execution of query. Query is {statement}. Exception is {str(e)}", )
                 pass
 
         except couchbase.exceptions.QueryException as qerr:
             self.log.debug("qerr")
             self.log.error(qerr)
-            #raise Exception(f"Exception seen while running the query {statement}. Error is {str(qerr)}")
+            # raise Exception(f"Exception seen while running the query {statement}. Error is {str(qerr)}")
         except couchbase.exceptions.HTTPException as herr:
             self.log.debug("herr")
             self.log.error(herr)
-            #raise Exception(f"Exception seen while running the query {statement}. Error is {str(herr)}")
+            # raise Exception(f"Exception seen while running the query {statement}. Error is {str(herr)}")
         except couchbase.exceptions.QueryIndexAlreadyExistsException as qiaeerr:
             self.log.debug("qiaeerr")
             self.log.error(qiaeerr)
         except couchbase.exceptions.TimeoutException as terr:
             self.log.debug("terr")
             self.log.error(terr)
-            #raise Exception(f"Exception seen while running the query {statement}. Error is {str(terr)}")
+            # raise Exception(f"Exception seen while running the query {statement}. Error is {str(terr)}")
         except Exception as e:
             self.log.error(f"Unexpected error : {str(e)}")
-            #raise Exception(f"Exception seen while running the query {statement}. Error {str(e)}")
+            # raise Exception(f"Exception seen while running the query {statement}. Error {str(e)}")
         return status, results, queryResult
 
     def get_indexer_metadata(self, timeout=120):
@@ -1465,7 +1629,8 @@ class IndexManager:
             # self.lib_filename = '/n1ql_udf.js'
             with open(self.lib_filename, 'rb') as f:
                 data = f.read()
-            url = "{}://".format(self.scheme) + self.n1ql_nodes[0] + ":{}/evaluator/v1/libraries/".format(self.node_port_query) + self.lib_name
+            url = "{}://".format(self.scheme) + self.n1ql_nodes[0] + ":{}/evaluator/v1/libraries/".format(
+                self.node_port_query) + self.lib_name
 
             self.log.info("Javascript filepath is {}".format(self.lib_filename))
             self.log.info("File data: \n {}".format(data))
@@ -1475,23 +1640,22 @@ class IndexManager:
 
             auth = (self.username, self.password)
             response = requests.post(url=url,
-                            data=data,
-                            headers={'Content-Type': 'application/json'}, auth=auth, verify=False)
+                                     data=data,
+                                     headers={'Content-Type': 'application/json'}, auth=auth, verify=False)
             if response.status_code != 200:
                 self.log.error("Error code : {0}".format(response.status_code))
                 self.log.error("Error reason : {0}".format(response.reason))
                 self.log.error("Error Text : {0}".format(response.text))
 
-
             # Create N1QL Function
-            n1ql_function_query_stmt = "CREATE OR REPLACE FUNCTION run_n1ql_query(bucketname) LANGUAGE JAVASCRIPT AS 'run_n1ql_query' AT '{0}';".format(self.lib_name)
+            n1ql_function_query_stmt = "CREATE OR REPLACE FUNCTION run_n1ql_query(bucketname) LANGUAGE JAVASCRIPT AS 'run_n1ql_query' AT '{0}';".format(
+                self.lib_name)
             self.log.info("Create Function Query : {0}".format(n1ql_function_query_stmt))
 
             status, results, queryResult = self._execute_query(n1ql_function_query_stmt)
             self.log.info(f"Status is {status} Results are {results} queryResult is {queryResult}")
         except Exception as e:
             self.log.error(str(e))
-
 
     def wait_until_indexes_online(self, timeout=60, defer_build=False, check_paused_index=False):
         init_time = time.time()
@@ -1554,14 +1718,14 @@ class IndexManager:
         bucket_indexer_node_map = self.get_bucket_index_node_map()
         self.log.info("Bucket indexer map is {}".format(bucket_indexer_node_map))
         for bucket in bucket_indexer_node_map:
-            self.log.info(f"Validating tenant affinity for {bucket}. Indexes for {bucket} are on nodes {bucket_indexer_node_map[bucket]}")
+            self.log.info(
+                f"Validating tenant affinity for {bucket}. Indexes for {bucket} are on nodes {bucket_indexer_node_map[bucket]}")
             if len(bucket_indexer_node_map[bucket]) != 2:
                 self.log.error(f"Tenant affinity not honoured for bucket {bucket}."
                                f"Index hosts the bucket is on:{bucket_indexer_node_map[bucket]}")
                 raise Exception("Tenant affinity check fail")
             else:
                 self.log.info(f"Tenant affinity honoured for bucket {bucket}")
-
 
     def get_indexer_nodes(self):
         service_map = self.get_services_map()
@@ -1589,7 +1753,7 @@ class IndexManager:
         self.log.info("Will use this bucket {} and this storage prefix {}".format(self.s3_bucket,
                                                                                   self.scheme))
         print("Will use this access key {} and this secret key {}".format(self.aws_access_key_id,
-                                                                                  self.aws_secret_access_key))
+                                                                          self.aws_secret_access_key))
         for node in self.node_list:
             print(f"Will ssh into {node} and copy the keys")
             ssh = paramiko.SSHClient()
@@ -1656,7 +1820,6 @@ class IndexManager:
             return response['total_requests']
         self.log.info(f"Error while fetching get_total_requests_metric - {endpoint}")
 
-
     def is_rebalance_running(self):
         endpoint = f"{self.url}/pools/default/rebalanceProgress"
         self.log.info(f"Endpoint used for is_rebalance_running {endpoint}")
@@ -1680,7 +1843,7 @@ class IndexManager:
                 endpoint = f"{self.scheme}://{node}:{self.node_port_index}/rebalanceCleanupStatus"
                 self.log.info(f"Endpoint used for is_rebalance_running {endpoint}")
                 response = requests.get(endpoint, auth=(
-                        self.username, self.password), verify=False, timeout=300)
+                    self.username, self.password), verify=False, timeout=300)
                 if response.ok:
                     status = response.text
                     self.log.info(f"Cleanup status {status}")
@@ -1729,6 +1892,7 @@ class IndexManager:
         self.log.info(f"Response get_capella_cluster_status {resp_json}")
         cluster_status = resp_json['meta']['status']['state']
         return cluster_status
+
 
 class NestedDict(dict):
     """Implementation of perl's autovivification feature."""

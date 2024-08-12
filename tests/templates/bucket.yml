@@ -20,3 +20,15 @@
       image: "vijayviji/sshpass"
       command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no
                   {{.SSHUsername}}@$0 systemctl stop couchbase-server.service"
+
+
+- name: flush-bucket
+  actions:
+    -
+      image: sequoiatools/couchbase-cli
+      command: "bucket-flush
+                    -c {{.Orchestrator}}:{{.RestPort}}
+                    --username {{$.RestUsername}}
+                    --password {{$.RestPassword}}
+                    --bucket $0 --force"
+      wait: true

@@ -26,6 +26,7 @@ class MagmaLoader:
         self.percent_delete = 0
         self.key_prefix = "doc"
         self.ops_rate = None
+        self.mutations_timeout = None
         self.value_type = "Hotel"
         self.model = None
         self.base64 = False
@@ -41,7 +42,9 @@ class MagmaLoader:
         self.protocol = "http"
         self.skip_default = False
         self.doc_template = "Hotel"
-        self.log = logging.getLogger("indexmanager")
+        self.mutations_mode = False
+        self.sift_path = None
+        self.log = logging.getLogger("magmaloader")
         self.log.setLevel(logging.INFO)
 
     def run(self):
@@ -71,10 +74,15 @@ class MagmaLoader:
         parser.add_argument("--tls", dest="tls", help="Set to true if host is SRV", default="false")
         parser.add_argument("--skip_default", dest="skip_default", help="True if dataload needs to be skipped on default collection",
                             default="false")
+        parser.add_argument("--sift_path", dest="sift_path", help="dataset path", default=None)
         parser.add_argument("--rr", dest="rr", help='Incremental data loading until indexer hits a specific resident ratio')
         parser.add_argument("--bucket_list", dest="bucket_list", help='A list of buckets passed in a comma seperated manner for data loading till a rr')
         parser.add_argument("--doc_template", dest="doc_template", help="doc template to be used for loader", default="Hotel")
-        parser.add_argument("--num_workers", dest="num_workers", help="True if dataload needs to be skipped on default collection", default=4)
+        parser.add_argument("--mutations_mode", dest="mutations_mode", help="running magmaloader with max memory",
+                            default="false")
+        parser.add_argument("--mutations_timeout", dest="mutations_timeout", help="mutations timeout period in seconds",
+                            default=3600)
+        parser.add_argument("--num_workers", dest="num_workers", help="True if dataload needs to be skipped on default collection", default=10)
         args = parser.parse_args()
         self.host = args.host
         self.username = args.username
@@ -93,6 +101,9 @@ class MagmaLoader:
         self.collection = args.collection
         self.bucket_name = args.bucket
         self.model = args.model
+        self.mutations_mode = args.mutations_mode.lower() == 'true'
+        self.mutations_timeout = int(args.mutations_timeout)
+        self.sift_path = args.sift_path
         if args.rr is None:
             self.rr = None
         else:
@@ -102,16 +113,19 @@ class MagmaLoader:
         self.workers = int(args.num_workers)
         self.all_coll = True if args.all_coll.lower() == 'true' else False
         self.skip_default = True if args.skip_default.lower() == 'true' else False
-        self.ops_rate = 10000 if not args.ops_rate else int(args.ops_rate)
+        self.ops_rate = 40000 if not args.ops_rate else int(args.ops_rate)
         if self.tls:
             self.port = 18091
             self.protocol = "https"
-        if self.host is None :
+        if self.host is None:
             self.log.info("Hostname is mandatory")
             parser.print_help()
             exit(1)
         if self.rr is None:
-            self.load_data()
+            if self.sift_path:
+                self.load_sift_data()
+            else:
+                self.load_data()
         else:
             self.load_data_till_rr()
 
@@ -126,9 +140,10 @@ class MagmaLoader:
         resp_json = response.json()
         scope_coll_map = {}
         for item in resp_json['scopes']:
-            scope = item['name']
-            coll_list = [item2['name'] for item2 in item['collections']]
-            scope_coll_map[scope] = coll_list
+            if item['name'] not in ['_system']:
+                scope = item['name']
+                coll_list = [item2['name'] for item2 in item['collections']]
+                scope_coll_map[scope] = coll_list
         return scope_coll_map
 
     def get_indexer_stats(self,node):
@@ -196,8 +211,7 @@ class MagmaLoader:
             raise Exception("service node list is empty")
 
     def load_data(self, random_key_prefix=False, bucket_name="default"):
-        if bucket_name != "default":
-            self.bucket_name = bucket_name
+        self.bucket_name = bucket_name
         if random_key_prefix:
             self.key_prefix = ''.join(random.choices(ascii_letters + digits, k=10))
         if self.all_coll:
@@ -211,15 +225,58 @@ class MagmaLoader:
             for coll in coll_list:
                 if coll == '_default' and self.skip_default:
                     continue
-                command = f"java -jar magmadocloader.jar -n {self.host} " \
-                          f"-user '{self.username}' -pwd '{self.password}' -b {self.bucket_name} " \
-                          f"-p 11207 -create_s {self.start} -create_e {self.end} " \
-                          f"-cr {self.percent_create} -up {self.percent_update} -rd {self.percent_delete}" \
-                          f" -docSize {self.doc_size} -keyPrefix {self.key_prefix} " \
-                          f"-scope {scope} -collection {coll} " \
-                          f"-workers {self.workers} -maxTTL 1800 -ops {self.ops_rate} -valueType {self.doc_template} "\
-                          f"-model {self.model} -base64 {self.base64}"
+                if not self.mutations_mode:
+                    command = f"java -jar magmadocloader.jar -n {self.host} " \
+                              f"-user '{self.username}' -pwd '{self.password}' -b {self.bucket_name} " \
+                              f"-p 11207 -create_s {self.start} -create_e {self.end} " \
+                              f"-cr {self.percent_create} -up {self.percent_update} -rd {self.percent_delete}" \
+                              f" -docSize {self.doc_size} -keyPrefix {self.key_prefix} " \
+                              f"-scope {scope} -collection {coll} " \
+                              f"-workers {self.workers} -maxTTL 1800 -ops {self.ops_rate} -valueType {self.doc_template} "\
+                              f"-model {self.model} -base64 {self.base64}"
+                else:
+                    command = f"java -Xmx512m -jar magmadocloader.jar -n {self.host} " \
+                              f"-user '{self.username}' -pwd '{self.password}' -b {self.bucket_name} " \
+                              f"-p 11207 -update_s {self.start} -update_e {self.end} " \
+                              f"-cr 0 -up 100 -rd {self.percent_delete}" \
+                              f" -docSize {self.doc_size} -keyPrefix {self.key_prefix} " \
+                              f"-scope {scope} -collection {coll} " \
+                              f"-workers {self.workers} -maxTTL 1800 -ops {self.ops_rate} -valueType {self.doc_template} " \
+                              f"-model {self.model} -base64 {self.base64} -mutate 100  -mutation_timeout {self.mutations_timeout}"
                 self.log.info("Will run this {}".format(command))
+                proc = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True)
+                out = proc.communicate()
+                if proc.returncode != 0:
+                    raise Exception("Exception in magma loader to {}".format(out))
+
+    def load_sift_data(self, random_key_prefix=False, bucket_name="default"):
+        self.bucket_name = bucket_name
+        if random_key_prefix:
+            self.key_prefix = ''.join(random.choices(ascii_letters + digits, k=10))
+        if self.all_coll:
+            scope_coll_map = self.get_all_collections(self.bucket_name)
+        else:
+            scope_coll_map = {self.scope: [self.collection]}
+        for scope in scope_coll_map:
+            if scope == '_system':
+                continue
+            coll_list = scope_coll_map[scope]
+            for coll in coll_list:
+                if coll == '_default' and self.skip_default:
+                    continue
+                command = f"java -cp magmadocloader.jar couchbase.test.sdk.SIFTLoader -n {self.host} " \
+                          f"-user '{self.username}' -pwd '{self.password}' -b {self.bucket_name} " \
+                          f"-create_s {self.start} -create_e {self.end} -cr {self.percent_create} " \
+                          f"-scope {scope} -collection {coll} -p 11207 " \
+                          f"-workers {self.workers} -ops {self.ops_rate} -valueType siftBigANN "\
+                          f"-siftURL ftp://ftp.irisa.fr/local/texmex/corpus/bigann_base.bvecs.gz " \
+                          f"-baseVectorsFilePath {self.sift_path}"
+                # working siftloader
+                # java -cp magmadocloader.jar couchbase.test.sdk.SIFTLoader -n  172.23.96.198 -user Administrator
+                # -pwd 'password' -b bucket4 -p 11207 -create_s 0 -create_e 100 -cr 100 -docSize 1024
+                # -keyPrefix doc1 -scope _default -collection _default -valueType siftBigANN
+                # -siftURL ftp://ftp.irisa.fr/local/texmex/corpus/bigann_base.bvecs.gz -baseVectorsFilePath /data/bigann
+                print("Will run this {}".format(command))
                 proc = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True)
                 out = proc.communicate()
                 if proc.returncode != 0:

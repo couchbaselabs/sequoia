@@ -2,7 +2,7 @@ FROM adoptopenjdk/openjdk12:latest
 WORKDIR /root
 
 # install base packages
-RUN apt-get update
+RUN DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install -yq --no-install-recommends
 RUN apt-get install -y git wget
 
 # install maven 3.6.3

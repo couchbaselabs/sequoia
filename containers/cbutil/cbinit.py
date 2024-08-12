@@ -25,7 +25,7 @@ class CBInit():
                 self.command="systemctl stop couchbase-server.service"
             elif version[0].__contains__("Ubuntu"):
                 self.command="service couchbase-server stop"
-        self.execute_command(self.command)
+        self.execute_command(self.command, self.hostname)
 
     def run_parallel(self):
         self.hostname = sys.argv[1]
@@ -46,12 +46,12 @@ class CBInit():
         version, err = self.execute_command("cat /etc/*release | grep -w NAME=",ip)
 
         if self.operation == "start":
-            if version[0].__contains__("CentOS Linux"):
+            if version[0].__contains__("CentOS Linux") or version[0].__contains__("Debian"):
                 self.command = "systemctl start couchbase-server.service"
             elif version[0].__contains__("Ubuntu"):
                 self.command = "service couchbase-server start"
         elif self.operation == "stop":
-            if version[0].__contains__("CentOS Linux"):
+            if version[0].__contains__("CentOS Linux") or version[0].__contains__("Debian"):
                 self.command = "systemctl stop couchbase-server.service"
             elif version[0].__contains__("Ubuntu"):
                 self.command = "service couchbase-server stop"
@@ -63,7 +63,7 @@ class CBInit():
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         ssh.connect(host, username=self.sshusername, password=self.sshpassword)
 
-        print "Executing : {0}".format(command)
+        print("Executing : {0}".format(command))
         ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command(command)
 
         output = ""
@@ -77,7 +77,7 @@ class CBInit():
 
         output = output.split("\n")
         for i in range(len(output)):
-            print output[i]
+            print(output[i])
 
         ssh.close()
 
