@@ -304,6 +304,7 @@
 
 - image: sequoiatools/indexmanager
   command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a wait_until_rebalance_cleanup_done"
+  wait: true
 -
    image: sequoiatools/cmd
    entrypoint: sleep
@@ -342,6 +343,7 @@
 
 - image: sequoiatools/indexmanager
   command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a wait_until_rebalance_cleanup_done"
+  wait: true
 -
    image: sequoiatools/cmd
    entrypoint: sleep
@@ -414,6 +416,7 @@
 
 - image: sequoiatools/indexmanager
   command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a wait_until_rebalance_cleanup_done"
+  wait: true
 -
    image: sequoiatools/cmd
    entrypoint: sleep
@@ -848,6 +851,406 @@
   template: wait_for_rebalance
   wait: true
 
+############### shardAffinity ################
+- template: set_gsi_config
+  args: "{{.ActiveIndexNode 0}}, 'indexer.settings.enable_shard_affinity':false"
+  requires:  "{{eq true .DoOnce }}"
+
+## To test file based rebalance improvements
+############### shardAffinity ################
+- template: set_gsi_config
+  args: "{{.ActiveIndexNode 0}}, 'indexer.settings.provisioned.enable_shard_affinity':false"
+  requires:  "{{eq true .DoOnce }}"
+
+###############  Rebalance-in single node ################
+- template: rebalance_in
+  args: "{{.InActiveNode}}, index"
+
+# Sleep after starting rebalance
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "310"
+   wait: true
+
+############### Kill indexer ################
+-
+  template: kill_process
+  args: "{{.ActiveIndexNode 0}}, indexer"
+
+# Sleep before starting to poll for rebalance progress
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "430"
+   wait: true
+
+# Wait for rebalance to complete
+-
+  template: wait_for_rebalance
+  wait: true
+
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a wait_until_rebalance_cleanup_done"
+  wait: true
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "1800"
+   wait: true
+
+###############  Complete the rebalance ################
+- template: rebalance
+
+-
+  template: wait_for_rebalance
+  wait: true
+
+###############  Rebalance-out single node ################
+- template: rebalance_out
+  args: "{{.ActiveIndexNode 0}}"
+
+# Sleep after starting rebalance
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "290"
+   wait: true
+
+############## Kill indexer ################
+-
+  template: kill_process
+  args: "{{.ActiveIndexNode 0}}, indexer"
+
+# Sleep before starting to poll for rebalance progress
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "440"
+   wait: true
+
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a wait_until_rebalance_cleanup_done"
+  wait: true
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "1800"
+   wait: true
+
+# Wait for rebalance to complete
+-
+  template: wait_for_rebalance
+  wait: true
+
+###############  Rebalance-out single node ################
+- template: rebalance_out
+  args: "{{.ActiveIndexNode 0}}"
+
+# Sleep after starting rebalance
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "330"
+   wait: true
+
+# Wait for rebalance to complete
+-
+  template: wait_for_rebalance
+  wait: true
+
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "901"
+   wait: true
+
+###############  Swap single index node ################
+- template: rebalance_swap
+  args: "{{.InActiveNode}}, {{.ActiveIndexNode 0}}, index"
+
+# Sleep after starting rebalance
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "902"
+   wait: true
+
+############### Kill indexer ################
+-
+  template: kill_process
+  args: "{{.ActiveIndexNode 0}}, indexer"
+
+# Sleep before starting to poll for rebalance progress
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "903"
+   wait: true
+
+# Wait for rebalance to complete
+-
+  template: wait_for_rebalance
+  wait: true
+
+
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "509"
+   wait: true
+
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a wait_until_rebalance_cleanup_done"
+  wait: true
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "900"
+   wait: true
+
+###############  Complete the rebalance ################
+- template: rebalance
+
+-
+  template: wait_for_rebalance
+  wait: true
+
+
+############## Kill memcached ################
+-
+  template: kill_process
+  args: "{{.NthDataNode 2}}, memcached"
+
+# Sleep for some more time after memcached-kill completes (10 minutes)
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "612"
+   wait: true
+
+###############  Rebalance-out two index nodes ################
+- template: rebalance_out
+  args: "({{.ActiveIndexNode 0}},{{.ActiveIndexNode 2}})"
+
+
+# Sleep for some more time after rebalance starts
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "307"
+   wait: true
+
+
+# Sleep before starting to poll for rebalance progress
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "432"
+   wait: true
+
+# Wait for rebalance to complete
+-
+  template: wait_for_rebalance
+  wait: true
+
+
+# Sleep for some time
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "611"
+   wait: true
+
+###############  Rebalance-in two index nodes ################
+- template: add_node
+  args: "{{.NthInActiveNode 0}}, index"
+- args: "{{.NthInActiveNode 1}}, index"
+- template: rebalance
+
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "333"
+   wait: true
+
+
+# Sleep before starting to poll for rebalance progress
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "417"
+   wait: true
+
+# Wait for rebalance to complete
+-
+  template: wait_for_rebalance
+  wait: true
+
+
+# Sleep for some time
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "619"
+   wait: true
+
+############## Kill projector ################
+-
+  template: kill_process
+  args: "{{.NthDataNode 0}}, projector"
+
+# Sleep for some more time after projector-kill completes (10 minutes)
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "605"
+   wait: true
+
+############## Kill query ################
+-
+  template: kill_process
+  args: "{{.Nodes | .Service `n1ql` | net 1}}, cbq-engine"
+
+# Sleep for some more time after query-kill completes (10 minutes)
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "609"
+   wait: true
+
+###############  Auto failover for indexer node ################
+- template: autofailover1IndexNode
+  args: "{{.ActiveIndexNode 1}}"
+  wait: true
+
+###############  Rebalance out data node ################
+- template: rebalance_out
+  args: "({{.NthDataNode 1}})"
+  wait: true
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "298"
+   wait: true
+
+############## Kill memcached ################
+-
+  template: kill_process
+  args: "{{.NthDataNode 2}}, memcached"
+
+# Sleep for some more time after memcached-kill completes (10 minutes)
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "614"
+   wait: true
+
+###############  Add back data node ################
+- template: rebalance_in
+  args: "{{.InActiveNode}}"
+  wait: true
+
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "315"
+   wait: true
+
+###############  Auto failover for indexer node ################
+- template: autofailover1IndexNode
+  args: "{{.ActiveIndexNode 1}}"
+
+############## Kill indexer ################
+-
+  template: kill_process
+  args: "{{.ActiveIndexNode 1}}, indexer"
+
+# Sleep for some more time after indexer-kill completes (30 minutes)
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "1800"
+   wait: true
+
+###############  Failover and addback ################
+- template: failover_force_and_recover
+  args: "{{.ActiveIndexNode 2}}, full"
+  wait: true
+
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "304"
+   wait: true
+
+############## Kill query ################
+-
+  template: kill_process
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, cbq-engine"
+
+# Sleep for some more time after query-kill completes (10 minutes)
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "615"
+   wait: true
+
+############## Kill indexer ################
+-
+  template: kill_process
+  args: "{{.ActiveIndexNode 0}}, indexer"
+
+# Sleep for some more time after indexer-kill completes (10 minutes)
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "596"
+   wait: true
+
+###############  Failover and rebalance out ################
+- template: hard_failover_node
+  args: "{{.ActiveIndexNode 1}}"
+- template: rebalance
+  wait: true
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "296"
+   wait: true
+
+# Sleep for some time to allow DDL to complete if running in background.
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "299"
+   wait: true
+
+###############  Add back index node  ################
+- template: add_node
+  args: "{{.NthInActiveNode 0}}, index"
+- template: rebalance
+  wait: true
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "289"
+   wait: true
+
+###############  Auto failover for indexer node ################
+- template: autofailover1IndexNode
+  args: "{{.ActiveIndexNode 1}}"
+  wait: true
+
+
 ###############  Rebalance-in single node ################
 - template: rebalance_in
   args: "{{.InActiveNode}}, index"
@@ -870,6 +1273,44 @@
 -
   template: wait_for_rebalance
   wait: true
+
+###############  Rebalance-in single node ################
+- template: rebalance_in
+  args: "{{.InActiveNode}}, index"
+
+# Sleep after starting rebalance
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "310"
+   wait: true
+
+# Sleep before starting to poll for rebalance progress
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "430"
+   wait: true
+
+# Wait for rebalance to complete
+-
+  template: wait_for_rebalance
+  wait: true
+
+
+
+############### shardAffinity ################
+- template: set_gsi_config
+  args: "{{.ActiveIndexNode 0}}, 'indexer.settings.enable_shard_affinity':true"
+  requires:  "{{eq true .DoOnce }}"
+
+## To test file based rebalance improvements
+############### shardAffinity ################
+- template: set_gsi_config
+  args: "{{.ActiveIndexNode 0}}, 'indexer.settings.provisioned.enable_shard_affinity':true"
+  requires:  "{{eq true .DoOnce }}"
+
+
 
 ###############  Drop all Indexes ################
 - section_start: drop_all_indexes

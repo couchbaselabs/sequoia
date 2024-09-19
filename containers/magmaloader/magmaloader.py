@@ -123,9 +123,9 @@ class MagmaLoader:
             exit(1)
         if self.rr is None:
             if self.sift_path:
-                self.load_sift_data()
+                self.load_sift_data(bucket_name=self.bucket_name)
             else:
-                self.load_data()
+                self.load_data(bucket_name=self.bucket_name)
         else:
             self.load_data_till_rr()
 
@@ -242,7 +242,7 @@ class MagmaLoader:
                               f" -docSize {self.doc_size} -keyPrefix {self.key_prefix} " \
                               f"-scope {scope} -collection {coll} " \
                               f"-workers {self.workers} -maxTTL 1800 -ops {self.ops_rate} -valueType {self.doc_template} " \
-                              f"-model {self.model} -base64 {self.base64} -mutate 100  -mutation_timeout {self.mutations_timeout}"
+                              f"-model {self.model} -base64 {self.base64} -mutate 1  -mutation_timeout {self.mutations_timeout}"
                 self.log.info("Will run this {}".format(command))
                 proc = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True)
                 out = proc.communicate()

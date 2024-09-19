@@ -10,6 +10,7 @@ import requests
 import numpy as np
 
 from os.path import splitext
+from deepdiff import DeepDiff
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
 from couchbase.auth import PasswordAuthenticator
@@ -20,10 +21,12 @@ from couchbase.exceptions import CouchbaseException
 from couchbase.cluster import QueryScanConsistency
 from couchbase.exceptions import CouchbaseException, QueryErrorContext
 
+
 class QueryManager:
     def __init__(self, connection_string, username, password, timeout, duration, doc_template, use_sdk, query_type,
                  query_file, groundtruth_file, validate_vector_query_results, distance_algo, bucket_list, use_tls,
-                 capella="false", skip_default="false", num_groundtruth_vectors=100, num_query_vectors=10000):
+                 capella="false", skip_default="false", num_groundtruth_vectors=100, num_query_vectors=10000,
+                 base64_encoding="false", xattrs="false", sample_size=20):
         self.connection_string = connection_string
         self.username = username
         self.password = password
@@ -44,6 +47,9 @@ class QueryManager:
         self.skip_default = skip_default == "true"
         self.num_groundtruth_vectors = num_groundtruth_vectors
         self.num_query_vectors = num_query_vectors
+        self.base64_encoding = base64_encoding == "true"
+        self.xattrs = xattrs == "true"
+        self.sample_size = sample_size
         self.query_error_obj = dict()
         self.log = logging.getLogger("query_manager")
         self.log.setLevel(logging.INFO)
@@ -76,7 +82,7 @@ class QueryManager:
         options.apply_profile('wan_development')
         if self.use_tls or self.capella:
             self.cluster = Cluster(f"couchbases://{self.connection_string}?tls_verify=none",
-                               options)
+                                   options)
         else:
             self.cluster = Cluster(f"couchbase://{self.connection_string}?tls_verify=none",
                                    options)
@@ -155,8 +161,6 @@ class QueryManager:
     def read_file(self, file_path, end):
         if "ivecs" in file_path:
             vectors = self.read_ivecs(file_path, end)
-        elif "fvecs" in file_path:
-            vectors = self.read_fvecs(file_path)
         elif "bvecs" in file_path:
             vectors = self.read_bvecs(file_path, end)
         return vectors
@@ -196,6 +200,8 @@ class QueryManager:
     def read_query_file(self):
         if "small" in self.query_file:
             return self.read_fvecs_file(self.query_file, 0, 100)
+        elif "gist" in self.query_file:
+            return self.read_fvecs_file(self.query_file, 0, 1000)
         elif "sift_query" in self.query_file:
             return self.read_fvecs_file(self.query_file, 0, 10000)
         return self.read_file(self.query_file, self.num_query_vectors)
@@ -231,20 +237,23 @@ class QueryManager:
 
     def compute_recall(self, groundtruth_vectors, result, index):
         groundtruth_result_vector = groundtruth_vectors[index]
-        self.log.info(f"Query result {result}")
-        self.log.info(f"Ground truth result {groundtruth_vectors[index]}")
         query_res_list = [item['id'] for item in result]
-        recall_percentage = len(list(set(groundtruth_result_vector).intersection(query_res_list)))
-        self.log.info(f"Recall percentage {recall_percentage}")
+        if 'shoes' not in self.template:
+            query_res_list = [int(s.lstrip('doc')) - 1 for s in query_res_list]
+            self.log.info(f"Query result {query_res_list}")
+        self.log.debug(f"Groundtruth {groundtruth_result_vector[:100]}")
+        self.log.debug(f"Query result {query_res_list}")
+        recall_percentage = len(list(set(groundtruth_result_vector[:100]).intersection(query_res_list)))
         self.update_recall_dict(recall_percentage)
 
     def run_n1ql_query(self, query, iterate_over_results=False, query_node=None, groundtruth_vectors=None,
                        validate_vector_query_results=False):
         query_vectors = self.read_query_file()
         index = 0
+        limit_val = None
         vector_query = False
         if "qvec" in query:
-            index = random.randint(0, len(query_vectors)-1)
+            index = random.randint(0, len(query_vectors) - 1)
             self.log.debug(f"Query vectors {query_vectors[index]}")
             query = query.replace("qvec", str(query_vectors[index]))
         if "nprobe" in query:
@@ -253,10 +262,16 @@ class QueryManager:
         if "DIST_ALGO" in query:
             query = query.replace("DIST_ALGO", self.distance_algo)
         if "LIMIT_N_VAL" in query:
-            self.log.info(f"limit val is {self.limit_val}")
-            query = query.replace("LIMIT_N_VAL", str(self.limit_val))
+            if self.validate_vector_query_results:
+                limit_val = 100
+            else:
+                limit_val = random.randint(1, 100)
+            query = query.replace("LIMIT_N_VAL", str(limit_val))
             vector_query = True
-        self.log.info(f"Query is {query}")
+        if self.base64_encoding:
+            query = query.replace("vectors", "decode_vector(vectors,false)")
+        if self.xattrs:
+            query = query.replace("vectors", "meta().xattrs.vectors")
         if self.use_sdk:
             if not self.cluster:
                 self.create_cluster_object()
@@ -274,13 +289,13 @@ class QueryManager:
             if iterate_over_results:
                 result = [row for row in result_obj.rows()]
                 if vector_query:
-                    if len(result) != self.limit_val:
+                    if limit_val and len(result) != limit_val:
                         self.log.error(f"Query {query} has fetched incorrect number of results "
-                                       f"though a limit was specified. Response {dir(result_obj)}")
+                                       f"though a limit was specified. Limit specified {limit_val}. "
+                                       f"Result length {len(result)}")
                         raise Exception(f"Query {query} has fetched incorrect number of results "
                                         f"though a limit was specified. Response {dir(result_obj)}")
             if validate_vector_query_results:
-                self.log.info(f"Index is {index}")
                 self.compute_recall(groundtruth_vectors, result, index)
             return result
         else:
@@ -335,22 +350,31 @@ class QueryManager:
         self.log.info(f"Node map is {node_map}")
         return node_map
 
-    def generate_queries(self):
+    def generate_queries(self, template=None):
         self.log.info("Generating queries.")
         generated_queries = []
         with open(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'queries.json')) as f:
             data = f.read()
         query_json = json.loads(data)
-        if self.template not in query_json:
-            raise Exception("Add your query blueprint json file")
-        queries_list = query_json[self.template]
+        queries_list = []
+        if template:
+            queries_list = query_json[template]
+        else:
+            if "," in self.template:
+                templates_list = self.template.split(",")
+                for template in templates_list:
+                    queries_list += query_json[template]
+            else:
+                queries_list = query_json[self.template]
+        self.log.info(f"Queries per template {len(queries_list)}")
         keyspaces = self.fetch_keyspaces_list()
         for keyspace in keyspaces:
             bucket, scope, collection = keyspace.split(".")
             for item in queries_list:
                 query_statement = item.replace("keyspacenameplaceholder", f"`{bucket}`.`{scope}`.`{collection}`")
                 generated_queries.append(query_statement)
-        self.log.info(f"=====================Generated a total of {len(generated_queries)} queries=====================")
+        self.log.info(
+            f"=====================Generated a total of {len(generated_queries)} queries=====================")
         return generated_queries
 
     def find_nodes_with_service(self, service):
@@ -451,7 +475,10 @@ class QueryManager:
                 time_last_refresh = time.time()
                 self.log.info("Entering refresh block")
             with ThreadPoolExecutor() as executor_main:
-                queries_chosen = random.sample(queries, num_concurrent_queries)
+                if len(queries) < num_concurrent_queries:
+                    queries_chosen = queries
+                else:
+                    queries_chosen = random.sample(queries, num_concurrent_queries)
                 for query in queries_chosen:
                     if not self.capella:
                         query_node = random.choice(query_nodes)
@@ -459,16 +486,14 @@ class QueryManager:
                         query_task = executor_main.submit(method, query, True)
                     else:
                         if "shoes" in self.template and self.validate_vector_query_results:
-                            self.log.info("Entering shoe template block to read groundtruth")
+                            self.log.debug("Entering shoe template block to read groundtruth")
                             query, groundtruth_file = query.split(";")
                             groundtruth_file = groundtruth_file.lstrip(" ")
                             groundtruth_file_path = f"/gnd/{groundtruth_file}"
-                            self.log.info(f"Groundtruth file {groundtruth_file_path}")
+                            self.log.debug(f"Groundtruth file {groundtruth_file_path}")
                             groundtruth_vectors = self.read_ground_truth_file(groundtruth_file_path)
                         query_task = executor_main.submit(method, query, True, query_node, groundtruth_vectors,
                                                           self.validate_vector_query_results)
-                        if self.validate_vector_query_results:
-                            self.print_recall_stats()
                     query_tasks.append(query_task)
             for task in query_tasks:
                 try:
@@ -484,8 +509,6 @@ class QueryManager:
             time.sleep(sleep_duration)
         self.log.info(f"Exiting query workload loop Current time {time.time()}  start time {time_now} "
                       f" Duration {self.duration}")
-        if self.validate_vector_query_results:
-            self.print_recall_stats()
 
     def get_query_errors_dict(self):
         return self.query_error_obj
@@ -493,14 +516,100 @@ class QueryManager:
     def periodic_print_recall_stats(self, frequency=10):
         while time.time() - time_now < self.duration:
             self.print_recall_stats()
-            time.sleep(frequency*60)
+            time.sleep(frequency * 60)
 
     def print_recall_stats(self):
         self.log.info(f"Recall dict is {self.recall_dict}")
-        for key, value in self.recall_dict.items():
-            lower_bound = key * 10 - 5
-            upper_bound = min(100, key * 10 + 5)
-            self.log.info(f"The number of queries with recall between {lower_bound} percent and {upper_bound} percent = {value}")
+        for item in self.recall_dict.keys():
+            self.log.info(f"Recall percentage between {item * 10 - 10} and {item * 10} is {self.recall_dict[item]}")
+
+    def get_rebalance_status(self):
+        endpoint = f"{self.connection_string}/pools/default/rebalanceProgress"
+        self.log.info(f"Endpoint used for is_rebalance_running {endpoint}")
+        response = requests.get(endpoint, auth=(
+            self.username, self.password), verify=False, timeout=300)
+        rebalance_progress = False
+        if response.ok:
+            response = json.loads(response.text)
+            rebalance_progress = response['status']
+            self.log.info(f"Rebalance_progress {rebalance_progress}")
+        return rebalance_progress
+
+    def run_scans_validation(self):
+        queries_list = self.generate_queries(template="hotel_scans_validation")
+        scan_results_map_before = dict()
+        for query in queries_list[:int(self.sample_size)]:
+            scan_results_pre_rebalance = self.run_n1ql_query(query, True, None, None, False)
+            scan_results_map_before[query] = scan_results_pre_rebalance
+        self.log.info("Pre-rebalance scans complete")
+        time.sleep(60)
+        rebal_status = None
+        time_now = time.time()
+        while not rebal_status and time.time() - time_now < 600:
+            rebal_status = self.get_rebalance_status()
+            if rebal_status == "running":
+                break
+            time.sleep(60)
+        if rebal_status != "running":
+            raise Exception("Rebalance did not get triggered despite waiting 10 mins")
+        rebal_status = None
+        while not rebal_status and time.time() - time_now < 72000:
+            rebal_status = self.get_rebalance_status()
+            if rebal_status == "none":
+                break
+            time.sleep(60)
+        if rebal_status != "none":
+            raise Exception("Rebalance did not get complete despite waiting 20 hours")
+        for query in scan_results_map_before.keys():
+            scan_results_after_rebalance = self.run_n1ql_query(query, True, None, None, False)
+            diffs = DeepDiff(scan_results_after_rebalance, scan_results_map_before[query], ignore_order=True)
+            if diffs:
+                self.log.error(f"Mismatch in query result before and after rebalance. Select query {query}\n\n. "
+                               f"Result before \n\n {scan_results_map_before[query]}."
+                               f"Result after \n \n {scan_results_after_rebalance}")
+                raise Exception(f"Mismatch in query {query} results before and after rebalance")
+        self.log.info("Scan results validation successful")
+
+    def create_primary_index(self):
+        primary_index_name = f"#primary{random.randint(0, 1000)}"
+        keyspaces = self.fetch_keyspaces_list()
+        for keyspace in keyspaces:
+            bucket, scope, collection = keyspace.split(".")
+            query = f"`create primary index {primary_index_name} on {bucket}`.`{scope}`.`{collection}`"
+            self.run_n1ql_query(query=query)
+        return primary_index_name
+
+    def drop_primary_index(self, primary_index_name):
+        keyspaces = self.fetch_keyspaces_list()
+        for keyspace in keyspaces:
+            bucket, scope, collection = keyspace.split(".")
+            query = f"drop primary index {primary_index_name} on {bucket}`.`{scope}`.`{collection}`"
+            self.run_n1ql_query(query=query)
+
+    def data_validation(self):
+        primary_index = self.create_primary_index()
+        errors = []
+        queries_list = self.generate_queries(template="hotel_scans_validation")
+        for query in queries_list:
+            self.log.info(f"GSI query {query}")
+            scan_results_gsi = self.run_n1ql_query(query, True, None, None, False)
+            primary_query = query.replace("where", f"USE INDEX(`{primary_index}`) where")
+            self.log.info(f"Primary query {primary_query}")
+            scan_results_primary = self.run_n1ql_query(primary_query, True, None, None, False)
+            diffs = DeepDiff(scan_results_gsi, scan_results_primary, ignore_order=True)
+            if diffs:
+                self.log.error(f"Mismatch in query result between primary and gsi scans. Select query {query}\n\n. "
+                               f"Results via GSI \n\n {scan_results_gsi}."
+                               f"Results via primary \n \n {scan_results_primary}")
+                errors_obj = dict()
+                errors_obj["scan_results_gsi"] = scan_results_gsi
+                errors_obj["scan_results_primary"] = scan_results_primary
+                errors_obj["query"] = query
+                errors.append(errors_obj)
+        self.drop_primary_index(primary_index)
+        if errors:
+            raise Exception(f"Mismatch in query results between primary and gsi {errors}")
+
 
 
 if __name__ == '__main__':
@@ -508,7 +617,7 @@ if __name__ == '__main__':
     parser.add_argument("-c", "--connection_string", help="SDK connection string")
     parser.add_argument("-u", "--username", help="username", default="Administrator")
     parser.add_argument("-p", "--password", help="password", default="password")
-    parser.add_argument("-t", "--timeout", help="query timeout", default=300)
+    parser.add_argument("-t", "--timeout", help="query timeout", default=1800)
     parser.add_argument("-b", "--template", help="doc template", default="product")
     parser.add_argument("-d", "--duration", help="duration for which the action needs to run",
                         default=3600)
@@ -521,12 +630,15 @@ if __name__ == '__main__':
                         default="true")
     parser.add_argument("-f", "--query_type", help="analytics/n1ql", default="analytics")
     parser.add_argument("-v", "--validate_vector_query_results", help="analytics/n1ql", default="false")
+    parser.add_argument("-z", "--run_vector_queries", help="do you want to run vector scans?", default="false")
     parser.add_argument("-qf", "--query_file", help="fvecs file to be used for queries", default="/sift_query.fvecs")
     parser.add_argument("-qv", "--num_query_vectors", help="Number of groundtruth vectors", default=10000, type=int)
     parser.add_argument("-gf", "--groundtruth_file", help="ground truth file to be used for vector queries",
                         default="/sift_groundtruth.ivecs")
     parser.add_argument("-gtv", "--num_groundtruth_vectors", help="Number of groundtruth vectors",
                         default=100, type=int)
+    parser.add_argument("-sz", "--sample_size", help="Number of groundtruth vectors",
+                        default=20, type=int)
     parser.add_argument("-da", "--distance_algo", help="ground truth file to be used for vector queries",
                         default="L2")
     parser.add_argument("-bl", "--bucket_list", help="ground truth file to be used for vector queries",
@@ -535,6 +647,10 @@ if __name__ == '__main__':
                         default="true")
     parser.add_argument("-ca", "--capella", help="ground truth file to be used for vector queries",
                         default="true")
+    parser.add_argument("-en", "--base64", help="ground truth file to be used for vector queries",
+                        default="false")
+    parser.add_argument("-xa", "--xattrs", help="ground truth file to be used for vector queries",
+                        default="false")
     parser.add_argument("-skd", "--skip_default", help="ground truth file to be used for vector queries",
                         default="true")
     parser.add_argument("-pf", "--print_frequency", help="ground truth file to be used for vector queries",
@@ -544,12 +660,17 @@ if __name__ == '__main__':
                                  int(args.duration), args.template, args.use_sdk, args.query_type, args.query_file,
                                  args.groundtruth_file, args.validate_vector_query_results, args.distance_algo,
                                  args.bucket_list, args.use_tls, args.capella, args.skip_default,
-                                 args.num_groundtruth_vectors, args.num_query_vectors)
+                                 args.num_groundtruth_vectors, args.num_query_vectors, args.base64,
+                                 args.xattrs, args.sample_size)
     try:
         if args.action == "run_query_workload":
             query_manager.run_query_workload(int(args.num_concurrent_queries), int(args.refresh_duration))
-            if args.validate_vector_query_results:
+            if args.validate_vector_query_results and args.run_vector_queries:
                 query_manager.print_recall_stats()
+        elif args.action == "run_scans_validation":
+            query_manager.run_scans_validation()
+        elif args.action == "data_validation":
+            query_manager.data_validation()
         elif args.action == "poll_for_failed_queries":
             query_manager.poll_for_failed_queries()
         elif args.action == "cancel_random_queries":
@@ -557,11 +678,12 @@ if __name__ == '__main__':
         elif args.action == "fetch_active_requests":
             query_manager.fetch_columnar_active_requests()
         else:
-            raise Exception("Actions allowed - run_query_workload | poll_for_failed_queries | cancel_random_queries")
+            raise Exception("Actions allowed - run_query_workload | poll_for_failed_queries "
+                            "| cancel_random_queries | run_scans_validation")
     finally:
         query_error_resp_dict = query_manager.get_query_errors_dict()
         if query_error_resp_dict:
-            print("========================Queries that have ended in errors==============================================================")
+            print(
+                "========================Queries that have ended in errors==============================================================")
             print(json.dumps(query_error_resp_dict, indent=4))
             raise Exception(f"A few queries have ended in errors")
-

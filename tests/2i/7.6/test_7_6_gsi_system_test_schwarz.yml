@@ -304,6 +304,7 @@
 
 - image: sequoiatools/indexmanager
   command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a wait_until_rebalance_cleanup_done"
+  wait: true
 -
    image: sequoiatools/cmd
    entrypoint: sleep
@@ -342,6 +343,7 @@
 
 - image: sequoiatools/indexmanager
   command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a wait_until_rebalance_cleanup_done"
+  wait: true
 -
    image: sequoiatools/cmd
    entrypoint: sleep
@@ -414,6 +416,7 @@
 
 - image: sequoiatools/indexmanager
   command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a wait_until_rebalance_cleanup_done"
+  wait: true
 -
    image: sequoiatools/cmd
    entrypoint: sleep

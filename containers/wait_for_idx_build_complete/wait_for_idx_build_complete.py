@@ -17,6 +17,9 @@ class WaitForAllIndexBuildComplete:
         self.node_addr = sys.argv[1]
         self.cluster_username = sys.argv[2]
         self.cluster_password = sys.argv[3]
+        self.excluded_buckets = []
+        if len(sys.argv) > 4 and sys.argv[4] != "wait_for_index_ingestion":
+            self.excluded_buckets = sys.argv[4].split(",")
         self.tls = False
         self.capella_run = False
         if "capella" in sys.argv:
@@ -78,37 +81,59 @@ class WaitForAllIndexBuildComplete:
         return srv_info['host']
 
     def check_index_status(self):
+        response = self.get_index_status_metadata()
+        excluded_buckets = self.excluded_buckets
+        if "status" in response:
+            # Check the status field for all indexes. status should be ready for all indexes.
+            all_indexes_built = True
+
+            for index in response["status"]:
+                self.log.debug(index["name"] + "," + index["status"])
+                if index["status"] == "Ready":
+                    all_indexes_built &= True
+                else:
+                    if excluded_buckets :
+                        if index["bucket"] not in excluded_buckets:
+                            all_indexes_built &= False
+                        else:
+                            all_indexes_built &= True
+                    else:
+                        all_indexes_built &= False
+
+            return all_indexes_built
+        else:
+            raise Exception("IndexStatus does not have status field")
+
+    def get_index_status_metadata(self):
         index_status_endpoint = "{}/getIndexStatus".format(self.index_url)
         # Buckets to be skipped for checking build status
-        self.log.info("Index endpoint API is {}".format(index_status_endpoint))
-        excluded_buckets = []
-
         # Get status for all indexes
-        response = requests.get(index_status_endpoint, auth=(self.cluster_username, self.cluster_password), verify=False)
+        for i in range(5):
+            try:
+                response = requests.get(index_status_endpoint, auth=(self.cluster_username, self.cluster_password),
+                                        verify=False)
+            except:
+                time.sleep(60)
         if response.ok:
             response = json.loads(response.content)
-            if "status" in response:
-                # Check the status field for all indexes. status should be ready for all indexes.
-                all_indexes_built = True
-
-                for index in response["status"]:
-                    self.log.debug(index["name"] + "," + index["status"])
-                    if index["status"] == "Ready":
-                        all_indexes_built &= True
-                    else:
-                        if excluded_buckets :
-                            if index["bucket"] not in excluded_buckets:
-                                all_indexes_built &= False
-                            else:
-                                all_indexes_built &= True
-                        else:
-                            all_indexes_built &= False
-
-                return all_indexes_built
-            else:
-                raise Exception("IndexStatus does not have status field")
         else:
             response.raise_for_status()
+        return response
+
+    def check_indexes_not_ready(self):
+        indexes_not_ready_list = list()
+        response = self.get_index_status_metadata()
+        excluded_buckets = self.excluded_buckets
+        if "status" in response:
+            # Check the status field for all indexes. status should be ready for all indexes.
+            for index in response["status"]:
+                if index["status"] != "Ready" and index["bucket"] not in excluded_buckets:
+                    indexes_not_ready_list.append("{}.{}.{}.{}".format(index['bucket'],
+                                                                       index['scope'], index['collection'],
+                                                                       index['name']))
+        else:
+            raise Exception("IndexStatus does not have status field")
+        return indexes_not_ready_list
 
     def check_index_pending(self, timeout=3600):
         index_node_list = []
@@ -235,4 +260,5 @@ if __name__ == '__main__':
             # Sleep for 1 min
             time.sleep(60)
     if not all_indexes_built:
-        raise Exception("All indexes were not built after {} seconds".format(hard_all_index_built_timeout))
+        index_list = index_obj.check_indexes_not_ready()
+        raise Exception("All indexes were not built after {} seconds. Indexes not built {}".format(hard_all_index_built_timeout, index_list))

@@ -41,72 +41,93 @@ SCOPENAME_SUFFIX = "_scope"
 HOTEL_DS_INDEX_TEMPLATES = [
     {"indexname": "idx1",
      "is_vector": False,
+     "validate_item_count_check": False,
      "statement": "CREATE INDEX `idx1_idxprefix` ON keyspacenameplaceholder(country, DISTINCT ARRAY `r`.`ratings`.`Check in / front desk` FOR r in `reviews` END,array_count((`public_likes`)),array_count((`reviews`)) DESC,`type`,`phone`,`price`,`email`,`address`,`name`,`url`) "},
     {"indexname": "idx2",
      "is_vector": False,
+     "validate_item_count_check": True,
      "statement": "CREATE INDEX `idx2_idxprefix` ON keyspacenameplaceholder(`free_breakfast`,`type`,`free_parking`,array_count((`public_likes`)),`price`,`country`)"},
     {"indexname": "idx3",
      "is_vector": False,
+     "validate_item_count_check": True,
      "statement": "CREATE INDEX `idx3_idxprefix` ON keyspacenameplaceholder(`free_breakfast`,`free_parking`,`country`,`city`) "},
     {"indexname": "idx4",
      "is_vector": False,
+     "validate_item_count_check": True,
      "statement": "CREATE INDEX `idx4_idxprefix` ON keyspacenameplaceholder(`price`,`city`,`name`)"},
     {"indexname": "idx5",
      "is_vector": False,
+     "validate_item_count_check": False,
      "statement": "CREATE INDEX `idx5_idxprefix` ON keyspacenameplaceholder(ALL ARRAY `r`.`ratings`.`Rooms` FOR r IN `reviews` END,`avg_rating`)"},
     {"indexname": "idx6",
      "is_vector": False,
+     "validate_item_count_check": True,
      "statement": "CREATE INDEX `idx6_idxprefix` ON keyspacenameplaceholder(`city`)"},
     {"indexname": "idx7",
      "is_vector": False,
+     "validate_item_count_check": True,
      "statement": "CREATE INDEX `idx7_idxprefix` ON keyspacenameplaceholder(`price`,`name`,`city`,`country`)"}
 ]
 HOTEL_DS_INDEX_TEMPLATES_NEW = [
     {"indexname": "idx8",
      "is_vector": False,
+     "validate_item_count_check": False,
      "statement": "CREATE INDEX `idx8_idxprefix` ON keyspacenameplaceholder(DISTINCT ARRAY FLATTEN_KEYS(`r`.`author`,`r`.`ratings`.`Cleanliness`) FOR r IN `reviews` when `r`.`ratings`.`Cleanliness` < 4 END, `country`, `email`, `free_parking`)"},
     {"indexname": "idx9",
      "is_vector": False,
+     "validate_item_count_check": False,
      "statement": "CREATE INDEX `idx9_idxprefix` ON keyspacenameplaceholder(ALL ARRAY FLATTEN_KEYS(`r`.`author`,`r`.`ratings`.`Rooms`) FOR r IN `reviews` END, `free_parking`)"},
     {"indexname": "idx10",
      "is_vector": False,
+     "validate_item_count_check": False,
      "statement": "CREATE INDEX `idx10_idxprefix` ON keyspacenameplaceholder((ALL (ARRAY(ALL (ARRAY flatten_keys(n,v) FOR n:v IN (`r`.`ratings`) END)) FOR `r` IN `reviews` END)))"},
     {"indexname": "idx11",
      "is_vector": False,
+     "validate_item_count_check": False,
      "statement": "CREATE INDEX `idx11_idxprefix` ON keyspacenameplaceholder(ALL ARRAY FLATTEN_KEYS(`r`.`ratings`.`Rooms`,`r`.`ratings`.`Cleanliness`) FOR r IN `reviews` END, `email`, `free_parking`)"},
     {"indexname": "idx12",
      "is_vector": False,
+     "validate_item_count_check": True,
      "statement": "CREATE INDEX `idx12_idxprefix` ON keyspacenameplaceholder(`name` INCLUDE MISSING DESC,`phone`,`type`)"},
     {"indexname": "idx13",
      "is_vector": False,
+     "validate_item_count_check": True,
      "statement": "CREATE INDEX `idx13_idxprefix` ON keyspacenameplaceholder(`city` INCLUDE MISSING ASC, `phone`)"}
 ]
 HOTEL_DS_CBO_FIELDS = "`country`, DISTINCT ARRAY `r`.`ratings`.`Check in / front desk`, array_count((`public_likes`)),array_count((`reviews`)) DESC,`type`,`phone`,`price`,`email`,`address`,`name`,`url`,`free_breakfast`,`free_parking`,`city`"
 HOTEL_DS_INDEX_TEMPLATES_VECTORS = [
     {"indexname": "idxvector1",
      "is_vector": True,
+     "validate_item_count_check": True,
      "statement": "CREATE INDEX `idxvector1_idxprefix` ON keyspacenameplaceholder(`free_breakfast`,vectors VECTOR, `free_parking`,`country`,`city`) "},
     {"indexname": "idxvector2",
      "is_vector": True,
+     "validate_item_count_check": True,
      "statement": "CREATE INDEX `idxvector2_idxprefix` ON keyspacenameplaceholder(`price`,`city`,`name`, vectors VECTOR)"},
     {"indexname": "idxvector3",
+     "validate_item_count_check": True,
      "is_vector": True,
      "statement": "CREATE INDEX `idxvector3_idxprefix` ON keyspacenameplaceholder(`name` INCLUDE MISSING DESC,`phone`,`type`, vectors VECTOR)"},
     {"indexname": "idxvector4",
      "is_vector": True,
+     "validate_item_count_check": True,
      "statement": "CREATE INDEX `idxvector4_idxprefix` ON keyspacenameplaceholder(country,vectors VECTOR)"},
     {"indexname": "idxvector5",
      "is_vector": True,
+     "validate_item_count_check": True,
      "statement": "CREATE INDEX `idxvector5_idxprefix` ON keyspacenameplaceholder(vectors VECTOR)"},
     {"indexname": "idxvector6",
      "is_vector": True,
+     "validate_item_count_check": True,
      "statement": "CREATE INDEX `idxvector6_idxprefix` ON keyspacenameplaceholder(vectors VECTOR, city )"}
 ]
 HOTEL_DS_INDEX_TEMPLATES_VECTORS_ONLY = [
     {"indexname": "idxvector1",
+     "validate_item_count_check": True,
      "is_vector": True,
      "statement": "CREATE INDEX `idxvector1_idxprefix` ON keyspacenameplaceholder(`type`,vectors VECTOR) "},
     {"indexname": "idxvector2",
+     "validate_item_count_check": True,
      "is_vector": True,
      "statement": "CREATE INDEX `idxvector2_idxprefix` ON keyspacenameplaceholder(vectors VECTOR)"}
 ]
@@ -114,18 +135,23 @@ HOTEL_DS_INDEX_TEMPLATES_VECTORS_ONLY = [
 SHOES_INDEX_TEMPLATES = [
     {"indexname": "idxshoesvector1",
      "is_vector": True,
+     "validate_item_count_check": True,
      "statement": "CREATE INDEX idxshoesvector1_idxprefix ON keyspacenameplaceholder(`category`,`country`, `brand`, `color`, `size`, `embedding` VECTOR) "},
     {"indexname": "idxshoesvector2",
      "is_vector": True,
+     "validate_item_count_check": True,
      "statement": "CREATE INDEX idxshoesvector2_idxprefix ON keyspacenameplaceholder(`category`,`country`, `brand`, `color`, `embedding` VECTOR) "},
     {"indexname": "idxshoesvector3",
      "is_vector": True,
+     "validate_item_count_check": True,
      "statement": "CREATE INDEX idxshoesvector3_idxprefix ON keyspacenameplaceholder(`category`,`country`, `brand`, `embedding` VECTOR) "},
     {"indexname": "idxshoesvector4",
      "is_vector": True,
+     "validate_item_count_check": True,
      "statement": "CREATE INDEX idxshoesvector4_idxprefix ON keyspacenameplaceholder(`category`,`country`, `embedding` VECTOR) "},
     {"indexname": "idxshoesvector5",
      "is_vector": True,
+     "validate_item_count_check": True,
      "statement": "CREATE INDEX idxshoesvector5_idxprefix ON keyspacenameplaceholder(`category`,`embedding` VECTOR) "}
 ]
 
@@ -160,17 +186,17 @@ class IndexManager:
         parser.add_argument("-a", "--action",
                             choices=["create_index", "build_deferred_index", "drop_all_indexes", "create_index_loop",
                                      "drop_index_loop", "alter_indexes", "enable_cbo", "delete_statistics",
-                                     "item_count_check",
+                                     "item_count_check", "post_topology_change_validations", "replica_count_check",
                                      "random_recovery", "create_udf", "drop_udf", "create_n1ql_udf",
                                      "validate_tenant_affinity", "set_fast_rebalance_config",
                                      "create_n_indexes_on_buckets", "validate_s3_cleanup", "copy_aws_keys",
                                      "cleanup_s3", "poll_total_requests_during_rebalance",
-                                     "wait_until_rebalance_cleanup_done", "print_stats"],
+                                     "wait_until_rebalance_cleanup_done", "print_stats", "wait_until_mutations_processed"],
                             help="Choose an action to be performed. Valid actions : create_index | build_deferred_index | drop_all_indexes | create_index_loop | "
-                                 "drop_index_loop | alter_indexes | enable_cbo | delete_statistics "
-                                 "| item_count_check | random_recovery | create_udf | drop_udf | create_n1ql_udf "
+                                 "drop_index_loop | alter_indexes | enable_cbo | delete_statistics | replica_count_check "
+                                 "| item_count_check | random_recovery | create_udf | drop_udf | create_n1ql_udf | post_topology_change_validations"
                                  "| validate_tenant_affinity | set_fast_rebalance_config | create_n_indexes_on_buckets "
-                                 "| copy_aws_keys | cleanup_s3 | validate_s3_cleanup | poll_total_requests_during_rebalance | wait_until_rebalance_cleanup_done | print_stats",
+                                 "| copy_aws_keys | cleanup_s3 | validate_s3_cleanup | poll_total_requests_during_rebalance | wait_until_rebalance_cleanup_done | print_stats | wait_until_mutations_processed",
                             default="create_index")
         parser.add_argument("-m", "--build_max_collections", type=int, default=0,
                             help="Build Indexes on max number of collections")
@@ -218,7 +244,7 @@ class IndexManager:
         parser.add_argument("-num_dimensions", "--num_dimensions", type=int, default=128, help="Num of dimensions")
         parser.add_argument("--num_vectors", type=int, default=1000000,
                             help="Number of indexes per bucket you want to create")
-        parser.add_argument("--base64_encoding_vectors",  default="false",
+        parser.add_argument("--base64_encoding_vectors", default="false",
                             help="are vector embeddings base64 encoded?")
         parser.add_argument("--defer_build", default="false",
                             help="are indexes to be deferred?")
@@ -227,7 +253,9 @@ class IndexManager:
         parser.add_argument("--xattrs_vectors", default="false",
                             help="are vector embeddings part of xattrs?")
         parser.add_argument("--set_max_replicas", default=None,
-                            help="are vector embeddings part of xattrs?")
+                            help="max replica count for indexes")
+        parser.add_argument("--all_docs_indexed", default="false",
+                            help="have all mutations been processed?")
         args = parser.parse_args()
         self.log = logging.getLogger("indexmanager")
         self.log.setLevel(logging.INFO)
@@ -266,6 +294,7 @@ class IndexManager:
         self.token = args.token
         self.distance_algo = args.distance_algo
         self.defer_build = args.defer_build == 'true'
+        self.all_docs_indexed = args.all_docs_indexed == 'true'
         if args.use_description != 'false':
             self.use_description = args.use_description
         else:
@@ -322,6 +351,7 @@ class IndexManager:
                 self.idx_def_templates = HOTEL_DS_INDEX_TEMPLATES_VECTORS
             else:
                 self.idx_def_templates = HOTEL_DS_INDEX_TEMPLATES + HOTEL_DS_INDEX_TEMPLATES_NEW
+            self.log.info(f"Idx definition {self.idx_def_templates}")
             self.cbo_fields = HOTEL_DS_CBO_FIELDS
 
             # Initialize connections to the cluster
@@ -340,7 +370,6 @@ class IndexManager:
         elif self.dataset == "shoes":
             self.idx_def_templates = SHOES_INDEX_TEMPLATES
         self.log.info(f"Capella flag is set to {self.capella_run}. Use tls flag is set to {self.use_tls}")
-        self.log.info("Indexes will be chosen at random from the sample statements {}".format(self.idx_def_templates))
         if self.use_https:
             self.log.info("This is Capella run.")
             for i in range(5):
@@ -372,7 +401,7 @@ class IndexManager:
         self.log.info(f"N1QL nodes {self.n1ql_nodes} and Index nodes : {self.index_nodes}")
         # Set max number of replica for the test. For that, fetch the number of indexer nodes in the cluster.
         self.max_num_replica = 0
-        self.max_num_partitions = 4
+        self.max_num_partitions = 64
         ## TODO What should be done with this?
         # self.set_max_num_replica()
 
@@ -725,10 +754,7 @@ class IndexManager:
                             is_partitioned_idx = False
                     else:
                         # remove after partitioned index sampling fix
-                        if not (self.create_vector_indexes or self.create_vector_indexes_only):
-                            is_partitioned_idx = bool(random.getrandbits(1))
-                        else:
-                            is_partitioned_idx = False
+                        is_partitioned_idx = bool(random.getrandbits(1))
                     is_defer_idx = bool(random.getrandbits(1)) or self.defer_build
                     with_clause_list = []
                     idx_statement = idx_statement.replace("keyspacenameplaceholder", keyspace)
@@ -744,14 +770,15 @@ class IndexManager:
                             with_clause_list.append("\'num_partition\':8")
                         else:
                             if is_partitioned_idx:
-                                num_partition = random.randint(2, 8)
+                                num_partition = random.randint(2, 64)
                                 with_clause_list.append("\'num_partition\':%s" % num_partition)
                     if self.install_mode == "ee" and self.max_num_replica > 0:
-                        num_replica = random.randint(0, self.max_num_replica)
+                        num_replica = random.randint(1, self.max_num_replica)
                         with_clause_list.append("\'num_replica\':%s" % num_replica)
                     if is_defer_idx:
                         with_clause_list.append("\'defer_build\':true")
-                    if self.create_vector_indexes or self.create_vector_indexes_only and "is_vector" in idx_template and idx_template['is_vector']:
+                    if self.create_vector_indexes or self.create_vector_indexes_only and "is_vector" in idx_template and \
+                            idx_template['is_vector']:
                         self.log.info("Creating vector index definitions")
                         if self.use_description:
                             description = self.use_description
@@ -828,7 +855,7 @@ class IndexManager:
             response_temp = json.loads(response.text)
             index_count_node, rr, memory_rss = response_temp['num_indexes'], \
                                                response_temp['avg_resident_percent'], response_temp['memory_rss'] / (
-                                                           1024 * 1024 * 1024)
+                                                       1024 * 1024 * 1024)
             total_data_size, total_disk_size = response_temp['total_data_size'] / (1024 * 1024 * 1024), \
                                                response_temp['total_disk_size'] / (1024 * 1024 * 1024)
             self.log.info(f"Node in question {idx_node}\nIndex count- {index_count_node}.\nRR {rr} "
@@ -1083,93 +1110,180 @@ class IndexManager:
     6. Compare result from 4 & 5 and raiseException if not matching 
     """
 
-    def item_count_check(self, sample_size=5):
+    def item_count_check(self, sample_size=5, raise_exception=True):
         # Get all index nodes in the cluster
         idx_node_list = self.find_nodes_with_service(self.get_services_map(), "index")
         idx_node_list.sort()
-
+        index_definitions = self.idx_def_templates
+        # Exclude any indexes that have when or where clause in the index definition from item count check
+        # as the item count will never match the number of docs in collection because of the partial index.
+        # Same goes for array indexes
+        ignore_count_index_list = [item['indexname'] for item in index_definitions if
+                                   not item['validate_item_count_check']]
         # Get Index Map for indexes in the bucket
-        index_map = self.get_index_map(self.bucket_name, idx_node_list[0])
-
-        if len(index_map) == 0:
-            self.log.info("Item check count not possible, no indexes present for the given bucket.")
-            return
-
-        # Randomly choose indexes on which item count check has to be performed
-        item_count_check_indexes = random.sample(index_map, min(sample_size, len(index_map)))
-
+        if self.bucket_name:
+            bucket_list = [self.bucket_name]
+        else:
+            bucket_list = self.get_all_buckets()
         errors = []
+        for bucket_name in bucket_list:
+            index_map = self.get_index_map(bucket_name, idx_node_list[0])
+            random.shuffle(index_map)
+            self.log.info(f"Item count will be skipped for {ignore_count_index_list}")
+            if len(index_map) == 0:
+                self.log.info("Item check count not possible, no indexes present for the given bucket.")
+                return
+            count_check_completed = 0
+            for index in index_map:
+                idx_prefix = index["name"].split("_")[0]
+                if idx_prefix in ignore_count_index_list:
+                    continue
 
-        for index in item_count_check_indexes:
-            # Exclude any indexes that have when or where clause in the index definition from item count check
-            # as the item count will never match the number of docs in collection because of the partial index.
-            # Currently it is idx8 that has a when / where clause in the index definition
-            if index["name"].split("_")[0] == "idx8":
-                continue
-
-            if (index["scope"] != "_default" and index["collection"] != "_default"):
-                keyspace_path = index["bucket"] + ":" + index["scope"] + ":" + index["collection"] + ":"
-            else:
-                keyspace_path = index["bucket"] + ":"
-            stat_key = keyspace_path + index["name"] + ":docid_count"
-            alt_stat_key = keyspace_path + index["name"] + ":items_count"
-            pending_mutations_key = keyspace_path + index["name"] + ":num_docs_pending"
-            keyspace_name_for_query = "`" + index["bucket"] + "`.`" + index["scope"] + "`.`" + index["collection"] + "`"
-
-            index_item_count = 0
-            index_pending_mutations = 0
-            for host in index["hosts"]:
-                item_count, pending_mutations = self.get_stats(stat_key, alt_stat_key, pending_mutations_key,
-                                                               host.split(":")[0])
-                if item_count >= 0:
-                    index_item_count += item_count
-                    index_pending_mutations += pending_mutations
+                if index["scope"] != "_default" and index["collection"] != "_default":
+                    keyspace_path = index["bucket"] + ":" + index["scope"] + ":" + index["collection"] + ":"
                 else:
-                    self.log.info("Got an error retrieving stat {0} or {1} from {2}".format(stat_key, alt_stat_key,
-                                                                                            host.split(":")[0]))
+                    keyspace_path = index["bucket"] + ":"
+                stat_key = keyspace_path + index["name"] + ":docid_count"
+                alt_stat_key = keyspace_path + index["name"] + ":items_count"
+                pending_mutations_key = keyspace_path + index["name"] + ":num_docs_pending"
+                keyspace_name_for_query = "`" + index["bucket"] + "`.`" + index["scope"] + "`.`" + index["collection"] + "`"
+
+                index_item_count = 0
+                index_pending_mutations = 0
+                for host in index["hosts"]:
+                    item_count, pending_mutations = self.get_stats(stat_key, alt_stat_key, pending_mutations_key,
+                                                                   host.split(":")[0])
+                    if item_count >= 0:
+                        index_item_count += item_count
+                        if not self.all_docs_indexed:
+                            index_pending_mutations += pending_mutations
+                    else:
+                        self.log.info("Got an error retrieving stat {0} or {1} from {2}".format(stat_key, alt_stat_key,
+                                                                                                host.split(":")[0]))
+                        errors_obj = {}
+                        errors_obj["type"] = "error_retrieving_stats"
+                        errors_obj["index_name"] = index["name"]
+                        errors_obj["keyspace"] = keyspace_name_for_query
+                        errors.append(errors_obj)
+
+                # Get Collection item count from KV via N1QL
+                kv_item_count = -1
+                kv_item_count_query = "select raw count(*) from {0}".format(keyspace_name_for_query)
+                self.log.info(f"Idx prefix is {idx_prefix}")
+                status, results, queryResult = self._execute_query(kv_item_count_query)
+                if status is not None:
+                    for result in results:
+                        self.log.debug(result)
+                        kv_item_count = result
+                else:
+                    self.log.info("Got an error retrieving stat from query via n1ql with query - {0}. Status : {1} ".format(
+                        kv_item_count_query, status))
                     errors_obj = {}
-                    errors_obj["type"] = "error_retrieving_stats"
+                    errors_obj["type"] = "error_retrieving_stats_from_kv_via_n1ql"
                     errors_obj["index_name"] = index["name"]
                     errors_obj["keyspace"] = keyspace_name_for_query
                     errors.append(errors_obj)
 
-            # Get Collection item count from KV via N1QL
-            kv_item_count = -1
-            kv_item_count_query = "select raw count(*) from {0};".format(keyspace_name_for_query)
-            status, results, queryResult = self._execute_query(kv_item_count_query)
-            if status is not None:
-                for result in results:
-                    self.log.debug(result)
-                    kv_item_count = result
-            else:
-                self.log.info("Got an error retrieving stat from query via n1ql with query - {0}. Status : {1} ".format(
-                    kv_item_count_query, status))
-                errors_obj = {}
-                errors_obj["type"] = "error_retrieving_stats_from_kv_via_n1ql"
-                errors_obj["index_name"] = index["name"]
-                errors_obj["keyspace"] = keyspace_name_for_query
-                errors.append(errors_obj)
-
-            self.log.info(
-                "Item count for index {0} on {1} is {2}. Pending Mutations = {3} Total items in collection are {4}".format(
-                    index["name"],
-                    keyspace_name_for_query,
-                    index_item_count, index_pending_mutations,
-                    kv_item_count))
-            if int(index_item_count) != int(kv_item_count):
-                errors_obj = {}
-                errors_obj["type"] = "item_count_check_failed"
-                errors_obj["index_name"] = index["name"]
-                errors_obj["keyspace"] = keyspace_name_for_query
-                errors_obj["index_item_count"] = index_item_count
-                errors_obj["index_pending_mutations"] = index_pending_mutations
-                errors_obj["kv_item_count"] = kv_item_count
-                errors.append(errors_obj)
-
+                self.log.info(
+                    "Item count for index {0} on {1} is {2}. Total items in collection  {3}".format(
+                        index["name"],
+                        keyspace_name_for_query,
+                        index_item_count,
+                        kv_item_count))
+                if not self.all_docs_indexed:
+                    self.log.info(f"Pending mutations {index_pending_mutations}")
+                if int(index_item_count) != int(kv_item_count):
+                    errors_obj = {}
+                    errors_obj["type"] = "item_count_check_failed"
+                    errors_obj["index_name"] = index["name"]
+                    errors_obj["keyspace"] = keyspace_name_for_query
+                    errors_obj["index_item_count"] = index_item_count
+                    errors_obj["index_pending_mutations"] = index_pending_mutations
+                    errors_obj["kv_item_count"] = kv_item_count
+                    errors.append(errors_obj)
+                count_check_completed += 1
+                self.log.info(f"count_check_completed = {count_check_completed}")
+                if count_check_completed > sample_size:
+                    break
         if len(errors) > 0:
-            raise Exception("There were errors in the item count check phase - \n{0}".format(errors))
+            if raise_exception:
+                raise Exception("There were errors in the item count check phase - \n{0}".format(errors))
+            else:
+                return errors
         else:
             self.log.info("Item check count passed. No discrepancies seen.")
+
+    def wait_until_mutations_processed(self):
+        # Get all index nodes in the cluster
+        idx_node_list = self.find_nodes_with_service(self.get_services_map(), "index")
+        end_time = time.time() + self.timeout
+        pending_indexes_list = list()
+        while time.time() < end_time:
+            mutations_pending, pending_indexes_list = False, []
+            for idx_node in idx_node_list:
+                endpoint = f"{self.scheme}://{idx_node}:{self.node_port_index}/stats"
+                self.log.info(f"Endpoint used for num_docs_pending metric {endpoint}")
+                for i in range(5):
+                    try:
+                        response = requests.get(endpoint, auth=(
+                            self.username, self.password), verify=False, timeout=300)
+                        break
+                    except:
+                        time.sleep(30)
+                if response.ok:
+                    response = json.loads(response.text)
+                    for key in response.keys():
+                        bucket = key.split(":")[0]
+                        if bucket in self.bucket_list and "num_docs_pending" in key:
+                            if response[key] > 0:
+                                mutations_pending = True
+                                pending_indexes_list.append(key)
+                                break
+            if not mutations_pending:
+                self.log.info("All the mutations have been processed. Breaking out of the loop")
+                break
+            time.sleep(300)
+        if mutations_pending:
+            self.log.error(f"All the mutations have not been processed despite waiting for {self.timeout} seconds."
+                           f"Pending indexes list {pending_indexes_list}")
+            raise Exception("Mutations pending")
+
+    def backstore_mainstore_check(self):
+        # Get all index nodes in the cluster
+        idx_node_list = self.find_nodes_with_service(self.get_services_map(), "index")
+        idx_node_list.sort()
+        index_definitions = self.idx_def_templates
+        # Exclude all array indexes
+        if self.bucket_name:
+            bucket_list = [self.bucket_name]
+        else:
+            bucket_list = self.get_all_buckets()
+        ignore_count_index_list = [item['indexname'] for item in index_definitions if
+                                   not item['validate_item_count_check']]
+        errors = []
+        for node in idx_node_list:
+            for bucket in bucket_list:
+                self.log.info(f"Checking stats for bucket {bucket}")
+                index_map = self.get_storage_stats_map(node, bucket=bucket)
+                for index in index_map:
+                    self.log.info(f"checking for index {index}")
+                    idx_name = index['name'].split(":")[-1]
+                    idx_prefix = idx_name.split("_")[0]
+                    if idx_prefix in ignore_count_index_list or "backstore_count" not in index:
+                        continue
+                    if index["mainstore_count"] != index["backstore_count"]:
+                        self.log.info(f"Index map as seen during backstore_mainstore_check is {index}")
+                        self.log.error(f"Item count mismatch in backstore and mainstore for {index['name']}")
+                        errors_obj = dict()
+                        errors_obj["type"] = "mismatch in backstore and mainstore"
+                        errors_obj["index_name"] = index["name"]
+                        errors_obj["mainstore_count"] = index["mainstore_count"]
+                        errors_obj["backstore_count"] = index["backstore_count"]
+                        errors.append(errors_obj)
+        if len(errors) > 0:
+            return errors
+        else:
+            self.log.info("backstore_mainstore_check passed. No discrepancies seen.")
 
     def get_stats(self, stat_key, alt_stat_key, pending_mutations_key, index_node_addr):
         endpoint = f"{self.scheme}://{index_node_addr}:{self.node_port_index}/stats"
@@ -1244,7 +1358,7 @@ class IndexManager:
         """
         endpoint = f"{self.scheme}://" + index_node_addr + ":" + self.node_port_index + "/getIndexStatus"
         # Get map of indexes in the cluster
-        self.log.info(f"URL used for get_index_map is {endpoint}")
+        self.log.debug(f"URL used for get_index_map is {endpoint}")
         response = requests.get(endpoint, auth=(
             self.username, self.password), verify=True, )
         idx_map = []
@@ -1252,9 +1366,55 @@ class IndexManager:
         if (response.ok):
             response = json.loads(response.text)
             for index in response["status"]:
-                if index["bucket"] == bucket:
+                if index["bucket"] == bucket and index['scope'] != "_system":
                     idx_map.append(index)
 
+        return idx_map
+
+    def get_storage_stats_map(self, index_node_addr, bucket=None):
+        """
+         Return the index map for the specified bucket
+        """
+        endpoint = f"{self.scheme}://" + index_node_addr + ":" + self.node_port_index + "/stats/storage"
+        # Get map of indexes in the cluster
+        self.log.info(f"URL used for get_index_map is {endpoint}")
+        response = requests.get(endpoint, auth=(
+            self.username, self.password), verify=True, )
+        idx_map = []
+        if response.ok:
+            response = json.loads(response.text)
+            for index in response:
+                if bucket is not None and bucket not in index['Index']:
+                    continue
+                idx_name = index['Index']
+                mainstore_count = index["Stats"]["MainStore"]["items_count"]
+                idx_map.append({"name": idx_name, "mainstore_count": mainstore_count})
+                if "BackStore" in index["Stats"]:
+                    idx_map[-1].update({"backstore_count": index["Stats"]["BackStore"]["items_count"]})
+        return idx_map
+
+    def get_stats_map(self, index_node_addr):
+        """
+         Return the index map for the specified bucket
+        """
+        endpoint = f"{self.scheme}://" + index_node_addr + ":" \
+                   + self.node_port_index + "/stats?async=false"
+        # Get map of indexes in the cluster
+        self.log.info(f"URL used for get_index_map is {endpoint}")
+        response = requests.get(endpoint, auth=(
+            self.username, self.password), verify=True, )
+        idx_map = {}
+        if response.ok:
+            response = json.loads(response.text)
+            for stat in response.keys():
+                if ":items_count" in stat:
+                    if len(stat.split(":")) == 3:
+                        stat_list = stat.split(":")
+                        bucket, idx_name, items_count_str = stat_list[0], stat_list[1], stat_list[2]
+                        stat_temp = f"{bucket}:_default:_default:{idx_name}:{items_count_str}:"
+                    else:
+                        stat_temp = stat
+                    idx_map.update({stat_temp.rstrip(":items_count"): response[stat]})
         return idx_map
 
     def get_services_map(self):
@@ -1267,7 +1427,6 @@ class IndexManager:
             cluster_url = url + "/pools/default"
         else:
             cluster_url = self.url + "/pools/default"
-        self.log.info(f"Rest URL is {cluster_url}")
         node_map = []
 
         try:
@@ -1303,7 +1462,6 @@ class IndexManager:
             self.log.error("Timeout getting response from {1} : {0}".format(str(errt), cluster_url))
         except requests.exceptions.RequestException as err:
             self.log.error("Error getting response from {1} : {0}".format(str(err), cluster_url))
-        self.log.info(f"Node map is {node_map}")
         return node_map
 
     def create_udfs(self):
@@ -1570,7 +1728,7 @@ class IndexManager:
             if self.timeout:
                 timeout = timedelta(minutes=self.timeout)
             else:
-                timeout = timedelta(minutes=5)
+                timeout = timedelta(minutes=20)
             queryResult = self.cluster.query(statement, QueryOptions(timeout=timeout))
             try:
                 status = queryResult.metadata().status()
@@ -1602,7 +1760,6 @@ class IndexManager:
         return status, results, queryResult
 
     def get_indexer_metadata(self, timeout=120):
-        self.log.info("polling /getIndexStatus")
         idx_node = self.find_nodes_with_service(self.get_services_map(), "index")[0]
         if self.use_https:
             api = f"{self.scheme}://" + idx_node + ':19102/getIndexStatus'
@@ -1696,7 +1853,6 @@ class IndexManager:
     def get_all_buckets(self):
         query = "Select * from system:buckets"
         status, result, _ = self._execute_query(query)
-        self.log.info(f"Results from system:buckets {result}")
         bucket_list = []
         for item in result:
             bucket_list.append(item['buckets']['name'])
@@ -1893,6 +2049,122 @@ class IndexManager:
         cluster_status = resp_json['meta']['status']['state']
         return cluster_status
 
+    def check_item_count_across_replicas(self, sample_size=5):
+        idx_node_list = self.find_nodes_with_service(self.get_services_map(), "index")
+        idx_maps_dict = dict()
+        idx_maps_list = list()
+        if self.bucket_name:
+            bucket_list = [self.bucket_name]
+        else:
+            bucket_list = self.get_all_buckets()
+        for node in idx_node_list:
+            idx_map = self.get_stats_map(node)
+            idx_maps_dict[node] = idx_map
+            idx_maps_list.append(idx_map)
+        partitioned_indexes_list = self.get_partitioned_indexes_list()
+        self.log.debug(f"Partitioned indexes {partitioned_indexes_list} ========================")
+        errors = []
+        random_indexes_to_validate = []
+        for node_dict in idx_maps_dict.keys():
+            indexes_list_node = idx_maps_dict[node_dict].keys()
+            indexes_list_node = list(indexes_list_node)
+            random.shuffle(indexes_list_node)
+            replicas_only_list = [item for item in indexes_list_node if "replica" in item]
+            for bucket in bucket_list:
+                replicas_only_list = [item for item in replicas_only_list if bucket in item]
+                random_indexes_to_validate += replicas_only_list[:sample_size]
+        self.log.info(f"Random indexes to validate: {random_indexes_to_validate}")
+        index_map = self.get_indexer_metadata()
+        for item in random_indexes_to_validate:
+            count_list = []
+            if item in partitioned_indexes_list:
+                agg_count = self.get_total_item_count_for_partitioned_index(idx_maps_dict, item)
+                count_list.append(agg_count)
+                self.log.info(f"{item} is a partitioned index. Aggregate count {agg_count}")
+                replicas_list = self.find_all_replicas(item, index_map)
+                self.log.info(f"Replicas for partitioned index {item} - {replicas_list}")
+                for replica in replicas_list:
+                    agg_count = self.get_total_item_count_for_partitioned_index(idx_maps_dict, replica)
+                    self.log.info(f"Replica index {replica} is a partitioned index. Aggregate count {agg_count}")
+                    count_list.append(agg_count)
+            else:
+                replicas_list = self.find_all_replicas(item, index_map)
+                self.log.info(f"Replicas for index {item} - {replicas_list}")
+                count_list = []
+                for node_dict in idx_maps_dict.keys():
+                    indexes_list_node = idx_maps_dict[node_dict].keys()
+                    indexes_list_node = list(indexes_list_node)
+                    replica_idx_list = list(set(indexes_list_node).intersection(set(replicas_list)))
+                    if replica_idx_list:
+                        if len(replica_idx_list) != 1:
+                            self.log.error(f"Replicas exist on the same node for {item}")
+                        idx_name = replica_idx_list[0]
+                        count = idx_maps_dict[node_dict][idx_name]
+                        self.log.debug(f"Count is {count}")
+                        count_list.append(count)
+            if len(list(set(count_list))) > 1:
+                self.log.error(f"Mismatch in item count across replicas for {item}. Count list {count_list}")
+                errors_obj = dict()
+                errors_obj["index_name"] = item
+                errors_obj["index_item_count_list"] = count_list
+                errors.append(errors_obj)
+        self.log.info("+++++++++++++++++++++END of replica item count check+++++++++++++++++++++++")
+        return errors
+
+    def get_total_item_count_for_partitioned_index(self, idx_maps_dict, idx_name):
+        agg_count = 0
+        for node_dict in idx_maps_dict.keys():
+            indexes_list_node = idx_maps_dict[node_dict].keys()
+            indexes_list_node = list(indexes_list_node)
+            if idx_name in indexes_list_node:
+                agg_count += idx_maps_dict[node_dict][idx_name]
+        return agg_count
+
+    def get_partitioned_indexes_list(self):
+        index_map = self.get_indexer_metadata()
+        indexes_dict = index_map['status']
+        partitioned_indexes_list = []
+        for index in indexes_dict:
+            if index["partitioned"]:
+                if index['scope'] == '_default':
+                    partitioned_indexes_list.append(f"{index['bucket']}:_default:_default:{index['name']}")
+                else:
+                    partitioned_indexes_list.append(
+                        f"{index['bucket']}:{index['scope']}:{index['collection']}:{index['name']}")
+        return partitioned_indexes_list
+
+    def find_all_replicas(self, name, index_map):
+        indexes_dict = index_map['status']
+        replicas_list = []
+        defn_Id = None
+        for index in indexes_dict:
+            index_list_full = name.split(":")
+            if index['name'] == index_list_full[-1] and index['bucket'] == index_list_full[0] \
+                    and index['scope'] == index_list_full[1] and index['collection'] == index_list_full[2]:
+                defn_Id = index['defnId']
+        if not defn_Id:
+            raise Exception(f"Could not find defnID for index {name}")
+        for index in indexes_dict:
+            if index['defnId'] == defn_Id:
+                replicas_list.append(f"{index['bucket']}:{index['scope']}:{index['collection']}:{index['name']}")
+        return replicas_list
+
+    def post_topology_change_validations(self, sample_size=5):
+        errors_item_check = self.item_count_check(sample_size=sample_size, raise_exception=False)
+        errors_replica_check = self.check_item_count_across_replicas(sample_size=sample_size)
+        errors_backstore_mainstore = self.backstore_mainstore_check()
+        validations_failed = False
+        if errors_item_check:
+            self.log.error(f"Item count check failed. Errors {errors_item_check}")
+            validations_failed = True
+        if errors_replica_check:
+            self.log.error(f"Replica item count check failed. Errors {errors_replica_check}")
+            validations_failed = True
+        if errors_backstore_mainstore:
+            self.log.error(f"Backstore mainstore count check failed. Errors {errors_item_check}")
+            validations_failed = True
+        if validations_failed:
+            raise Exception("Post topology validations failed")
 
 class NestedDict(dict):
     """Implementation of perl's autovivification feature."""
@@ -1946,6 +2218,10 @@ if __name__ == '__main__':
         indexMgr.drop_indexes_in_a_loop(indexMgr.timeout, indexMgr.interval)
     elif indexMgr.action == "item_count_check":
         indexMgr.item_count_check(indexMgr.sample_size)
+    elif indexMgr.action == "post_topology_change_validations":
+        indexMgr.post_topology_change_validations(indexMgr.sample_size)
+    elif indexMgr.action == "replica_count_check":
+        indexMgr.check_item_count_across_replicas()
     elif indexMgr.action == "random_recovery":
         indexMgr.random_recovery(indexMgr.timeout, indexMgr.interval)
     elif indexMgr.action == "create_udf":
@@ -1972,9 +2248,11 @@ if __name__ == '__main__':
         indexMgr.wait_until_rebalance_cleanup_done()
     elif indexMgr.action == 'print_stats':
         indexMgr.print_stats()
+    elif indexMgr.action == 'wait_until_mutations_processed':
+        indexMgr.wait_until_mutations_processed()
     else:
         print("Invalid choice for action. Choose from the following - "
               "create_index | build_deferred_index | drop_all_indexes | create_index_loop | alter_indexes | "
-              "enable_cbo | drop_index_loop | item_count_check | random_recovery "
+              "enable_cbo | drop_index_loop | item_count_check | random_recovery | post_topology_change_validations"
               "| create_udf | drop_udf | create_n1ql_udf | validate_tenant_affinity | set_fast_rebalance_config | "
-              "validate_s3_cleanup | cleanup_s3")
+              "validate_s3_cleanup | cleanup_s3 | replica_count_check | wait_until_mutations_processed")

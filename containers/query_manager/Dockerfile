@@ -11,5 +11,7 @@ COPY sift_groundtruth.ivecs /
 COPY sift_query.fvecs /
 COPY siftsmall_groundtruth.ivecs /
 COPY siftsmall_query.fvecs /
+COPY gist_query.fvecs /
+COPY gist_groundtruth.ivecs /
 COPY query_manager.py /
 ENTRYPOINT [ "python3", "/query_manager.py"]
