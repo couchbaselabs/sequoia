@@ -83,7 +83,7 @@ servers: # each server tag represents a cluster
       rest_port: 8091
       query_port: 8093
       init_nodes: 29
-      buckets: default,WAREHOUSE,NEW_ORDER,ITEM,bucket4,bucket5,bucket6,bucket7,bucket8,bucket9
+      buckets: default,WAREHOUSE,NEW_ORDER,ITEM,bucket4,bucket5,bucket6,bucket7,bucket8,bucket9,bucket10
       users: default,WAREHOUSE,NEW_ORDER,ITEM,bucket4,bucket5,bucket6,bucket7,bucket8,bucket9
   -
       name: remote
