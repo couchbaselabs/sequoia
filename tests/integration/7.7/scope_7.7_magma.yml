@@ -161,7 +161,7 @@ buckets:
       rank : 1
   -
       name: bucket6
-      ram: 5%
+      ram: 4%
       storage: magma
       eviction: fullEviction
       historyretentionbytes: 2147483648
@@ -170,7 +170,7 @@ buckets:
       rank : 1
   -
       name: bucket7
-      ram: 5%
+      ram: 4%
       storage: magma
       eviction: fullEviction
       historyretentionbytes: 2147483648
@@ -197,7 +197,7 @@ buckets:
 
   -
       name: bucket10
-      ram: 2%
+      ram: 4%
       storage: magma
       eviction: fullEviction
       historyretentionbytes: 2147483648
