@@ -158,7 +158,7 @@
 
 ##### Data loading for gsi composite indexes creation ################
 - image: sequoiatools/magmaloader
-  command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 10}} --start 1 --end 1000000 --doc_template Hotel --all_coll true"
+  command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 10}} --start 0 --end 1000000 --doc_template Hotel --all_coll true"
   requires:  "{{eq true .DoOnce }}"
   wait: true
 
