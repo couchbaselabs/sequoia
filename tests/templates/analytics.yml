@@ -41,7 +41,7 @@
       command: "-method POST
                 -duration $0
                 -rate $1
-                -url http://{{if gt (len `$4`) 2}}$4{{else}}{{$.RestUsername}}{{end}}:{{if gt (len `$5`) 2}}$5{{else}}{{$.RestPassword}}{{end}}@$2:8095/query/service
+                -url http://{{if gt (len `$4`) 2}}$4{{else}}{{$.RestUsername}}{{end}}:{{if gt (len `$5`) 2}}$5{{else}}{{$.RestPassword}}{{end}}@$2/query/service
                 -body $3"
       alias: $6
 -
