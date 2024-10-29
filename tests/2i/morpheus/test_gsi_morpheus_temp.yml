@@ -1,503 +1,8 @@
 - include: tests/templates/kv.yml, tests/templates/n1ql.yml, tests/templates/rebalance.yml, tests/templates/multinode_failure.yml, tests/templates/bucket.yml
 
-############### Enable Plasma Bloom Filter ################
-- template: set_gsi_config
-  args: "{{.ActiveIndexNode 0}}, 'indexer.plasma.backIndex.enablePageBloomFilter':true"
-  requires: "{{eq true .DoOnce }}"
-
-############### Set num_replica ################
-- template: set_gsi_config
-  args: "{{.ActiveIndexNode 0}}, 'indexer.settings.num_replica':1"
-  requires: "{{eq true .DoOnce }}"
-
-
-################ temporary settings MB-63703 and MB-63643 ################
-- template: set_gsi_config
-  args: "{{.ActiveIndexNode 0}}, 'indexer.numSliceWriters':4"
-  requires: "{{eq true .DoOnce }}"
-
-- template: set_gsi_config
-  args: "{{.ActiveIndexNode 0}}, 'indexer.plasma.mainIndex.enableInMemoryCompression':false"
-  requires: "{{eq true .DoOnce }}"
-
-### Enable file-based rebalance
-############### shardAffinity ################
-- template: set_gsi_config
-  args: "{{.ActiveIndexNode 0}}, 'indexer.settings.enable_shard_affinity':true"
-  requires: "{{eq true .DoOnce }}"
-
-## Enable file-based rebalance
-############### shardAffinity ################
-- template: set_gsi_config
-  args: "{{.ActiveIndexNode 0}}, 'indexer.settings.provisioned.enable_shard_affinity':true"
-  requires: "{{eq true .DoOnce }}"
-
-############### Backup any corrupted index data files ################
-- template: set_gsi_config
-  args: "{{.ActiveIndexNode 0}}, 'indexer.settings.enable_corrupt_index_backup':true"
-  requires: "{{eq true .DoOnce }}"
-
-############### Disable workaround for MB-46650 ################
-- template: set_gsi_config
-  args: "{{.ActiveIndexNode 0}}, 'indexer.plasma.recovery.enableFullReplayOnError':false"
-  requires: "{{eq true .DoOnce }}"
-
-############### Enable GSI Redistribution of indexes on rebalance in ################
-- template: set_gsi_config
-  args: "{{.ActiveIndexNode 0}}, 'indexer.settings.rebalance.redistribute_indexes':true"
-  requires: "{{eq true .DoOnce }}"
-
-############### create scopes and collections across 3 buckets as scope_1,scope_2 ... ###############
-- image: sequoiatools/collections:1.0
-  command: "-i {{.Orchestrator}}:8091 -b {{.Bucket}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count=1 --collection_count=1 --collection_distribution=uniform"
-  requires: "{{eq true .DoOnce }}"
-  wait: true
-- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 1}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count=1 --collection_count=1 --collection_distribution=uniform"
-  requires: "{{eq true .DoOnce }}"
-  wait: true
-- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 2}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count=1 --collection_count=1 --collection_distribution=uniform"
-  requires: "{{eq true .DoOnce }}"
-  wait: true
-
-# Sleep for some time to allow collections manifest to sync
-- image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "300"
-  requires: "{{eq true .DoOnce }}"
-  wait: true
-
-############### initial data loading ################
-- image: sequoiatools/magmaloader
-  command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.Bucket}} --start 0  --end 10000 --doc_template Hotel --all_coll true"
-  requires: "{{eq true .DoOnce }}"
-  wait: true
-- command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 1}} --start 0  --end 10000 --doc_template Hotel --all_coll true"
-  requires: "{{eq true .DoOnce }}"
-  wait: true
-- command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 2}} --start 0  --end 10000 --doc_template Hotel --all_coll true"
-  requires: "{{eq true .DoOnce }}"
-  wait: true
-############### data loading shoes dataset ################
-- image: sequoiatools/magmaloader
-  command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 5}} --start 0  --end 50000000 --sift_path /root/bigann/ --all_coll true"
-  volumes: "/data/bigann/:/root/bigann"
-  requires: "{{eq true .DoOnce }}"
-
-############### Start Collections CRUD on bucket 4 & bucket5 ###############
-- image: sequoiatools/collections:1.0
-  command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 3}} -o crud_mode --crud_interval=30 --max_scopes={{.Scale 5}} --max_collections={{.Scale 50}}"
-  alias: collection_crud1
-- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 4}} -o crud_mode --crud_interval=30 --max_scopes={{.Scale 5}} --max_collections={{.Scale 50}}"
-  alias: collection_crud2
-
-###############  create indexes ################
-- section_start: create_replica_indexes
-- image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.Bucket}} -i {{.Scale 1}} -a create_n_indexes_on_buckets -v --num_of_indexes_per_bucket 13 --skip_default_collection false"
-  wait: true
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 1}} -i {{.Scale 1}} -a create_n_indexes_on_buckets -v --num_of_indexes_per_bucket 26 --skip_default_collection false"
-  wait: true
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 2}} -i {{.Scale 1}} -a create_n_indexes_on_buckets -v --num_of_indexes_per_bucket 26 --skip_default_collection false"
-  wait: true
-
-###############  Indexer Random Recovery ################
-
-- image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a random_recovery --timeout {{.Scale 1200}} --interval 300"
-  alias: random_recovery
-
-###############  build all deferred indexes ################
-
-- image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a build_deferred_index -m 5"
-  wait: true
-
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -a build_deferred_index -m 5"
-  wait: true
-
-# Enable CBO and Update Statistics for indexes on some collections
-- image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a enable_cbo --cbo_enable_ratio=50"
-  alias: cbo_bucket1
-
-# Sleep for some time to allow update statistics to run
-- image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "60"
-  wait: true
-
-- image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a enable_cbo --cbo_enable_ratio=50"
-  alias: cbo_bucket2
-
-# Sleep for some time to allow update statistics to run
-- image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "60"
-  wait: true
-
-- image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -a enable_cbo --cbo_enable_ratio=50"
-  alias: cbo_bucket3
-
-# Sleep for some time to allow update statistics to run
-- image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "600"
-  wait: true
-
-# Create N1QL UDF Library and function - do it once per test
-- image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a create_n1ql_udf --lib_filename n1ql_udf.js --lib_name n1qludf"
-  requires: "{{eq true .DoOnce }}"
-
-############### incremental data loading ################
-- image: sequoiatools/magmaloader
-  command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.Bucket}} --start 10000  --end 1000000 --doc_template Hotel --all_coll true"
-  requires: "{{eq true .DoOnce }}"
-- command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 1}} --start 10000  --end 1000000 --doc_template Hotel --all_coll true"
-  requires: "{{eq true .DoOnce }}"
-- command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 2}} --start 10000  --end 1000000 --doc_template Hotel --all_coll true"
-  requires: "{{eq true .DoOnce }}"
-- command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 6}} --start 0  --end 1000000 --doc_template Hotel --all_coll true"
-  requires: "{{eq true .DoOnce }}"
-- command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 7}} --start 0  --end 1000000 --doc_template Hotel --all_coll true"
-  requires: "{{eq true .DoOnce }}"
-
-- image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "1800"
-  wait: true
-
-############ upsert vector embeddings ################
-- image: sequoiatools/siftloader
-  command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.Bucket}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false"
-  alias: vector_mutations_1
-- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 2}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false"
-  alias: vector_mutations_3
-- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.Bucket}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0"
-  alias: vector_mutations_4
-- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 2}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0"
-  alias: vector_mutations_6
-- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 6}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false --base64_encoding true"
-  alias: vector_mutations_7
-- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 7}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false --xattrs true"
-  alias: vector_mutations_8
-
-############ wait for a while ################
-- image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "1800"
-  wait: true
-
-- image: sequoiatools/siftloader
-  command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 1}} --start 1 --end 1000000 --batch_size 100000 --file_path /gist_base.fvecs --load_in_chunks false"
-  alias: vector_mutations_2
-- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 1}} --start 1 --end 1000000 --batch_size 100000 --file_path /gist_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0"
-  alias: vector_mutations_5
-
-
-############ wait for a while ################
-- image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "5400"
-  wait: true
-
-- client:
-    op: rm
-    container: vector_mutations_1
-- client:
-    op: rm
-    container: vector_mutations_2
-- client:
-    op: rm
-    container: vector_mutations_3
-- client:
-    op: rm
-    container: vector_mutations_4
-- client:
-    op: rm
-    container: vector_mutations_5
-- client:
-    op: rm
-    container: vector_mutations_6
-- client:
-    op: rm
-    container: vector_mutations_7
-- client:
-    op: rm
-    container: vector_mutations_8
-
-###############  create indexes ################
-- section_start: create_replica_indexes
-- image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.Bucket}}  -a create_n_indexes_on_buckets --timeout 30 --num_of_indexes_per_bucket 12  --create_vector_indexes true --num_dimensions 128 --skip_default_collection false --num_vectors 1000000 --distance_algo COSINE"
-  wait: true
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 1}}  -a create_n_indexes_on_buckets --timeout 30  -v --num_of_indexes_per_bucket 12  --create_vector_indexes true --num_dimensions 960 --skip_default_collection false --num_vectors 1000000 --distance_algo EUCLIDEAN"
-  wait: true
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 5}}  -a create_n_indexes_on_buckets --timeout 30  -v --num_of_indexes_per_bucket 5  --create_vector_indexes_only true  --dataset shoes --num_dimensions 128 --skip_default_collection false --num_vectors 50000000 --distance_algo L2 --defer_build true --set_max_replicas 1 --use_description IVF,SQ8"
-  wait: true
-# uncomment after dev code drop
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 6}}  -a create_n_indexes_on_buckets --timeout 30  -v --num_of_indexes_per_bucket 2  --create_vector_indexes_only true --num_dimensions 128 --skip_default_collection false --num_vectors 1000000 --distance_algo L2 --base64_encoding_vectors true"
-  wait: true
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 7}}  -a create_n_indexes_on_buckets --timeout 30  -v --num_of_indexes_per_bucket 2  --create_vector_indexes_only true --num_dimensions 128 --skip_default_collection false --num_vectors 1000000 --distance_algo L2 --xattrs_vectors true"
-  wait: true
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 2}}  -a create_n_indexes_on_buckets --timeout 30  -v --num_of_indexes_per_bucket 12  --create_vector_indexes true --num_dimensions 128 --skip_default_collection false --num_vectors 1000000 --distance_algo DOT"
-  wait: true
-
-
-# Sleep for some more time after memcached-kill completes (10 minutes)
-- image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "602"
-  wait: true
-
-
-###############  build all deferred indexes ################
-
-- image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 6}} -a build_deferred_index -m 5"
-  wait: true
-
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a build_deferred_index -m 5"
-  wait: true
-
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 5}} -a build_deferred_index -m 5"
-  wait: true
-
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -a build_deferred_index -m 5"
-  wait: true
-
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a build_deferred_index -m 5"
-  wait: true
-
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 7}} -a build_deferred_index -m 5"
-  wait: true
-
-############### Kill memcached ################
-
-  template: kill_process
-  args: "{{.NthDataNode 3}}, memcached"
-
-# Sleep for some more time after memcached-kill completes (10 minutes)
-- image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "212"
-  wait: true
-
-############## Kill memcached ################
-- template: kill_process
-  args: "{{.NthDataNode 2}}, memcached"
-
-# Sleep for some more time after memcached-kill completes (10 minutes)
-- image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "319"
-  wait: true
-
-############## Kill memcached ################
-- template: kill_process
-  args: "{{.NthDataNode 1}}, memcached"
-
-# Sleep for some more time after memcached-kill completes (10 minutes)
-- image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "1812"
-  wait: true
-
-- image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 7}} -a build_deferred_index -m 5"
-  wait: true
-
-# Wait till all indexes are completely built
-- image: sequoiatools/wait_for_idx_build_complete
-  command: "{{.ActiveIndexNode 0}} {{.RestUsername}} {{.RestPassword}} {{.NthBucket 3}},{{.NthBucket 4}}"
-  wait: true
-
-######## Validate items count against KV #######################
-
-- image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a item_count_check --sample_size 5 --all_docs_indexed true"
-  wait: true
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a item_count_check --sample_size 5 --all_docs_indexed true"
-  wait: true
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -a item_count_check --sample_size 5 --all_docs_indexed true"
-  wait: true
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 5}} -a item_count_check --sample_size 5 --all_docs_indexed true"
-  wait: true
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 6}} -a item_count_check --sample_size 5 --all_docs_indexed true"
-  wait: true
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 7}} -a item_count_check --sample_size 5 --all_docs_indexed true --xattrs true"
-  wait: true
-
-- image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a wait_until_mutations_processed --timeout 18000 --bucket_list {{.Bucket}},{{.NthBucket 1}},{{.NthBucket 2}},{{.NthBucket 5}},{{.NthBucket 6}},{{.NthBucket 7}}"
-  wait: true
-
-- image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a post_topology_change_validations"
-  wait: true
-
-- image: sequoiatools/query_manager:dev
-  command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action data_validation --use_sdk true --query_type n1ql --bucket_list  {{.NthBucket 1}}  --use_tls false --skip_default false"
-  wait: true
-
-# ###############  run queries ################
-- section_start: query_vector_indexes
-- image: sequoiatools/query_manager:dev
-  command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 72000 --refresh_duration 900 --timeout 600 --num_concurrent_queries 15 --use_sdk true --query_type n1ql --template hotel,hotel_vectors --bucket_list {{.Bucket}} --distance_algo COSINE --use_tls false"
-  alias: query_workload_1
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 72000 --refresh_duration 900 --timeout 600 --num_concurrent_queries 15 --use_sdk true --query_type n1ql --template hotel,hotel_vectors --bucket_list  {{.NthBucket 1}} --distance_algo EUCLIDEAN --num_query_vectors 1000 --num_groundtruth_vectors 100 --query_file /gist_query.fvecs --groundtruth_file /gist_groundtruth.ivecs --use_tls false"
-  alias: query_workload_2
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template shoes_50M --bucket_list  {{.NthBucket 5}} --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false"
-  alias: query_workload_3
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 72000 --refresh_duration 900 --timeout 600 --num_concurrent_queries 15 --use_sdk true --query_type n1ql --template hotel,hotel_vectors --bucket_list  {{.NthBucket 2}} --distance_algo DOT --use_tls false"
-  alias: query_workload_4
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 72000 --refresh_duration 900 --timeout 600 --num_concurrent_queries 1 --use_sdk true --query_type n1ql --template hotel_vectors_only --bucket_list  {{.NthBucket 6}} --distance_algo L2 --use_tls false --skip_default false --base64 true"
-  alias: query_workload_5a
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 72000 --refresh_duration 900 --timeout 600 --num_concurrent_queries 1 --use_sdk true --query_type n1ql --template hotel_vectors_only --bucket_list  {{.NthBucket 7}} --distance_algo L2 --use_tls false --skip_default false --xattrs true"
-  alias: query_workload_6a
-- section_end: query_vector_indexes
-
-############### Start creating indexes in a loop on bucket4 & bucket5 (Collection CRUD workload) ###############
-- image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 3}} -d hotel -a create_index_loop --interval 60 --timeout {{.Scale 3600}}"
-  alias: index_loop1
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}} -d hotel -a create_index_loop --interval 60 --timeout {{.Scale 3600}}"
-  alias: index_loop2
-
-# Sleep for some time to allow some indexes to be created on bucket4 & bucket5
-- image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "600"
-  wait: true
-
-# Start dropping indexes in a loop on bucket4 & bucket5 (Collection CRUD workload)
-- image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 3}} -d hotel -a drop_index_loop --interval 60 --timeout {{.Scale 3600}}"
-  alias: index_drop_loop1
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}} -d hotel -a drop_index_loop --interval 60 --timeout {{.Scale 3600}}"
-  alias: index_drop_loop2
-  wait: true
-
-- section_end: query_replica_indexes
-
-############### Stop Collections CRUD and index creation on bucket4 & bucket5 ###############
-- client:
-    op: rm
-    container: index_loop1
-- client:
-    op: rm
-    container: index_loop2
-- client:
-    op: rm
-    container: index_drop_loop1
-- client:
-    op: rm
-    container: index_drop_loop2
-- client:
-    op: rm
-    container: random_recovery
-- image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "3600"
-  wait: true
-
-
-############### Flush Bucket ################ once ready repeat this for other buckets at different places
-- template: flush-bucket
-  args: "{{.NthBucket 2}}"
-
-
-############ Repopulate flushed bucket ################
-
-- image: sequoiatools/magmaloader
-  command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 2}} --start 0  --end 1000000 --doc_template Hotel --all_coll true"
-  requires: "{{eq true .DoOnce }}"
-  wait: true
-
-- image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "273"
-  wait: true
-
-- image: sequoiatools/siftloader
-  command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 2}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false"
-  alias: vector_mutations_flush_1
-  wait: true
-
-- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 2}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0"
-  alias: vector_mutations_flush_2
-  wait: true
-
-- image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "173"
-  wait: true
-
-- client:
-    op: rm
-    container: vector_mutations_flush_1
-
-- client:
-    op: rm
-    container: vector_mutations_flush_2
-
-- image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "1800"
-  wait: true
-
-######## Validate items count against KV #######################
-
-- image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -a item_count_check --sample_size 5 --all_docs_indexed false"
-  wait: true
-
-- section_start: change_indexer_topologies
-- image: sequoiatools/query_manager:dev
-  command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template shoes_50M --bucket_list  {{.NthBucket 5}} --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false"
-
-###############  Rebalance-in single node ################
-- template: rebalance_in
-  args: "{{.InActiveNode}}, index"
-
-# Sleep after starting rebalance
-- image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "310"
-  wait: true
-
-############### Kill indexer ################
-- template: kill_process
-  args: "{{.ActiveIndexNode 0}}, indexer"
-
-# Sleep before starting to poll for rebalance progress
-- image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "430"
-  wait: true
-
-# Wait for rebalance to complete
 - template: wait_for_rebalance
   wait: true
-
-# Sleep for some more time after indexer-kill completes (10 minutes)
-- image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a wait_until_rebalance_cleanup_done"
-  wait: true
-
-- image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "1800"
-  wait: true
-
-###############  Complete the rebalance ################
-- template: rebalance
-
-- template: wait_for_rebalance
-  wait: true
-
+  
 ############### more data loading ################
 - image: sequoiatools/magmaloader
   command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.Bucket}} --start 1000000  --end 1010000 --doc_template Hotel --all_coll true"
@@ -592,29 +97,29 @@
 - command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 7}} -a item_count_check --sample_size 5 --all_docs_indexed true --xattrs true"
   wait: true
 
-############ mutate vector embeddings ################
+############ continuous mutations on bucket1 ################
 - image: sequoiatools/siftloader
-  command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.Bucket}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false --mutate true --mutation_duration 3600"
-  alias: vector_mutations_1a
+  command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.Bucket}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false --mutate true --mutation_duration 72000"
+- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.Bucket}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0 --mutate true --mutation_duration 72000"
+- image: sequoiatools/magmaloader
+  command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.Bucket}} --start 1  --end 1000000 --doc_template Hotel --all_coll true  --mutations_mode true --mutations_timeout 72000 --ops_rate 100"
+
+############ mutate vector embeddings ################
 - command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 2}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false --mutate true --mutation_duration 3600"
   alias: vector_mutations_3a
-- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.Bucket}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0 --mutate true --mutation_duration 3600"
-  alias: vector_mutations_4a
 - command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 1}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0 --mutate true --mutation_duration 3600"
   alias: vector_mutations_5a
 - command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 2}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0 --mutate true --mutation_duration 3600"
   alias: vector_mutations_6a
 
 ####### mutate scalar fields #######################
-- image: sequoiatools/magmaloader
-  command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.Bucket}} --start 1  --end 10000 --doc_template Hotel --all_coll true  --mutations_mode true --mutations_timeout 3600 --ops_rate 100"
-  alias: vector_mutations_1a
   requires: "{{eq true .DoOnce }}"
 - command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 1}} --start 1  --end 10000 --doc_template Hotel --all_coll true  --mutations_mode true --mutations_timeout 3600 --ops_rate 100"
-  alias: vector_mutations_1a
+  alias: vector_mutations_1b
   requires: "{{eq true .DoOnce }}"
 - command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 2}} --start 1  --end 10000 --doc_template Hotel --all_coll true --mutations_mode true --mutations_timeout 3600 --ops_rate 100"
   requires: "{{eq true .DoOnce }}"
+  alias: vector_mutations_1b
 
 - image: sequoiatools/query_manager:dev
   command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template shoes_50M --bucket_list  {{.NthBucket 5}} --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false"
@@ -653,7 +158,7 @@
 # Wait for rebalance to complete
 
 - image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a wait_until_mutations_processed --timeout 18000 --bucket_list {{.Bucket}},{{.NthBucket 1}},{{.NthBucket 2}},{{.NthBucket 5}},{{.NthBucket 6}},{{.NthBucket 7}}"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a wait_until_mutations_processed --timeout 18000 --bucket_list {{.NthBucket 1}},{{.NthBucket 2}},{{.NthBucket 5}},{{.NthBucket 6}},{{.NthBucket 7}}"
   wait: true
 
 - image: sequoiatools/indexmanager
@@ -789,11 +294,11 @@
   wait: true
 
 - image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a wait_until_mutations_processed --timeout 18000 --bucket_list {{.Bucket}},{{.NthBucket 1}},{{.NthBucket 2}},{{.NthBucket 5}},{{.NthBucket 6}},{{.NthBucket 7}}"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a wait_until_mutations_processed --timeout 18000 --bucket_list {{.NthBucket 1}},{{.NthBucket 2}},{{.NthBucket 5}},{{.NthBucket 6}},{{.NthBucket 7}}"
   wait: true
 
 - image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -a post_topology_change_validations"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 5}} -a post_topology_change_validations"
   wait: true
 
 - image: sequoiatools/query_manager:dev
@@ -1459,11 +964,11 @@
   wait: true
 
 - image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a wait_until_mutations_processed --timeout 18000 --bucket_list {{.Bucket}},{{.NthBucket 1}},{{.NthBucket 2}},{{.NthBucket 5}},{{.NthBucket 6}},{{.NthBucket 7}}"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a wait_until_mutations_processed --timeout 18000 --bucket_list {{.NthBucket 1}},{{.NthBucket 2}},{{.NthBucket 5}},{{.NthBucket 6}},{{.NthBucket 7}}"
   wait: true
 
 - image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -a post_topology_change_validations"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 6}} -a post_topology_change_validations"
   wait: true
 
 - image: sequoiatools/query_manager:dev
@@ -1595,11 +1100,11 @@
   wait: true
 
 - image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a wait_until_mutations_processed --timeout 18000 --bucket_list {{.Bucket}},{{.NthBucket 1}},{{.NthBucket 2}},{{.NthBucket 5}},{{.NthBucket 6}},{{.NthBucket 7}}"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a wait_until_mutations_processed --timeout 18000 --bucket_list {{.NthBucket 1}},{{.NthBucket 2}},{{.NthBucket 5}},{{.NthBucket 6}},{{.NthBucket 7}}"
   wait: true
 
 - image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a post_topology_change_validations"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 7}} -a post_topology_change_validations"
   wait: true
 
 - image: sequoiatools/query_manager:dev
@@ -1921,11 +1426,11 @@
   wait: true
 - command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 7}} -a item_count_check --sample_size 5 --all_docs_indexed true --xattrs true"
   wait: true
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 7}} -a post_topology_change_validations"
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a post_topology_change_validations"
   wait: true
 
 - image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a wait_until_mutations_processed --timeout 18000 --bucket_list {{.Bucket}},{{.NthBucket 1}},{{.NthBucket 2}},{{.NthBucket 5}},{{.NthBucket 6}},{{.NthBucket 7}}"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a wait_until_mutations_processed --timeout 18000 --bucket_list {{.NthBucket 1}},{{.NthBucket 2}},{{.NthBucket 5}},{{.NthBucket 6}},{{.NthBucket 7}}"
   wait: true
 
 ############## Kill projector ################
@@ -2233,8 +1738,6 @@
 ######## Validate items count against KV #######################
 
 - image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a item_count_check --sample_size 5 --all_docs_indexed true"
-  wait: true
 - command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a item_count_check --sample_size 5 --all_docs_indexed true"
   wait: true
 - command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -a item_count_check --sample_size 5 --all_docs_indexed true"
@@ -2247,11 +1750,11 @@
   wait: true
 
 - image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a post_topology_change_validations"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -a post_topology_change_validations"
   wait: true
 
 - image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a wait_until_mutations_processed --timeout 18000 --bucket_list {{.Bucket}},{{.NthBucket 1}},{{.NthBucket 2}},{{.NthBucket 5}},{{.NthBucket 6}},{{.NthBucket 7}}"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a wait_until_mutations_processed --timeout 18000 --bucket_list {{.NthBucket 1}},{{.NthBucket 2}},{{.NthBucket 5}},{{.NthBucket 6}},{{.NthBucket 7}}"
   wait: true
 
 # change the topologies on the query nodes

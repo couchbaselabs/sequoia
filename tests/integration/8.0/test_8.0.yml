@@ -163,7 +163,7 @@
   wait: true
 
 ##### Insert vector embeddings on the bucket used for composite indexes creation ################
-- image: sequoiatools/vectorloader
+- image: sequoiatools/siftloader
   command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 10}} --start 1 --end 100000 --batch_size 10000 --file_path /sift_base.fvecs --load_in_chunks false"
   wait: true
 

@@ -95,9 +95,9 @@
 - image: sequoiatools/indexmanager
   command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.Bucket}} -i {{.Scale 1}} -a create_n_indexes_on_buckets -v --num_of_indexes_per_bucket 13 --skip_default_collection false"
   wait: true
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 1}} -i {{.Scale 1}} -a create_n_indexes_on_buckets -v --num_of_indexes_per_bucket 13 --skip_default_collection false"
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 1}} -i {{.Scale 1}} -a create_n_indexes_on_buckets -v --num_of_indexes_per_bucket 26 --skip_default_collection false"
   wait: true
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 2}} -i {{.Scale 1}} -a create_n_indexes_on_buckets -v --num_of_indexes_per_bucket 13 --skip_default_collection false"
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 2}} -i {{.Scale 1}} -a create_n_indexes_on_buckets -v --num_of_indexes_per_bucket 26 --skip_default_collection false"
   wait: true
 
 ###############  Indexer Random Recovery ################
@@ -173,14 +173,10 @@
 - image: sequoiatools/siftloader
   command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.Bucket}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false"
   alias: vector_mutations_1
-- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 1}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false"
-  alias: vector_mutations_2
 - command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 2}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false"
   alias: vector_mutations_3
 - command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.Bucket}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0"
   alias: vector_mutations_4
-- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 1}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0"
-  alias: vector_mutations_5
 - command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 2}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0"
   alias: vector_mutations_6
 - command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 6}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false --base64_encoding true"
@@ -191,9 +187,21 @@
 ############ wait for a while ################
 - image: sequoiatools/cmd
   entrypoint: sleep
-  command: "7200"
+  command: "1800"
   wait: true
 
+- image: sequoiatools/siftloader
+  command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 1}} --start 1 --end 1000000 --batch_size 100000 --file_path /gist_base.fvecs --load_in_chunks false"
+  alias: vector_mutations_2
+- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 1}} --start 1 --end 1000000 --batch_size 100000 --file_path /gist_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0"
+  alias: vector_mutations_5
+
+
+############ wait for a while ################
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "5400"
+  wait: true
 
 - client:
     op: rm
@@ -223,18 +231,18 @@
 ###############  create indexes ################
 - section_start: create_replica_indexes
 - image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.Bucket}}  -a create_n_indexes_on_buckets --timeout 30 --num_of_indexes_per_bucket 6  --create_vector_indexes true --num_dimensions 128 --skip_default_collection false --num_vectors 1000000 --distance_algo COSINE"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.Bucket}}  -a create_n_indexes_on_buckets --timeout 30 --num_of_indexes_per_bucket 12  --create_vector_indexes true --num_dimensions 128 --skip_default_collection false --num_vectors 1000000 --distance_algo COSINE"
   wait: true
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 1}}  -a create_n_indexes_on_buckets --timeout 30  -v --num_of_indexes_per_bucket 6  --create_vector_indexes true --num_dimensions 128 --skip_default_collection false --num_vectors 1000000 --distance_algo EUCLIDEAN"
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 1}}  -a create_n_indexes_on_buckets --timeout 30  -v --num_of_indexes_per_bucket 12  --create_vector_indexes true --num_dimensions 960 --skip_default_collection false --num_vectors 1000000 --distance_algo EUCLIDEAN"
   wait: true
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 5}}  -a create_n_indexes_on_buckets --timeout 30  -v --num_of_indexes_per_bucket 5  --create_vector_indexes_only true  --dataset shoes --num_dimensions 128 --skip_default_collection false --num_vectors 50000000 --distance_algo L2 --defer_build true --defer_build true --set_max_replicas 1 --use_description IVF,SQ8"
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 5}}  -a create_n_indexes_on_buckets --timeout 30  -v --num_of_indexes_per_bucket 5  --create_vector_indexes_only true  --dataset shoes --num_dimensions 128 --skip_default_collection false --num_vectors 50000000 --distance_algo L2 --defer_build true --set_max_replicas 1 --use_description IVF,SQ8"
   wait: true
 # uncomment after dev code drop
 - command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 6}}  -a create_n_indexes_on_buckets --timeout 30  -v --num_of_indexes_per_bucket 2  --create_vector_indexes_only true --num_dimensions 128 --skip_default_collection false --num_vectors 1000000 --distance_algo L2 --base64_encoding_vectors true"
   wait: true
 - command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 7}}  -a create_n_indexes_on_buckets --timeout 30  -v --num_of_indexes_per_bucket 2  --create_vector_indexes_only true --num_dimensions 128 --skip_default_collection false --num_vectors 1000000 --distance_algo L2 --xattrs_vectors true"
   wait: true
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 2}}  -a create_n_indexes_on_buckets --timeout 30  -v --num_of_indexes_per_bucket 6  --create_vector_indexes true --num_dimensions 128 --skip_default_collection false --num_vectors 1000000 --distance_algo DOT"
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 2}}  -a create_n_indexes_on_buckets --timeout 30  -v --num_of_indexes_per_bucket 12  --create_vector_indexes true --num_dimensions 128 --skip_default_collection false --num_vectors 1000000 --distance_algo DOT"
   wait: true
 
 
@@ -248,27 +256,26 @@
 ###############  build all deferred indexes ################
 
 - image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a build_deferred_index -m 5"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 6}} -a build_deferred_index -m 5"
   wait: true
 
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a build_deferred_index -m 5"
-  wait: true
-
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -a build_deferred_index -m 5"
-  wait: true
-
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 7}} -a build_deferred_index -m 5"
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a build_deferred_index -m 5"
   wait: true
 
 - command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 5}} -a build_deferred_index -m 5"
   wait: true
 
-- image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 6}} -a build_deferred_index -m 5"
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -a build_deferred_index -m 5"
   wait: true
 
-  ############### Kill memcached ################
-  #- uncomment after MB-63090 fix
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a build_deferred_index -m 5"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 7}} -a build_deferred_index -m 5"
+  wait: true
+
+############### Kill memcached ################
+
   template: kill_process
   args: "{{.NthDataNode 3}}, memcached"
 
@@ -298,6 +305,10 @@
   command: "1812"
   wait: true
 
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 7}} -a build_deferred_index -m 5"
+  wait: true
+
 # Wait till all indexes are completely built
 - image: sequoiatools/wait_for_idx_build_complete
   command: "{{.ActiveIndexNode 0}} {{.RestUsername}} {{.RestPassword}} {{.NthBucket 3}},{{.NthBucket 4}}"
@@ -320,6 +331,10 @@
   wait: true
 
 - image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a wait_until_mutations_processed --timeout 18000 --bucket_list {{.NthBucket 1}},{{.NthBucket 2}},{{.NthBucket 5}},{{.NthBucket 6}},{{.NthBucket 7}}"
+  wait: true
+
+- image: sequoiatools/indexmanager
   command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a post_topology_change_validations"
   wait: true
 
@@ -332,7 +347,7 @@
 - image: sequoiatools/query_manager:dev
   command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 72000 --refresh_duration 900 --timeout 600 --num_concurrent_queries 15 --use_sdk true --query_type n1ql --template hotel,hotel_vectors --bucket_list {{.Bucket}} --distance_algo COSINE --use_tls false"
   alias: query_workload_1
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 72000 --refresh_duration 900 --timeout 600 --num_concurrent_queries 15 --use_sdk true --query_type n1ql --template hotel,hotel_vectors --bucket_list  {{.NthBucket 1}} --distance_algo EUCLIDEAN --use_tls false"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 72000 --refresh_duration 900 --timeout 600 --num_concurrent_queries 15 --use_sdk true --query_type n1ql --template hotel,hotel_vectors --bucket_list  {{.NthBucket 1}} --distance_algo EUCLIDEAN --num_query_vectors 1000 --num_groundtruth_vectors 100 --query_file /gist_query.fvecs --groundtruth_file /gist_groundtruth.ivecs --use_tls false"
   alias: query_workload_2
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template shoes_50M --bucket_list  {{.NthBucket 5}} --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false"
   alias: query_workload_3
@@ -391,13 +406,13 @@
 
 ############### Flush Bucket ################ once ready repeat this for other buckets at different places
 - template: flush-bucket
-  args: "{{.NthBucket 1}}"
+  args: "{{.NthBucket 2}}"
 
 
 ############ Repopulate flushed bucket ################
 
 - image: sequoiatools/magmaloader
-  command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 1}} --start 0  --end 1000000 --doc_template Hotel --all_coll true"
+  command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 2}} --start 0  --end 1000000 --doc_template Hotel --all_coll true"
   requires: "{{eq true .DoOnce }}"
   wait: true
 
@@ -407,11 +422,11 @@
   wait: true
 
 - image: sequoiatools/siftloader
-  command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 1}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false"
+  command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 2}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false"
   alias: vector_mutations_flush_1
   wait: true
 
-- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 1}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0"
+- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 2}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0"
   alias: vector_mutations_flush_2
   wait: true
 
@@ -436,7 +451,7 @@
 ######## Validate items count against KV #######################
 
 - image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a item_count_check --sample_size 5 --all_docs_indexed false"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -a item_count_check --sample_size 5 --all_docs_indexed false"
   wait: true
 
 - section_start: change_indexer_topologies
@@ -506,7 +521,7 @@
   command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.Bucket}} --start 1000001 --end 1010000 --batch_size 1000 --file_path /siftsmall_base.fvecs --load_in_chunks false"
   alias: vector_mutations_1r
   wait: true
-- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 1}} --start 1000001 --end 1010000 --batch_size 1000 --file_path /siftsmall_base.fvecs --load_in_chunks false"
+- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 1}} --start 1000001 --end 1010000 --batch_size 1000 --file_path /gist_base.fvecs --load_in_chunks false"
   alias: vector_mutations_2r
   wait: true
 - command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 2}} --start 1000001 --end 1010000 --batch_size 1000 --file_path /siftsmall_base.fvecs --load_in_chunks false"
@@ -515,7 +530,7 @@
 - command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.Bucket}} --start 1000001 --end 1010000 --batch_size 1000 --file_path /siftsmall_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0"
   alias: vector_mutations_4r
   wait: true
-- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 1}} --start 1000001 --end 1010000 --batch_size 1000 --file_path /siftsmall_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0"
+- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 1}} --start 1000001 --end 1010000 --batch_size 1000 --file_path /gist_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0"
   alias: vector_mutations_5r
   wait: true
 - command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 2}} --start 1000001 --end 1010000 --batch_size 1000 --file_path /siftsmall_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0"
@@ -555,6 +570,12 @@
     op: rm
     container: vector_mutations_8r
 
+
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "1800"
+  wait: true
+
 ######## Validate items count against KV #######################
 
 - image: sequoiatools/indexmanager
@@ -571,16 +592,17 @@
 - command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 7}} -a item_count_check --sample_size 5 --all_docs_indexed true --xattrs true"
   wait: true
 
+############ continuous mutations on bucket1 ################
+- image: sequoiatools/siftloader
+  command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.Bucket}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false --mutate true --mutation_duration 72000"
+- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.Bucket}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0 --mutate true --mutation_duration 72000"
+- image: sequoiatools/magmaloader
+  command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.Bucket}} --start 1  --end 1000000 --doc_template Hotel --all_coll true  --mutations_mode true --mutations_timeout 72000 --ops_rate 100"
+
 ############ mutate vector embeddings ################
 - image: sequoiatools/siftloader
-  command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.Bucket}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false --mutate true --mutation_duration 3600"
-  alias: vector_mutations_1a
-- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 1}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false --mutate true --mutation_duration 3600"
-  alias: vector_mutations_2a
 - command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 2}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false --mutate true --mutation_duration 3600"
   alias: vector_mutations_3a
-- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.Bucket}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0 --mutate true --mutation_duration 3600"
-  alias: vector_mutations_4a
 - command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 1}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0 --mutate true --mutation_duration 3600"
   alias: vector_mutations_5a
 - command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 2}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0 --mutate true --mutation_duration 3600"
@@ -588,12 +610,13 @@
 
 ####### mutate scalar fields #######################
 - image: sequoiatools/magmaloader
-  command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.Bucket}} --start 1  --end 100000 --doc_template Hotel --all_coll true  --mutations_mode true --mutations_timeout 3600 --ops_rate 100"
   requires: "{{eq true .DoOnce }}"
-- command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 1}} --start 1  --end 100000 --doc_template Hotel --all_coll true  --mutations_mode true --mutations_timeout 3600 --ops_rate 100"
+- command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 1}} --start 1  --end 10000 --doc_template Hotel --all_coll true  --mutations_mode true --mutations_timeout 3600 --ops_rate 100"
+  alias: vector_mutations_1b
   requires: "{{eq true .DoOnce }}"
-- command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 2}} --start 1  --end 100000 --doc_template Hotel --all_coll true --mutations_mode true --mutations_timeout 3600 --ops_rate 100"
+- command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 2}} --start 1  --end 10000 --doc_template Hotel --all_coll true --mutations_mode true --mutations_timeout 3600 --ops_rate 100"
   requires: "{{eq true .DoOnce }}"
+  alias: vector_mutations_1b
 
 - image: sequoiatools/query_manager:dev
   command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template shoes_50M --bucket_list  {{.NthBucket 5}} --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false"
@@ -626,10 +649,14 @@
 
 - image: sequoiatools/cmd
   entrypoint: sleep
-  command: "1800"
+  command: "7200"
   wait: true
 
 # Wait for rebalance to complete
+
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a wait_until_mutations_processed --timeout 18000 --bucket_list {{.NthBucket 1}},{{.NthBucket 2}},{{.NthBucket 5}},{{.NthBucket 6}},{{.NthBucket 7}}"
+  wait: true
 
 - image: sequoiatools/indexmanager
   command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -a post_topology_change_validations"
@@ -692,7 +719,7 @@
   command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.Bucket}} --start 1010001 --end 1020000 --batch_size 1000 --file_path /siftsmall_base.fvecs --load_in_chunks false"
   alias: vector_mutations_1r2
   wait: true
-- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 1}} --start 1010001 --end 1020000 --batch_size 1000 --file_path /siftsmall_base.fvecs --load_in_chunks false"
+- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 1}} --start 1010001 --end 1020000 --batch_size 1000 --file_path /gist_base.fvecs --load_in_chunks false"
   alias: vector_mutations_2r2
   wait: true
 - command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 2}} --start 1010001 --end 1020000 --batch_size 1000 --file_path /siftsmall_base.fvecs --load_in_chunks false"
@@ -701,7 +728,7 @@
 - command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.Bucket}} --start 1010001 --end 1020000 --batch_size 1000 --file_path /siftsmall_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0"
   alias: vector_mutations_4r2
   wait: true
-- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 1}} --start 1010001 --end 1020000 --batch_size 1000 --file_path /siftsmall_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0"
+- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 1}} --start 1010001 --end 1020000 --batch_size 1000 --file_path /gist_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0"
   alias: vector_mutations_5r2
   wait: true
 - command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 2}} --start 1010001 --end 1020000 --batch_size 1000 --file_path /siftsmall_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0"
@@ -744,7 +771,7 @@
 
 - image: sequoiatools/cmd
   entrypoint: sleep
-  command: "1800"
+  command: "7200"
   wait: true
 
 ######## Validations #######################
@@ -764,11 +791,15 @@
   wait: true
 
 - image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a post_topology_change_validations"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a wait_until_mutations_processed --timeout 18000 --bucket_list {{.NthBucket 1}},{{.NthBucket 2}},{{.NthBucket 5}},{{.NthBucket 6}},{{.NthBucket 7}}"
+  wait: true
+
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 5}} -a post_topology_change_validations"
   wait: true
 
 - image: sequoiatools/query_manager:dev
-  command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action data_validation --use_sdk true --query_type n1ql --bucket_list  {{.NthBucket 1}}  --use_tls false --skip_default false"
+  command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action data_validation --use_sdk true --query_type n1ql --bucket_list  {{.NthBucket 2}}  --use_tls false --skip_default false"
   wait: true
 
 ###############  Rebalance-out single node and stop rebalance ################
@@ -805,24 +836,22 @@
 - image: sequoiatools/siftloader
   command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.Bucket}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false --mutate true --mutation_duration 3600"
   alias: vector_mutations_1a
-- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 1}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false --mutate true --mutation_duration 3600"
-  alias: vector_mutations_2a
 - command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 2}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false --mutate true --mutation_duration 3600"
   alias: vector_mutations_3a
 - command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.Bucket}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0 --mutate true --mutation_duration 3600"
   alias: vector_mutations_4a
-- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 1}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0 --mutate true --mutation_duration 3600"
+- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 1}} --start 1 --end 1000000 --batch_size 100000 --file_path /gist_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0 --mutate true --mutation_duration 3600"
   alias: vector_mutations_5a
 - command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 2}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0 --mutate true --mutation_duration 3600"
   alias: vector_mutations_6a
 
 ####### mutate scalar fields #######################
 - image: sequoiatools/magmaloader
-  command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.Bucket}} --start 1  --end 100000 --doc_template Hotel --all_coll true  --mutations_mode true --mutations_timeout 3600 --ops_rate 100"
+  command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.Bucket}} --start 1  --end 10000 --doc_template Hotel --all_coll true  --mutations_mode true --mutations_timeout 3600 --ops_rate 100"
   requires: "{{eq true .DoOnce }}"
-- command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 1}} --start 1  --end 100000 --doc_template Hotel --all_coll true  --mutations_mode true --mutations_timeout 3600 --ops_rate 100"
+- command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 1}} --start 1  --end 10000 --doc_template Hotel --all_coll true  --mutations_mode true --mutations_timeout 3600 --ops_rate 100"
   requires: "{{eq true .DoOnce }}"
-- command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 2}} --start 1  --end 100000 --doc_template Hotel --all_coll true --mutations_mode true --mutations_timeout 3600 --ops_rate 100"
+- command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 2}} --start 1  --end 10000 --doc_template Hotel --all_coll true --mutations_mode true --mutations_timeout 3600 --ops_rate 100"
   requires: "{{eq true .DoOnce }}"
 
 ###############  Rebalance-out single node ################
@@ -949,24 +978,22 @@
 - image: sequoiatools/siftloader
   command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.Bucket}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false --mutate true --mutation_duration 3600"
   alias: vector_mutations_1a
-- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 1}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false --mutate true --mutation_duration 3600"
-  alias: vector_mutations_2a
 - command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 2}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false --mutate true --mutation_duration 3600"
   alias: vector_mutations_3a
 - command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.Bucket}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0 --mutate true --mutation_duration 3600"
   alias: vector_mutations_4a
-- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 1}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0 --mutate true --mutation_duration 3600"
+- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 1}} --start 1 --end 1000000 --batch_size 100000 --file_path /gist_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0 --mutate true --mutation_duration 3600"
   alias: vector_mutations_5a
 - command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 2}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0 --mutate true --mutation_duration 3600"
   alias: vector_mutations_6a
 
 ####### mutate scalar fields #######################
 - image: sequoiatools/magmaloader
-  command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.Bucket}} --start 1  --end 100000 --doc_template Hotel --all_coll true  --mutations_mode true --mutations_timeout 3600 --ops_rate 100"
+  command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.Bucket}} --start 1  --end 10000 --doc_template Hotel --all_coll true  --mutations_mode true --mutations_timeout 3600 --ops_rate 100"
   requires: "{{eq true .DoOnce }}"
-- command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 1}} --start 1  --end 100000 --doc_template Hotel --all_coll true  --mutations_mode true --mutations_timeout 3600 --ops_rate 100"
+- command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 1}} --start 1  --end 10000 --doc_template Hotel --all_coll true  --mutations_mode true --mutations_timeout 3600 --ops_rate 100"
   requires: "{{eq true .DoOnce }}"
-- command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 2}} --start 1  --end 100000 --doc_template Hotel --all_coll true --mutations_mode true --mutations_timeout 3600 --ops_rate 100"
+- command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 2}} --start 1  --end 10000 --doc_template Hotel --all_coll true --mutations_mode true --mutations_timeout 3600 --ops_rate 100"
   requires: "{{eq true .DoOnce }}"
 
 ###############  Rebalance-in two index nodes ################
@@ -1023,7 +1050,7 @@
   command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.Bucket}} --start 1020001 --end 1030000 --batch_size 1000 --file_path /siftsmall_base.fvecs --load_in_chunks false"
   alias: vector_mutations_1r3
   wait: true
-- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 1}} --start 1020001 --end 1030000 --batch_size 1000 --file_path /siftsmall_base.fvecs --load_in_chunks false"
+- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 1}} --start 1020001 --end 1030000 --batch_size 1000 --file_path /gist_base.fvecs --load_in_chunks false"
   alias: vector_mutations_2r3
   wait: true
 - command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 2}} --start 1020001 --end 1030000 --batch_size 1000 --file_path /siftsmall_base.fvecs --load_in_chunks false"
@@ -1032,7 +1059,7 @@
 - command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.Bucket}} --start 1020001 --end 1030000 --batch_size 1000 --file_path /siftsmall_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0"
   alias: vector_mutations_4r3
   wait: true
-- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 1}} --start 1020001 --end 1030000 --batch_size 1000 --file_path /siftsmall_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0"
+- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 1}} --start 1020001 --end 1030000 --batch_size 1000 --file_path /gist_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0"
   alias: vector_mutations_5r3
   wait: true
 - command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 2}} --start 1020001 --end 1030000 --batch_size 1000 --file_path /siftsmall_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0"
@@ -1311,7 +1338,7 @@
   command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.Bucket}} --start 1030001 --end 1040000 --batch_size 1000 --file_path /siftsmall_base.fvecs --load_in_chunks false"
   alias: vector_mutations_1r
   wait: true
-- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 1}} --start 1030001 --end 1040000 --batch_size 1000 --file_path /siftsmall_base.fvecs --load_in_chunks false"
+- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 1}} --start 1030001 --end 1040000 --batch_size 1000 --file_path /gist_base.fvecs --load_in_chunks false"
   alias: vector_mutations_2r
   wait: true
 - command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 2}} --start 1030001 --end 1040000 --batch_size 1000 --file_path /siftsmall_base.fvecs --load_in_chunks false"
@@ -1320,7 +1347,7 @@
 - command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.Bucket}} --start 1030001 --end 1040000 --batch_size 1000 --file_path /siftsmall_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0"
   alias: vector_mutations_4r
   wait: true
-- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 1}} --start 1030001 --end 1040000 --batch_size 1000 --file_path /siftsmall_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0"
+- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 1}} --start 1030001 --end 1040000 --batch_size 1000 --file_path /gist_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0"
   alias: vector_mutations_5r
   wait: true
 - command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 2}} --start 1030001 --end 1040000 --batch_size 1000 --file_path /siftsmall_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0"
@@ -1380,24 +1407,22 @@
 - image: sequoiatools/siftloader
   command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.Bucket}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false --mutate true --mutation_duration 3600"
   alias: vector_mutations_1a
-- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 1}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false --mutate true --mutation_duration 3600"
-  alias: vector_mutations_2a
 - command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 2}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false --mutate true --mutation_duration 3600"
   alias: vector_mutations_3a
 - command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.Bucket}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0 --mutate true --mutation_duration 3600"
   alias: vector_mutations_4a
-- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 1}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0 --mutate true --mutation_duration 3600"
+- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 1}} --start 1 --end 1000000 --batch_size 100000 --file_path /gist_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0 --mutate true --mutation_duration 3600"
   alias: vector_mutations_5a
 - command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 2}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0 --mutate true --mutation_duration 3600"
   alias: vector_mutations_6a
 
 ####### mutate scalar fields #######################
 - image: sequoiatools/magmaloader
-  command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.Bucket}} --start 1  --end 100000 --doc_template Hotel --all_coll true  --mutations_mode true --mutations_timeout 3600 --ops_rate 100"
+  command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.Bucket}} --start 1  --end 10000 --doc_template Hotel --all_coll true  --mutations_mode true --mutations_timeout 3600 --ops_rate 100"
   requires: "{{eq true .DoOnce }}"
-- command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 1}} --start 1  --end 100000 --doc_template Hotel --all_coll true  --mutations_mode true --mutations_timeout 3600 --ops_rate 100"
+- command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 1}} --start 1  --end 10000 --doc_template Hotel --all_coll true  --mutations_mode true --mutations_timeout 3600 --ops_rate 100"
   requires: "{{eq true .DoOnce }}"
-- command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 2}} --start 1  --end 100000 --doc_template Hotel --all_coll true --mutations_mode true --mutations_timeout 3600 --ops_rate 100"
+- command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 2}} --start 1  --end 10000 --doc_template Hotel --all_coll true --mutations_mode true --mutations_timeout 3600 --ops_rate 100"
   requires: "{{eq true .DoOnce }}"
 
 - image: sequoiatools/query_manager:dev
@@ -1428,7 +1453,7 @@
 
 - image: sequoiatools/cmd
   entrypoint: sleep
-  command: "1800"
+  command: "7200"
   wait: true
 
 # Wait for rebalance to complete
@@ -1436,7 +1461,11 @@
   wait: true
 
 - image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -a post_topology_change_validations"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a wait_until_mutations_processed --timeout 18000 --bucket_list {{.NthBucket 1}},{{.NthBucket 2}},{{.NthBucket 5}},{{.NthBucket 6}},{{.NthBucket 7}}"
+  wait: true
+
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 6}} -a post_topology_change_validations"
   wait: true
 
 - image: sequoiatools/query_manager:dev
@@ -1496,7 +1525,7 @@
   command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.Bucket}} --start 1040001 --end 1050000 --batch_size 1000 --file_path /siftsmall_base.fvecs --load_in_chunks false"
   alias: vector_mutations_1r2
   wait: true
-- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 1}} --start 1040001 --end 1050000 --batch_size 1000 --file_path /siftsmall_base.fvecs --load_in_chunks false"
+- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 1}} --start 1040001 --end 1050000 --batch_size 1000 --file_path /gist_base.fvecs --load_in_chunks false"
   alias: vector_mutations_2r2
   wait: true
 - command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 2}} --start 1040001 --end 1050000 --batch_size 1000 --file_path /siftsmall_base.fvecs --load_in_chunks false"
@@ -1505,7 +1534,7 @@
 - command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.Bucket}} --start 1040001 --end 1050000 --batch_size 1000 --file_path /siftsmall_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0"
   alias: vector_mutations_4r2
   wait: true
-- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 1}} --start 1040001 --end 1050000 --batch_size 1000 --file_path /siftsmall_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0"
+- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 1}} --start 1040001 --end 1050000 --batch_size 1000 --file_path /gist_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0"
   alias: vector_mutations_5r2
   wait: true
 - command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 2}} --start 1040001 --end 1050000 --batch_size 1000 --file_path /siftsmall_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0"
@@ -1548,7 +1577,7 @@
 
 - image: sequoiatools/cmd
   entrypoint: sleep
-  command: "1800"
+  command: "7200"
   wait: true
 
 ######## Validations #######################
@@ -1568,7 +1597,11 @@
   wait: true
 
 - image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a post_topology_change_validations"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a wait_until_mutations_processed --timeout 18000 --bucket_list {{.NthBucket 1}},{{.NthBucket 2}},{{.NthBucket 5}},{{.NthBucket 6}},{{.NthBucket 7}}"
+  wait: true
+
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 7}} -a post_topology_change_validations"
   wait: true
 
 - image: sequoiatools/query_manager:dev
@@ -1609,24 +1642,22 @@
 - image: sequoiatools/siftloader
   command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.Bucket}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false --mutate true --mutation_duration 3600"
   alias: vector_mutations_1a
-- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 1}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false --mutate true --mutation_duration 3600"
-  alias: vector_mutations_2a
 - command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 2}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false --mutate true --mutation_duration 3600"
   alias: vector_mutations_3a
 - command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.Bucket}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0 --mutate true --mutation_duration 3600"
   alias: vector_mutations_4a
-- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 1}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0 --mutate true --mutation_duration 3600"
+- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 1}} --start 1 --end 1000000 --batch_size 100000 --file_path /gist_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0 --mutate true --mutation_duration 3600"
   alias: vector_mutations_5a
 - command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 2}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0 --mutate true --mutation_duration 3600"
   alias: vector_mutations_6a
 
 ####### mutate scalar fields #######################
 - image: sequoiatools/magmaloader
-  command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.Bucket}} --start 1  --end 100000 --doc_template Hotel --all_coll true  --mutations_mode true --mutations_timeout 3600 --ops_rate 100"
+  command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.Bucket}} --start 1  --end 10000 --doc_template Hotel --all_coll true  --mutations_mode true --mutations_timeout 3600 --ops_rate 100"
   requires: "{{eq true .DoOnce }}"
-- command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 1}} --start 1  --end 100000 --doc_template Hotel --all_coll true  --mutations_mode true --mutations_timeout 3600 --ops_rate 100"
+- command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 1}} --start 1  --end 10000 --doc_template Hotel --all_coll true  --mutations_mode true --mutations_timeout 3600 --ops_rate 100"
   requires: "{{eq true .DoOnce }}"
-- command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 2}} --start 1  --end 100000 --doc_template Hotel --all_coll true --mutations_mode true --mutations_timeout 3600 --ops_rate 100"
+- command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 2}} --start 1  --end 10000 --doc_template Hotel --all_coll true --mutations_mode true --mutations_timeout 3600 --ops_rate 100"
   requires: "{{eq true .DoOnce }}"
 
 ###############  Rebalance-out single node ################
@@ -1749,24 +1780,22 @@
 - image: sequoiatools/siftloader
   command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.Bucket}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false --mutate true --mutation_duration 3600"
   alias: vector_mutations_1a
-- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 1}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false --mutate true --mutation_duration 3600"
-  alias: vector_mutations_2a
 - command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 2}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false --mutate true --mutation_duration 3600"
   alias: vector_mutations_3a
 - command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.Bucket}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0 --mutate true --mutation_duration 3600"
   alias: vector_mutations_4a
-- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 1}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0 --mutate true --mutation_duration 3600"
+- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 1}} --start 1 --end 1000000 --batch_size 100000 --file_path /gist_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0 --mutate true --mutation_duration 3600"
   alias: vector_mutations_5a
 - command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 2}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0 --mutate true --mutation_duration 3600"
   alias: vector_mutations_6a
 
 ####### mutate scalar fields #######################
 - image: sequoiatools/magmaloader
-  command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.Bucket}} --start 1  --end 100000 --doc_template Hotel --all_coll true  --mutations_mode true --mutations_timeout 3600 --ops_rate 100"
+  command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.Bucket}} --start 1  --end 10000 --doc_template Hotel --all_coll true  --mutations_mode true --mutations_timeout 3600 --ops_rate 100"
   requires: "{{eq true .DoOnce }}"
-- command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 1}} --start 1  --end 100000 --doc_template Hotel --all_coll true  --mutations_mode true --mutations_timeout 3600 --ops_rate 100"
+- command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 1}} --start 1  --end 10000 --doc_template Hotel --all_coll true  --mutations_mode true --mutations_timeout 3600 --ops_rate 100"
   requires: "{{eq true .DoOnce }}"
-- command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 2}} --start 1  --end 100000 --doc_template Hotel --all_coll true --mutations_mode true --mutations_timeout 3600 --ops_rate 100"
+- command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 2}} --start 1  --end 10000 --doc_template Hotel --all_coll true --mutations_mode true --mutations_timeout 3600 --ops_rate 100"
   requires: "{{eq true .DoOnce }}"
 
 ###############  Rebalance-in two index nodes ################
@@ -1823,7 +1852,7 @@
   command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.Bucket}} --start 1050001 --end 1060000 --batch_size 1000 --file_path /siftsmall_base.fvecs --load_in_chunks false"
   alias: vector_mutations_1r3
   wait: true
-- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 1}} --start 1050001 --end 1060000 --batch_size 1000 --file_path /siftsmall_base.fvecs --load_in_chunks false"
+- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 1}} --start 1050001 --end 1060000 --batch_size 1000 --file_path /gist_base.fvecs --load_in_chunks false"
   alias: vector_mutations_2r3
   wait: true
 - command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 2}} --start 1050001 --end 1060000 --batch_size 1000 --file_path /siftsmall_base.fvecs --load_in_chunks false"
@@ -1832,7 +1861,7 @@
 - command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.Bucket}} --start 1050001 --end 1060000 --batch_size 1000 --file_path /siftsmall_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0"
   alias: vector_mutations_4r3
   wait: true
-- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 1}} --start 1050001 --end 1060000 --batch_size 1000 --file_path /siftsmall_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0"
+- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 1}} --start 1050001 --end 1060000 --batch_size 1000 --file_path /gist_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0"
   alias: vector_mutations_5r3
   wait: true
 - command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 2}} --start 1050001 --end 1060000 --batch_size 1000 --file_path /siftsmall_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0"
@@ -1872,6 +1901,13 @@
     op: rm
     container: vector_mutations_8r3
 
+# Sleep for some time
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "7200"
+  wait: true
+
+
 ######## Validate items count against KV #######################
 
 - image: sequoiatools/indexmanager
@@ -1887,7 +1923,11 @@
   wait: true
 - command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 7}} -a item_count_check --sample_size 5 --all_docs_indexed true --xattrs true"
   wait: true
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 7}} -a post_topology_change_validations"
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a post_topology_change_validations"
+  wait: true
+
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a wait_until_mutations_processed --timeout 18000 --bucket_list {{.NthBucket 1}},{{.NthBucket 2}},{{.NthBucket 5}},{{.NthBucket 6}},{{.NthBucket 7}}"
   wait: true
 
 ############## Kill projector ################
@@ -2057,7 +2097,7 @@
   command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.Bucket}} --start 1060001 --end 1070000 --batch_size 1000 --file_path /siftsmall_base.fvecs --load_in_chunks false"
   alias: vector_mutations_1r7
   wait: true
-- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 1}} --start 1060001 --end 1070000 --batch_size 1000 --file_path /siftsmall_base.fvecs --load_in_chunks false"
+- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 1}} --start 1060001 --end 1070000 --batch_size 1000 --file_path /gist_base.fvecs --load_in_chunks false"
   alias: vector_mutations_2r7
   wait: true
 - command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 2}} --start 1060001 --end 1070000 --batch_size 1000 --file_path /siftsmall_base.fvecs --load_in_chunks false"
@@ -2066,7 +2106,7 @@
 - command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.Bucket}} --start 1060001 --end 1070000 --batch_size 1000 --file_path /siftsmall_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0"
   alias: vector_mutations_4r7
   wait: true
-- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 1}} --start 1060001 --end 1070000 --batch_size 1000 --file_path /siftsmall_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0"
+- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 1}} --start 1060001 --end 1070000 --batch_size 1000 --file_path /gist_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0"
   alias: vector_mutations_5r7
   wait: true
 - command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 2}} --start 1060001 --end 1070000 --batch_size 1000 --file_path /siftsmall_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0"
@@ -2184,13 +2224,17 @@
   command: "{{.ActiveIndexNode 0}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}},{{.NthBucket 4}}"
   wait: true
 
+# Sleep for some time
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "7200"
+  wait: true
+
 ######## Check for item count match #######################
 
 ######## Validate items count against KV #######################
 
 - image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a item_count_check --sample_size 5 --all_docs_indexed true"
-  wait: true
 - command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a item_count_check --sample_size 5 --all_docs_indexed true"
   wait: true
 - command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -a item_count_check --sample_size 5 --all_docs_indexed true"
@@ -2203,7 +2247,11 @@
   wait: true
 
 - image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a post_topology_change_validations"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -a post_topology_change_validations"
+  wait: true
+
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a wait_until_mutations_processed --timeout 18000 --bucket_list {{.NthBucket 1}},{{.NthBucket 2}},{{.NthBucket 5}},{{.NthBucket 6}},{{.NthBucket 7}}"
   wait: true
 
 # change the topologies on the query nodes
