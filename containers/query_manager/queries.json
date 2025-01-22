@@ -28,18 +28,24 @@
     "SELECT meta().id,type from keyspacenameplaceholder  where type is not null ORDER BY ANN(vectors, qvec, \"DIST_ALGO\", nprobe) limit LIMIT_N_VAL;",
     "SELECT meta().id,country from keyspacenameplaceholder  where country not like \"Z%\" ORDER BY ANN(vectors, qvec, \"DIST_ALGO\", nprobe) limit LIMIT_N_VAL;",
     "SELECT meta().id from keyspacenameplaceholder ORDER BY ANN(vectors, qvec, \"DIST_ALGO\", nprobe) limit LIMIT_N_VAL;",
-    "SELECT meta().id,city,country from keyspacenameplaceholder  where city not like \"Z%\" ORDER BY ANN(vectors, qvec, \"DIST_ALGO\", nprobe);"
+    "SELECT meta().id,city,country from keyspacenameplaceholder  where city not like \"Z%\" ORDER BY ANN(vectors, qvec, \"DIST_ALGO\", nprobe) limit LIMIT_N_VAL;;",
+    "SELECT meta().id, price, avg_rating, free_breakfast from keyspacenameplaceholder  where price > 1500 AND avg_rating >= 3 AND free_breakfast = true ORDER BY ANN(vectors, qvec, \"DIST_ALGO\", nprobe) limit LIMIT_N_VAL;",
+    "SELECT meta().id, city, country from keyspacenameplaceholder where city not like \"A%\" AND country not like \"E%\" ORDER BY ANN(vectors, qvec, \"DIST_ALGO\", nprobe) limit LIMIT_N_VAL;"
   ],
-  "hotel_vectors_only": [
-    "SELECT meta().id from keyspacenameplaceholder ORDER BY ANN(vectors, qvec, \"DIST_ALGO\", nprobe) limit LIMIT_N_VAL;",
-    "SELECT meta().id from keyspacenameplaceholder where type is not null ORDER BY ANN(vectors, qvec, \"DIST_ALGO\", nprobe) limit LIMIT_N_VAL;"
-  ],
+
   "shoes_50M": [
-    "SELECT id from keyspacenameplaceholder where category=\"Shoes\" AND country=\"USA\" AND brand=\"Nike\" AND color=\"Green\" AND size=5 ORDER BY ANN(embedding, qvec, \"DIST_ALGO\", nprobe) limit 100; idx_1M.ivecs",
-    "SELECT id from keyspacenameplaceholder where category=\"Shoes\" AND country=\"USA\" AND brand=\"Nike\" AND color=\"Green\" ORDER BY ANN(embedding, qvec, \"DIST_ALGO\", nprobe) limit 100; idx_2M.ivecs",
-    "SELECT id from keyspacenameplaceholder where category=\"Shoes\" AND country=\"USA\" AND brand=\"Nike\" ORDER BY ANN(embedding, qvec, \"DIST_ALGO\", nprobe) limit 100; idx_5M.ivecs",
-    "SELECT id from keyspacenameplaceholder where category=\"Shoes\" AND country=\"USA\" ORDER BY ANN(embedding, qvec, \"DIST_ALGO\", nprobe) limit 100; idx_10M.ivecs",
-    "SELECT id from keyspacenameplaceholder where category=\"Shoes\" ORDER BY ANN(embedding, qvec, \"DIST_ALGO\", nprobe) limit 100; idx_20M.ivecs"
+
+    "SELECT id from keyspacenameplaceholder USE composite_shoes_idx where category=\"Shoes\" AND country=\"USA\" AND brand=\"Nike\" AND color=\"Green\" AND size=5 ORDER BY ANN(embedding, qvec, \"DIST_ALGO\", nprobe) limit 100; idx_1M.ivecs",
+    "SELECT id from keyspacenameplaceholder USE composite_shoes_idx where category=\"Shoes\" AND country=\"USA\" AND brand=\"Nike\" AND color=\"Green\" ORDER BY ANN(embedding, qvec, \"DIST_ALGO\", nprobe) limit 100; idx_2M.ivecs",
+    "SELECT id from keyspacenameplaceholder USE composite_shoes_idx where category=\"Shoes\" AND country=\"USA\" AND brand=\"Nike\" ORDER BY ANN(embedding, qvec, \"DIST_ALGO\", nprobe) limit 100; idx_5M.ivecs",
+    "SELECT id from keyspacenameplaceholder USE composite_shoes_idx where category=\"Shoes\" AND country=\"USA\" ORDER BY ANN(embedding, qvec, \"DIST_ALGO\", nprobe) limit 100; idx_10M.ivecs",
+    "SELECT id from keyspacenameplaceholder USE composite_shoes_idx where category=\"Shoes\" ORDER BY ANN(embedding, qvec, \"DIST_ALGO\", nprobe) limit 100; idx_20M.ivecs",
+
+    "SELECT id from keyspacenameplaceholder USE bhive_shoes_idx where category=\"Shoes\" AND country=\"USA\" AND brand=\"Nike\" AND color=\"Green\" AND size=5 ORDER BY ANN(embedding, qvec, \"DIST_ALGO\", nprobe) limit 100; idx_1M.ivecs",
+    "SELECT id from keyspacenameplaceholder USE bhive_shoes_idx where category=\"Shoes\" AND country=\"USA\" AND brand=\"Nike\" AND color=\"Green\" ORDER BY ANN(embedding, qvec, \"DIST_ALGO\", nprobe) limit 100; idx_2M.ivecs",
+    "SELECT id from keyspacenameplaceholder USE bhive_shoes_idx where category=\"Shoes\" AND country=\"USA\" AND brand=\"Nike\" ORDER BY ANN(embedding, qvec, \"DIST_ALGO\", nprobe) limit 100; idx_5M.ivecs",
+    "SELECT id from keyspacenameplaceholder USE bhive_shoes_idx where category=\"Shoes\" AND country=\"USA\" ORDER BY ANN(embedding, qvec, \"DIST_ALGO\", nprobe) limit 100; idx_10M.ivecs",
+    "SELECT id from keyspacenameplaceholder USE bhive_shoes_idx where category=\"Shoes\" ORDER BY ANN(embedding, qvec, \"DIST_ALGO\", nprobe) limit 100; idx_20M.ivecs"
   ],
   "hotel_scans_validation": [
     "select meta().id from keyspacenameplaceholder where country='Armenia' and `type` is not null and (any r in reviews satisfies r.ratings.`Check in / front desk` is not null end)",

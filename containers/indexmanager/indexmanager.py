@@ -119,40 +119,26 @@ HOTEL_DS_INDEX_TEMPLATES_VECTORS = [
     {"indexname": "idxvector6",
      "is_vector": True,
      "validate_item_count_check": True,
-     "statement": "CREATE INDEX `idxvector6_idxprefix` ON keyspacenameplaceholder(vectors VECTOR, city )"}
-]
-HOTEL_DS_INDEX_TEMPLATES_VECTORS_ONLY = [
-    {"indexname": "idxvector1",
+     "statement": "CREATE INDEX `idxvector6_idxprefix` ON keyspacenameplaceholder(vectors VECTOR, city )"},
+    {"indexname": "bhiveidxvector1",
      "validate_item_count_check": True,
      "is_vector": True,
-     "statement": "CREATE INDEX `idxvector1_idxprefix` ON keyspacenameplaceholder(`type`,vectors VECTOR) "},
-    {"indexname": "idxvector2",
+     "statement": "CREATE VECTOR INDEX `idxvector7_idxprefix` ON keyspacenameplaceholder(vectors VECTOR) INCLUDE (price, avg_rating, free_breakfast)"},
+    {"indexname": "bhiveidxvector2 ",
      "validate_item_count_check": True,
      "is_vector": True,
-     "statement": "CREATE INDEX `idxvector2_idxprefix` ON keyspacenameplaceholder(vectors VECTOR)"}
+     "statement": "CREATE VECTOR INDEX `idxvector8_idxprefix` ON keyspacenameplaceholder(vectors VECTOR) INCLUDE (city, country)"},
 ]
 
-SHOES_INDEX_TEMPLATES = [
-    {"indexname": "idxshoesvector1",
+SHOES_COMPOSITE_INDEX_TEMPLATES = [
+    {"indexname": "composite_shoes_idx",
      "is_vector": True,
      "validate_item_count_check": True,
-     "statement": "CREATE INDEX idxshoesvector1_idxprefix ON keyspacenameplaceholder(`category`,`country`, `brand`, `color`, `size`, `embedding` VECTOR) "},
-    {"indexname": "idxshoesvector2",
+     "statement": "CREATE INDEX composite_shoes_idx ON keyspacenameplaceholder(`category`,`country`, `brand`, `color`, `size`, `embedding` VECTOR) "},
+    {"indexname": "bhive_shoes_idx",
      "is_vector": True,
      "validate_item_count_check": True,
-     "statement": "CREATE INDEX idxshoesvector2_idxprefix ON keyspacenameplaceholder(`category`,`country`, `brand`, `color`, `embedding` VECTOR) "},
-    {"indexname": "idxshoesvector3",
-     "is_vector": True,
-     "validate_item_count_check": True,
-     "statement": "CREATE INDEX idxshoesvector3_idxprefix ON keyspacenameplaceholder(`category`,`country`, `brand`, `embedding` VECTOR) "},
-    {"indexname": "idxshoesvector4",
-     "is_vector": True,
-     "validate_item_count_check": True,
-     "statement": "CREATE INDEX idxshoesvector4_idxprefix ON keyspacenameplaceholder(`category`,`country`, `embedding` VECTOR) "},
-    {"indexname": "idxshoesvector5",
-     "is_vector": True,
-     "validate_item_count_check": True,
-     "statement": "CREATE INDEX idxshoesvector5_idxprefix ON keyspacenameplaceholder(`category`,`embedding` VECTOR) "}
+     "statement": "CREATE VECTOR INDEX bhive_shoes_idx ON keyspacenameplaceholder(`embedding` VECTOR) INCLUDE (`category`,`country`, `brand`, `color`, `size`)"},
 ]
 
 DISTANCE_SUPPORTED_FUNCTIONS = ["L2", "L2_SQUARED", "DOT", "COSINE", "EUCLIDEAN", "EUCLIDEAN_SQUARED"]
@@ -239,7 +225,6 @@ class IndexManager:
         parser.add_argument("--token", default=None)
         parser.add_argument("--skip_default_collection", default="true")
         parser.add_argument("-vec", "--create_vector_indexes", help="create_vector_indexes")
-        parser.add_argument("-vo", "--create_vector_indexes_only", help="create_vector_indexes only to measure recall")
         parser.add_argument("-da", "--distance_algo", help="create_vector_indexes", default=None)
         parser.add_argument("-num_dimensions", "--num_dimensions", type=int, default=128, help="Num of dimensions")
         parser.add_argument("--num_vectors", type=int, default=1000000,
@@ -320,7 +305,6 @@ class IndexManager:
         self.capella_run = args.capella
         self.use_https = False
         self.create_vector_indexes = args.create_vector_indexes == 'true'
-        self.create_vector_indexes_only = args.create_vector_indexes_only == 'true'
         self.num_dimensions = args.num_dimensions
         if self.use_tls or self.capella_run:
             self.node_port_index = '19102'
@@ -345,9 +329,7 @@ class IndexManager:
 
         # If there are more datasets supported, this can be expanded.
         if self.dataset == "hotel":
-            if self.create_vector_indexes_only:
-                self.idx_def_templates = HOTEL_DS_INDEX_TEMPLATES_VECTORS_ONLY
-            elif self.create_vector_indexes:
+            if self.create_vector_indexes:
                 self.idx_def_templates = HOTEL_DS_INDEX_TEMPLATES_VECTORS
             else:
                 self.idx_def_templates = HOTEL_DS_INDEX_TEMPLATES + HOTEL_DS_INDEX_TEMPLATES_NEW
@@ -368,7 +350,7 @@ class IndexManager:
             fh.setFormatter(formatter)
             self.log.addHandler(fh)
         elif self.dataset == "shoes":
-            self.idx_def_templates = SHOES_INDEX_TEMPLATES
+            self.idx_def_templates = SHOES_COMPOSITE_INDEX_TEMPLATES
         self.log.info(f"Capella flag is set to {self.capella_run}. Use tls flag is set to {self.use_tls}")
         if self.use_https:
             self.log.info("This is Capella run.")
@@ -777,7 +759,7 @@ class IndexManager:
                         with_clause_list.append("\'num_replica\':%s" % num_replica)
                     if is_defer_idx:
                         with_clause_list.append("\'defer_build\':true")
-                    if self.create_vector_indexes or self.create_vector_indexes_only and "is_vector" in idx_template and \
+                    if self.create_vector_indexes  and "is_vector" in idx_template and \
                             idx_template['is_vector']:
                         self.log.info("Creating vector index definitions")
                         if self.use_description:

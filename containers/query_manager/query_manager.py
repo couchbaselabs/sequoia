@@ -426,7 +426,7 @@ class QueryManager:
     def cancel_random_queries(self, cancel_query_count=5):
         active_requests = self.fetch_columnar_active_requests()
         for _ in range(cancel_query_count):
-            context_id_to_cancel = random.choice(active_query_context_id_list)
+            context_id_to_cancel = random.choice(active_requests)
             query = f"cancel {context_id_to_cancel}"
             self.run_analytics_query(query=query)
 
@@ -514,6 +514,7 @@ class QueryManager:
         return self.query_error_obj
 
     def periodic_print_recall_stats(self, frequency=10):
+        time_now = time.time()
         while time.time() - time_now < self.duration:
             self.print_recall_stats()
             time.sleep(frequency * 60)
