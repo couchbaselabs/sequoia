@@ -20,7 +20,7 @@
   args: "{{.ActiveIndexNode 0}}, 'indexer.plasma.mainIndex.enableInMemoryCompression':false"
   requires: "{{eq true .DoOnce }}"
 
-### Enable file-based rebalance
+## Enable file-based rebalance
 ############### shardAffinity ################
 - template: set_gsi_config
   args: "{{.ActiveIndexNode 0}}, 'indexer.settings.enable_shard_affinity':true"
@@ -196,7 +196,6 @@
 - command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 1}} --start 1 --end 1000000 --batch_size 100000 --file_path /gist_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0"
   alias: vector_mutations_5
 
-
 ############ wait for a while ################
 - image: sequoiatools/cmd
   entrypoint: sleep
@@ -228,14 +227,14 @@
     op: rm
     container: vector_mutations_8
 
-###############  create indexes ################
+###############  create vector indexes ################
 - section_start: create_replica_indexes
 - image: sequoiatools/indexmanager
   command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.Bucket}}  -a create_n_indexes_on_buckets --timeout 30 --num_of_indexes_per_bucket 12  --create_vector_indexes true --num_dimensions 128 --skip_default_collection false --num_vectors 1000000 --distance_algo COSINE"
   wait: true
 - command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 1}}  -a create_n_indexes_on_buckets --timeout 30  -v --num_of_indexes_per_bucket 12  --create_vector_indexes true --num_dimensions 960 --skip_default_collection false --num_vectors 1000000 --distance_algo EUCLIDEAN"
   wait: true
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 5}}  -a create_n_indexes_on_buckets --timeout 30  -v --num_of_indexes_per_bucket 5  --create_vector_indexes true  --dataset shoes --num_dimensions 128 --skip_default_collection false --num_vectors 50000000 --distance_algo L2 --defer_build true --set_max_replicas 1 --use_description IVF,SQ8"
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 5}}  -a create_n_indexes_on_buckets --timeout 30  -v --num_of_indexes_per_bucket 2  --create_vector_indexes true  --dataset shoes --num_dimensions 128 --skip_default_collection false --num_vectors 50000000 --distance_algo L2 --defer_build true --set_max_replicas 1 --use_description IVF,SQ8"
   wait: true
 - command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 6}}  -a create_n_indexes_on_buckets --timeout 30  -v --num_of_indexes_per_bucket 2  --create_vector_indexes true --num_dimensions 128 --skip_default_collection false --num_vectors 1000000 --distance_algo L2 --base64_encoding_vectors true"
   wait: true
@@ -244,13 +243,11 @@
 - command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 2}}  -a create_n_indexes_on_buckets --timeout 30  -v --num_of_indexes_per_bucket 12  --create_vector_indexes true --num_dimensions 128 --skip_default_collection false --num_vectors 1000000 --distance_algo DOT"
   wait: true
 
-
 # Sleep for some more time after memcached-kill completes (10 minutes)
 - image: sequoiatools/cmd
   entrypoint: sleep
   command: "602"
   wait: true
-
 
 ###############  build all deferred indexes ################
 
@@ -269,7 +266,6 @@
   wait: true
 
 ############### Kill memcached ################
-
   template: kill_process
   args: "{{.NthDataNode 3}}, memcached"
 
@@ -325,7 +321,7 @@
   wait: true
 
 - image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a wait_until_mutations_processed --timeout 18000 --bucket_list {{.NthBucket 1}},{{.NthBucket 2}},{{.NthBucket 5}},{{.NthBucket 6}},{{.NthBucket 7}}"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a wait_until_mutations_processed --timeout 18000 --bucket_list {{.Bucket}},{{.NthBucket 1}},{{.NthBucket 2}},{{.NthBucket 5}},{{.NthBucket 6}},{{.NthBucket 7}}"
   wait: true
 
 - image: sequoiatools/indexmanager
@@ -397,11 +393,9 @@
   command: "3600"
   wait: true
 
-
 ############### Flush Bucket ################ once ready repeat this for other buckets at different places
 - template: flush-bucket
   args: "{{.NthBucket 2}}"
-
 
 ############ Repopulate flushed bucket ################
 
@@ -452,7 +446,7 @@
 - image: sequoiatools/query_manager:dev
   command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template shoes_50M --bucket_list  {{.NthBucket 5}} --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false"
 
-###############  Rebalance-in single node ################
+###############  Rebalance-in single index node ################
 - template: rebalance_in
   args: "{{.InActiveNode}}, index"
 
@@ -537,7 +531,6 @@
   alias: vector_mutations_8r
   wait: true
 
-
 - client:
     op: rm
     container: vector_mutations_1r
@@ -559,11 +552,9 @@
 - client:
     op: rm
     container: vector_mutations_7r
-
 - client:
     op: rm
     container: vector_mutations_8r
-
 
 - image: sequoiatools/cmd
   entrypoint: sleep
@@ -571,7 +562,6 @@
   wait: true
 
 ######## Validate items count against KV #######################
-
 - image: sequoiatools/indexmanager
   command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a item_count_check --sample_size 5 --all_docs_indexed true"
   wait: true
@@ -647,10 +637,8 @@
   command: "7200"
   wait: true
 
-# Wait for rebalance to complete
-
 - image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a wait_until_mutations_processed --timeout 18000 --bucket_list {{.NthBucket 1}},{{.NthBucket 2}},{{.NthBucket 5}},{{.NthBucket 6}},{{.NthBucket 7}}"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a wait_until_mutations_processed --timeout 18000 --bucket_list {{.Bucket}},{{.NthBucket 1}},{{.NthBucket 2}},{{.NthBucket 5}},{{.NthBucket 6}},{{.NthBucket 7}}"
   wait: true
 
 - image: sequoiatools/indexmanager
@@ -659,36 +647,6 @@
 
 - image: sequoiatools/query_manager:dev
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action data_validation --use_sdk true --query_type n1ql --bucket_list  {{.NthBucket 2}}  --use_tls false --skip_default false"
-  wait: true
-
-
-###############  Rebalance-in single node and stop rebalance ################
-- template: rebalance_in
-  args: "{{.InActiveNode}}, index"
-
-# Sleep after starting rebalance
-- image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "310"
-  wait: true
-
-- template: rebalance_stop
-
-- image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "310"
-  wait: true
-
-- template: rebalance
-- template: wait_for_rebalance
-  wait: true
-
-- image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a wait_until_rebalance_cleanup_done"
-  wait: true
-- image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "1800"
   wait: true
 
 ############### more data loading ################
@@ -736,7 +694,6 @@
   alias: vector_mutations_8r2
   wait: true
 
-
 - client:
     op: rm
     container: vector_mutations_1r2
@@ -755,11 +712,9 @@
 - client:
     op: rm
     container: vector_mutations_6r2
-
 - client:
     op: rm
     container: vector_mutations_7r2
-
 - client:
     op: rm
     container: vector_mutations_8r2
@@ -770,7 +725,6 @@
   wait: true
 
 ######## Validations #######################
-
 - image: sequoiatools/indexmanager
   command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a item_count_check --sample_size 5 --all_docs_indexed true"
   wait: true
@@ -786,7 +740,7 @@
   wait: true
 
 - image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a wait_until_mutations_processed --timeout 18000 --bucket_list {{.NthBucket 1}},{{.NthBucket 2}},{{.NthBucket 5}},{{.NthBucket 6}},{{.NthBucket 7}}"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a wait_until_mutations_processed --timeout 18000 --bucket_list {{.Bucket}},{{.NthBucket 1}},{{.NthBucket 2}},{{.NthBucket 5}},{{.NthBucket 6}},{{.NthBucket 7}}"
   wait: true
 
 - image: sequoiatools/indexmanager
@@ -797,9 +751,9 @@
   command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action data_validation --use_sdk true --query_type n1ql --bucket_list  {{.NthBucket 2}}  --use_tls false --skip_default false"
   wait: true
 
-###############  Rebalance-out single node and stop rebalance ################
+###############  Rebalance-out single index node and stop rebalance ################
 - template: rebalance_out
-  args: "{{.InActiveNode}}, index"
+  args: "{{.ActiveIndexNode 0}}, index"
 
 # Sleep after starting rebalance
 - image: sequoiatools/cmd
@@ -815,6 +769,7 @@
   wait: true
 
 - template: rebalance
+
 - template: wait_for_rebalance
   wait: true
 
@@ -825,7 +780,6 @@
   entrypoint: sleep
   command: "1800"
   wait: true
-
 
 ############ mutate vector embeddings ################
 - image: sequoiatools/siftloader
@@ -905,7 +859,6 @@
   command: "1800"
   wait: true
 
-
 # Sleep for some more time after rebalance completes
 - image: sequoiatools/cmd
   entrypoint: sleep
@@ -922,7 +875,6 @@
 - template: wait_for_rebalance
   wait: true
 
-
 ############## Kill memcached ################
 - template: kill_process
   args: "{{.NthDataNode 2}}, memcached"
@@ -936,18 +888,61 @@
 - image: sequoiatools/query_manager:dev
   command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template shoes_50M --bucket_list  {{.NthBucket 5}} --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false"
 
+###############  Rebalance-in 2 nodes one after another ################
+- template: rebalance_in
+  args: "{{.InActiveNode}}, index"
+
+# Sleep after starting rebalance
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "330"
+  wait: true
+
+# Wait for rebalance to complete
+- template: wait_for_rebalance
+  wait: true
+
+# Sleep for some more time after rebalance completes
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "901"
+  wait: true
+
+- image: sequoiatools/query_manager:dev
+  command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template shoes_50M --bucket_list  {{.NthBucket 5}} --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false"
+
+###############  Rebalance-in single node ################
+- template: rebalance_in
+  args: "{{.InActiveNode}}, index"
+
+# Sleep after starting rebalance
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "330"
+  wait: true
+
+# Wait for rebalance to complete
+- template: wait_for_rebalance
+  wait: true
+
+# Sleep for some more time after rebalance completes
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "901"
+  wait: true
+
+- image: sequoiatools/query_manager:dev
+  command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template shoes_50M --bucket_list  {{.NthBucket 5}} --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false"
 
 ###############  Rebalance-out two index nodes ################
 - template: rebalance_out
   args: "({{.ActiveIndexNode 0}},{{.ActiveIndexNode 2}})"
-
 
 # Sleep for some more time after rebalance starts
 - image: sequoiatools/cmd
   entrypoint: sleep
   command: "307"
   wait: true
-
 
 # Sleep before starting to poll for rebalance progress
 - image: sequoiatools/cmd
@@ -958,7 +953,6 @@
 # Wait for rebalance to complete
 - template: wait_for_rebalance
   wait: true
-
 
 # Sleep for some time
 - image: sequoiatools/cmd
@@ -1003,7 +997,6 @@
   command: "333"
   wait: true
 
-
 # Sleep before starting to poll for rebalance progress
 - image: sequoiatools/cmd
   entrypoint: sleep
@@ -1014,13 +1007,11 @@
 - template: wait_for_rebalance
   wait: true
 
-
 # Sleep for some time
 - image: sequoiatools/cmd
   entrypoint: sleep
   command: "619"
   wait: true
-
 
 ############### more data loading ################
 - image: sequoiatools/magmaloader
@@ -1067,7 +1058,6 @@
   alias: vector_mutations_8r3
   wait: true
 
-
 - client:
     op: rm
     container: vector_mutations_1r3
@@ -1089,7 +1079,6 @@
 - client:
     op: rm
     container: vector_mutations_7r3
-
 - client:
     op: rm
     container: vector_mutations_8r3
@@ -1139,6 +1128,7 @@
 - template: rebalance_out
   args: "({{.NthDataNode 1}})"
   wait: true
+
 # Sleep for some more time after rebalance completes
 - image: sequoiatools/cmd
   entrypoint: sleep
@@ -1157,7 +1147,7 @@
 
 ###############  Add back data node ################
 - template: rebalance_in
-  args: "{{.InActiveNode}}"
+  args: "{{.InActiveNode}}, data"
   wait: true
 
 # Sleep for some more time after rebalance completes
@@ -1217,6 +1207,8 @@
 ###############  Failover and rebalance out ################
 - template: hard_failover_node
   args: "{{.ActiveIndexNode 1}}"
+  wait: true
+
 - template: rebalance
   wait: true
 # Sleep for some more time after rebalance completes
@@ -1234,6 +1226,8 @@
 ###############  Add back index node  ################
 - template: add_node
   args: "{{.NthInActiveNode 0}}, index"
+  wait: true
+
 - template: rebalance
   wait: true
 # Sleep for some more time after rebalance completes
@@ -1249,7 +1243,7 @@
 
 - section_end: change_indexer_topologies
 
-### Disable file-based rebalance
+## Disable file-based rebalance
 ############### shardAffinity ################
 - template: set_gsi_config
   args: "{{.ActiveIndexNode 0}}, 'indexer.settings.enable_shard_affinity':false"
@@ -1271,16 +1265,6 @@
 - image: sequoiatools/query_manager:dev
   command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template shoes_50M --bucket_list  {{.NthBucket 5}} --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false"
 
-###############  Rebalance-in single node ################
-- template: rebalance_in
-  args: "{{.InActiveNode}}, index"
-
-# Sleep after starting rebalance
-- image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "310"
-  wait: true
-
 ############### Kill indexer ################
 - template: kill_process
   args: "{{.ActiveIndexNode 0}}, indexer"
@@ -1291,20 +1275,7 @@
   command: "430"
   wait: true
 
-# Wait for rebalance to complete
-- template: wait_for_rebalance
-  wait: true
-
-- image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a wait_until_rebalance_cleanup_done"
-  wait: true
-
-- image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "1800"
-  wait: true
-
-###############  Complete the rebalance ################
+###############  Trigger the rebalance ################
 - template: rebalance
 
 - template: wait_for_rebalance
@@ -1355,7 +1326,6 @@
   alias: vector_mutations_8r
   wait: true
 
-
 - client:
     op: rm
     container: vector_mutations_1r
@@ -1377,7 +1347,6 @@
 - client:
     op: rm
     container: vector_mutations_7r
-
 - client:
     op: rm
     container: vector_mutations_8r
@@ -1423,7 +1392,7 @@
 - image: sequoiatools/query_manager:dev
   command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template shoes_50M --bucket_list  {{.NthBucket 5}} --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false"
 
-###############  Rebalance-out single node ################
+###############  Rebalance-out single index node ################
 - template: rebalance_out
   args: "{{.ActiveIndexNode 0}}"
 
@@ -1452,12 +1421,14 @@
   command: "7200"
   wait: true
 
+- template: rebalance
+
 # Wait for rebalance to complete
 - template: wait_for_rebalance
   wait: true
 
 - image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a wait_until_mutations_processed --timeout 18000 --bucket_list {{.NthBucket 1}},{{.NthBucket 2}},{{.NthBucket 5}},{{.NthBucket 6}},{{.NthBucket 7}}"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a wait_until_mutations_processed --timeout 18000 --bucket_list {{.Bucket}},{{.NthBucket 1}},{{.NthBucket 2}},{{.NthBucket 5}},{{.NthBucket 6}},{{.NthBucket 7}}"
   wait: true
 
 - image: sequoiatools/indexmanager
@@ -1487,6 +1458,7 @@
   wait: true
 
 - template: rebalance
+
 - template: wait_for_rebalance
   wait: true
 
@@ -1543,7 +1515,6 @@
   alias: vector_mutations_8r2
   wait: true
 
-
 - client:
     op: rm
     container: vector_mutations_1r2
@@ -1562,11 +1533,9 @@
 - client:
     op: rm
     container: vector_mutations_6r2
-
 - client:
     op: rm
     container: vector_mutations_7r2
-
 - client:
     op: rm
     container: vector_mutations_8r2
@@ -1593,7 +1562,7 @@
   wait: true
 
 - image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a wait_until_mutations_processed --timeout 18000 --bucket_list {{.NthBucket 1}},{{.NthBucket 2}},{{.NthBucket 5}},{{.NthBucket 6}},{{.NthBucket 7}}"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a wait_until_mutations_processed --timeout 18000 --bucket_list {{.Bucket}},{{.NthBucket 1}},{{.NthBucket 2}},{{.NthBucket 5}},{{.NthBucket 6}},{{.NthBucket 7}}"
   wait: true
 
 - image: sequoiatools/indexmanager
@@ -1604,9 +1573,9 @@
   command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action data_validation --use_sdk true --query_type n1ql --bucket_list  {{.NthBucket 1}}  --use_tls false --skip_default false"
   wait: true
 
-###############  Rebalance-out single node and stop rebalance ################
+###############  Rebalance-out single index node and stop rebalance ################
 - template: rebalance_out
-  args: "{{.InActiveNode}}, index"
+  args: "{{.ActiveIndexNode 0}}"
 
 # Sleep after starting rebalance
 - image: sequoiatools/cmd
@@ -1622,6 +1591,7 @@
   wait: true
 
 - template: rebalance
+
 - template: wait_for_rebalance
   wait: true
 
@@ -1632,7 +1602,6 @@
   entrypoint: sleep
   command: "1800"
   wait: true
-
 
 ############ mutate vector embeddings ################
 - image: sequoiatools/siftloader
@@ -1655,29 +1624,6 @@
   requires: "{{eq true .DoOnce }}"
 - command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 2}} --start 1  --end 10000 --doc_template Hotel --all_coll true --mutations_mode true --mutations_timeout 3600 --ops_rate 100"
   requires: "{{eq true .DoOnce }}"
-
-###############  Rebalance-out single node ################
-- template: rebalance_out
-  args: "{{.ActiveIndexNode 0}}"
-
-# Sleep after starting rebalance
-- image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "330"
-  wait: true
-
-# Wait for rebalance to complete
-- template: wait_for_rebalance
-  wait: true
-
-# Sleep for some more time after rebalance completes
-- image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "901"
-  wait: true
-
-- image: sequoiatools/query_manager:dev
-  command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template shoes_50M --bucket_list  {{.NthBucket 5}} --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false"
 
 ###############  Swap single index node ################
 - template: rebalance_swap
@@ -1703,7 +1649,6 @@
 - template: wait_for_rebalance
   wait: true
 
-
 # Sleep for some more time after rebalance completes
 - image: sequoiatools/cmd
   entrypoint: sleep
@@ -1725,7 +1670,6 @@
 - template: wait_for_rebalance
   wait: true
 
-
 ############## Kill memcached ################
 - template: kill_process
   args: "{{.NthDataNode 2}}, memcached"
@@ -1739,17 +1683,46 @@
 - image: sequoiatools/query_manager:dev
   command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template shoes_50M --bucket_list  {{.NthBucket 5}} --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false"
 
+###############  Rebalance-in a index nodes ################
+- template: add_node
+  args: "{{.NthInActiveNode 0}}, index"
+- template: rebalance
+
+# Sleep for some more time after rebalance completes
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "333"
+  wait: true
+
+
+# Sleep before starting to poll for rebalance progress
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "417"
+  wait: true
+
+# Wait for rebalance to complete
+- template: wait_for_rebalance
+  wait: true
+
+# Sleep for some time
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "619"
+  wait: true
+
+- image: sequoiatools/query_manager:dev
+  command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template shoes_50M --bucket_list  {{.NthBucket 5}} --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false"
+
 ###############  Rebalance-out two index nodes ################
 - template: rebalance_out
   args: "({{.ActiveIndexNode 0}},{{.ActiveIndexNode 2}})"
-
 
 # Sleep for some more time after rebalance starts
 - image: sequoiatools/cmd
   entrypoint: sleep
   command: "307"
   wait: true
-
 
 # Sleep before starting to poll for rebalance progress
 - image: sequoiatools/cmd
@@ -1760,7 +1733,6 @@
 # Wait for rebalance to complete
 - template: wait_for_rebalance
   wait: true
-
 
 # Sleep for some time
 - image: sequoiatools/cmd
@@ -1805,7 +1777,6 @@
   command: "333"
   wait: true
 
-
 # Sleep before starting to poll for rebalance progress
 - image: sequoiatools/cmd
   entrypoint: sleep
@@ -1816,13 +1787,11 @@
 - template: wait_for_rebalance
   wait: true
 
-
 # Sleep for some time
 - image: sequoiatools/cmd
   entrypoint: sleep
   command: "619"
   wait: true
-
 
 ############### more data loading ################
 - image: sequoiatools/magmaloader
@@ -1869,7 +1838,6 @@
   alias: vector_mutations_8r3
   wait: true
 
-
 - client:
     op: rm
     container: vector_mutations_1r3
@@ -1891,7 +1859,6 @@
 - client:
     op: rm
     container: vector_mutations_7r3
-
 - client:
     op: rm
     container: vector_mutations_8r3
@@ -1901,7 +1868,6 @@
   entrypoint: sleep
   command: "7200"
   wait: true
-
 
 ######## Validate items count against KV #######################
 
@@ -1922,7 +1888,7 @@
   wait: true
 
 - image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a wait_until_mutations_processed --timeout 18000 --bucket_list {{.NthBucket 1}},{{.NthBucket 2}},{{.NthBucket 5}},{{.NthBucket 6}},{{.NthBucket 7}}"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a wait_until_mutations_processed --timeout 18000 --bucket_list {{.Bucket}},{{.NthBucket 1}},{{.NthBucket 2}},{{.NthBucket 5}},{{.NthBucket 6}},{{.NthBucket 7}}"
   wait: true
 
 ############## Kill projector ################
@@ -1972,7 +1938,7 @@
 
 ###############  Add back data node ################
 - template: rebalance_in
-  args: "{{.InActiveNode}}"
+  args: "{{.InActiveNode}}, data"
   wait: true
 
 # Sleep for some more time after rebalance completes
@@ -2034,9 +2000,11 @@
   command: "1800"
   wait: true
 
-###############  Failover and rebalance out ################
+###############  Failover index node and rebalance out ################
 - template: hard_failover_node
   args: "{{.ActiveIndexNode 1}}"
+  wait: true
+
 - template: rebalance
   wait: true
 # Sleep for some more time after rebalance completes
@@ -2054,7 +2022,11 @@
 ###############  Add back index node  ################
 - template: add_node
   args: "{{.NthInActiveNode 0}}, index"
+  wait: true
+
 - template: rebalance
+
+- template: wait_for_rebalance
   wait: true
 # Sleep for some more time after rebalance completes
 - image: sequoiatools/cmd
@@ -2114,7 +2086,6 @@
   alias: vector_mutations_8r7
   wait: true
 
-
 - client:
     op: rm
     container: vector_mutations_1r7
@@ -2136,21 +2107,16 @@
 - client:
     op: rm
     container: vector_mutations_7r7
-
 - client:
     op: rm
     container: vector_mutations_8r7
 
-
 ############### KV node failover/recovery ###############
-
 - template: failover_and_recover
   args: "{{.ActiveDataNode 2}}, full"
   wait: true
 
 ###############  Complete the rebalance ################
-- template: rebalance
-
 - template: wait_for_rebalance
   wait: true
 
@@ -2162,6 +2128,7 @@
 ###############  Hard failover KV node and rebalance out ################
 - template: hard_failover_node
   args: "{{.ActiveDataNode 2}}"
+  wait: true
 
 ###############  Complete the rebalance ################
 - template: rebalance
@@ -2174,15 +2141,29 @@
   command: "332"
   wait: true
 
-
 # ###############  Rebalance in a KV node ################
 - template: rebalance_in
   args: "{{.InActiveNode}}, data"
   wait: true
+
 - image: sequoiatools/cmd
   entrypoint: sleep
   command: "534"
   wait: true
+
+# ###############  Rebalance out an Index node ################
+- template: rebalance_out
+  args: "({{.ActiveIndexNode 1}})"
+  wait: true
+
+# Sleep for some more time after rebalance completes
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "298"
+  wait: true
+
+- image: sequoiatools/query_manager:dev
+  command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template shoes_50M --bucket_list  {{.NthBucket 5}} --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false"
 
 ############### Start creating indexes in a loop on bucket4 & bucket5 (Collection CRUD workload) ###############
 - section_start: create_replica_indexes
@@ -2226,7 +2207,6 @@
   wait: true
 
 ######## Check for item count match #######################
-
 ######## Validate items count against KV #######################
 
 - image: sequoiatools/indexmanager
@@ -2246,7 +2226,7 @@
   wait: true
 
 - image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a wait_until_mutations_processed --timeout 18000 --bucket_list {{.NthBucket 1}},{{.NthBucket 2}},{{.NthBucket 5}},{{.NthBucket 6}},{{.NthBucket 7}}"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a wait_until_mutations_processed --timeout 18000 --bucket_list {{.Bucket}},{{.NthBucket 1}},{{.NthBucket 2}},{{.NthBucket 5}},{{.NthBucket 6}},{{.NthBucket 7}}"
   wait: true
 
 # change the topologies on the query nodes
@@ -2360,14 +2340,9 @@
 - template: wait_for_rebalance
   wait: true
 
-###############  Rebalance-in single node ################
-- template: rebalance_in
-  args: "{{.InActiveNode}}, index"
-
-# Sleep after starting rebalance
-- image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "310"
+###############  Rebalance-out single node ################
+- template: rebalance_out
+  args: "({{.ActiveIndexNode 1}})"
   wait: true
 
 # Sleep before starting to poll for rebalance progress
@@ -2379,6 +2354,9 @@
 # Wait for rebalance to complete
 - template: wait_for_rebalance
   wait: true
+
+- image: sequoiatools/query_manager:dev
+  command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template shoes_50M --bucket_list  {{.NthBucket 5}} --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false"
 
 ###############  Drop all Indexes ################
 - section_start: drop_all_indexes

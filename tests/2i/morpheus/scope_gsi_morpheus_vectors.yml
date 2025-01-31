@@ -75,7 +75,7 @@ servers: # each server tag represents a cluster
       index_ram: 80%
       index_storage: default
       services:
-        index: 6
+        index: 5
         index_start: 7
         query: 2
         query_start: 5

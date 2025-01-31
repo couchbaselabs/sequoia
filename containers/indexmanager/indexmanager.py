@@ -130,7 +130,7 @@ HOTEL_DS_INDEX_TEMPLATES_VECTORS = [
      "statement": "CREATE VECTOR INDEX `idxvector8_idxprefix` ON keyspacenameplaceholder(vectors VECTOR) INCLUDE (city, country)"},
 ]
 
-SHOES_COMPOSITE_INDEX_TEMPLATES = [
+SHOES_INDEX_TEMPLATES = [
     {"indexname": "composite_shoes_idx",
      "is_vector": True,
      "validate_item_count_check": True,
@@ -350,7 +350,7 @@ class IndexManager:
             fh.setFormatter(formatter)
             self.log.addHandler(fh)
         elif self.dataset == "shoes":
-            self.idx_def_templates = SHOES_COMPOSITE_INDEX_TEMPLATES
+            self.idx_def_templates = SHOES_INDEX_TEMPLATES
         self.log.info(f"Capella flag is set to {self.capella_run}. Use tls flag is set to {self.use_tls}")
         if self.use_https:
             self.log.info("This is Capella run.")
