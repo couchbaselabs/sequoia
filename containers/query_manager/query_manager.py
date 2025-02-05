@@ -4,11 +4,12 @@ import time
 import random
 import json
 import os
+import sys
 from dns import resolver
 import struct
 import requests
 import numpy as np
-
+from beautifultable import BeautifulTable
 from os.path import splitext
 from deepdiff import DeepDiff
 from datetime import datetime
@@ -20,13 +21,14 @@ from couchbase.options import (ClusterOptions, ClusterTimeoutOptions,
 from couchbase.exceptions import CouchbaseException
 from couchbase.cluster import QueryScanConsistency
 from couchbase.exceptions import CouchbaseException, QueryErrorContext
+import threading
 
 
 class QueryManager:
     def __init__(self, connection_string, username, password, timeout, duration, doc_template, use_sdk, query_type,
                  query_file, groundtruth_file, validate_vector_query_results, distance_algo, bucket_list, use_tls,
                  capella="false", skip_default="false", num_groundtruth_vectors=100, num_query_vectors=10000,
-                 base64_encoding="false", xattrs="false", sample_size=20):
+                 base64_encoding="false", xattrs="false", sample_size=20, bhive_queries=False, print_frequency=30):
         self.connection_string = connection_string
         self.username = username
         self.password = password
@@ -50,7 +52,9 @@ class QueryManager:
         self.base64_encoding = base64_encoding == "true"
         self.xattrs = xattrs == "true"
         self.sample_size = sample_size
+        self.bhive_queries = bhive_queries == "true"
         self.query_error_obj = dict()
+        self.print_frequency = print_frequency
         self.log = logging.getLogger("query_manager")
         self.log.setLevel(logging.INFO)
         ch = logging.StreamHandler()
@@ -64,6 +68,7 @@ class QueryManager:
         fh = logging.FileHandler("./query_manager-{0}.log".format(timestamp))
         fh.setFormatter(formatter)
         self.log.addHandler(fh)
+        self.log.info("Query manager started")
 
     def get_recall_dict(self):
         return self.recall_dict
@@ -118,14 +123,12 @@ class QueryManager:
         else:
             if self.bucket_list:
                 bucket_list = self.bucket_list.split(",")
-                self.log.info(f"Bucket list param passed. Using {bucket_list}")
             else:
                 bucket_list = self.get_all_buckets()
             for bucket_name in bucket_list:
-                self.log.info(f"Bucket name {bucket_name}")
                 bucket_obj = self.cluster.bucket(bucket_name)
                 scopes = bucket_obj.collections().get_all_scopes()
-                self.log.info("Bucket name {}".format(bucket_name))
+                self.log.debug("Bucket name {}".format(bucket_name))
                 for scope in scopes:
                     if "scope_" in scope.name or "_default" in scope.name:
                         for coll in scope.collections:
@@ -256,9 +259,17 @@ class QueryManager:
             index = random.randint(0, len(query_vectors) - 1)
             self.log.debug(f"Query vectors {query_vectors[index]}")
             query = query.replace("qvec", str(query_vectors[index]))
+            vector_query = True
         if "nprobe" in query:
             nprobe_val = random.randint(15, 30)
-            query = query.replace("nprobe", str(nprobe_val))
+            run_with_reranking = random.random() < 0.2
+            if self.bhive_queries and run_with_reranking:
+                #reranking set to true for random queries
+                concat_str = str(nprobe_val) + ", true"
+                self.log.info("bhive query true")
+                query = query.replace("nprobe", concat_str)
+            else:
+                query = query.replace("nprobe", str(nprobe_val))
         if "DIST_ALGO" in query:
             query = query.replace("DIST_ALGO", self.distance_algo)
         if "LIMIT_N_VAL" in query:
@@ -267,7 +278,6 @@ class QueryManager:
             else:
                 limit_val = random.randint(1, 100)
             query = query.replace("LIMIT_N_VAL", str(limit_val))
-            vector_query = True
         if self.base64_encoding:
             query = query.replace("vectors", "decode_vector(vectors,false)")
         if self.xattrs:
@@ -283,23 +293,41 @@ class QueryManager:
             result_obj = None
             try:
                 result_obj = self.cluster.query(query, query_opts)
+            except CouchbaseException as ex:
+                if isinstance(ex.context, QueryErrorContext):
+                    request_time = None
+                    if result_obj:
+                        execution_time = result_obj.metadata().metrics().execution_time()
+                        if execution_time:
+                            request_time = execution_time
+                    if hasattr(ex.context, 'execution_time'):
+                        request_time = ex.context.execution_time or result_obj.request_time
+                    item_dict = {ex.context.client_context_id: {
+                        "statement": ex.context.statement,
+                        "first_error_message": ex.context.first_error_message,
+                        "request_time": request_time
+                    }}
+                    self.query_error_obj.update(item_dict)
             except:
-                return result_obj
+                print("Unexpected error:", sys.exc_info()[0])
             result = []
             if iterate_over_results:
                 result = [row for row in result_obj.rows()]
                 if vector_query:
                     if limit_val and len(result) != limit_val:
-                        self.log.error(f"Query {query} has fetched incorrect number of results "
+                        self.log.debug(f"Query {query} has fetched incorrect number of results "
                                        f"though a limit was specified. Limit specified {limit_val}. "
                                        f"Result length {len(result)}")
-                        raise Exception(f"Query {query} has fetched incorrect number of results "
-                                        f"though a limit was specified. Response {dir(result_obj)}")
+                        item_dict = {result_obj.metadata().request_id(): {"statement": query,
+                                                                      "first_error_message": f"Query {query} has fetched incorrect number of results "
+                                                                                             f"though a limit was specified. Limit specified {limit_val}. "
+                                                                                             f"Result length {len(result)}"}}
+                        self.query_error_obj.update(item_dict)
             if validate_vector_query_results:
                 self.compute_recall(groundtruth_vectors, result, index)
             return result
         else:
-            self.log.info(f"running query - {query} via rest")
+            self.log.debug(f"running query - {query} via rest")
             if query_node:
                 query_node = random.choice(self.get_all_n1ql_nodes())
             auth = (self.username, self.password)
@@ -351,7 +379,7 @@ class QueryManager:
         return node_map
 
     def generate_queries(self, template=None):
-        self.log.info("Generating queries.")
+        self.log.debug("Generating queries.")
         generated_queries = []
         with open(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'queries.json')) as f:
             data = f.read()
@@ -366,15 +394,13 @@ class QueryManager:
                     queries_list += query_json[template]
             else:
                 queries_list = query_json[self.template]
-        self.log.info(f"Queries per template {len(queries_list)}")
+        self.log.debug(f"Queries per template {len(queries_list)}")
         keyspaces = self.fetch_keyspaces_list()
         for keyspace in keyspaces:
             bucket, scope, collection = keyspace.split(".")
             for item in queries_list:
                 query_statement = item.replace("keyspacenameplaceholder", f"`{bucket}`.`{scope}`.`{collection}`")
                 generated_queries.append(query_statement)
-        self.log.info(
-            f"=====================Generated a total of {len(generated_queries)} queries=====================")
         return generated_queries
 
     def find_nodes_with_service(self, service):
@@ -450,7 +476,40 @@ class QueryManager:
         if failed_query_count > 0:
             raise Exception("There are failed queries in the completed_requests call. Check logs")
 
+    def print_query_errors(self):
+        """Prints current query errors in a formatted table"""
+        query_error_resp_dict = self.get_query_errors_dict()
+        if query_error_resp_dict:
+            self.log.info("========================Queries that have ended in errors==============================================================")
+            table = BeautifulTable()
+            table.column_headers = ["Request ID", "Statement", "Error", "Request Time"]
+            # Set reasonable widths for all columns
+            table.column_widths = [40, 60, 60, 40]
+            # Configure word wrapping
+            table.maxwidth = 200
+            table.wrap_on_max_width = True
+            
+            for item in query_error_resp_dict.keys():
+                table.append_row([item, 
+                                query_error_resp_dict[item]["statement"],
+                                query_error_resp_dict[item]["first_error_message"],
+                                query_error_resp_dict[item]["request_time"]])
+            self.log.info("\n" + str(table))
+            self.query_error_obj = {}
+
     def run_query_workload(self, num_concurrent_queries=5, refresh_duration=1800):
+        self.log.info("Running query workload")
+        # Start periodic error printing in a separate thread
+        error_thread = threading.Thread(target=self.periodic_print_errors, 
+                                      args=(self.print_frequency,))  # Print every 30 minutes
+        error_thread.daemon = True
+        error_thread.start()
+        # Start periodic recall stats printing if needed
+        if self.validate_vector_query_results:
+            stats_thread = threading.Thread(target=self.periodic_print_recall_stats, 
+                                          args=(self.print_frequency,))
+            stats_thread.daemon = True
+            stats_thread.start()
         query_tasks = []
         time_now = time.time()
         time_last_refresh = time.time()
@@ -465,7 +524,7 @@ class QueryManager:
         elif self.query_type == 'n1ql':
             if self.validate_vector_query_results:
                 groundtruth_vectors = self.read_ground_truth_file()
-                self.log.info(f"Length of the groundtruth vectors array {len(groundtruth_vectors)}")
+                self.log.debug(f"Length of the groundtruth vectors array {len(groundtruth_vectors)}")
             method = self.run_n1ql_query
         else:
             raise Exception("Allowed service values - analytics/n1ql")
@@ -473,7 +532,6 @@ class QueryManager:
             if time.time() - time_last_refresh >= refresh_duration:
                 queries = self.generate_queries()
                 time_last_refresh = time.time()
-                self.log.info("Entering refresh block")
             with ThreadPoolExecutor() as executor_main:
                 if len(queries) < num_concurrent_queries:
                     queries_chosen = queries
@@ -499,13 +557,14 @@ class QueryManager:
                 try:
                     task.result()
                 except CouchbaseException as ex:
-                    self.log.error(f"Query task ended in exception. Ignoring this")
                     if isinstance(ex.context, QueryErrorContext):
                         item_dict = {ex.context.client_context_id: {"statement": ex.context.statement,
                                                                     "first_error_message": ex.context.first_error_message}}
                         self.query_error_obj.update(item_dict)
+                except:
+                    print("Unexpected error:", sys.exc_info()[0])
+
             sleep_duration = random.randint(10, 60)
-            self.log.info(f"Query batch completed. Will sleep for {sleep_duration} seconds")
             time.sleep(sleep_duration)
         self.log.info(f"Exiting query workload loop Current time {time.time()}  start time {time_now} "
                       f" Duration {self.duration}")
@@ -513,16 +572,20 @@ class QueryManager:
     def get_query_errors_dict(self):
         return self.query_error_obj
 
-    def periodic_print_recall_stats(self, frequency=10):
+    def periodic_print_recall_stats(self, frequency=30):
         time_now = time.time()
         while time.time() - time_now < self.duration:
             self.print_recall_stats()
-            time.sleep(frequency * 60)
+            time.sleep(frequency * 60)  # Convert minutes to seconds
 
     def print_recall_stats(self):
-        self.log.info(f"Recall dict is {self.recall_dict}")
+        table = BeautifulTable()
+        table.column_headers = ["Recall range", "Query count", "Percentage"]
+        total_query_count = sum(self.recall_dict.values())
         for item in self.recall_dict.keys():
-            self.log.info(f"Recall percentage between {item * 10 - 10} and {item * 10} is {self.recall_dict[item]}")
+            range_recall = f" {item * 10 - 10} to {item * 10} "
+            table.append_row([range_recall, self.recall_dict[item], 100 * self.recall_dict[item] / total_query_count])
+        print(table)
 
     def get_rebalance_status(self):
         endpoint = f"{self.connection_string}/pools/default/rebalanceProgress"
@@ -611,6 +674,12 @@ class QueryManager:
         if errors:
             raise Exception(f"Mismatch in query results between primary and gsi {errors}")
 
+    def periodic_print_errors(self, frequency=30):
+        """Prints error stats every n minutes"""
+        time_now = time.time()
+        while time.time() - time_now < self.duration:
+            self.print_query_errors()
+            time.sleep(frequency * 60)  # Convert minutes to seconds
 
 
 if __name__ == '__main__':
@@ -655,19 +724,22 @@ if __name__ == '__main__':
     parser.add_argument("-skd", "--skip_default", help="ground truth file to be used for vector queries",
                         default="true")
     parser.add_argument("-pf", "--print_frequency", help="ground truth file to be used for vector queries",
-                        default=5)
+                        default=5, type=int)
+    parser.add_argument("-bhi", "--run_bhive_queries", help="ground truth file to be used for vector queries",
+                        default="false")
     args = parser.parse_args()
     query_manager = QueryManager(args.connection_string, args.username, args.password, int(args.timeout),
                                  int(args.duration), args.template, args.use_sdk, args.query_type, args.query_file,
                                  args.groundtruth_file, args.validate_vector_query_results, args.distance_algo,
                                  args.bucket_list, args.use_tls, args.capella, args.skip_default,
                                  args.num_groundtruth_vectors, args.num_query_vectors, args.base64,
-                                 args.xattrs, args.sample_size)
+                                 args.xattrs, args.sample_size, args.run_bhive_queries, args.print_frequency)
     try:
         if args.action == "run_query_workload":
             query_manager.run_query_workload(int(args.num_concurrent_queries), int(args.refresh_duration))
             if args.validate_vector_query_results and args.run_vector_queries:
                 query_manager.print_recall_stats()
+                raise Exception("Raising dummy exception to print the recall stats in the console log")
         elif args.action == "run_scans_validation":
             query_manager.run_scans_validation()
         elif args.action == "data_validation":
@@ -686,5 +758,21 @@ if __name__ == '__main__':
         if query_error_resp_dict:
             print(
                 "========================Queries that have ended in errors==============================================================")
-            print(json.dumps(query_error_resp_dict, indent=4))
-            raise Exception(f"A few queries have ended in errors")
+            table = BeautifulTable()
+            table.column_headers = ["Request ID", "Statement", "Error", "Request Time"]
+            # Set reasonable widths for all columns
+            table.column_widths = [40, 60, 60, 20]
+            # Configure word wrapping
+            table.maxwidth = 180
+            table.wrap_on_max_width = True
+            
+            for item in query_error_resp_dict.keys():
+                if hasattr(query_error_resp_dict[item], 'request_time'):
+                    request_time = query_error_resp_dict[item].request_time
+                else:
+                    request_time = "NA"
+                table.append_row([item,
+                                query_error_resp_dict[item]["statement"],
+                                query_error_resp_dict[item]["first_error_message"],
+                                request_time])
+            print(table)

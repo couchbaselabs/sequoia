@@ -1,5 +1,13 @@
 - include: tests/templates/kv.yml, tests/templates/n1ql.yml, tests/templates/rebalance.yml, tests/templates/multinode_failure.yml
 
+############### Sleep for 5 mins before changing indexer settings ################
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  requires: "{{eq true .DoOnce }}"
+  wait: true
+
+
 ############### Enable Plasma Bloom Filter ################
 - template: set_gsi_config
   args: "{{.ActiveIndexNode 0}}, 'indexer.plasma.backIndex.enablePageBloomFilter':true"
