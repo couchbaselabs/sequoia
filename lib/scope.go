@@ -13,11 +13,11 @@ package sequoia
  */
 
 import (
-	"fmt"
-	"regexp"
-	"strconv"
-	"strings"
-
+    "fmt"
+    "regexp"
+    "strconv"
+    "strings"
+    "time"
 	cmap "github.com/streamrail/concurrent-map"
 )
 
@@ -135,6 +135,8 @@ func (s *Scope) SetupServer() {
         s.InitNodes()
         s.InitCluster()
         s.AddUsers()
+        s.CreateEncryptionKeys()
+        s.EnableLogAndConfigEncryption()
         s.AddNodes()
         s.RebalanceClusters()
         s.ApplyInternalSettings()
@@ -575,6 +577,46 @@ func (s *Scope) AddUsers() {
 	s.Spec.ApplyToServers(operation, 0, 1)
 }
 
+func (s *Scope) CreateEncryptionKeys() {
+    var image = s.GetCliImage()
+    operation := func(name string,server *ServerSpec) {
+        autoRotateStartTime := time.Now().UTC().Add(1 * time.Hour).Format(time.RFC3339)
+        orchestrator := server.Names[0]
+        ip := s.Provider.GetHostAddress(orchestrator)
+        command := []string{"setting-encryption",
+            "-c", ip,
+            "-u", server.RestUsername,
+            "-p", server.RestPassword,
+            "--key-type", "auto-generated",
+            "--auto-rotate-every", "1",
+            "--name", "universal_key",
+            "--encrypt-with-master-password",
+            "--config-usage",
+            "--log-usage",
+            "--all-bucket-usage",
+            "--auto-rotate-start-on", autoRotateStartTime,
+             "--add-key",
+        }
+
+        desc := "create encryption key " + name
+        command = cliCommandValidator(s.Version, command)
+
+        task := ContainerTask{
+            Describe: desc,
+            Image:    image,
+            Command:  command,
+            Async:    false,
+        }
+        fmt.Printf("Creating encryption key: %s\n", name)
+        fmt.Printf("Command: %v\n", command)
+        fmt.Printf("Task Description: %s\n", desc)
+        fmt.Printf("Auto-Rotate Start Time: %s\n", autoRotateStartTime)
+
+        s.Cm.Run(&task)
+    }
+
+    s.Spec.ApplyToServers(operation, 0, 1)
+}
 func (s *Scope) AddNodes() {
 	var image = s.GetCliImage()
 	addNodesOp := func(name string, server *ServerSpec) {
@@ -628,6 +670,78 @@ func (s *Scope) AddNodes() {
 
 	// add nodes
 	s.Spec.ApplyToAllServers(addNodesOp)
+}
+
+
+func (s *Scope) EnableLogAndConfigEncryption() {
+    var image = s.GetCliImage()
+    operation := func(name string, server *ServerSpec) {
+        orchestrator := server.Names[0]
+        ip := s.Provider.GetHostAddress(orchestrator)
+
+        // Enable config encryption
+        command := []string{"setting-encryption",
+            "-c", ip,
+            "-u", server.RestUsername,
+            "-p", server.RestPassword,
+            "--set",
+            "--target", "config",
+            "--type", "key",
+            "--key", "0",
+        }
+        if server.DekRotateEvery != "" {
+          command = append(command, "--dek-rotate-every", server.DekRotateEvery)
+        }
+        if server.DekRotateEvery != "" {
+          command = append(command, "--dek-rotate-every", server.DekRotateEvery)
+         }
+        desc := "enable config encryption " + name
+        command = cliCommandValidator(s.Version, command)
+
+        task := ContainerTask{
+            Describe: desc,
+            Image:    image,
+            Command:  command,
+            Async:    false,
+        }
+        fmt.Printf("Enabling config encryption: %s\n", name)
+        fmt.Printf("Command: %v\n", command)
+        fmt.Printf("Task Description: %s\n", desc)
+
+        s.Cm.Run(&task)
+
+        // Enable log encryption
+        command = []string{"setting-encryption",
+            "-c", ip,
+            "-u", server.RestUsername,
+            "-p", server.RestPassword,
+            "--set",
+            "--target", "log",
+            "--type", "key",
+            "--key", "0",
+        }
+
+         if server.DekRotateEvery != "" {
+          command = append(command, "--dek-rotate-every", server.DekRotateEvery)
+        }
+
+        desc = "enable log encryption " + name
+        command = cliCommandValidator(s.Version, command)
+
+        task = ContainerTask{
+            Describe: desc,
+            Image:    image,
+            Command:  command,
+            Async:    false,
+        }
+        fmt.Printf("Enabling log encryption: %s\n", name)
+        fmt.Printf("Command: %v\n", command)
+        fmt.Printf("Task Description: %s\n", desc)
+
+        s.Cm.Run(&task)
+    }
+
+    s.Spec.ApplyToServers(operation, 0, 1)
 }
 
 func (s *Scope) RebalanceClusters() {
@@ -696,88 +810,93 @@ func (s *Scope) ApplyInternalSettings() {
 }
 
 func (s *Scope) CreateBuckets() {
-	//fmt.Printf("%+v\n", s.Spec.Buckets)
-	var image = s.GetCliImage()
+    var image = s.GetCliImage()
 
-	if s.Spec.Servers[0].NumberOfBuckets != "" {
-		s.Rest.updateNumberOfBucktes(s.Spec.Servers[0].NumberOfBuckets)
-	}
+    if s.Spec.Servers[0].NumberOfBuckets != "" {
+        s.Rest.updateNumberOfBucktes(s.Spec.Servers[0].NumberOfBuckets)
+    }
 
-	// configure rebalance operation
-	operation := func(name string, server *ServerSpec) {
+    // configure rebalance operation
+    operation := func(name string, server *ServerSpec) {
+        orchestrator := server.Names[0]
+        ip := s.Provider.GetHostAddress(orchestrator)
+        for _, bucket := range server.BucketSpecs {
+            for _, bucketName := range bucket.Names {
+                ramQuota := bucket.Ram
+                if strings.Index(ramQuota, "%") > -1 {
+                    // convert bucket ram to value within context of server ram
+                    ramQuota = strings.Replace(ramQuota, "%", "", 1)
+                    ramVal, _ := strconv.Atoi(ramQuota)
+                    nodeRam, _ := strconv.Atoi(server.Ram)
+                    ramQuota = strconv.Itoa((nodeRam * ramVal) / 100)
+                }
+                var replica uint8 = 1
+                if bucket.Replica != nil {
+                    replica = *bucket.Replica
+                }
+                command := []string{"bucket-create", "-c", ip,
+                    "-u", server.RestUsername, "-p", server.RestPassword,
+                    "--bucket", bucketName,
+                    "--bucket-ramsize", ramQuota,
+                    "--bucket-type", bucket.Type,
+                    "--bucket-replica", strconv.Itoa(int(replica)),
+                    "--enable-flush", "1", "--wait",
+                }
+                if bucket.Eviction != "" {
+                    command = append(command, "--bucket-eviction-policy", bucket.Eviction)
+                }
+                if bucket.Compression != "" {
+                    command = append(command, "--compression-mode", bucket.Compression)
+                }
+                if bucket.TTL != "" {
+                    command = append(command, "--max-ttl", bucket.TTL)
+                }
+                if bucket.Storage != "" {
+                    command = append(command, "--storage-backend", bucket.Storage)
+                }
+                if bucket.Durability != "" {
+                    command = append(command, "--durability-min-level", bucket.Durability)
+                }
+                if bucket.HistoryRetentionBytes != "" {
+                   command = append(command, "--history-retention-bytes", bucket.HistoryRetentionBytes)
+                }
+                if bucket.HistoryRetentionSeconds != "" {
+                    command = append(command, "--history-retention-seconds", bucket.HistoryRetentionSeconds)
+                }
+                if bucket.EnableHistoryRetentionByDefault != "" {
+                    command = append(command, "--enable-history-retention-by-default", bucket.EnableHistoryRetentionByDefault)
+                }
+                if bucket.Rank != "" {
+                    command = append(command, "--rank", bucket.Rank)
+                }
+                if bucket.EnableEncryptionAtRest {
+                    command = append(command, "--encryption-key", "0")
+                    if bucket.DekRotateEvery != "" {
+                        command = append(command, "--dek-rotate-every", bucket.DekRotateEvery)
+                    }
+                    if bucket.DekLifetime != "" {
+                        command = append(command, "--dek-lifetime", bucket.DekLifetime)
+                    }
+                }
 
-		orchestrator := server.Names[0]
-		ip := s.Provider.GetHostAddress(orchestrator)
+                desc := "bucket create " + bucketName
+                task := ContainerTask{
+                    Describe: desc,
+                    Image:    image,
+                    Command:  command,
+                    Async:    false,
+                }
+                if s.Provider.GetType() == "docker" {
+                    task.LinksTo = orchestrator
+                }
 
-		for _, bucket := range server.BucketSpecs {
-			for _, bucketName := range bucket.Names {
-				ramQuota := bucket.Ram
-				if strings.Index(ramQuota, "%") > -1 {
-					// convert bucket ram to value within context of server ram
-					ramQuota = strings.Replace(ramQuota, "%", "", 1)
-					ramVal, _ := strconv.Atoi(ramQuota)
-					nodeRam, _ := strconv.Atoi(server.Ram)
-					ramQuota = strconv.Itoa((nodeRam * ramVal) / 100)
-				}
-				var replica uint8 = 1
-				if bucket.Replica != nil {
-					replica = *bucket.Replica
-				}
-				command := []string{"bucket-create", "-c", ip,
-					"-u", server.RestUsername, "-p", server.RestPassword,
-					"--bucket", bucketName,
-					"--bucket-ramsize", ramQuota,
-					"--bucket-type", bucket.Type,
-					"--bucket-replica", strconv.Itoa(int(replica)),
-					"--enable-flush", "1", "--wait",
-				}
-				if bucket.Eviction != "" {
-					command = append(command, "--bucket-eviction-policy", bucket.Eviction)
-				}
-				if bucket.Compression != "" {
-					command = append(command, "--compression-mode", bucket.Compression)
-				}
-				if bucket.TTL != "" {
-					command = append(command, "--max-ttl", bucket.TTL)
-				}
-				if bucket.Storage != "" {
-					command = append(command, "--storage-backend", bucket.Storage)
-				}
-				if bucket.Durability != "" {
-					command = append(command, "--durability-min-level", bucket.Durability)
-				}
-				if bucket.HistoryRetentionBytes != "" {
-					command = append(command, "--history-retention-bytes", bucket.HistoryRetentionBytes)
-				}
-				if bucket.HistoryRetentionSeconds != "" {
-					command = append(command, "--history-retention-seconds", bucket.HistoryRetentionSeconds)
-				}
-				if bucket.EnableHistoryRetentionByDefault != "" {
-					command = append(command, "--enable-history-retention-by-default", bucket.EnableHistoryRetentionByDefault)
-				}
-				if bucket.Rank != "" {
-					command = append(command, "--rank", bucket.Rank)
-				}
+                s.Cm.Run(&task)
+            }
+        }
+    }
 
-				desc := "bucket create " + bucketName
-				task := ContainerTask{
-					Describe: desc,
-					Image:    image,
-					Command:  command,
-					Async:    false,
-				}
-				if s.Provider.GetType() == "docker" {
-					task.LinksTo = orchestrator
-				}
-
-				s.Cm.Run(&task)
-			}
-		}
-	}
-
-	// apply only to orchestrator
-	s.Spec.ApplyToServers(operation, 0, 1)
-
+    // apply only to orchestrator
+    s.Spec.ApplyToServers(operation, 0, 1)
 }
 
 func (s *Scope) CreateScope() {

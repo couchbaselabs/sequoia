@@ -27,6 +27,10 @@ type BucketSpec struct {
 	BucketScopes    string
 	Storage         string
 	Durability      string
+	EncryptionKeyID *uint8 `default:"0"`
+	DekRotateEvery  string `yaml:"dekRotateEvery"`
+	DekLifetime     string `yaml:"dekLifetime"`
+    EnableEncryptionAtRest bool `yaml:"enableEncryptionAtRest"`
 	HistoryRetentionBytes string
 	HistoryRetentionSeconds string
 	EnableHistoryRetentionByDefault string
@@ -71,6 +75,9 @@ type ServerSpec struct {
 	IndexPath       string `yaml:"index_path"`
 	AnalyticsPath   string `yaml:"analytics_path"`
 	IndexStorage    string `yaml:"index_storage"`
+	DekRotateEvery  string `yaml:"dekRotateEvery"`
+	DekLifetime     string `yaml:"dekLifetime"`
+	EnableEncryptionAtRest bool `yaml:"enable_encryption_at_rest"`
 	Buckets         string
 	BucketSpecs     []BucketSpec
 	NodesActive     uint8

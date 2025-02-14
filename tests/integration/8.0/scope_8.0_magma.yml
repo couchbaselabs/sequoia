@@ -66,6 +66,7 @@ servers: # each server tag represents a cluster
       eventing_ram: 90%
       analytics_ram: 90%
       index_storage: default
+      enable_encryption_at_rest: true
       services:
         index: 6
         query: 2
@@ -77,6 +78,8 @@ servers: # each server tag represents a cluster
       rest_password: password
       ssh_username: root
       ssh_password: couchbase
+      dekRotateEvery: 50
+      dekLifetime: 100
       data_path: "/data/couchbase"
       index_path: "/data/couchbase"
       analytics_path: "/data/couchbase"
@@ -106,6 +109,9 @@ buckets:
       ram: 35%
       storage: magma
       eviction: fullEviction
+      enableEncryptionAtRest: true
+      dekLifetime: 100
+      dekRotateEvery: 50
       ddocs: scale
       compression: active
       historyretentionbytes : 134217728000
@@ -118,6 +124,9 @@ buckets:
       storage: magma
       eviction: fullEviction
       historyretentionbytes: 268435456000
+      enableEncryptionAtRest: true
+      dekLifetime: 100
+      dekRotateEvery: 50
       historyretentionseconds: 43200
       enablehistoryretentionbydefault: 1
       rank : 3
@@ -128,6 +137,9 @@ buckets:
       eviction: fullEviction
       ttl: 10800
       historyretentionbytes: 2147483648
+      enableEncryptionAtRest: true
+      dekLifetime: 100
+      dekRotateEvery: 50
       historyretentionseconds: 3600
       enablehistoryretentionbydefault: 1
       rank : 2
@@ -138,6 +150,9 @@ buckets:
       eviction: fullEviction
       ddocs: all
       historyretentionbytes: 53687091200
+      enableEncryptionAtRest: true
+      dekLifetime: 100
+      dekRotateEvery: 50
       historyretentionseconds: 7200
       enablehistoryretentionbydefault: 1
       rank : 2
@@ -147,6 +162,9 @@ buckets:
       storage: magma
       eviction: fullEviction
       historyretentionbytes: 2147483648
+      enableEncryptionAtRest: true
+      dekLifetime: 100
+      dekRotateEvery: 50
       historyretentionseconds: 14440
       enablehistoryretentionbydefault: 1
       rank : 1
@@ -156,6 +174,9 @@ buckets:
       storage: magma
       eviction: fullEviction
       historyretentionbytes: 2147483648
+      enableEncryptionAtRest: true
+      dekLifetime: 100
+      dekRotateEvery: 50
       historyretentionseconds: 86400
       enablehistoryretentionbydefault: 1
       rank : 1
@@ -165,6 +186,9 @@ buckets:
       storage: magma
       eviction: fullEviction
       historyretentionbytes: 2147483648
+      enableEncryptionAtRest: true
+      dekLifetime: 100
+      dekRotateEvery: 50
       historyretentionseconds: 86400
       enablehistoryretentionbydefault: 1
       rank : 1
@@ -174,6 +198,9 @@ buckets:
       storage: magma
       eviction: fullEviction
       historyretentionbytes: 2147483648
+      enableEncryptionAtRest: true
+      dekLifetime: 100
+      dekRotateEvery: 50
       historyretentionseconds: 86400
       enablehistoryretentionbydefault: 1
       rank : 1
@@ -183,6 +210,9 @@ buckets:
       storage: magma
       eviction: fullEviction
       historyretentionbytes: 2147483648
+      enableEncryptionAtRest: true
+      dekLifetime: 100
+      dekRotateEvery: 50
       historyretentionseconds: 86400
       enablehistoryretentionbydefault: 1
       rank : 1
@@ -192,6 +222,9 @@ buckets:
       storage: magma
       eviction: fullEviction
       historyretentionbytes: 2147483648
+      enableEncryptionAtRest: true
+      dekLifetime: 100
+      dekRotateEvery: 50
       historyretentionseconds: 86400
       enablehistoryretentionbydefault: 1
 
@@ -201,6 +234,9 @@ buckets:
       storage: magma
       eviction: fullEviction
       historyretentionbytes: 2147483648
+      enableEncryptionAtRest: true
+      dekLifetime: 100
+      dekRotateEvery: 50
       historyretentionseconds: 86400
       enablehistoryretentionbydefault: 1
   -
@@ -209,6 +245,9 @@ buckets:
       storage: magma
       eviction: fullEviction
       historyretentionbytes: 2147483648
+      enableEncryptionAtRest: true
+      dekLifetime: 100
+      dekRotateEvery: 50
       historyretentionseconds: 86400
       enablehistoryretentionbydefault: 1
 
