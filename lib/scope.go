@@ -590,11 +590,11 @@ func (s *Scope) CreateEncryptionKeys() {
             "--key-type", "auto-generated",
             "--auto-rotate-every", "1",
             "--name", "universal_key",
+            "--auto-rotate-start-on", autoRotateStartTime,
             "--encrypt-with-master-password",
             "--config-usage",
             "--log-usage",
             "--all-bucket-usage",
-            "--auto-rotate-start-on", autoRotateStartTime,
              "--add-key",
         }
 
@@ -684,7 +684,6 @@ func (s *Scope) EnableLogAndConfigEncryption() {
             "-c", ip,
             "-u", server.RestUsername,
             "-p", server.RestPassword,
-            "--set",
             "--target", "config",
             "--type", "key",
             "--key", "0",
@@ -695,6 +694,7 @@ func (s *Scope) EnableLogAndConfigEncryption() {
         if server.DekRotateEvery != "" {
           command = append(command, "--dek-rotate-every", server.DekRotateEvery)
          }
+        command = append(command, "--set")
         desc := "enable config encryption " + name
         command = cliCommandValidator(s.Version, command)
 
@@ -715,7 +715,6 @@ func (s *Scope) EnableLogAndConfigEncryption() {
             "-c", ip,
             "-u", server.RestUsername,
             "-p", server.RestPassword,
-            "--set",
             "--target", "log",
             "--type", "key",
             "--key", "0",
@@ -724,6 +723,7 @@ func (s *Scope) EnableLogAndConfigEncryption() {
          if server.DekRotateEvery != "" {
           command = append(command, "--dek-rotate-every", server.DekRotateEvery)
         }
+        command = append(command, "--set")
 
         desc = "enable log encryption " + name
         command = cliCommandValidator(s.Version, command)
