@@ -727,18 +727,18 @@ func (s *Scope) EnableLogAndConfigEncryption() {
 
         desc = "enable log encryption " + name
         command = cliCommandValidator(s.Version, command)
-
-        task = ContainerTask{
-            Describe: desc,
-            Image:    image,
-            Command:  command,
-            Async:    false,
-        }
-        fmt.Printf("Enabling log encryption: %s\n", name)
-        fmt.Printf("Command: %v\n", command)
-        fmt.Printf("Task Description: %s\n", desc)
-
-        s.Cm.Run(&task)
+// temp disabling log encryption until workaround for eagle eye is coded
+//         task = ContainerTask{
+//             Describe: desc,
+//             Image:    image,
+//             Command:  command,
+//             Async:    false,
+//         }
+//         fmt.Printf("Enabling log encryption: %s\n", name)
+//         fmt.Printf("Command: %v\n", command)
+//         fmt.Printf("Task Description: %s\n", desc)
+//
+//         s.Cm.Run(&task)
     }
 
     s.Spec.ApplyToServers(operation, 0, 1)
