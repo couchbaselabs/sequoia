@@ -134,7 +134,7 @@ class MagmaLoader:
             exit(1)
         if self.rr is None:
             if self.sift_path:
-                self.load_sift_data(bucket_name=self.bucket_name)
+                self.load_sift_data(bucket_name=self.bucket_name, mutations_mode=self.mutations_mode)
             else:
                 start_time = time.time()
                 while True:
@@ -327,7 +327,7 @@ class MagmaLoader:
                 if future.exception():
                     raise future.exception()
 
-    def load_sift_data(self, random_key_prefix=False, bucket_name="default"):
+    def load_sift_data(self, random_key_prefix=False, bucket_name="default", mutations_mode=False):
         self.bucket_name = bucket_name
         if random_key_prefix:
             self.key_prefix = ''.join(random.choices(ascii_letters + digits, k=10))
@@ -342,12 +342,20 @@ class MagmaLoader:
             for coll in coll_list:
                 if coll == '_default' and self.skip_default:
                     continue
-                command = f"java -cp magmadocloader.jar SIFTLoader -n {self.host} " \
+                if not mutations_mode:
+                    command = f"java -cp magmadocloader.jar SIFTLoader -n {self.host} " \
                           f"-user '{self.username}' -pwd '{self.password}' -b {self.bucket_name} " \
                           f"-create_s {self.start} -keyType Sequential -create_e {self.end} -cr 100 " \
                           f"-scope {scope} -collection {coll} -p 11207 " \
                           f"-workers {self.workers} -ops {self.ops_rate} -valueType siftBigANN "\
                           f"-baseVectorsFilePath {self.sift_path}"
+                else:
+                    command = f"java -cp magmadocloader.jar SIFTLoader -n {self.host} " \
+                          f"-user '{self.username}' -pwd '{self.password}' -b {self.bucket_name} " \
+                          f"-create_s {self.start} -create_e {self.end} -update_s {self.start} -update_e {self.end} -cr 100 -up 100" \
+                          f"-scope {scope} -collection {coll} -p 11207 " \
+                          f"-workers {self.workers} -ops {self.ops_rate} -valueType siftBigANN "\
+                          f"-baseVectorsFilePath {self.sift_path} -mutate 5"
                 print("Will run this {}".format(command))
                 proc = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True)
                 out = proc.communicate()

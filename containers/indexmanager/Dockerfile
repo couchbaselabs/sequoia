@@ -1,5 +1,6 @@
 FROM ubuntu:20.04
 ENV TZ=US/Pacific
+ENV CMAKE_POLICY_VERSION_MINIMUM=3.5
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 RUN apt-get update --allow-insecure-repositories
 RUN apt-get install -y --allow-unauthenticated gnupg2

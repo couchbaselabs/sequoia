@@ -288,9 +288,13 @@ class IndexManager:
                             help="max replica count for indexes")
         parser.add_argument("--all_docs_indexed", default="false",
                             help="have all mutations been processed?")
+        parser.add_argument("--log_level",
+                          choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+                          default="INFO",
+                          help="Set the logging level")
         args = parser.parse_args()
         self.log = logging.getLogger("indexmanager")
-        self.log.setLevel(logging.INFO)
+        self.log.setLevel(getattr(logging, args.log_level))
         self.node_addr = args.node
         self.node_list = args.node_list.split(",")
         self.node_port = args.port
@@ -845,7 +849,8 @@ class IndexManager:
                             similarity = random.choice(DISTANCE_SUPPORTED_FUNCTIONS)
                         self.num_dimensions = int(self.num_dimensions)
                         use_custom_nprobes = bool(random.getrandbits(1))
-                        use_custom_persist_full_vector = bool(random.getrandbits(1))
+                        # Set persist_full_vector to true 25% of the time
+                        use_custom_persist_full_vector = random.random() < 0.25
                         # commented until a decision is made on the custom trainlist number
                         # use_custom_trainlist = bool(random.getrandbits(1))
                         use_custom_trainlist = False
@@ -1219,7 +1224,8 @@ class IndexManager:
                             similarity = random.choice(DISTANCE_SUPPORTED_FUNCTIONS)
                         self.num_dimensions = int(self.num_dimensions)
                         use_custom_nprobes = bool(random.getrandbits(1))
-                        use_custom_persist_full_vector = bool(random.getrandbits(1))
+                        # Set persist_full_vector to true 25% of the time
+                        use_custom_persist_full_vector = random.random() < 0.25
                         # commented until a decision is made on the custom trainlist number
                         # use_custom_trainlist = bool(random.getrandbits(1))
                         use_custom_trainlist = False
@@ -1228,7 +1234,7 @@ class IndexManager:
                                                 f"\"similarity\":\"{similarity}\"")
                         # Only set persist_full_vector for BHIVE indexes
                         if create_bhive_indexes and use_custom_persist_full_vector:
-                            with_clause_list.append(f"\"persist_full_vector\":\"true\"")
+                            with_clause_list.append(f"\"persist_full_vector\":\"false\"")
                         if use_custom_nprobes:
                             custom_nprobe = random.randint(SCAN_NPROBE_MIN, SCAN_NPROBE_MAX)
                             with_clause_list.append(f"\"scan_nprobes\":{custom_nprobe}")
@@ -1334,16 +1340,20 @@ class IndexManager:
         
         def monitor_node(node, violation_counts):
             """Thread function to monitor a single node"""
-            while True:
-                endpoint = f"{self.scheme}://{node}:{self.node_port_index}/stats"
+            end_time = time.time() + self.timeout if self.timeout > 0 else float('inf')
+            while time.time() < end_time:
                 try:
+                    endpoint = f"{self.scheme}://{node}:{self.node_port_index}/stats"
                     response = requests.get(endpoint, auth=(
                         self.username, self.password), verify=False, timeout=300)
                     if response.ok:
                         response_temp = json.loads(response.text)
-                        
                         memory_rss = response_temp['memory_rss']
                         memory_total = response_temp['memory_total'] 
+                        usage_percent = (memory_rss / memory_total) * 100
+                        self.log.debug(f"Node {node} - Memory RSS: {memory_rss/(1024*1024*1024):.2f}GB, "
+                                f"Total: {memory_total/(1024*1024*1024):.2f}GB, "
+                                f"Usage: {usage_percent:.2f}%")
                         if memory_rss > memory_total:
                             # Calculate memory usage percentage
                             usage_percent = (memory_rss / memory_total) * 100
@@ -1369,19 +1379,18 @@ class IndexManager:
                                 if violation_counts[node] > 0:
                                     self.log.info(f"Node {node} memory usage returned to normal levels")
                                     violation_counts[node] = 0
-                                    
                 except Exception as e:
                     self.log.error(f"Error collecting stats from node {node}: {str(e)}")
                     
                 time.sleep(INTERVAL)
 
         # Get list of index nodes
-        idx_nodes = self.find_nodes_with_service(self.get_services_map(), "index")
+        idx_nodes = self.get_index_nodes()
         
         # Initialize shared violation counts dict and lock
         violation_counts = {node: 0 for node in idx_nodes}
         violation_counts_lock = threading.Lock()
-        
+        self.log.info(f"Monitoring memory usage for nodes {idx_nodes}")
         # Create and start monitoring threads for each node
         monitor_threads = []
         for node in idx_nodes:
@@ -1400,7 +1409,7 @@ class IndexManager:
                 all_alive = all(t.is_alive() for t in monitor_threads)
                 if not all_alive:
                     raise Exception("One or more monitoring threads died unexpectedly")
-                time.sleep(60)
+                time.sleep(120)
         except KeyboardInterrupt:
             self.log.info("Memory monitoring interrupted by user")
         except Exception as e:
@@ -1964,10 +1973,16 @@ class IndexManager:
                 if bucket is not None and bucket not in index['Index']:
                     continue
                 idx_name = index['Index']
-                mainstore_count = index["Stats"]["MainStore"]["items_count"]
+                if "items_count" in index["Stats"]["MainStore"]:
+                    mainstore_count = index["Stats"]["MainStore"]["items_count"]
+                else:
+                    mainstore_count = index["Stats"]["MainStore"]["item_count"]
                 idx_map.append({"name": idx_name, "mainstore_count": mainstore_count})
                 if "BackStore" in index["Stats"]:
-                    idx_map[-1].update({"backstore_count": index["Stats"]["BackStore"]["items_count"]})
+                    if "items_count" in index["Stats"]["BackStore"]:
+                        idx_map[-1].update({"backstore_count": index["Stats"]["BackStore"]["items_count"]})
+                    else:
+                        idx_map[-1].update({"backstore_count": index["Stats"]["BackStore"]["item_count"]})
         return idx_map
 
     def get_stats_map(self, index_node_addr):
@@ -2148,6 +2163,20 @@ class IndexManager:
                 if service in node["services"]:
                     nodelist.append(node["hostname"])
         return nodelist
+
+    def get_index_nodes(self):
+        """
+        Get list of index nodes with periodic refresh
+        """
+        current_time = time.time()
+        # Initialize or refresh if 20 minutes have passed
+        if not hasattr(self, '_idx_nodes_cache_time') or \
+           not hasattr(self, '_idx_nodes_cache') or \
+           current_time - self._idx_nodes_cache_time > 1200:  # 1200 seconds = 20 minutes
+            self._idx_nodes_cache = self.find_nodes_with_service(self.get_services_map(), "index")
+            self._idx_nodes_cache_time = current_time
+            self.log.info(f"Refreshed index nodes list: {self._idx_nodes_cache}")
+        return self._idx_nodes_cache
 
     # Not working with collections in Python SDK 3.0.4. To be revisited when implemented
 
@@ -2705,36 +2734,86 @@ class IndexManager:
         metadata = self.get_indexer_metadata()
         shard_index_map = {}
         for index_metadata in metadata['status']:
-            if 'alternateShardIds' in index_metadata:
+            if index_metadata.get('alternateShardIds'):
                 for host in index_metadata['alternateShardIds']:
                     for partition in index_metadata['alternateShardIds'][host]:
                         shards = index_metadata['alternateShardIds'][host][partition][0][:-2]
+                        full_index_name = f"{index_metadata['bucket']}:{index_metadata['scope']}:{index_metadata['collection']}:{index_metadata['name']}"
                         if shards in shard_index_map:
-                            shard_index_map[shards].append(index_metadata['indexName'])
+                            shard_index_map[shards].append(full_index_name)
                         else:
-                            shard_index_map[shards] = [index_metadata['indexName']]
+                            shard_index_map[shards] = [full_index_name]
 
         for key, value in shard_index_map.items():
             shard_index_map[key] = list(set(shard_index_map[key]))
         return shard_index_map
 
+    def get_index_types(self):
+        """
+        Get lists of indexes categorized by their types by querying the /getIndexStatus endpoint.
+        
+        Returns:
+            tuple: Three lists containing (vector_index_list, bhive_index_list, scalar_index_list)
+        """
+        vector_index_list = []
+        bhive_index_list = []
+        scalar_index_list = []
+        
+        # Get index metadata from indexer node
+        index_metadata = self.get_indexer_metadata()
+        if not index_metadata or 'status' not in index_metadata:
+            self.log.error("Failed to get index metadata")
+            return vector_index_list, bhive_index_list, scalar_index_list
+            
+        for index in index_metadata['status']:
+            # Construct the full index name
+            if index['scope'] == '_default':
+                full_index_name = f"{index['bucket']}:_default:_default:{index['name']}"
+            else:
+                full_index_name = f"{index['bucket']}:{index['scope']}:{index['collection']}:{index['name']}"
+                
+            # Check index definition to categorize
+            definition = index.get('definition', '').lower()
+            
+            if "create vector index" in definition:
+                bhive_index_list.append(full_index_name)
+            elif "vector" in definition in definition and "similarity" in definition and "description" in definition:
+                vector_index_list.append(full_index_name)
+            else:
+                scalar_index_list.append(full_index_name)
+        
+        self.log.info(f"Vector indexes: {vector_index_list}")
+        self.log.info(f"BHIVE indexes: {bhive_index_list}")
+        self.log.info(f"Scalar indexes: {scalar_index_list}")
+        return vector_index_list, bhive_index_list, scalar_index_list
+
     def validate_shard_seggregation(self):
-        index_categories = ['scalar', 'vector', 'bhive']
+        vector_index_list, bhive_index_list, scalar_index_list = self.get_index_types()
         shard_index_map = self.get_shards_index_map()
-        errors = [] # Initialize errors list
+        self.log.debug(f"Shard index map {shard_index_map}")
+        errors = []
+        
         for shard, indices in shard_index_map.items():
             categories_found = set()
             for index in indices:
-                for category in index_categories:
-                    if category in index:
-                        categories_found.add(category)
-            # To check if exactly more than one category is found for this shard
+                if index in vector_index_list:
+                    categories_found.add('vector')
+                elif index in bhive_index_list:
+                    categories_found.add('bhive')
+                elif index in scalar_index_list:
+                    categories_found.add('scalar')
+                    
+            # Check if more than one category is found for this shard
             if len(categories_found) != 1:
-                errors_obj = dict()
-                errors_obj["type"] = "More than category of index found for the shard specific shard"
-                errors_obj["indices"] = indices
-                errors_obj["shard_index_map"] = shard_index_map
+                errors_obj = {
+                    "type": "Multiple index categories found in single shard",
+                    "shard": shard,
+                    "indices": indices,
+                    "categories": list(categories_found)
+                }
                 errors.append(errors_obj)
+                self.log.error(f"Shard {shard} contains mixed index types: {categories_found}")
+                
         return errors
 
     def find_all_replicas(self, name, index_map):

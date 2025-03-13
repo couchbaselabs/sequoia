@@ -28,7 +28,8 @@ class QueryManager:
     def __init__(self, connection_string, username, password, timeout, duration, doc_template, use_sdk, query_type,
                  query_file, groundtruth_file, validate_vector_query_results, distance_algo, bucket_list, use_tls,
                  capella="false", skip_default="false", num_groundtruth_vectors=100, num_query_vectors=10000,
-                 base64_encoding="false", xattrs="false", sample_size=20, bhive_queries=False, print_frequency=30):
+                 base64_encoding="false", xattrs="false", sample_size=20, bhive_queries=False, print_frequency=30,
+                 log_level="INFO"):
         self.connection_string = connection_string
         self.username = username
         self.password = password
@@ -56,10 +57,12 @@ class QueryManager:
         self.query_error_obj = dict()
         self.print_frequency = print_frequency
         self.log = logging.getLogger("query_manager")
-        self.log.setLevel(logging.INFO)
+        # Set log level based on parameter
+        log_level = getattr(logging, log_level.upper(), logging.INFO)
+        self.log.setLevel(log_level)
         ch = logging.StreamHandler()
         self.recall_dict = dict()
-        ch.setLevel(logging.INFO)
+        ch.setLevel(log_level)
         formatter = logging.Formatter(
             "%(asctime)s - %(name)s - %(levelname)s - %(message)s")
         ch.setFormatter(formatter)
@@ -74,11 +77,12 @@ class QueryManager:
         return self.recall_dict
 
     def update_recall_dict(self, recall_percentage):
-        rounded_pct = round(recall_percentage / 10)
-        if rounded_pct in self.recall_dict:
-            self.recall_dict[rounded_pct] += 1
+        # Calculate which range (0-10, 10-20, etc) this percentage falls into
+        range_index = recall_percentage // 10
+        if range_index in self.recall_dict:
+            self.recall_dict[range_index] += 1
         else:
-            self.recall_dict[rounded_pct] = 1
+            self.recall_dict[range_index] = 1
         return
 
     def create_cluster_object(self):
@@ -249,8 +253,43 @@ class QueryManager:
         recall_percentage = len(list(set(groundtruth_result_vector[:100]).intersection(query_res_list)))
         self.update_recall_dict(recall_percentage)
 
+    def calculate_nprobe(self, filter_value):
+        """
+        Calculate nprobe value based on groundtruth file and filtering ratio
+        Returns a value between 50-250 based on the filtering ratio
+        """
+        # Extract filtering ratio from groundtruth filename
+        try:
+            # Assuming filename format contains filtering ratio like "1M" or "2M"
+            filter_num = filter_value
+            total_vectors = int(self.template.split('_')[1].rstrip('M'))
+            
+            # Calculate filtering ratio (e.g., 1/100, 2/100, etc.)
+            filter_ratio = filter_num / total_vectors
+            
+            # Calculate nprobe based on filtering ratio
+            # Using the specified values:
+            # 1/100 -> 250
+            # 2/100 -> 250
+            # 10/100 -> 125
+            # 20/100 -> 107
+            # 50/100 -> 85
+            if filter_ratio <= 0.02:  # 1% or 2%
+                return 250
+            elif filter_ratio <= 0.1:  # 10%
+                return 125
+            elif filter_ratio <= 0.2:  # 20%
+                return 107
+            elif filter_ratio <= 0.5:  # 50%
+                return 85
+            else:
+                return 50  # Default minimum value
+        except:
+            self.log.warning("Could not parse filtering ratio from groundtruth file, using default nprobe range")
+            return random.randint(50, 100)  # Fallback to original behavior
+
     def run_n1ql_query(self, query, iterate_over_results=False, query_node=None, groundtruth_vectors=None,
-                       validate_vector_query_results=False):
+                       validate_vector_query_results=False, groundtruth_file=None):
         query_vectors = self.read_query_file()
         index = 0
         limit_val = None
@@ -261,12 +300,18 @@ class QueryManager:
             query = query.replace("qvec", str(query_vectors[index]))
             vector_query = True
         if "nprobe" in query:
-            nprobe_val = random.randint(15, 30)
+            if "shoes" in self.template:
+                # Extract number before 'M' from filename like 'idx_5M.ivecs'
+                filter_value = int(groundtruth_file.split('M')[0].split('_')[-1])
+                nprobe_val = self.calculate_nprobe(filter_value)
+            else:
+                nprobe_val = random.randint(50, 100)
+            self.log.debug(f"Nprobe value is {nprobe_val}")
+            #uncomment once reranking can be enabled
             run_with_reranking = random.random() < 0.2
             if self.bhive_queries and run_with_reranking:
                 #reranking set to true for random queries
                 concat_str = str(nprobe_val) + ", true"
-                self.log.info("bhive query true")
                 query = query.replace("nprobe", concat_str)
             else:
                 query = query.replace("nprobe", str(nprobe_val))
@@ -292,6 +337,7 @@ class QueryManager:
                 query_opts = QueryOptions(timeout=self.timeout)
             result_obj = None
             try:
+                self.log.debug(f"running query - {query} via SDK")
                 result_obj = self.cluster.query(query, query_opts)
             except CouchbaseException as ex:
                 if isinstance(ex.context, QueryErrorContext):
@@ -490,10 +536,15 @@ class QueryManager:
             table.wrap_on_max_width = True
             
             for item in query_error_resp_dict.keys():
-                table.append_row([item, 
-                                query_error_resp_dict[item]["statement"],
+                request_time = query_error_resp_dict[item].get("request_time", "NA")
+                statement = query_error_resp_dict[item]["statement"]
+                # Truncate statement if longer than 50 characters
+                # if len(statement) > 50:
+                #     statement = statement[:47] + "..."
+                table.append_row([item,
+                                statement,
                                 query_error_resp_dict[item]["first_error_message"],
-                                query_error_resp_dict[item]["request_time"]])
+                                request_time])
             self.log.info("\n" + str(table))
             self.query_error_obj = {}
 
@@ -505,11 +556,11 @@ class QueryManager:
         error_thread.daemon = True
         error_thread.start()
         # Start periodic recall stats printing if needed
-        if self.validate_vector_query_results:
-            stats_thread = threading.Thread(target=self.periodic_print_recall_stats, 
-                                          args=(self.print_frequency,))
-            stats_thread.daemon = True
-            stats_thread.start()
+        # if self.validate_vector_query_results:
+        #     stats_thread = threading.Thread(target=self.periodic_print_recall_stats, 
+        #                                   args=(self.print_frequency,))
+        #     stats_thread.daemon = True
+        #     stats_thread.start()
         query_tasks = []
         time_now = time.time()
         time_last_refresh = time.time()
@@ -550,8 +601,10 @@ class QueryManager:
                             groundtruth_file_path = f"/gnd/{groundtruth_file}"
                             self.log.debug(f"Groundtruth file {groundtruth_file_path}")
                             groundtruth_vectors = self.read_ground_truth_file(groundtruth_file_path)
+                            self.log.debug(f"Length of the groundtruth vectors array {len(groundtruth_vectors)}")
+                            self.log.debug(f"Query is - {query}")
                         query_task = executor_main.submit(method, query, True, query_node, groundtruth_vectors,
-                                                          self.validate_vector_query_results)
+                                                          self.validate_vector_query_results, groundtruth_file)
                     query_tasks.append(query_task)
             for task in query_tasks:
                 try:
@@ -581,9 +634,12 @@ class QueryManager:
     def print_recall_stats(self):
         table = BeautifulTable()
         table.column_headers = ["Recall range", "Query count", "Percentage"]
+        self.log.debug(f"Recall dict {self.recall_dict}")
         total_query_count = sum(self.recall_dict.values())
-        for item in self.recall_dict.keys():
-            range_recall = f" {item * 10 - 10} to {item * 10} "
+        for item in sorted(self.recall_dict.keys()):  # Sort keys for consistent order
+            range_start = item * 10
+            range_end = min((item + 1) * 10, 100)  # Cap the end range at 100
+            range_recall = f"{range_start}" if range_start == range_end else f"{range_start} to {range_end}"
             table.append_row([range_recall, self.recall_dict[item], 100 * self.recall_dict[item] / total_query_count])
         print(table)
 
@@ -727,13 +783,16 @@ if __name__ == '__main__':
                         default=5, type=int)
     parser.add_argument("-bhi", "--run_bhive_queries", help="ground truth file to be used for vector queries",
                         default="false")
+    parser.add_argument("-ll", "--log_level", help="logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)", 
+                        default="INFO")
     args = parser.parse_args()
     query_manager = QueryManager(args.connection_string, args.username, args.password, int(args.timeout),
                                  int(args.duration), args.template, args.use_sdk, args.query_type, args.query_file,
                                  args.groundtruth_file, args.validate_vector_query_results, args.distance_algo,
                                  args.bucket_list, args.use_tls, args.capella, args.skip_default,
                                  args.num_groundtruth_vectors, args.num_query_vectors, args.base64,
-                                 args.xattrs, args.sample_size, args.run_bhive_queries, args.print_frequency)
+                                 args.xattrs, args.sample_size, args.run_bhive_queries, args.print_frequency,
+                                 args.log_level)
     try:
         if args.action == "run_query_workload":
             query_manager.run_query_workload(int(args.num_concurrent_queries), int(args.refresh_duration))
@@ -753,26 +812,50 @@ if __name__ == '__main__':
         else:
             raise Exception("Actions allowed - run_query_workload | poll_for_failed_queries "
                             "| cancel_random_queries | run_scans_validation")
+    except KeyboardInterrupt:
+        if args.validate_vector_query_results and args.run_vector_queries:
+            query_manager.print_recall_stats()
+        raise
     finally:
         query_error_resp_dict = query_manager.get_query_errors_dict()
         if query_error_resp_dict:
             print(
                 "========================Queries that have ended in errors==============================================================")
-            table = BeautifulTable()
-            table.column_headers = ["Request ID", "Statement", "Error", "Request Time"]
-            # Set reasonable widths for all columns
-            table.column_widths = [40, 60, 60, 20]
-            # Configure word wrapping
-            table.maxwidth = 180
-            table.wrap_on_max_width = True
-            
-            for item in query_error_resp_dict.keys():
-                if hasattr(query_error_resp_dict[item], 'request_time'):
-                    request_time = query_error_resp_dict[item].request_time
+            try:
+                table = BeautifulTable()
+                table.column_headers = ["Request ID", "Statement", "Error", "Request Time"]
+                # Set reasonable widths for all columns
+                table.column_widths = [40, 60, 60, 20]
+                # Configure word wrapping
+                table.maxwidth = 180
+                table.wrap_on_max_width = True
+                
+                for item in query_error_resp_dict.keys():
+                    try:
+                        request_time = str(query_error_resp_dict[item].get("request_time", "NA"))
+                        statement = str(query_error_resp_dict[item].get("statement", ""))
+                        error_message = str(query_error_resp_dict[item].get("first_error_message", ""))
+                        
+                        # Truncate statement if longer than 50 characters
+                        if len(statement) > 50:
+                            statement = statement[:47] + "..."
+                        if len(error_message) > 50:
+                            error_message = error_message[:47] + "..."
+                            
+                        table.append_row([str(item),
+                                        statement,
+                                        error_message,
+                                        request_time])
+                    except Exception as e:
+                        print(f"Error processing row for item {item}: {str(e)}")
+                        continue
+                
+                # Only print if table has rows
+                if len(table.rows) > 0:
+                    print(table)
                 else:
-                    request_time = "NA"
-                table.append_row([item,
-                                query_error_resp_dict[item]["statement"],
-                                query_error_resp_dict[item]["first_error_message"],
-                                request_time])
-            print(table)
+                    print("No valid error data to display")
+                    
+            except Exception as e:
+                print(f"Error creating error table: {str(e)}")
+                print("Raw error data:", query_error_resp_dict)

@@ -502,8 +502,7 @@ func (cm *ContainerManager) DidPull(repo string) bool {
 }
 
 func (cm *ContainerManager) PullImage(repo string) error {
-	msg := UtilTaskMsg("[pull]", repo)
-	fmt.Println(msg)
+	fmt.Printf("Pulling image: %s\n", repo)
 
 	// pull image across all clients
 	pullChans := []chan error{}

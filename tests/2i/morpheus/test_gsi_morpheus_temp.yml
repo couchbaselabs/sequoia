@@ -1,256 +1,5 @@
 - include: tests/templates/kv.yml, tests/templates/n1ql.yml, tests/templates/rebalance.yml, tests/templates/multinode_failure.yml, tests/templates/bucket.yml
 
-############### Sleep for 5 mins before changing indexer settings ################
-- image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "300"
-  requires: "{{eq true .DoOnce }}"
-  wait: true
-
-############### Enable Plasma Bloom Filter ################
-- template: set_gsi_config
-  args: "{{.ActiveIndexNode 0}}, 'indexer.plasma.backIndex.enablePageBloomFilter':true"
-  requires: "{{eq true .DoOnce }}"
-
-############### Set num_replica ################
-- template: set_gsi_config
-  args: "{{.ActiveIndexNode 0}}, 'indexer.settings.num_replica':1"
-  requires: "{{eq true .DoOnce }}"
-
-############### Turn off reranking ################
-# - template: set_gsi_config
-#   args: "{{.ActiveIndexNode 0}}, 'indexer.scan.vector.rerank_factor':0"
-#   requires: "{{eq true .DoOnce }}"
-
-################ temporary settings MB-63703 and MB-63643 ################
-- template: set_gsi_config
-  args: "{{.ActiveIndexNode 0}}, 'indexer.numSliceWriters':4"
-  requires: "{{eq true .DoOnce }}"
-
-- template: set_gsi_config
-  args: "{{.ActiveIndexNode 0}}, 'indexer.plasma.mainIndex.enableInMemoryCompression':false"
-  requires: "{{eq true .DoOnce }}"
-
-## Enable file-based rebalance
-############### shardAffinity ################
-- template: set_gsi_config
-  args: "{{.ActiveIndexNode 0}}, 'indexer.settings.enable_shard_affinity':true"
-  requires: "{{eq true .DoOnce }}"
-
-## Enable file-based rebalance
-############### shardAffinity ################
-- template: set_gsi_config
-  args: "{{.ActiveIndexNode 0}}, 'indexer.settings.provisioned.enable_shard_affinity':true"
-  requires: "{{eq true .DoOnce }}"
-
-############### Backup any corrupted index data files ################
-- template: set_gsi_config
-  args: "{{.ActiveIndexNode 0}}, 'indexer.settings.enable_corrupt_index_backup':true"
-  requires: "{{eq true .DoOnce }}"
-
-############### Disable workaround for MB-46650 ################
-- template: set_gsi_config
-  args: "{{.ActiveIndexNode 0}}, 'indexer.plasma.recovery.enableFullReplayOnError':false"
-  requires: "{{eq true .DoOnce }}"
-
-############### Enable GSI Redistribution of indexes on rebalance in ################
-- template: set_gsi_config
-  args: "{{.ActiveIndexNode 0}}, 'indexer.settings.rebalance.redistribute_indexes':true"
-  requires: "{{eq true .DoOnce }}"
-
-############### create scopes and collections across 3 buckets as scope_1,scope_2 ... ###############
-- image: sequoiatools/collections:1.0
-  command: "-i {{.Orchestrator}}:8091 -b {{.Bucket}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count=1 --collection_count=1 --collection_distribution=uniform"
-  requires: "{{eq true .DoOnce }}"
-  wait: true
-- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 1}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count=1 --collection_count=1 --collection_distribution=uniform"
-  requires: "{{eq true .DoOnce }}"
-  wait: true
-- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 2}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count=3 --collection_count=15 --collection_distribution=uniform"
-  requires: "{{eq true .DoOnce }}"
-  wait: true
-- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 3}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count=1 --collection_count=1 --collection_distribution=uniform"
-  requires: "{{eq true .DoOnce }}"
-  wait: true
-- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 4}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count=1 --collection_count=1 --collection_distribution=uniform"
-  requires: "{{eq true .DoOnce }}"
-  wait: true
-- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 9}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count=1 --collection_count=1 --collection_distribution=uniform"
-  requires: "{{eq true .DoOnce }}"
-  wait: true
-
-# Sleep for some time to allow collections manifest to sync
-- image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "300"
-  requires: "{{eq true .DoOnce }}"
-  wait: true
-
-############### initial data loading ################
-- image: sequoiatools/magmaloader
-  command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.Bucket}} --start 0  --end 10000 --doc_template Hotel --all_coll true"
-  requires: "{{eq true .DoOnce }}"
-  wait: true
-- command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 1}} --start 0  --end 10000 --doc_template Hotel --all_coll true"
-  requires: "{{eq true .DoOnce }}"
-  wait: true
-- command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 2}} --start 0  --end 10000 --doc_template Hotel --all_coll true"
-  requires: "{{eq true .DoOnce }}"
-  wait: true
-- command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 3}} --start 0  --end 100000 --doc_template Hotel --all_coll true"
-  requires: "{{eq true .DoOnce }}"
-  wait: true
-- command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 4}} --start 0  --end 100000 --doc_template Hotel --all_coll true"
-  requires: "{{eq true .DoOnce }}"
-  wait: true
-- command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 6}} --start 0  --end 10000 --doc_template Hotel --all_coll true"
-  requires: "{{eq true .DoOnce }}"
-  wait: true
-- command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 7}} --start 0  --end 10000 --doc_template Hotel --all_coll true"
-  requires: "{{eq true .DoOnce }}"
-  wait: true
-- command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 9}} --start 0  --end 10000 --doc_template Hotel --all_coll true"
-  requires: "{{eq true .DoOnce }}"
-  wait: true
-
-############### data loading shoes dataset ################
-- image: sequoiatools/magmaloader
-  command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 5}} --start 0  --end 100000000 --sift_path /root/bigann/ --all_coll true"
-  volumes: "/data/bigann/:/root/bigann"
-  requires: "{{eq true .DoOnce }}"
-# TODO - scale it back to 100m once BHIVE is more stable
-- command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 8}} --start 0  --end 10000000 --sift_path /root/bigann/ --all_coll true"
-  volumes: "/data/bigann/:/root/bigann"
-  requires: "{{eq true .DoOnce }}"
-
-# TODO need to find a way to run collections crud on bucket 4 & 5 without it affecting the test
-# ############### Start Collections CRUD on bucket 4 & bucket5 ###############
-# - image: sequoiatools/collections:1.0
-#   command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 3}} -o crud_mode --crud_interval=30 --max_scopes={{.Scale 5}} --max_collections={{.Scale 50}}"
-#   alias: collection_crud1
-# - command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 4}} -o crud_mode --crud_interval=30 --max_scopes={{.Scale 5}} --max_collections={{.Scale 50}}"
-#   alias: collection_crud2
-
-###############  create indexes ################
-- section_start: create_replica_indexes
-- image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.Bucket}} -i {{.Scale 1}} -a create_n_indexes_on_buckets -v --num_of_indexes_per_bucket 13 --skip_default_collection false"
-  wait: true
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 1}} -i {{.Scale 1}} -a create_n_indexes_on_buckets -v --num_of_indexes_per_bucket 26 --skip_default_collection false"
-  wait: true
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 2}} -i {{.Scale 1}} -a create_n_indexes_on_buckets -v --num_of_indexes_per_bucket 39 --skip_default_collection false"
-  wait: true
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 3}} -i {{.Scale 1}} -a create_n_indexes_on_buckets -v --num_of_indexes_per_bucket 13 --skip_default_collection false"
-  wait: true
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 4}} -i {{.Scale 1}} -a create_n_indexes_on_buckets -v --num_of_indexes_per_bucket 13 --skip_default_collection false"
-  wait: true
-
-###############  Indexer Random Recovery ################
-# TODO: Enable this after MB-65104 is fixed
-# - image: sequoiatools/indexmanager
-#   command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a random_recovery --timeout {{.Scale 3600}} --interval 300"
-#   alias: random_recovery
-
-###############  build all deferred indexes ################
-
-- image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a build_deferred_index -m 5"
-  wait: true
-
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -a build_deferred_index -m 5"
-  wait: true
-
-# Enable CBO and Update Statistics for indexes on some collections
-- image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a enable_cbo --cbo_enable_ratio=50"
-  alias: cbo_bucket1
-
-# Sleep for some time to allow update statistics to run
-- image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "60"
-  wait: true
-
-- image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a enable_cbo --cbo_enable_ratio=50"
-  alias: cbo_bucket2
-
-# Sleep for some time to allow update statistics to run
-- image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "60"
-  wait: true
-
-- image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -a enable_cbo --cbo_enable_ratio=50"
-  alias: cbo_bucket3
-
-# Sleep for some time to allow update statistics to run
-- image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "600"
-  wait: true
-
-# Create N1QL UDF Library and function - do it once per test
-- image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a create_n1ql_udf --lib_filename n1ql_udf.js --lib_name n1qludf"
-  requires: "{{eq true .DoOnce }}"
-
-############### incremental data loading ################
-- image: sequoiatools/magmaloader
-  command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.Bucket}} --start 10000  --end 1000000 --doc_template Hotel --all_coll true"
-  requires: "{{eq true .DoOnce }}"
-- command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 1}} --start 10000  --end 1000000 --doc_template Hotel --all_coll true"
-  requires: "{{eq true .DoOnce }}"
-- command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 2}} --start 10000  --end 100000 --doc_template Hotel --all_coll true"
-  requires: "{{eq true .DoOnce }}"
-- command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 6}} --start 0  --end 1000000 --doc_template Hotel --all_coll true"
-  requires: "{{eq true .DoOnce }}"
-- command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 7}} --start 0  --end 1000000 --doc_template Hotel --all_coll true"
-  requires: "{{eq true .DoOnce }}"
-- command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 9}} --start 0  --end 1000000 --doc_template Hotel --all_coll true"
-  requires: "{{eq true .DoOnce }}"
-
-
-- image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "1800"
-  wait: true
-
-############ upsert vector embeddings ################
-- image: sequoiatools/siftloader
-  command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.Bucket}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false"
-  alias: vector_mutations_1
-- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 2}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false"
-  alias: vector_mutations_3
-- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.Bucket}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0"
-  alias: vector_mutations_4
-- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 2}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0"
-  alias: vector_mutations_6
-- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 6}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false --base64_encoding true"
-  alias: vector_mutations_7
-- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 7}} --start 1 --end 1000000 --batch_size 100000 --file_path /sift_base.fvecs --load_in_chunks false --xattrs true"
-  alias: vector_mutations_8
-- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 9}} --start 1 --end 1000 --batch_size 100 --file_path /sift_base.fvecs --load_in_chunks false"
-  alias: vector_mutations_9
-- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 9}} --start 1 --end 1000 --batch_size 100 --file_path /sift_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0"
-  alias: vector_mutations_10
-
-- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 3}} --start 1 --end 10000 --batch_size 1000 --file_path /sift_base.fvecs --load_in_chunks false"
-  alias: vector_mutations_1
-- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 4}} --start 1 --end 10000 --batch_size 1000 --file_path /sift_base.fvecs --load_in_chunks false"
-  alias: vector_mutations_3
-- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 3}} --start 1 --end 10000 --batch_size 1000 --file_path /sift_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0"
-  alias: vector_mutations_4
-- command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 4}} --start 1 --end 10000 --batch_size 1000 --file_path /sift_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0"
-  alias: vector_mutations_6
-
-############ wait for a while ################
-- image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "1800"
-  wait: true
-
 - image: sequoiatools/siftloader
   command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 1}} --start 1 --end 1000000 --batch_size 100000 --file_path /gist_base.fvecs --load_in_chunks false"
 - command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 1}} --start 1 --end 1000000 --batch_size 100000 --file_path /gist_base.fvecs --load_in_chunks false --scope scope_0 --collection coll_0"
@@ -298,8 +47,8 @@
 #   wait: true
 - command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 5}}  -a create_n_indexes_on_buckets --timeout 30  -v --num_of_indexes_per_bucket 3  --create_vector_indexes true  --dataset shoes --num_dimensions 128 --skip_default_collection false --num_vectors 100000000 --distance_algo L2 --defer_build true --set_max_replicas 1 --use_description IVF,SQ8"
   wait: true
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 8}}  -a create_n_indexes_on_buckets --timeout 30  -v --num_of_indexes_per_bucket 4  --create_bhive_indexes true  --dataset shoes --num_dimensions 128 --skip_default_collection false --num_vectors 10000000 --distance_algo L2 --defer_build true --set_max_replicas 1 --use_description IVF,SQ8"
-  wait: true
+# - command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 8}}  -a create_n_indexes_on_buckets --timeout 30  -v --num_of_indexes_per_bucket 4  --create_bhive_indexes true  --dataset shoes --num_dimensions 128 --skip_default_collection false --num_vectors 10000000 --distance_algo L2 --defer_build true --set_max_replicas 1 --use_description IVF,SQ8"
+#   wait: true
 - command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 6}}  -a create_n_indexes_on_buckets --timeout 30  -v --num_of_indexes_per_bucket 6  --create_vector_indexes true --num_dimensions 128 --skip_default_collection false --num_vectors 1000000 --distance_algo L2 --base64_encoding_vectors true"
   wait: true
 - command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 7}}  -a create_n_indexes_on_buckets --timeout 30  -v --num_of_indexes_per_bucket 6  --create_vector_indexes true --num_dimensions 128 --skip_default_collection false --num_vectors 1000000 --distance_algo L2 --xattrs_vectors true"
@@ -392,8 +141,6 @@
 - image: sequoiatools/indexmanager
   command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 8}} -a build_deferred_index -m 5"
   wait: true
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 6}} -a build_deferred_index -m 5"
-  wait: true
 
 # Wait till all indexes are completely built
 - image: sequoiatools/wait_for_idx_build_complete
@@ -433,15 +180,9 @@
   command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a post_topology_change_validations"
   wait: true
 
-- image: sequoiatools/magmaloader
-  command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.Bucket}} --start 10000  --end 2000000 --doc_template Hotel --all_coll true --expiry_mode true --max_ttl 21600 --percentage_expiry 10"
-  requires: "{{eq true .DoOnce }}"
-- command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 1}} --start 10000  --end 1500000 --doc_template Hotel --all_coll true --expiry_mode true --max_ttl 36000 --percentage_expiry 5"
-  requires: "{{eq true .DoOnce }}"
-
-# - image: sequoiatools/query_manager:dev
-#   command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action data_validation --use_sdk true --query_type n1ql --bucket_list  {{.NthBucket 1}}  --use_tls false --skip_default false"
-#   wait: true
+- image: sequoiatools/query_manager:dev
+  command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action data_validation --use_sdk true --query_type n1ql --bucket_list  {{.NthBucket 1}}  --use_tls false --skip_default false"
+  wait: true
 
 ########### continuous mutations on bucket4 and bucket5
 - image: sequoiatools/magmaloader
@@ -462,8 +203,8 @@
   alias: query_workload_2
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template shoes_50M --bucket_list  {{.NthBucket 5}} --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false"
   alias: query_workload_3
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template shoes_10M --bucket_list  {{.NthBucket 8}} --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false --run_bhive_queries true"
-  alias: query_workload_8
+# - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template shoes_10M --bucket_list  {{.NthBucket 8}} --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false --run_bhive_queries true"
+#   alias: query_workload_8
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 15 --use_sdk true --query_type n1ql --template hotel,hotel_vectors --bucket_list  {{.NthBucket 2}} --distance_algo DOT --use_tls false"
   alias: query_workload_4
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 1 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list  {{.NthBucket 6}} --distance_algo L2 --use_tls false --skip_default false --base64 true"
@@ -476,8 +217,8 @@
 
 ############## Random index lifecycle actions on bucket 4 & 5 ###############
 - image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 3}} -i {{.Scale 1}} -a random_index_lifecycle --skip_default_collection false -c False --interval 3600 --timeout 3600 -b {{.NthBucket 3}}"
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 4}} -i {{.Scale 1}} -a random_index_lifecycle --skip_default_collection false -c False --interval 3600 --timeout 3600 -b {{.NthBucket 4}}"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 3}} -i {{.Scale 1}} -a random_index_lifecycle --skip_default_collection false -c False --interval 7200 --timeout 7200 -b {{.NthBucket 3}}"
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 4}} -i {{.Scale 1}} -a random_index_lifecycle --skip_default_collection false -c False --interval 7200 --timeout 7200 -b {{.NthBucket 4}}"
 
 # TODO need to find a way to run create/drop loops on bucket 4 & 5 without it affecting the test
 ############### Start creating indexes in a loop on bucket4 & bucket5 (Collection CRUD workload) ###############
@@ -580,8 +321,8 @@
   alias: query_workload_2
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template shoes_50M --bucket_list  {{.NthBucket 5}} --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false"
   alias: query_workload_3
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template shoes_10M --bucket_list  {{.NthBucket 8}} --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false --run_bhive_queries true"
-  alias: query_workload_8
+# - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template shoes_10M --bucket_list  {{.NthBucket 8}} --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false --run_bhive_queries true"
+#   alias: query_workload_8
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 15 --use_sdk true --query_type n1ql --template hotel,hotel_vectors --bucket_list  {{.NthBucket 2}} --distance_algo DOT --use_tls false"
   alias: query_workload_4
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 1 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list  {{.NthBucket 6}} --distance_algo L2 --use_tls false --skip_default false --base64 true"
@@ -592,7 +333,7 @@
   alias: query_workload_4a
 - section_end: query_vector_indexes
   command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template shoes_50M --bucket_list  {{.NthBucket 5}} --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false"
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template shoes_10M --bucket_list  {{.NthBucket 8}} --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false --run_bhive_queries true"
+# - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template shoes_10M --bucket_list  {{.NthBucket 8}} --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false --run_bhive_queries true"
 
 ###############  Rebalance-in single index node ################
 - template: rebalance_in
@@ -707,22 +448,12 @@
 ############## Random index lifecycle actions on bucket 4 & 5 ###############
 - image: sequoiatools/indexmanager
   command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 3}} -i {{.Scale 1}} -a random_index_lifecycle --skip_default_collection false -c False --interval 3600 --timeout 3600 -b {{.NthBucket 3}}"
-  alias: lifecycle1
 - command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 4}} -i {{.Scale 1}} -a random_index_lifecycle --skip_default_collection false -c False --interval 3600 --timeout 3600 -b {{.NthBucket 4}}"
-  alias: lifecycle2
 
 - image: sequoiatools/cmd
   entrypoint: sleep
   command: "3900"
   wait: true
-
-- client:
-    op: rm
-    container: lifecycle1
-- client:
-    op: rm
-    container: lifecycle2
-
 
 ######## Validate items count against KV #######################
 - image: sequoiatools/indexmanager
@@ -767,8 +498,8 @@
   alias: query_workload_2
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template shoes_50M --bucket_list  {{.NthBucket 5}} --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false"
   alias: query_workload_3
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template shoes_10M --bucket_list  {{.NthBucket 8}} --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false --run_bhive_queries true"
-  alias: query_workload_8
+# - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template shoes_10M --bucket_list  {{.NthBucket 8}} --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false --run_bhive_queries true"
+#   alias: query_workload_8
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 15 --use_sdk true --query_type n1ql --template hotel,hotel_vectors --bucket_list  {{.NthBucket 2}} --distance_algo DOT --use_tls false"
   alias: query_workload_4
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 1 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list  {{.NthBucket 6}} --distance_algo L2 --use_tls false --skip_default false --base64 true"
@@ -818,9 +549,9 @@
   command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -a post_topology_change_validations"
   wait: true
 
-# - image: sequoiatools/query_manager:dev
-# - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action data_validation --use_sdk true --query_type n1ql --bucket_list  {{.NthBucket 2}}  --use_tls false --skip_default false"
-#   wait: true
+- image: sequoiatools/query_manager:dev
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action data_validation --use_sdk true --query_type n1ql --bucket_list  {{.NthBucket 2}}  --use_tls false --skip_default false"
+  wait: true
 
 ############### more data loading ################
 - image: sequoiatools/magmaloader
@@ -922,9 +653,9 @@
 - command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 8}} -a post_topology_change_validations"
   wait: true
 
-# - image: sequoiatools/query_manager:dev
-#   command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action data_validation --use_sdk true --query_type n1ql --bucket_list  {{.NthBucket 2}}  --use_tls false --skip_default false"
-#   wait: true
+- image: sequoiatools/query_manager:dev
+  command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action data_validation --use_sdk true --query_type n1ql --bucket_list  {{.NthBucket 2}}  --use_tls false --skip_default false"
+  wait: true
 
 ###############  Rebalance-out single index node and stop rebalance ################
 - template: rebalance_out
@@ -981,21 +712,12 @@
 ############## Random index lifecycle actions on bucket 4 & 5 ###############
 - image: sequoiatools/indexmanager
   command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 3}} -i {{.Scale 1}} -a random_index_lifecycle --skip_default_collection false -c False --interval 3600 --timeout 3600 -b {{.NthBucket 3}}"
-  alias: lifecycle1
 - command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 4}} -i {{.Scale 1}} -a random_index_lifecycle --skip_default_collection false -c False --interval 3600 --timeout 3600 -b {{.NthBucket 4}}"
-  alias: lifecycle2
 
 - image: sequoiatools/cmd
   entrypoint: sleep
   command: "3900"
   wait: true
-
-- client:
-    op: rm
-    container: lifecycle1
-- client:
-    op: rm
-    container: lifecycle2
 
 ###############  Rebalance-out single node ################
 - template: rebalance_out
@@ -1026,8 +748,8 @@
   alias: query_workload_2
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template shoes_50M --bucket_list  {{.NthBucket 5}} --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false"
   alias: query_workload_3
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template shoes_10M --bucket_list  {{.NthBucket 8}} --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false --run_bhive_queries true"
-  alias: query_workload_8
+# - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template shoes_10M --bucket_list  {{.NthBucket 8}} --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false --run_bhive_queries true"
+#   alias: query_workload_8
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 15 --use_sdk true --query_type n1ql --template hotel,hotel_vectors --bucket_list  {{.NthBucket 2}} --distance_algo DOT --use_tls false"
   alias: query_workload_4
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 1 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list  {{.NthBucket 6}} --distance_algo L2 --use_tls false --skip_default false --base64 true"
@@ -1097,8 +819,8 @@
   alias: query_workload_2
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template shoes_50M --bucket_list  {{.NthBucket 5}} --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false"
   alias: query_workload_3
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template shoes_10M --bucket_list  {{.NthBucket 8}} --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false --run_bhive_queries true"
-  alias: query_workload_8
+# - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template shoes_10M --bucket_list  {{.NthBucket 8}} --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false --run_bhive_queries true"
+#   alias: query_workload_8
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 15 --use_sdk true --query_type n1ql --template hotel,hotel_vectors --bucket_list  {{.NthBucket 2}} --distance_algo DOT --use_tls false"
   alias: query_workload_4
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 1 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list  {{.NthBucket 6}} --distance_algo L2 --use_tls false --skip_default false --base64 true"
@@ -1112,21 +834,12 @@
 ############## Random index lifecycle actions on bucket 4 & 5 ###############
 - image: sequoiatools/indexmanager
   command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 3}} -i {{.Scale 1}} -a random_index_lifecycle --skip_default_collection false -c False --interval 3600 --timeout 3600 -b {{.NthBucket 3}}"
-  alias: lifecycle1
 - command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 4}} -i {{.Scale 1}} -a random_index_lifecycle --skip_default_collection false -c False --interval 3600 --timeout 3600 -b {{.NthBucket 4}}"
-  alias: lifecycle2
 
 - image: sequoiatools/cmd
   entrypoint: sleep
   command: "3900"
   wait: true
-
-- client:
-    op: rm
-    container: lifecycle1
-- client:
-    op: rm
-    container: lifecycle2
 
 ###############  Rebalance-in 2 nodes one after another ################
 - template: rebalance_in
@@ -1157,8 +870,8 @@
   alias: query_workload_2
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template shoes_50M --bucket_list  {{.NthBucket 5}} --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false"
   alias: query_workload_3
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template shoes_10M --bucket_list  {{.NthBucket 8}} --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false --run_bhive_queries true"
-  alias: query_workload_8
+# - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template shoes_10M --bucket_list  {{.NthBucket 8}} --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false --run_bhive_queries true"
+#   alias: query_workload_8
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 15 --use_sdk true --query_type n1ql --template hotel,hotel_vectors --bucket_list  {{.NthBucket 2}} --distance_algo DOT --use_tls false"
   alias: query_workload_4
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 1 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list  {{.NthBucket 6}} --distance_algo L2 --use_tls false --skip_default false --base64 true"
@@ -1197,8 +910,8 @@
   alias: query_workload_2
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template shoes_50M --bucket_list  {{.NthBucket 5}} --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false"
   alias: query_workload_3
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template shoes_10M --bucket_list  {{.NthBucket 8}} --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false --run_bhive_queries true"
-  alias: query_workload_8
+# - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template shoes_10M --bucket_list  {{.NthBucket 8}} --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false --run_bhive_queries true"
+  # alias: query_workload_8
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 15 --use_sdk true --query_type n1ql --template hotel,hotel_vectors --bucket_list  {{.NthBucket 2}} --distance_algo DOT --use_tls false"
   alias: query_workload_4
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 1 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list  {{.NthBucket 6}} --distance_algo L2 --use_tls false --skip_default false --base64 true"
@@ -1237,8 +950,8 @@
   alias: query_workload_2
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template shoes_50M --bucket_list  {{.NthBucket 5}} --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false"
   alias: query_workload_3
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template shoes_10M --bucket_list  {{.NthBucket 8}} --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false --run_bhive_queries true"
-  alias: query_workload_8
+# - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template shoes_10M --bucket_list  {{.NthBucket 8}} --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false --run_bhive_queries true"
+#   alias: query_workload_8
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 15 --use_sdk true --query_type n1ql --template hotel,hotel_vectors --bucket_list  {{.NthBucket 2}} --distance_algo DOT --use_tls false"
   alias: query_workload_4
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 1 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list  {{.NthBucket 6}} --distance_algo L2 --use_tls false --skip_default false --base64 true"
@@ -1526,11 +1239,6 @@
   args: "{{.ActiveIndexNode 0}}, 'indexer.settings.provisioned.enable_shard_affinity':false"
   requires: "{{eq true .DoOnce }}"
 
-############### Set transferBatchSize to 3 * number of indexer nodes ################
-- template: set_gsi_config
-  args: "{{.ActiveIndexNode 0}}, 'indexer.rebalance.transferBatchSize':12"
-  requires: "{{eq true .DoOnce }}"
-  
 - image: sequoiatools/cmd
   entrypoint: sleep
   command: "309"
@@ -1547,8 +1255,8 @@
   alias: query_workload_2
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template shoes_50M --bucket_list  {{.NthBucket 5}} --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false"
   alias: query_workload_3
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template shoes_10M --bucket_list  {{.NthBucket 8}} --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false --run_bhive_queries true"
-  alias: query_workload_8
+# - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template shoes_10M --bucket_list  {{.NthBucket 8}} --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false --run_bhive_queries true"
+#   alias: query_workload_8
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 15 --use_sdk true --query_type n1ql --template hotel,hotel_vectors --bucket_list  {{.NthBucket 2}} --distance_algo DOT --use_tls false"
   alias: query_workload_4
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 1 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list  {{.NthBucket 6}} --distance_algo L2 --use_tls false --skip_default false --base64 true"
@@ -1715,8 +1423,8 @@
   alias: query_workload_2
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template shoes_50M --bucket_list  {{.NthBucket 5}} --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false"
   alias: query_workload_3
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template shoes_10M --bucket_list  {{.NthBucket 8}} --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false --run_bhive_queries true"
-  alias: query_workload_8
+# - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template shoes_10M --bucket_list  {{.NthBucket 8}} --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false --run_bhive_queries true"
+#   alias: query_workload_8
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 15 --use_sdk true --query_type n1ql --template hotel,hotel_vectors --bucket_list  {{.NthBucket 2}} --distance_algo DOT --use_tls false"
   alias: query_workload_4
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 1 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list  {{.NthBucket 6}} --distance_algo L2 --use_tls false --skip_default false --base64 true"
@@ -1730,21 +1438,12 @@
 ############## Random index lifecycle actions on bucket 4 & 5 ###############
 - image: sequoiatools/indexmanager
   command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 3}} -i {{.Scale 1}} -a random_index_lifecycle --skip_default_collection false -c False --interval 3600 --timeout 3600 -b {{.NthBucket 3}}"
-  alias: lifecycle1
 - command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 4}} -i {{.Scale 1}} -a random_index_lifecycle --skip_default_collection false -c False --interval 3600 --timeout 3600 -b {{.NthBucket 4}}"
-  alias: lifecycle2
 
 - image: sequoiatools/cmd
   entrypoint: sleep
   command: "3900"
   wait: true
-
-- client:
-    op: rm
-    container: lifecycle1
-- client:
-    op: rm
-    container: lifecycle2
 
 
 ###############  Rebalance-out single index node ################
@@ -1787,9 +1486,9 @@
   command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 6}} -a post_topology_change_validations"
   wait: true
 
-# - image: sequoiatools/query_manager:dev
-# - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action data_validation --use_sdk true --query_type n1ql --bucket_list  {{.NthBucket 2}}  --use_tls false --skip_default false"
-#   wait: true
+- image: sequoiatools/query_manager:dev
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action data_validation --use_sdk true --query_type n1ql --bucket_list  {{.NthBucket 2}}  --use_tls false --skip_default false"
+  wait: true
 
 
 ###############  Rebalance-in single node and stop rebalance ################
@@ -1921,9 +1620,9 @@
   command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 7}} -a post_topology_change_validations"
   wait: true
 
-# - image: sequoiatools/query_manager:dev
-#   command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action data_validation --use_sdk true --query_type n1ql --bucket_list  {{.NthBucket 1}}  --use_tls false --skip_default false"
-#   wait: true
+- image: sequoiatools/query_manager:dev
+  command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action data_validation --use_sdk true --query_type n1ql --bucket_list  {{.NthBucket 1}}  --use_tls false --skip_default false"
+  wait: true
 
 ###############  Rebalance-out single index node and stop rebalance ################
 - template: rebalance_out
@@ -1981,21 +1680,8 @@
 ############## Random index lifecycle actions on bucket 4 & 5 ###############
 - image: sequoiatools/indexmanager
   command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 3}} -i {{.Scale 1}} -a random_index_lifecycle --skip_default_collection false -c False --interval 3600 --timeout 3600 -b {{.NthBucket 3}}"
-  alias: lifecycle1
 - command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 4}} -i {{.Scale 1}} -a random_index_lifecycle --skip_default_collection false -c False --interval 3600 --timeout 3600 -b {{.NthBucket 4}}"
-  alias: lifecycle2
 
-- image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "3900"
-  wait: true
-
-- client:
-    op: rm
-    container: lifecycle1
-- client:
-    op: rm
-    container: lifecycle2
 
 ###############  Swap single index node ################
 - template: rebalance_swap
@@ -2061,8 +1747,8 @@
   alias: query_workload_2
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template shoes_50M --bucket_list  {{.NthBucket 5}} --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false"
   alias: query_workload_3
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template shoes_10M --bucket_list  {{.NthBucket 8}} --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false --run_bhive_queries true"
-  alias: query_workload_8
+# - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template shoes_10M --bucket_list  {{.NthBucket 8}} --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false --run_bhive_queries true"
+#   alias: query_workload_8
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 15 --use_sdk true --query_type n1ql --template hotel,hotel_vectors --bucket_list  {{.NthBucket 2}} --distance_algo DOT --use_tls false"
   alias: query_workload_4
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 1 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list  {{.NthBucket 6}} --distance_algo L2 --use_tls false --skip_default false --base64 true"
@@ -2103,8 +1789,8 @@
   alias: query_workload_2
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template shoes_50M --bucket_list  {{.NthBucket 5}} --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false"
   alias: query_workload_3
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template shoes_10M --bucket_list  {{.NthBucket 8}} --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false --run_bhive_queries true"
-  alias: query_workload_8
+# - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template shoes_10M --bucket_list  {{.NthBucket 8}} --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false --run_bhive_queries true"
+#   alias: query_workload_8
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 15 --use_sdk true --query_type n1ql --template hotel,hotel_vectors --bucket_list  {{.NthBucket 2}} --distance_algo DOT --use_tls false"
   alias: query_workload_4
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 1 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list  {{.NthBucket 6}} --distance_algo L2 --use_tls false --skip_default false --base64 true"
@@ -2145,8 +1831,8 @@
   alias: query_workload_2
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template shoes_50M --bucket_list  {{.NthBucket 5}} --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false"
   alias: query_workload_3
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template shoes_10M --bucket_list  {{.NthBucket 8}} --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false --run_bhive_queries true"
-  alias: query_workload_8
+# - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template shoes_10M --bucket_list  {{.NthBucket 8}} --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false --run_bhive_queries true"
+#   alias: query_workload_8
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 15 --use_sdk true --query_type n1ql --template hotel,hotel_vectors --bucket_list  {{.NthBucket 2}} --distance_algo DOT --use_tls false"
   alias: query_workload_4
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 1 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list  {{.NthBucket 6}} --distance_algo L2 --use_tls false --skip_default false --base64 true"
@@ -2569,8 +2255,8 @@
   alias: query_workload_2
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template shoes_50M --bucket_list  {{.NthBucket 5}} --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false"
   alias: query_workload_3
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template shoes_10M --bucket_list  {{.NthBucket 8}} --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false --run_bhive_queries true"
-  alias: query_workload_8
+# - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template shoes_10M --bucket_list  {{.NthBucket 8}} --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false --run_bhive_queries true"
+#   alias: query_workload_8
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 15 --use_sdk true --query_type n1ql --template hotel,hotel_vectors --bucket_list  {{.NthBucket 2}} --distance_algo DOT --use_tls false"
   alias: query_workload_4
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 1 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list  {{.NthBucket 6}} --distance_algo L2 --use_tls false --skip_default false --base64 true"
@@ -2651,22 +2337,12 @@
 ############## Random index lifecycle actions on bucket 4 & 5 ###############
 - image: sequoiatools/indexmanager
   command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 3}} -i {{.Scale 1}} -a random_index_lifecycle --skip_default_collection false -c False --interval 3600 --timeout 3600 -b {{.NthBucket 3}}"
-  alias: lifecycle1
 - command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 4}} -i {{.Scale 1}} -a random_index_lifecycle --skip_default_collection false -c False --interval 3600 --timeout 3600 -b {{.NthBucket 4}}"
-  alias: lifecycle2
 
 - image: sequoiatools/cmd
   entrypoint: sleep
   command: "3900"
   wait: true
-
-- client:
-    op: rm
-    container: lifecycle1
-- client:
-    op: rm
-    container: lifecycle2
-
 
 # change the topologies on the query nodes
 - test: tests/2i/neo/test_idx_neo_integration.yml
@@ -2797,8 +2473,8 @@
   alias: query_workload_2
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template shoes_50M --bucket_list  {{.NthBucket 5}} --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false"
   alias: query_workload_3
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template shoes_10M --bucket_list  {{.NthBucket 8}} --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false --run_bhive_queries true"
-  alias: query_workload_8
+# - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template shoes_10M --bucket_list  {{.NthBucket 8}} --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false --run_bhive_queries true"
+#   alias: query_workload_8
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 15 --use_sdk true --query_type n1ql --template hotel,hotel_vectors --bucket_list  {{.NthBucket 2}} --distance_algo DOT --use_tls false"
   alias: query_workload_4
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 1 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list  {{.NthBucket 6}} --distance_algo L2 --use_tls false --skip_default false --base64 true"
