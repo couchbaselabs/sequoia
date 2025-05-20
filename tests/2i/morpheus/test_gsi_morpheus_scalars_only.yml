@@ -1,0 +1,1342 @@
+- include: tests/templates/kv.yml, tests/templates/n1ql.yml, tests/templates/rebalance.yml, tests/templates/multinode_failure.yml
+
+############### Enable Plasma Bloom Filter ################
+- template: set_gsi_config
+  args: "{{.ActiveIndexNode 0}}, 'indexer.plasma.backIndex.enablePageBloomFilter':true"
+  requires:  "{{eq true .DoOnce }}"
+
+############### Set num_replica ################
+- template: set_gsi_config
+  args: "{{.ActiveIndexNode 0}}, 'indexer.settings.num_replica':1"
+  requires:  "{{eq true .DoOnce }}"
+
+### To test file based rebalance improvements
+############### shardAffinity ################
+- template: set_gsi_config
+  args: "{{.ActiveIndexNode 0}}, 'indexer.settings.enable_shard_affinity':true"
+  requires:  "{{eq true .DoOnce }}"
+
+## To test file based rebalance improvements
+############### shardAffinity ################
+- template: set_gsi_config
+  args: "{{.ActiveIndexNode 0}}, 'indexer.settings.provisioned.enable_shard_affinity':true"
+  requires:  "{{eq true .DoOnce }}"
+
+############### Enable Plasma Bloom Filter ################
+- template: set_gsi_config
+  args: "{{.ActiveIndexNode 0}}, 'indexer.plasma.backIndex.enablePageBloomFilter':true"
+  requires:  "{{eq true .DoOnce }}"
+
+############### Backup any corrupted index data files ################
+- template: set_gsi_config
+  args: "{{.ActiveIndexNode 0}}, 'indexer.settings.enable_corrupt_index_backup':true"
+  requires:  "{{eq true .DoOnce }}"
+
+############### Disable workaround for MB-46650 ################
+- template: set_gsi_config
+  args: "{{.ActiveIndexNode 0}}, 'indexer.plasma.recovery.enableFullReplayOnError':false"
+  requires:  "{{eq true .DoOnce }}"
+
+############### Enable GSI Redistribution of indexes on rebalance in ################
+- template: set_gsi_config
+  args: "{{.ActiveIndexNode 0}}, 'indexer.settings.rebalance.redistribute_indexes':true"
+  requires:  "{{eq true .DoOnce }}"
+
+############### Disable in memory compression ################
+- template: set_gsi_config
+  args: "{{.ActiveIndexNode 0}}, 'indexer.plasma.mainIndex.enableInMemoryCompression':false"
+  requires: "{{eq true .DoOnce }}"
+
+############### Enable AWR and AUS ################
+- image: sequoiatools/query_manager:dev
+  command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action set_awr_aws --bucket_list {{.NthBucket 5}}"
+
+############### create scopes and collections across 3 buckets as scope_1,scope_2 ... ###############
+-
+  image: sequoiatools/collections:1.0
+  command: "-i {{.Orchestrator}}:8091 -b {{.Bucket}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count={{.Scale 2}} --collection_count={{.Scale 25}} --collection_distribution=random"
+  requires:  "{{eq true .DoOnce }}"
+  wait: true
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 1}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count={{.Scale 2}} --collection_count={{.Scale 25}} --collection_distribution=random"
+  requires:  "{{eq true .DoOnce }}"
+  wait: true
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 2}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count={{.Scale 2}} --collection_count={{.Scale 25}} --collection_distribution=random"
+  requires:  "{{eq true .DoOnce }}"
+  wait: true
+
+# Sleep for some time to allow collections manifest to sync
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "300"
+   requires:  "{{eq true .DoOnce }}"
+   wait: true
+
+############### initial data loading ################
+- image: sequoiatools/catapult
+  command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -n {{.Scale 80000}} -pc 100
+    -dt Hotel -ds 1000 -ac True -dpx test1"
+  requires:  "{{eq true .DoOnce }}"
+  alias: collection_bucket1_doc_ops1
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -n {{.Scale 80000}} -pc 100
+    -dt Hotel -ds 1000 -ac True -dpx test2"
+  requires:  "{{eq true .DoOnce }}"
+  alias: collection_bucket1_doc_ops3
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -n {{.Scale 80000}} -pc 100
+    -dt Hotel -ds 1000 -ac True -dpx test3"
+  requires:  "{{eq true .DoOnce }}"
+  alias: collection_bucket1_doc_ops4
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 1}} -n {{.Scale 100000}} -pc 100
+    -dt Hotel -ds 1000 -ac True -dpx test1"
+  requires:  "{{eq true .DoOnce }}"
+  alias: collection_bucket2_doc_ops1
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 1}} -n {{.Scale 100000}} -pc 100
+    -dt Hotel -ds 1000 -ac True -dpx test2"
+  requires:  "{{eq true .DoOnce }}"
+  alias: collection_bucket2_doc_ops3
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 1}} -n {{.Scale 100000}} -pc 100
+    -dt Hotel -ds 1000 -ac True -dpx test3"
+  requires:  "{{eq true .DoOnce }}"
+  alias: collection_bucket2_doc_ops4
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 2}} -n {{.Scale 80000}} -pc 100
+    -dt Hotel -ds 1000 -ac True -dpx test1"
+  requires:  "{{eq true .DoOnce }}"
+  alias: collection_bucket3_doc_ops1
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 2}} -n {{.Scale 80000}} -pc 100
+    -dt Hotel -ds 1000 -ac True -dpx test2"
+  requires:  "{{eq true .DoOnce }}"
+  alias: collection_bucket3_doc_ops3
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 2}} -n {{.Scale 80000}} -pc 100
+    -dt Hotel -ds 1000 -ac True -dpx test3"
+  requires:  "{{eq true .DoOnce }}"
+  alias: collection_bucket3_doc_ops4
+
+############### Start Collections CRUD on bucket 4 & bucket5 ###############
+-
+  image: sequoiatools/collections:1.0
+  command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 3}} -o crud_mode --crud_interval=30 --max_scopes={{.Scale 5}} --max_collections={{.Scale 50}}"
+  alias: collection_crud1
+-
+  command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 4}} -o crud_mode --crud_interval=30 --max_scopes={{.Scale 5}} --max_collections={{.Scale 50}}"
+  alias: collection_crud2
+
+###############  create indexes ################
+- section_start: create_replica_indexes
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -i {{.Scale 3}} -a create_index -v"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -i {{.Scale 3}} -a create_index -v"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -i {{.Scale 3}} -a create_index -v"
+  wait: true
+
+###############  Indexer Random Recovery ################
+
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a random_recovery --timeout {{.Scale 1200}} --interval 300"
+  alias: random_recovery
+
+###############  build all deferred indexes ################
+
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a build_deferred_index -m 5"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a build_deferred_index -m 5"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -a build_deferred_index -m 5"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 3}} -a build_deferred_index -m 5"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}} -a build_deferred_index -m 5"
+  wait: true
+
+# Wait till all indexes are completely built
+-
+   image: sequoiatools/wait_for_idx_build_complete
+   command: "{{.ActiveIndexNode 0}} {{.RestUsername}} {{.RestPassword}} {{.NthBucket 3}},{{.NthBucket 4}}"
+   wait: true
+
+# Enable CBO and Update Statistics for indexes on some collections
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a enable_cbo --cbo_enable_ratio=50"
+  alias: cbo_bucket1
+
+# Sleep for some time to allow update statistics to run
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "60"
+   wait: true
+
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a enable_cbo --cbo_enable_ratio=50"
+  alias: cbo_bucket2
+
+# Sleep for some time to allow update statistics to run
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "60"
+   wait: true
+
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -a enable_cbo --cbo_enable_ratio=50"
+  alias: cbo_bucket3
+
+# Sleep for some time to allow update statistics to run
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "600"
+   wait: true
+
+# Create N1QL UDF Library and function - do it once per test
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a create_n1ql_udf --lib_filename n1ql_udf.js --lib_name n1qludf"
+  requires:  "{{eq true .DoOnce }}"
+
+############### incremental data loading ################
+- image: sequoiatools/catapult
+  command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -n {{.Scale 20000}} -pc 100 -pu 5 -pd 10
+    -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 300 -fu price,free_parking -ac True --num_threads 1"
+  alias: collection_bucket1_doc_ops2
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 1}} -n {{.Scale 20000}} -pc 100 -pu 5 -pd 10
+    -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 300 -fu price,free_parking -ac True --num_threads 1"
+  alias: collection_bucket2_doc_ops2
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 2}} -n {{.Scale 20000}} -pc 100 -pu 5 -pd 10
+    -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 300 -fu price,free_parking -ac True --num_threads 1"
+  alias: collection_bucket3_doc_ops2
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 3}} -n {{.Scale 200}} -pc 100 -pu 5 -pd 10
+    -dt Hotel -de {{.Scale 7200}} -ds 0 -lf True -li 300 -fu price,free_parking -ac True --num_threads 1"
+  alias: collection_bucket3_doc_ops2
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 4}} -n {{.Scale 200}} -pc 100 -pu 5 -pd 10
+    -dt Hotel -de {{.Scale 7200}} -ds 0 -lf True -li 300 -fu price,free_parking -ac True --num_threads 1"
+  alias: collection_bucket3_doc_ops2
+
+
+# ###############  run queries ################
+- section_start: query_replica_indexes
+- image: sequoiatools/queryapp
+  command: "-J-Xms256m -J-Xmx512m -J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.7.21/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 0 --print_duration=3600 --bucket {{.Bucket}} --querycount {{.Scale 3}} --threads 5 --n1ql True --query_timeout=600 --scan_consistency REQUEST_PLUS --bucket_names [{{.Bucket}},{{.NthBucket 1}},{{.NthBucket 2}}] --collections_mode --dataset hotel --run_udf_queries True"
+- command: "-J-Xms256m -J-Xmx512m -J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.7.21/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 0 --print_duration=3600 --bucket {{.NthBucket 1}} --querycount {{.Scale 3}} --threads 5 --n1ql True --query_timeout=600 --scan_consistency REQUEST_PLUS --bucket_names [{{.Bucket}},{{.NthBucket 1}},{{.NthBucket 2}}] --collections_mode --dataset hotel --run_udf_queries True"
+- command: "-J-Xms256m -J-Xmx512m -J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.7.21/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 0 --print_duration=3600 --bucket {{.NthBucket 2}} --querycount {{.Scale 3}} --threads 5 --n1ql True --query_timeout=600 --scan_consistency REQUEST_PLUS --bucket_names [{{.Bucket}},{{.NthBucket 1}},{{.NthBucket 2}}]  --txns True --dataset hotel --run_udf_queries True"
+- section_end: query_replica_indexes
+
+############### Start creating indexes in a loop on bucket4 & bucket5 (Collection CRUD workload) ###############
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 3}} -d hotel -a create_index_loop --interval 60 --timeout {{.Scale 3600}}"
+  alias: index_loop1
+-
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}} -d hotel -a create_index_loop --interval 60 --timeout {{.Scale 3600}}"
+  alias: index_loop2
+
+# Sleep for some time to allow some indexes to be created on bucket4 & bucket5
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "1000"
+   wait: true
+
+# Start dropping indexes in a loop on bucket4 & bucket5 (Collection CRUD workload)
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 3}} -d hotel -a drop_index_loop --interval 120 --timeout {{.Scale 3600}}"
+  alias: index_drop_loop1
+-
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}} -d hotel -a drop_index_loop --interval 120 --timeout {{.Scale 3600}}"
+  alias: index_drop_loop2
+  wait: true
+
+- section_end: query_replica_indexes
+
+############### Stop Collections CRUD and index creation on bucket4 & bucket5 ###############
+-
+  client:
+    op: rm
+    container: index_loop1
+-
+  client:
+    op: rm
+    container: index_loop2
+-
+  client:
+    op: rm
+    container: index_drop_loop1
+-
+  client:
+    op: rm
+    container: index_drop_loop2
+-
+  client:
+    op: rm
+    container: random_recovery
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "3600"
+   wait: true
+
+- section_start: change_indexer_topologies
+
+###############  Rebalance-in single node ################
+- template: rebalance_in
+  args: "{{.InActiveNode}}, index"
+
+# Sleep after starting rebalance
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "310"
+   wait: true
+
+############### Kill indexer ################
+-
+  template: kill_process
+  args: "{{.ActiveIndexNode 0}}, indexer"
+
+# Sleep before starting to poll for rebalance progress
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "430"
+   wait: true
+
+# Wait for rebalance to complete
+-
+  template: wait_for_rebalance
+  wait: true
+
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a wait_until_rebalance_cleanup_done"
+  wait: true
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "1800"
+   wait: true
+
+###############  Complete the rebalance ################
+- template: rebalance
+
+-
+  template: wait_for_rebalance
+  wait: true
+
+###############  Rebalance-out single node ################
+- template: rebalance_out
+  args: "{{.ActiveIndexNode 0}}"
+
+# Sleep after starting rebalance
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "290"
+   wait: true
+
+############## Kill indexer ################
+-
+  template: kill_process
+  args: "{{.ActiveIndexNode 0}}, indexer"
+
+# Sleep before starting to poll for rebalance progress
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "440"
+   wait: true
+
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a wait_until_rebalance_cleanup_done"
+  wait: true
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "1800"
+   wait: true
+
+# Wait for rebalance to complete
+-
+  template: wait_for_rebalance
+  wait: true
+
+###############  Rebalance-out single node ################
+- template: rebalance_out
+  args: "{{.ActiveIndexNode 0}}"
+
+# Sleep after starting rebalance
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "330"
+   wait: true
+
+# Wait for rebalance to complete
+-
+  template: wait_for_rebalance
+  wait: true
+
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "901"
+   wait: true
+
+###############  Swap single index node ################
+- template: rebalance_swap
+  args: "{{.InActiveNode}}, {{.ActiveIndexNode 0}}, index"
+
+# Sleep after starting rebalance
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "902"
+   wait: true
+
+############### Kill indexer ################
+-
+  template: kill_process
+  args: "{{.ActiveIndexNode 0}}, indexer"
+
+# Sleep before starting to poll for rebalance progress
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "903"
+   wait: true
+
+# Wait for rebalance to complete
+-
+  template: wait_for_rebalance
+  wait: true
+
+
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "509"
+   wait: true
+
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a wait_until_rebalance_cleanup_done"
+  wait: true
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "900"
+   wait: true
+
+###############  Complete the rebalance ################
+- template: rebalance
+
+-
+  template: wait_for_rebalance
+  wait: true
+
+
+############## Kill memcached ################
+-
+  template: kill_process
+  args: "{{.NthDataNode 2}}, memcached"
+
+# Sleep for some more time after memcached-kill completes (10 minutes)
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "612"
+   wait: true
+
+###############  Rebalance-out two index nodes ################
+- template: rebalance_out
+  args: "({{.ActiveIndexNode 0}},{{.ActiveIndexNode 2}})"
+
+
+# Sleep for some more time after rebalance starts
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "307"
+   wait: true
+
+
+# Sleep before starting to poll for rebalance progress
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "432"
+   wait: true
+
+# Wait for rebalance to complete
+-
+  template: wait_for_rebalance
+  wait: true
+
+
+# Sleep for some time
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "611"
+   wait: true
+
+###############  Rebalance-in two index nodes ################
+- template: add_node
+  args: "{{.NthInActiveNode 0}}, index"
+- args: "{{.NthInActiveNode 1}}, index"
+- template: rebalance
+
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "333"
+   wait: true
+
+
+# Sleep before starting to poll for rebalance progress
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "417"
+   wait: true
+
+# Wait for rebalance to complete
+-
+  template: wait_for_rebalance
+  wait: true
+
+
+# Sleep for some time
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "619"
+   wait: true
+
+############## Kill projector ################
+-
+  template: kill_process
+  args: "{{.NthDataNode 0}}, projector"
+
+# Sleep for some more time after projector-kill completes (10 minutes)
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "605"
+   wait: true
+
+############## Kill query ################
+-
+  template: kill_process
+  args: "{{.Nodes | .Service `n1ql` | net 1}}, cbq-engine"
+
+# Sleep for some more time after query-kill completes (10 minutes)
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "609"
+   wait: true
+
+###############  Auto failover for indexer node ################
+- template: autofailover1IndexNode
+  args: "{{.ActiveIndexNode 1}}"
+  wait: true
+
+###############  Rebalance out data node ################
+- template: rebalance_out
+  args: "({{.NthDataNode 1}})"
+  wait: true
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "298"
+   wait: true
+
+############## Kill memcached ################
+-
+  template: kill_process
+  args: "{{.NthDataNode 2}}, memcached"
+
+# Sleep for some more time after memcached-kill completes (10 minutes)
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "614"
+   wait: true
+
+###############  Add back data node ################
+- template: rebalance_in
+  args: "{{.InActiveNode}}"
+  wait: true
+
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "315"
+   wait: true
+
+###############  Auto failover for indexer node ################
+- template: autofailover1IndexNode
+  args: "{{.ActiveIndexNode 1}}"
+
+############## Kill indexer ################
+-
+  template: kill_process
+  args: "{{.ActiveIndexNode 1}}, indexer"
+
+# Sleep for some more time after indexer-kill completes (30 minutes)
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "1800"
+   wait: true
+
+###############  Failover and addback ################
+- template: failover_force_and_recover
+  args: "{{.ActiveIndexNode 2}}, full"
+  wait: true
+
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "304"
+   wait: true
+
+############## Kill query ################
+-
+  template: kill_process
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, cbq-engine"
+
+# Sleep for some more time after query-kill completes (10 minutes)
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "615"
+   wait: true
+
+############## Kill indexer ################
+-
+  template: kill_process
+  args: "{{.ActiveIndexNode 0}}, indexer"
+
+# Sleep for some more time after indexer-kill completes (10 minutes)
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "596"
+   wait: true
+
+###############  Failover and rebalance out ################
+- template: hard_failover_node
+  args: "{{.ActiveIndexNode 1}}"
+- template: rebalance
+  wait: true
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "296"
+   wait: true
+
+# Sleep for some time to allow DDL to complete if running in background.
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "299"
+   wait: true
+
+###############  Add back index node  ################
+- template: add_node
+  args: "{{.NthInActiveNode 0}}, index"
+- template: rebalance
+  wait: true
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "289"
+   wait: true
+
+###############  Auto failover for indexer node ################
+- template: autofailover1IndexNode
+  args: "{{.ActiveIndexNode 1}}"
+  wait: true
+
+- section_end: change_indexer_topologies
+
+
+############### KV node failover/recovery ###############
+
+- template: failover_and_recover
+  args: "{{.ActiveDataNode 2}}, full"
+  wait: true
+
+###############  Complete the rebalance ################
+- template: rebalance
+
+- template: wait_for_rebalance
+  wait: true
+
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "543"
+   wait: true
+
+###############  Hard failover KV node and rebalance out ################
+- template: hard_failover_node
+  args: "{{.ActiveDataNode 2}}"
+
+###############  Complete the rebalance ################
+- template: rebalance
+
+- template: wait_for_rebalance
+  wait: true
+
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "332"
+   wait: true
+
+
+# ###############  Rebalance in a KV node ################
+- template: rebalance_in
+  args: "{{.InActiveNode}}, data"
+  wait: true
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "534"
+   wait: true
+
+############### Start creating indexes in a loop on bucket4 & bucket5 (Collection CRUD workload) ###############
+- section_start: create_replica_indexes
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -i {{.Scale 1}} -a create_index -v"
+  wait: true
+
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a build_deferred_index -m 5"
+  wait: true
+
+- section_start: create_replica_indexes
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 3}} -i {{.Scale 1}} -a create_index -v"
+  wait: true
+
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 3}} -a build_deferred_index -m 5"
+  wait: true
+
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -a build_deferred_index -m 5"
+  wait: true
+
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a build_deferred_index -m 5"
+  wait: true
+
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}} -a build_deferred_index -m 5"
+  wait: true
+
+-
+   image: sequoiatools/wait_for_idx_build_complete
+   command: "{{.ActiveIndexNode 0}} {{.RestUsername}} {{.RestPassword}} {{.Bucket}},{{.NthBucket 4}}"
+   wait: true
+
+# change the topologies on the query nodes
+- test: tests/2i/neo/test_idx_neo_integration.yml
+  section: change_query_topologies
+
+############### Stop Data loading to cool down system for item count check ###############
+-
+  client:
+    op: rm
+    container: collection_bucket1_doc_ops1
+-
+  client:
+    op: rm
+    container: collection_bucket2_doc_ops1
+-
+  client:
+    op: rm
+    container: collection_bucket3_doc_ops1
+-
+  client:
+    op: rm
+    container: collection_bucket1_doc_ops2
+-
+  client:
+    op: rm
+    container: collection_bucket2_doc_ops2
+-
+  client:
+    op: rm
+    container: collection_bucket3_doc_ops2
+-
+  client:
+    op: rm
+    container: collection_bucket1_doc_ops3
+-
+  client:
+    op: rm
+    container: collection_bucket2_doc_ops3
+-
+  client:
+    op: rm
+    container: collection_bucket3_doc_ops3
+-
+  client:
+    op: rm
+    container: collection_bucket1_doc_ops4
+-
+  client:
+    op: rm
+    container: collection_bucket2_doc_ops4
+-
+  client:
+    op: rm
+    container: collection_bucket3_doc_ops4
+-
+  client:
+    op: rm
+    container: cbo_bucket1
+-
+  client:
+    op: rm
+    container: cbo_bucket2
+-
+  client:
+    op: rm
+    container: cbo_bucket3
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "1200"
+   wait: true
+
+###############  Delete Statistics ################
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}}  -a delete_statistics"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}}  -a delete_statistics"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}}  -a delete_statistics"
+  wait: true
+
+###############  Rebalance-in single node ################
+- template: rebalance_in
+  args: "{{.InActiveNode}}, index"
+
+# Sleep after starting rebalance
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "310"
+   wait: true
+
+# Sleep before starting to poll for rebalance progress
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "430"
+   wait: true
+
+# Wait for rebalance to complete
+-
+  template: wait_for_rebalance
+  wait: true
+
+############### shardAffinity ################
+- template: set_gsi_config
+  args: "{{.ActiveIndexNode 0}}, 'indexer.settings.enable_shard_affinity':false"
+  requires:  "{{eq true .DoOnce }}"
+
+## To test file based rebalance improvements
+############### shardAffinity ################
+- template: set_gsi_config
+  args: "{{.ActiveIndexNode 0}}, 'indexer.settings.provisioned.enable_shard_affinity':false"
+  requires:  "{{eq true .DoOnce }}"
+
+###############  Rebalance-in single node ################
+- template: rebalance_in
+  args: "{{.InActiveNode}}, index"
+
+# Sleep after starting rebalance
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "310"
+   wait: true
+
+############### Kill indexer ################
+-
+  template: kill_process
+  args: "{{.ActiveIndexNode 0}}, indexer"
+
+# Sleep before starting to poll for rebalance progress
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "430"
+   wait: true
+
+# Wait for rebalance to complete
+-
+  template: wait_for_rebalance
+  wait: true
+
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a wait_until_rebalance_cleanup_done"
+  wait: true
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "1800"
+   wait: true
+
+###############  Complete the rebalance ################
+- template: rebalance
+
+-
+  template: wait_for_rebalance
+  wait: true
+
+###############  Rebalance-out single node ################
+- template: rebalance_out
+  args: "{{.ActiveIndexNode 0}}"
+
+# Sleep after starting rebalance
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "290"
+   wait: true
+
+############## Kill indexer ################
+-
+  template: kill_process
+  args: "{{.ActiveIndexNode 0}}, indexer"
+
+# Sleep before starting to poll for rebalance progress
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "440"
+   wait: true
+
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a wait_until_rebalance_cleanup_done"
+  wait: true
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "1800"
+   wait: true
+
+# Wait for rebalance to complete
+-
+  template: wait_for_rebalance
+  wait: true
+
+###############  Rebalance-out single node ################
+- template: rebalance_out
+  args: "{{.ActiveIndexNode 0}}"
+
+# Sleep after starting rebalance
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "330"
+   wait: true
+
+# Wait for rebalance to complete
+-
+  template: wait_for_rebalance
+  wait: true
+
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "901"
+   wait: true
+
+###############  Swap single index node ################
+- template: rebalance_swap
+  args: "{{.InActiveNode}}, {{.ActiveIndexNode 0}}, index"
+
+# Sleep after starting rebalance
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "902"
+   wait: true
+
+############### Kill indexer ################
+-
+  template: kill_process
+  args: "{{.ActiveIndexNode 0}}, indexer"
+
+# Sleep before starting to poll for rebalance progress
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "903"
+   wait: true
+
+# Wait for rebalance to complete
+-
+  template: wait_for_rebalance
+  wait: true
+
+
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "509"
+   wait: true
+
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a wait_until_rebalance_cleanup_done"
+  wait: true
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "900"
+   wait: true
+
+###############  Complete the rebalance ################
+- template: rebalance
+
+-
+  template: wait_for_rebalance
+  wait: true
+
+
+############## Kill memcached ################
+-
+  template: kill_process
+  args: "{{.NthDataNode 2}}, memcached"
+
+# Sleep for some more time after memcached-kill completes (10 minutes)
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "612"
+   wait: true
+
+###############  Rebalance-out two index nodes ################
+- template: rebalance_out
+  args: "({{.ActiveIndexNode 0}},{{.ActiveIndexNode 2}})"
+
+
+# Sleep for some more time after rebalance starts
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "307"
+   wait: true
+
+
+# Sleep before starting to poll for rebalance progress
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "432"
+   wait: true
+
+# Wait for rebalance to complete
+-
+  template: wait_for_rebalance
+  wait: true
+
+
+# Sleep for some time
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "611"
+   wait: true
+
+###############  Rebalance-in two index nodes ################
+- template: add_node
+  args: "{{.NthInActiveNode 0}}, index"
+- args: "{{.NthInActiveNode 1}}, index"
+- template: rebalance
+
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "333"
+   wait: true
+
+
+# Sleep before starting to poll for rebalance progress
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "417"
+   wait: true
+
+# Wait for rebalance to complete
+-
+  template: wait_for_rebalance
+  wait: true
+
+
+# Sleep for some time
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "619"
+   wait: true
+
+############## Kill projector ################
+-
+  template: kill_process
+  args: "{{.NthDataNode 0}}, projector"
+
+# Sleep for some more time after projector-kill completes (10 minutes)
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "605"
+   wait: true
+
+############## Kill query ################
+-
+  template: kill_process
+  args: "{{.Nodes | .Service `n1ql` | net 1}}, cbq-engine"
+
+# Sleep for some more time after query-kill completes (10 minutes)
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "609"
+   wait: true
+
+###############  Auto failover for indexer node ################
+- template: autofailover1IndexNode
+  args: "{{.ActiveIndexNode 1}}"
+  wait: true
+
+###############  Rebalance out data node ################
+- template: rebalance_out
+  args: "({{.NthDataNode 1}})"
+  wait: true
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "298"
+   wait: true
+
+############## Kill memcached ################
+-
+  template: kill_process
+  args: "{{.NthDataNode 2}}, memcached"
+
+# Sleep for some more time after memcached-kill completes (10 minutes)
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "614"
+   wait: true
+
+###############  Add back data node ################
+- template: rebalance_in
+  args: "{{.InActiveNode}}"
+  wait: true
+
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "315"
+   wait: true
+
+###############  Auto failover for indexer node ################
+- template: autofailover1IndexNode
+  args: "{{.ActiveIndexNode 1}}"
+
+############## Kill indexer ################
+-
+  template: kill_process
+  args: "{{.ActiveIndexNode 1}}, indexer"
+
+# Sleep for some more time after indexer-kill completes (30 minutes)
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "1800"
+   wait: true
+
+###############  Failover and addback ################
+- template: failover_force_and_recover
+  args: "{{.ActiveIndexNode 2}}, full"
+  wait: true
+
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "304"
+   wait: true
+
+############## Kill query ################
+-
+  template: kill_process
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, cbq-engine"
+
+# Sleep for some more time after query-kill completes (10 minutes)
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "615"
+   wait: true
+
+############## Kill indexer ################
+-
+  template: kill_process
+  args: "{{.ActiveIndexNode 0}}, indexer"
+
+# Sleep for some more time after indexer-kill completes (10 minutes)
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "596"
+   wait: true
+
+###############  Failover and rebalance out ################
+- template: hard_failover_node
+  args: "{{.ActiveIndexNode 1}}"
+- template: rebalance
+  wait: true
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "296"
+   wait: true
+
+# Sleep for some time to allow DDL to complete if running in background.
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "299"
+   wait: true
+
+###############  Add back index node  ################
+- template: add_node
+  args: "{{.NthInActiveNode 0}}, index"
+- template: rebalance
+  wait: true
+# Sleep for some more time after rebalance completes
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "289"
+   wait: true
+
+###############  Auto failover for indexer node ################
+- template: autofailover1IndexNode
+  args: "{{.ActiveIndexNode 1}}"
+  wait: true
+
+
+###############  Rebalance-in single node ################
+- template: rebalance_in
+  args: "{{.InActiveNode}}, index"
+
+# Sleep after starting rebalance
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "310"
+   wait: true
+
+# Sleep before starting to poll for rebalance progress
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "430"
+   wait: true
+
+# Wait for rebalance to complete
+-
+  template: wait_for_rebalance
+  wait: true
+
+###############  Rebalance-in single node ################
+- template: rebalance_in
+  args: "{{.InActiveNode}}, index"
+
+# Sleep after starting rebalance
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "310"
+   wait: true
+
+# Sleep before starting to poll for rebalance progress
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "430"
+   wait: true
+
+# Wait for rebalance to complete
+-
+  template: wait_for_rebalance
+  wait: true
+
+
+
+############### shardAffinity ################
+- template: set_gsi_config
+  args: "{{.ActiveIndexNode 0}}, 'indexer.settings.enable_shard_affinity':true"
+  requires:  "{{eq true .DoOnce }}"
+
+## To test file based rebalance improvements
+############### shardAffinity ################
+- template: set_gsi_config
+  args: "{{.ActiveIndexNode 0}}, 'indexer.settings.provisioned.enable_shard_affinity':true"
+  requires:  "{{eq true .DoOnce }}"
+
+
+
+###############  Drop all Indexes ################
+- section_start: drop_all_indexes
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}}  -a drop_all_indexes -v"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a drop_all_indexes -v"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -a drop_all_indexes -v"
+  wait: true
+
+# Sleep for some time to allow DDL to complete in the background
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "600"
+   wait: true
+- section_end: drop_all_indexes

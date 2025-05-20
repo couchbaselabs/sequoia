@@ -56,7 +56,11 @@ buckets:
     storage: magma
 
   - name: bucket10
-    ram: 4%
+    ram: 3%
+    eviction: fullEviction
+  
+  - name: bucket11
+    ram: 1%
     eviction: fullEviction
 
 

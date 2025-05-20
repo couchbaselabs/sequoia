@@ -12,7 +12,8 @@ import numpy as np
 from beautifultable import BeautifulTable
 from os.path import splitext
 from deepdiff import DeepDiff
-from datetime import datetime
+from datetime import datetime, timedelta
+import pytz
 from concurrent.futures import ThreadPoolExecutor
 from couchbase.auth import PasswordAuthenticator
 from couchbase.cluster import Cluster
@@ -23,13 +24,12 @@ from couchbase.cluster import QueryScanConsistency
 from couchbase.exceptions import CouchbaseException, QueryErrorContext
 import threading
 
-
 class QueryManager:
     def __init__(self, connection_string, username, password, timeout, duration, doc_template, use_sdk, query_type,
                  query_file, groundtruth_file, validate_vector_query_results, distance_algo, bucket_list, use_tls,
                  capella="false", skip_default="false", num_groundtruth_vectors=100, num_query_vectors=10000,
                  base64_encoding="false", xattrs="false", sample_size=20, bhive_queries=False, print_frequency=30,
-                 log_level="INFO"):
+                 log_level="INFO", smoke_test_run="false"):
         self.connection_string = connection_string
         self.username = username
         self.password = password
@@ -54,6 +54,7 @@ class QueryManager:
         self.xattrs = xattrs == "true"
         self.sample_size = sample_size
         self.bhive_queries = bhive_queries == "true"
+        self.smoke_test_run = smoke_test_run == "true"
         self.query_error_obj = dict()
         self.print_frequency = print_frequency
         self.log = logging.getLogger("query_manager")
@@ -287,6 +288,92 @@ class QueryManager:
         except:
             self.log.warning("Could not parse filtering ratio from groundtruth file, using default nprobe range")
             return random.randint(50, 100)  # Fallback to original behavior
+        
+    def set_awr_aus(self):
+        """Configure AWR and AUS settings for the cluster with dynamic scheduling"""
+        # Get current time in IST
+        ist = pytz.timezone('Asia/Calcutta')
+        current_time_ist = datetime.now(ist)
+        
+        # Calculate start time (6 hours from now)
+        start_time = current_time_ist + timedelta(hours=6)
+        # End time will be 3 hours after start time
+        end_time = start_time + timedelta(hours=3)
+        
+        # Format times as HH:MM
+        start_time_str = start_time.strftime("%H:%M")
+        end_time_str = end_time.strftime("%H:%M")
+        self.log.info(f"AUS start time: {start_time_str}, AUS end time: {end_time_str}")
+        
+        # Configure AUS (Automatic Update Statistics)
+        aus_query = f"""UPDATE system:aus SET enable = true, change_percentage = 20, all_buckets = true,
+        schedule = {{ "start_time": "{start_time_str}", "end_time": "{end_time_str}", "timezone": "Asia/Calcutta", 
+        "days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"] }}"""
+        
+        # Configure AWR location and interval (using single quotes for Query Workbench compatibility)
+        bucket_name = self.bucket_list.split(",")[0]
+        awr_config_query = f"""UPDATE system:awr SET location = '{bucket_name}', 
+        interval = '60m', threshold = '30s'"""
+        
+        # Enable AWR
+        awr_enable_query = "UPDATE system:awr SET enabled = true"
+        
+        try:
+            # Execute the queries
+            self.log.info(f"Running AUS query: {aus_query}")
+            self.run_n1ql_query(aus_query, True)
+            time.sleep(30)
+            
+            # Verify AUS settings
+            verify_aus_query = "SELECT * FROM system:aus"
+            aus_settings = self.run_n1ql_query(verify_aus_query, True)
+            self.log.info(f"Current AUS settings: {aus_settings}")
+            
+            self.log.info(f"Running AWR config query: {awr_config_query}")
+            self.run_n1ql_query(awr_config_query, True)
+            time.sleep(30)
+            
+            self.log.info(f"Running AWR enable query: {awr_enable_query}")
+            self.run_n1ql_query(awr_enable_query, True)
+            time.sleep(30)
+            
+            # Verify AWR settings
+            verify_awr_query = "SELECT * FROM system:awr"
+            awr_settings = self.run_n1ql_query(verify_awr_query, True)
+            self.log.info(f"Current AWR settings: {awr_settings}")
+            
+        except Exception as e:
+            self.log.error(f"Error configuring AWR/AUS settings: {str(e)}")
+            raise
+
+    def disable_awr_aus(self):
+        """Disable AWR and AUS settings for the cluster"""
+        try:
+            # Disable AUS
+            aus_disable_query = "UPDATE system:aus SET enable = false"
+            self.log.info(f"Running AUS disable query: {aus_disable_query}")
+            self.run_n1ql_query(aus_disable_query, True)
+            time.sleep(30)
+            
+            # Verify AUS settings
+            verify_aus_query = "SELECT * FROM system:aus"
+            aus_settings = self.run_n1ql_query(verify_aus_query, True)
+            self.log.info(f"Current AUS settings after disable: {aus_settings}")
+            
+            # Disable AWR
+            awr_disable_query = "UPDATE system:awr SET enabled = false"
+            self.log.info(f"Running AWR disable query: {awr_disable_query}")
+            self.run_n1ql_query(awr_disable_query, True)
+            time.sleep(30)
+            
+            # Verify AWR settings
+            verify_awr_query = "SELECT * FROM system:awr"
+            awr_settings = self.run_n1ql_query(verify_awr_query, True)
+            self.log.info(f"Current AWR settings after disable: {awr_settings}")
+            
+        except Exception as e:
+            self.log.error(f"Error disabling AWR/AUS settings: {str(e)}")
+            raise
 
     def run_n1ql_query(self, query, iterate_over_results=False, query_node=None, groundtruth_vectors=None,
                        validate_vector_query_results=False, groundtruth_file=None):
@@ -570,6 +657,7 @@ class QueryManager:
             self.log.info("Not capella run so fetching query nodes")
             query_nodes = self.get_all_n1ql_nodes()
         groundtruth_vectors = None
+        groundtruth_file = None  # Initialize groundtruth_file as None
         if self.query_type == 'analytics':
             method = self.run_analytics_query
         elif self.query_type == 'n1ql':
@@ -636,12 +724,25 @@ class QueryManager:
         table.column_headers = ["Recall range", "Query count", "Percentage"]
         self.log.debug(f"Recall dict {self.recall_dict}")
         total_query_count = sum(self.recall_dict.values())
-        for item in sorted(self.recall_dict.keys()):  # Sort keys for consistent order
-            range_start = item * 10
-            range_end = min((item + 1) * 10, 100)  # Cap the end range at 100
-            range_recall = f"{range_start}" if range_start == range_end else f"{range_start} to {range_end}"
-            table.append_row([range_recall, self.recall_dict[item], 100 * self.recall_dict[item] / total_query_count])
-        print(table)
+        if self.smoke_test_run:
+            # Calculate queries with recall < 70%
+            low_recall_count = 0
+            for range_idx in self.recall_dict.keys():
+                if range_idx < 7:  # ranges 0-6 represent 0-69% recall
+                    low_recall_count += self.recall_dict[range_idx]
+            
+            low_recall_percentage = (low_recall_count / total_query_count) * 100 if total_query_count > 0 else 0
+            self.log.info(f"Percentage of queries with recall < 70%: {low_recall_percentage:.2f}%")
+            
+            if low_recall_percentage > 20:
+                raise Exception(f"Smoke test failed: {low_recall_percentage:.2f}% of queries have recall < 70%, which exceeds the 20% threshold")
+        else:
+            for item in sorted(self.recall_dict.keys()):  # Sort keys for consistent order
+                range_start = item * 10
+                range_end = min((item + 1) * 10, 100)  # Cap the end range at 100
+                range_recall = f"{range_start}" if range_start == range_end else f"{range_start} to {range_end}"
+                table.append_row([range_recall, self.recall_dict[item], 100 * self.recall_dict[item] / total_query_count])
+            print(table)
 
     def get_rebalance_status(self):
         endpoint = f"{self.connection_string}/pools/default/rebalanceProgress"
@@ -785,6 +886,8 @@ if __name__ == '__main__':
                         default="false")
     parser.add_argument("-ll", "--log_level", help="logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)", 
                         default="INFO")
+    parser.add_argument("-st", "--smoke_test_run", help="True or False. Is it a smoke test run?", 
+                        default="false")
     args = parser.parse_args()
     query_manager = QueryManager(args.connection_string, args.username, args.password, int(args.timeout),
                                  int(args.duration), args.template, args.use_sdk, args.query_type, args.query_file,
@@ -798,7 +901,9 @@ if __name__ == '__main__':
             query_manager.run_query_workload(int(args.num_concurrent_queries), int(args.refresh_duration))
             if args.validate_vector_query_results and args.run_vector_queries:
                 query_manager.print_recall_stats()
-                raise Exception("Raising dummy exception to print the recall stats in the console log")
+                smoke_run = args.smoke_test_run == "true"
+                if not smoke_run:
+                    raise Exception("Raising dummy exception to print the recall stats in the console log")
         elif args.action == "run_scans_validation":
             query_manager.run_scans_validation()
         elif args.action == "data_validation":
@@ -809,9 +914,14 @@ if __name__ == '__main__':
             query_manager.cancel_random_queries(int(args.num_concurrent_queries))
         elif args.action == "fetch_active_requests":
             query_manager.fetch_columnar_active_requests()
+        elif args.action == "set_awr_aus":
+            query_manager.set_awr_aus()
+        elif args.action == "disable_awr_aus":
+            query_manager.disable_awr_aus()
         else:
             raise Exception("Actions allowed - run_query_workload | poll_for_failed_queries "
-                            "| cancel_random_queries | run_scans_validation")
+                            "| cancel_random_queries | run_scans_validation | data_validation "
+                            "| fetch_active_requests | set_awr_aus | disable_awr_aus")
     except KeyboardInterrupt:
         if args.validate_vector_query_results and args.run_vector_queries:
             query_manager.print_recall_stats()

@@ -230,7 +230,7 @@ buckets:
 
   -
       name: bucket10
-      ram: 4%
+      ram: 2%
       storage: magma
       eviction: fullEviction
       historyretentionbytes: 2147483648
@@ -239,6 +239,16 @@ buckets:
       dekRotateEvery: 50
       historyretentionseconds: 86400
       enablehistoryretentionbydefault: 1
+  
+  -
+      name: bucket11
+      ram: 2%
+      storage: magma
+      eviction: fullEviction
+      historyretentionbytes: 2147483648
+      historyretentionseconds: 86400
+      enablehistoryretentionbydefault: 1
+
   -
       name: remote
       ram: 80%

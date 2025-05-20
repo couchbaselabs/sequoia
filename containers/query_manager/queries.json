@@ -43,9 +43,7 @@
     "SELECT id from keyspacenameplaceholder where category=\"Shoes\" AND country=\"USA\" AND brand=\"Nike\" ORDER BY APPROX_VECTOR_DISTANCE(embedding, qvec, \"DIST_ALGO\", nprobe) limit 100; idx_5M.ivecs",
     "SELECT id from keyspacenameplaceholder where category=\"Shoes\" AND country=\"USA\" ORDER BY APPROX_VECTOR_DISTANCE(embedding, qvec, \"DIST_ALGO\", nprobe) limit 100; idx_10M.ivecs",
     "SELECT id from keyspacenameplaceholder where category=\"Shoes\" ORDER BY APPROX_VECTOR_DISTANCE(embedding, qvec, \"DIST_ALGO\", nprobe) limit 100; idx_20M.ivecs",
-    "SELECT id, APPROX_VECTOR_DISTANCE(embedding, qvec, \"DIST_ALGO\", nprobe) from keyspacenameplaceholder where category=\"Shoes\" AND country=\"USA\" ORDER BY APPROX_VECTOR_DISTANCE(embedding, qvec, \"DIST_ALGO\", nprobe) limit 100; idx_10M.ivecs",
-    "SELECT id from keyspacenameplaceholder where `type`=\"Casual\" AND category=\"Shoes\" ORDER BY APPROX_VECTOR_DISTANCE(embedding, qvec, \"DIST_ALGO\", nprobe) limit 100; idx_20M.ivecs",
-    "SELECT id from keyspacenameplaceholder where `type`=\"Casual\" ORDER BY APPROX_VECTOR_DISTANCE(embedding, qvec, \"DIST_ALGO\", nprobe) limit 100; idx_50M.ivecs"
+    "SELECT id, APPROX_VECTOR_DISTANCE(embedding, qvec, \"DIST_ALGO\", nprobe) from keyspacenameplaceholder where category=\"Shoes\" AND country=\"USA\" ORDER BY APPROX_VECTOR_DISTANCE(embedding, qvec, \"DIST_ALGO\", nprobe) limit 100; idx_10M.ivecs"
   ],
   "shoes_10M": [
     "SELECT id from keyspacenameplaceholder where category=\"Shoes\" AND country=\"USA\" AND brand=\"Nike\" AND color=\"Green\" AND size=5 ORDER BY APPROX_VECTOR_DISTANCE(embedding, qvec, \"DIST_ALGO\", nprobe) limit 100; idx_1M.ivecs",

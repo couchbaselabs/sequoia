@@ -58,6 +58,10 @@
   args: "{{.ActiveIndexNode 0}}, 'indexer.settings.rebalance.redistribute_indexes':true"
   requires: "{{eq true .DoOnce }}"
 
+############### Enable AWR and AUS ################
+- image: sequoiatools/query_manager:dev
+  command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action set_awr_aws --bucket_list {{.NthBucket 10}}"
+
 ############### create scopes and collections across 3 buckets as scope_1,scope_2 ... ###############
 - image: sequoiatools/collections:1.0
   command: "-i {{.Orchestrator}}:8091 -b {{.Bucket}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count=1 --collection_count=1 --collection_distribution=uniform"

@@ -1,4 +1,7 @@
-FROM ubuntu:20.04
+FROM --platform=linux/amd64 ubuntu:20.04
+
+# Set ARG for platform
+ARG TARGETPLATFORM
 ENV TZ=US/Pacific
 ENV CMAKE_POLICY_VERSION_MINIMUM=3.5
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone

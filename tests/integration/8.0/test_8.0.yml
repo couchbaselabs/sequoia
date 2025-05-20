@@ -162,9 +162,18 @@
   requires:  "{{eq true .DoOnce }}"
   wait: true
 
+- image: sequoiatools/magmaloader
+  command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 11}} --start 0 --end 100000 --doc_template Hotel --all_coll true"
+  requires:  "{{eq true .DoOnce }}"
+  wait: true
+
 ##### Insert vector embeddings on the bucket used for composite indexes creation ################
 - image: sequoiatools/siftloader
   command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 10}} --start 1 --end 100000 --batch_size 10000 --file_path /sift_base.fvecs --load_in_chunks false"
+  wait: true
+
+- image: sequoiatools/siftloader
+  command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 11}} --start 1 --end 100000 --batch_size 10000 --file_path /sift_base.fvecs --load_in_chunks false"
   wait: true
 
 ######### Create composite indexes as well as secondary indexes on scalar fields ###################
@@ -173,6 +182,14 @@
   wait: true
 - command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 10}} -i {{.Scale 1}} -a create_n_indexes_on_buckets -v --num_of_indexes_per_bucket 13 --skip_default_collection false"
   wait: true
+
+######### Create composite indexes as well as secondary indexes on scalar fields ###################
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 11}}  -a create_n_indexes_on_buckets --timeout 30 --num_of_indexes_per_bucket 4  --create_vector_indexes true --num_dimensions 128 --skip_default_collection false --num_vectors 1000000 --distance_algo L2 --defer_build true --set_max_replicas 1 --use_description IVF,SQ8"
+  wait: true
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 11}} -i {{.Scale 1}} -a create_n_indexes_on_buckets -v --num_of_indexes_per_bucket 13 --skip_default_collection false"
+  wait: true
+
 
 # Start transactions workload on default bucket
 -
@@ -277,6 +294,10 @@
   command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 10}} -a build_deferred_index -m 5"
   wait: true
 
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 11}} -a build_deferred_index -m 5"
+  wait: true
+
 # Wait till all indexes are completely built
 -
    image: sequoiatools/wait_for_idx_build_complete
@@ -347,8 +368,12 @@
 - command: "-J-Xms256m -J-Xmx512m -J-cp /AnalyticsQueryApp/Couchbase-Java-Client-2.7.61/* /AnalyticsQueryApp/Query/load_queries.py --server_ip {{.Nodes | .Service `n1ql` | net 0}} --port {{.QueryPort}} --duration 0 --print_duration=3600 --bucket {{.NthBucket 7}} --querycount {{.Scale 3}} --threads {{.Scale 3}} --n1ql True --query_timeout=600 --scan_consistency REQUEST_PLUS --bucket_names [{{.NthBucket 4}},{{.NthBucket 5}},{{.NthBucket 6}},{{.NthBucket 7}}] --txns True --dataset hotel"
 
 - image: sequoiatools/query_manager:dev
-  command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 5 --use_sdk true --query_type n1ql --template hotel --bucket_list {{.NthBucket 10}} --distance_algo L2 --skip_default false --use_tls false"
+  command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 72000 --refresh_duration 900 --timeout 600 --num_concurrent_queries 10 --use_sdk true --query_type n1ql --template hotel,hotel_vectors --bucket_list {{.NthBucket 10}} --distance_algo L2 --skip_default false --use_tls false"
   alias: query_workload_1
+
+- image: sequoiatools/query_manager:dev
+  command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 72000 --refresh_duration 900 --timeout 600 --num_concurrent_queries 5 --use_sdk true --query_type n1ql --template hotel,hotel_vectors --bucket_list {{.NthBucket 11}} --distance_algo L2 --skip_default false --use_tls false --run_bhive_queries true"
+  alias: query_workload_2
 
 # query FTS indexes
 - image: sequoiatools/ftsindexmanager
