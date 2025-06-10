@@ -70,7 +70,7 @@
 
 ############### Enable AWR and AUS ################
 - image: sequoiatools/query_manager:dev
-  command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action set_awr_aws --bucket_list {{.NthBucket 10}}"
+  command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action set_awr_aus --bucket_list {{.NthBucket 10}}"
 
 ############### create scopes and collections across 3 buckets as scope_1,scope_2 ... ###############
 - image: sequoiatools/collections:1.0

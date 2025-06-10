@@ -61,7 +61,7 @@
 
 ############### Enable AWR and AUS ################
 - image: sequoiatools/query_manager:dev
-  command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action set_awr_aws --bucket_list {{.NthBucket 10}}"
+  command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action set_awr_aus --bucket_list {{.NthBucket 10}}"
 
 ############### MB-66578 workaround ################
 - template: set_gsi_config

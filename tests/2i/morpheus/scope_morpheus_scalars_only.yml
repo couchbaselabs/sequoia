@@ -70,5 +70,5 @@ servers: # each server tag represents a cluster
       data_path: "/data"
       index_path: "/data"
       init_nodes: 11
-      buckets: bucket1, bucket2, bucket3, bucket4, bucket5
+      buckets: bucket1, bucket2, bucket3, bucket4, bucket5, bucket6
       users: bucket1, bucket2, bucket3, bucket4, bucket5
