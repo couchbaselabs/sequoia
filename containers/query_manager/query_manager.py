@@ -290,25 +290,16 @@ class QueryManager:
             return random.randint(50, 100)  # Fallback to original behavior
         
     def set_awr_aus(self):
-        """Configure AWR and AUS settings for the cluster with dynamic scheduling"""
-        # Get current time in IST
-        ist = pytz.timezone('Asia/Calcutta')
-        current_time_ist = datetime.now(ist)
-        
-        # Calculate start time (6 hours from now)
-        start_time = current_time_ist + timedelta(hours=6)
-        # End time will be 3 hours after start time
-        end_time = start_time + timedelta(hours=3)
-        
-        # Format times as HH:MM
-        start_time_str = start_time.strftime("%H:%M")
-        end_time_str = end_time.strftime("%H:%M")
+        """Configure AWR and AUS settings for the cluster with fixed scheduling"""
+        # Hardcode times to 6 PM to 9 PM IST
+        start_time_str = "18:00"  # 6 PM
+        end_time_str = "21:00"    # 9 PM
         self.log.info(f"AUS start time: {start_time_str}, AUS end time: {end_time_str}")
         
         # Configure AUS (Automatic Update Statistics)
         aus_query = f"""UPDATE system:aus SET enable = true, change_percentage = 20, all_buckets = true,
         schedule = {{ "start_time": "{start_time_str}", "end_time": "{end_time_str}", "timezone": "Asia/Calcutta", 
-        "days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"] }}"""
+        "days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"] }}"""
         
         # Configure AWR location and interval (using single quotes for Query Workbench compatibility)
         bucket_name = self.bucket_list.split(",")[0]
@@ -896,6 +887,7 @@ if __name__ == '__main__':
                                  args.num_groundtruth_vectors, args.num_query_vectors, args.base64,
                                  args.xattrs, args.sample_size, args.run_bhive_queries, args.print_frequency,
                                  args.log_level)
+    args.validate_vector_query_results = True if args.validate_vector_query_results == "true" else False
     try:
         if args.action == "run_query_workload":
             query_manager.run_query_workload(int(args.num_concurrent_queries), int(args.refresh_duration))

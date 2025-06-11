@@ -221,14 +221,14 @@
 
 ######### Create composite indexes as well as secondary indexes on scalar fields ###################
 - image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 10}}  -a create_n_indexes_on_buckets --timeout 30 --num_of_indexes_per_bucket 6  --create_vector_indexes true --num_dimensions 128 --skip_default_collection false --num_vectors 1000000 --distance_algo L2 --defer_build true --set_max_replicas 1 --use_description IVF,SQ8"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 10}}  -a create_n_indexes_on_buckets --timeout 30 --num_of_indexes_per_bucket 6  --create_vector_indexes true --num_dimensions 128 --skip_default_collection false --num_vectors 100000 --distance_algo L2 --defer_build true --set_max_replicas 1"
   wait: true
 - command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 10}} -i {{.Scale 1}} -a create_n_indexes_on_buckets -v --num_of_indexes_per_bucket 13 --skip_default_collection false"
   wait: true
 
 ######### Create composite indexes as well as secondary indexes on scalar fields ###################
 - image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 11}}  -a create_n_indexes_on_buckets --timeout 30 --num_of_indexes_per_bucket 4  --create_vector_indexes true --num_dimensions 128 --skip_default_collection false --num_vectors 1000000 --distance_algo L2 --defer_build true --set_max_replicas 1 --use_description IVF,SQ8"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 11}}  -a create_n_indexes_on_buckets --timeout 30 --num_of_indexes_per_bucket 4  --create_bhive_indexes true --num_dimensions 128 --skip_default_collection false --num_vectors 100000 --distance_algo L2 --defer_build true --set_max_replicas 1"
   wait: true
 - command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 11}} -i {{.Scale 1}} -a create_n_indexes_on_buckets -v --num_of_indexes_per_bucket 13 --skip_default_collection false"
   wait: true

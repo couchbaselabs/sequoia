@@ -12,6 +12,12 @@
   args: "{{.ActiveIndexNode 0}}, 'indexer.plasma.backIndex.enablePageBloomFilter':true"
   requires: "{{eq true .DoOnce }}"
 
+############### Enable breakpad ################
+- template: set_gsi_config
+  args: "{{.ActiveIndexNode 0}}, 'indexer.bhive.enableBreakPad':true"
+  requires:  "{{eq true .DoOnce }}"
+
+
 ############### Set num_replica ################
 - template: set_gsi_config
   args: "{{.ActiveIndexNode 0}}, 'indexer.settings.num_replica':1"
@@ -27,9 +33,9 @@
   args: "{{.ActiveIndexNode 0}}, 'indexer.numSliceWriters':4"
   requires: "{{eq true .DoOnce }}"
 
-- template: set_gsi_config
-  args: "{{.ActiveIndexNode 0}}, 'indexer.plasma.mainIndex.enableInMemoryCompression':false"
-  requires: "{{eq true .DoOnce }}"
+# - template: set_gsi_config
+#   args: "{{.ActiveIndexNode 0}}, 'indexer.plasma.mainIndex.enableInMemoryCompression':false"
+#   requires: "{{eq true .DoOnce }}"
 
 ## Enable file-based rebalance
 ############### shardAffinity ################
@@ -946,6 +952,15 @@
   entrypoint: sleep
   command: "326"
   wait: true
+
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a wait_until_rebalance_cleanup_done"
+  wait: true
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "1800"
+  wait: true
+
 
 - template: rebalance
 

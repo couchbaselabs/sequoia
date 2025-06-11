@@ -1203,11 +1203,11 @@ class IndexManager:
                     with_clause_list.append("\'num_replica\':%s" % num_replica)
                     if is_defer_idx:
                         with_clause_list.append("\'defer_build\':true")
-                    if "is_vector" in idx_template and idx_template['is_vector']:
+                    if "is_vector" in idx_template and idx_template['is_vector'] and self.create_vector_indexes:
                         create_vector_indexes = True
                     else:
                         create_vector_indexes = False
-                    if "is_bhive" in idx_template and idx_template['is_bhive']:
+                    if "is_bhive" in idx_template and idx_template['is_bhive'] and self.create_bhive_indexes:
                         create_bhive_indexes = True
                     else:
                         create_bhive_indexes = False
