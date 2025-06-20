@@ -98,8 +98,39 @@
    command: "300"
    wait: true
 
+# Enable cross-cluster versioning for buckets 0, 4, 8, 9 ######
+- image: sequoiatools/couchbase-cli:8.0
+  requires:  "{{eq true .DoOnce }}"
+  command: "bucket-edit -c {{.Orchestrator}}:{{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket {{.Bucket}} --enable-cross-cluster-versioning --force"
+  wait: true
+- command: "bucket-edit -c {{.Orchestrator}}:{{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket {{.NthBucket 4}} --enable-cross-cluster-versioning --force"
+  wait: true
+- command: "bucket-edit -c {{.Orchestrator}}:{{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket {{.NthBucket 8}} --enable-cross-cluster-versioning --force"
+  wait: true
+- command: "bucket-edit -c {{.Orchestrator}}:{{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket {{.NthBucket 9}} --enable-cross-cluster-versioning --force"
+  wait: true
+
+# Enable cross-cluster versioning in remote cluster for buckets 0, 1, 2, 3 ######
+- image: sequoiatools/couchbase-cli:8.0
+  requires:  "{{eq true .DoOnce }}"
+  command: "bucket-edit -c {{.Nodes | .Cluster 1 | net 0}}:{{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket {{.Nodes | .Cluster 1 | bucket 0}} --enable-cross-cluster-versioning --force"
+  wait: true
+- command: "bucket-edit -c {{.Nodes | .Cluster 1 | net 0}}:{{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket {{.Nodes | .Cluster 1 | bucket 1}} --enable-cross-cluster-versioning --force"
+  wait: true
+- command: "bucket-edit -c {{.Nodes | .Cluster 1 | net 0}}:{{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket {{.Nodes | .Cluster 1 | bucket 2}} --enable-cross-cluster-versioning --force"
+  wait: true
+- command: "bucket-edit -c {{.Nodes | .Cluster 1 | net 0}}:{{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket {{.Nodes | .Cluster 1 | bucket 3}} --enable-cross-cluster-versioning --force"
+  wait: true
+
+# Sleep to ensure conflict logging collections are properly created
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "60"
+   wait: true
+
 # start xdcr replications
-- image: sequoiatools/couchbase-cli:7.6
+- image: sequoiatools/couchbase-cli:8.0
   requires:  "{{eq true .DoOnce }}"
   command:  "xdcr-setup -c {{.Orchestrator}}:{{.RestPort}} --create --xdcr-cluster-name remote
         --xdcr-hostname {{.Nodes | .Cluster 1 | net 0}}
@@ -111,28 +142,40 @@
         --xdcr-cluster-name remote
         --xdcr-from-bucket {{.Bucket}}
         --xdcr-to-bucket {{.Nodes | .Cluster 1 | bucket 0}}
-        --enable-compression 1"
+        --enable-compression 1
+        --conflict-logging 1
+        --conflict-logging-default ITEM.event_0.coll0
+        --force"
   wait: true
 - command: "xdcr-replicate -c {{.Orchestrator}}:{{.RestPort}}
         --create
         --xdcr-cluster-name remote
         --xdcr-from-bucket {{.NthBucket 4}}
         --xdcr-to-bucket {{.Nodes | .Cluster 1 | bucket 1}}
-        --enable-compression 1"
+        --enable-compression 1
+        --conflict-logging 1
+        --conflict-logging-default ITEM.event_0.coll1     
+        --force"
   wait: true
 - command: "xdcr-replicate -c {{.Orchestrator}}:{{.RestPort}}
         --create
         --xdcr-cluster-name remote
         --xdcr-from-bucket {{.NthBucket 8}}
         --xdcr-to-bucket {{.Nodes | .Cluster 1 | bucket 2}}
-        --enable-compression 1"
+        --enable-compression 1
+        --conflict-logging 1
+        --conflict-logging-default ITEM.event_0.coll2       
+        --force"
   wait: true
 - command: "xdcr-replicate -c {{.Orchestrator}}:{{.RestPort}}
         --create
         --xdcr-cluster-name remote
         --xdcr-from-bucket {{.NthBucket 9}}
         --xdcr-to-bucket {{.Nodes | .Cluster 1 | bucket 3}}
-        --enable-compression 1"
+        --enable-compression 1
+        --conflict-logging 1
+        --conflict-logging-default ITEM.event_0.coll3      
+        --force"
   wait: true
 
 ############### Initial data loading to collections - no doc expiry, only creates ################
@@ -819,3 +862,4 @@
    entrypoint: sleep
    command: "600"
    wait: true
+
