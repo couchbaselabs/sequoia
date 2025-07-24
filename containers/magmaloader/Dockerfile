@@ -13,9 +13,9 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install -yq --no-in
 RUN apt-get install -y git wget
 
 # install maven 3.6.3
-RUN wget https://downloads.apache.org/maven/maven-3/3.9.10/binaries/apache-maven-3.9.10-bin.tar.gz
-RUN tar xzf apache-maven-3.9.10-bin.tar.gz
-RUN ln -s apache-maven-3.9.10 maven
+RUN wget https://downloads.apache.org/maven/maven-3/3.9.11/binaries/apache-maven-3.9.11-bin.tar.gz
+RUN tar xzf apache-maven-3.9.11-bin.tar.gz
+RUN ln -s apache-maven-3.9.11 maven
 ENV PATH=${PATH}:/root/maven/bin
 
 # src

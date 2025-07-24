@@ -13,11 +13,12 @@ package sequoia
  */
 
 import (
-    "fmt"
-    "regexp"
-    "strconv"
-    "strings"
-    "time"
+	"fmt"
+	"regexp"
+	"strconv"
+	"strings"
+	"time"
+
 	cmap "github.com/streamrail/concurrent-map"
 )
 
@@ -129,18 +130,18 @@ func NewScope(flags TestFlags, cm *ContainerManager) Scope {
 }
 
 func (s *Scope) SetupServer() {
-	if !(*s.Flags.Capella){
-        s.WaitForServers()
-        s.InitCli()
-        s.InitNodes()
-        s.InitCluster()
-        s.AddUsers()
-        s.CreateEncryptionKeys()
-        s.EnableLogAndConfigEncryption()
-        s.AddNodes()
-        s.RebalanceClusters()
-        s.ApplyInternalSettings()
-        s.CreateBuckets()
+	if !(*s.Flags.Capella) {
+		s.WaitForServers()
+		s.InitCli()
+		s.InitNodes()
+		s.InitCluster()
+		s.AddUsers()
+		s.CreateEncryptionKeys()
+		s.EnableLogAndConfigEncryption()
+		s.AddNodes()
+		s.RebalanceClusters()
+		s.ApplyInternalSettings()
+		s.CreateBuckets()
 	}
 	s.getClusteInfo()
 	s.InitRestContainer()
@@ -242,13 +243,34 @@ func (s *Scope) WaitForServers() {
 	waitForServersOp := func(name string, server *ServerSpec, done chan bool) {
 
 		ip := s.Provider.GetHostAddress(name)
+
+		// Validate that we got a valid IP address
+		if ip == "" {
+			fmt.Printf("Warning: Empty IP address for server %s, skipping wait operation\n", name)
+			done <- true
+			return
+		}
+
 		parts := strings.Split(ip, ",")
 		prefix := parts[0]
 		if prefix == "syncgateway" || prefix == "elasticsearch" {
 			if len(parts) > 1 {
 				ip = parts[1]
+			} else {
+				// If we have syncgateway/elasticsearch prefix but no second part, skip
+				fmt.Printf("Warning: Invalid IP format for %s (expected format: syncgateway,ip or elasticsearch,ip), skipping wait operation\n", name)
+				done <- true
+				return
 			}
 		}
+
+		// Validate IP after potential modification
+		if ip == "" {
+			fmt.Printf("Warning: Empty IP address after processing for server %s, skipping wait operation\n", name)
+			done <- true
+			return
+		}
+
 		ipPort := strings.Split(ip, ":")
 		if len(ipPort) == 1 {
 			// use default port
@@ -283,6 +305,14 @@ func (s *Scope) WaitForMobile() {
 	waitForSyncGatewaysOp := func(name string, syncGateway *SyncGatewaySpec, done chan bool) {
 
 		ip := s.Provider.GetHostAddress(name)
+
+		// Validate that we got a valid IP address
+		if ip == "" {
+			fmt.Printf("Warning: Empty IP address for sync gateway %s, skipping wait operation\n", name)
+			done <- true
+			return
+		}
+
 		ipPort := strings.Split(ip, ":")
 		if len(ipPort) == 1 {
 			// use default port
@@ -309,6 +339,14 @@ func (s *Scope) WaitForMobile() {
 	waitForAccelsOp := func(name string, accel *AccelSpec, done chan bool) {
 
 		ip := s.Provider.GetHostAddress(name)
+
+		// Validate that we got a valid IP address
+		if ip == "" {
+			fmt.Printf("Warning: Empty IP address for accel %s, skipping wait operation\n", name)
+			done <- true
+			return
+		}
+
 		ipPort := strings.Split(ip, ":")
 		if len(ipPort) == 1 {
 			// use default port
@@ -364,6 +402,8 @@ func (s *Scope) InitNodes() {
 		parts := strings.Split(ip, ",")
 		prefix := parts[0]
 		if prefix == "syncgateway" || prefix == "elasticsearch" {
+			fmt.Printf("Skipping node-init for %s (type: %s) - not a Couchbase Server node\n", name, prefix)
+			done <- true
 			return
 		}
 		command := []string{"node-init",
@@ -578,44 +618,44 @@ func (s *Scope) AddUsers() {
 }
 
 func (s *Scope) CreateEncryptionKeys() {
-    var image = s.GetCliImage()
-    operation := func(name string,server *ServerSpec) {
-        autoRotateStartTime := time.Now().UTC().Add(1 * time.Hour).Format(time.RFC3339)
-        orchestrator := server.Names[0]
-        ip := s.Provider.GetHostAddress(orchestrator)
-        command := []string{"setting-encryption",
-            "-c", ip,
-            "-u", server.RestUsername,
-            "-p", server.RestPassword,
-            "--key-type", "auto-generated",
-            "--auto-rotate-every", "1",
-            "--name", "universal_key",
-            "--auto-rotate-start-on", autoRotateStartTime,
-            "--encrypt-with-master-password",
-            "--config-usage",
-            "--log-usage",
-            "--all-bucket-usage",
-             "--add-key",
-        }
+	var image = s.GetCliImage()
+	operation := func(name string, server *ServerSpec) {
+		autoRotateStartTime := time.Now().UTC().Add(1 * time.Hour).Format(time.RFC3339)
+		orchestrator := server.Names[0]
+		ip := s.Provider.GetHostAddress(orchestrator)
+		command := []string{"setting-encryption",
+			"-c", ip,
+			"-u", server.RestUsername,
+			"-p", server.RestPassword,
+			"--key-type", "auto-generated",
+			"--auto-rotate-every", "1",
+			"--name", "universal_key",
+			"--auto-rotate-start-on", autoRotateStartTime,
+			"--encrypt-with-master-password",
+			"--config-usage",
+			"--log-usage",
+			"--all-bucket-usage",
+			"--add-key",
+		}
 
-        desc := "create encryption key " + name
-        command = cliCommandValidator(s.Version, command)
+		desc := "create encryption key " + name
+		command = cliCommandValidator(s.Version, command)
 
-        task := ContainerTask{
-            Describe: desc,
-            Image:    image,
-            Command:  command,
-            Async:    false,
-        }
-        fmt.Printf("Creating encryption key: %s\n", name)
-        fmt.Printf("Command: %v\n", command)
-        fmt.Printf("Task Description: %s\n", desc)
-        fmt.Printf("Auto-Rotate Start Time: %s\n", autoRotateStartTime)
+		task := ContainerTask{
+			Describe: desc,
+			Image:    image,
+			Command:  command,
+			Async:    false,
+		}
+		fmt.Printf("Creating encryption key: %s\n", name)
+		fmt.Printf("Command: %v\n", command)
+		fmt.Printf("Task Description: %s\n", desc)
+		fmt.Printf("Auto-Rotate Start Time: %s\n", autoRotateStartTime)
 
-        s.Cm.Run(&task)
-    }
+		s.Cm.Run(&task)
+	}
 
-    s.Spec.ApplyToServers(operation, 0, 1)
+	s.Spec.ApplyToServers(operation, 0, 1)
 }
 func (s *Scope) AddNodes() {
 	var image = s.GetCliImage()
@@ -672,76 +712,75 @@ func (s *Scope) AddNodes() {
 	s.Spec.ApplyToAllServers(addNodesOp)
 }
 
-
 func (s *Scope) EnableLogAndConfigEncryption() {
-    var image = s.GetCliImage()
-    operation := func(name string, server *ServerSpec) {
-        orchestrator := server.Names[0]
-        ip := s.Provider.GetHostAddress(orchestrator)
+	var image = s.GetCliImage()
+	operation := func(name string, server *ServerSpec) {
+		orchestrator := server.Names[0]
+		ip := s.Provider.GetHostAddress(orchestrator)
 
-        // Enable config encryption
-        command := []string{"setting-encryption",
-            "-c", ip,
-            "-u", server.RestUsername,
-            "-p", server.RestPassword,
-            "--target", "config",
-            "--type", "key",
-            "--key", "0",
-        }
-        if server.DekRotateEvery != "" {
-          command = append(command, "--dek-rotate-every", server.DekRotateEvery)
-        }
-        if server.DekRotateEvery != "" {
-          command = append(command, "--dek-rotate-every", server.DekRotateEvery)
-         }
-        command = append(command, "--set")
-        desc := "enable config encryption " + name
-        command = cliCommandValidator(s.Version, command)
+		// Enable config encryption
+		command := []string{"setting-encryption",
+			"-c", ip,
+			"-u", server.RestUsername,
+			"-p", server.RestPassword,
+			"--target", "config",
+			"--type", "key",
+			"--key", "0",
+		}
+		if server.DekRotateEvery != "" {
+			command = append(command, "--dek-rotate-every", server.DekRotateEvery)
+		}
+		if server.DekRotateEvery != "" {
+			command = append(command, "--dek-rotate-every", server.DekRotateEvery)
+		}
+		command = append(command, "--set")
+		desc := "enable config encryption " + name
+		command = cliCommandValidator(s.Version, command)
 
-        task := ContainerTask{
-            Describe: desc,
-            Image:    image,
-            Command:  command,
-            Async:    false,
-        }
-        fmt.Printf("Enabling config encryption: %s\n", name)
-        fmt.Printf("Command: %v\n", command)
-        fmt.Printf("Task Description: %s\n", desc)
+		task := ContainerTask{
+			Describe: desc,
+			Image:    image,
+			Command:  command,
+			Async:    false,
+		}
+		fmt.Printf("Enabling config encryption: %s\n", name)
+		fmt.Printf("Command: %v\n", command)
+		fmt.Printf("Task Description: %s\n", desc)
 
-        s.Cm.Run(&task)
+		s.Cm.Run(&task)
 
-        // Enable log encryption
-        command = []string{"setting-encryption",
-            "-c", ip,
-            "-u", server.RestUsername,
-            "-p", server.RestPassword,
-            "--target", "log",
-            "--type", "key",
-            "--key", "0",
-        }
+		// Enable log encryption
+		command = []string{"setting-encryption",
+			"-c", ip,
+			"-u", server.RestUsername,
+			"-p", server.RestPassword,
+			"--target", "log",
+			"--type", "key",
+			"--key", "0",
+		}
 
-         if server.DekRotateEvery != "" {
-          command = append(command, "--dek-rotate-every", server.DekRotateEvery)
-        }
-        command = append(command, "--set")
+		if server.DekRotateEvery != "" {
+			command = append(command, "--dek-rotate-every", server.DekRotateEvery)
+		}
+		command = append(command, "--set")
 
-        desc = "enable log encryption " + name
-        command = cliCommandValidator(s.Version, command)
-// temp disabling log encryption until workaround for eagle eye is coded
-//         task = ContainerTask{
-//             Describe: desc,
-//             Image:    image,
-//             Command:  command,
-//             Async:    false,
-//         }
-//         fmt.Printf("Enabling log encryption: %s\n", name)
-//         fmt.Printf("Command: %v\n", command)
-//         fmt.Printf("Task Description: %s\n", desc)
-//
-//         s.Cm.Run(&task)
-    }
+		desc = "enable log encryption " + name
+		command = cliCommandValidator(s.Version, command)
+		// temp disabling log encryption until workaround for eagle eye is coded
+		//         task = ContainerTask{
+		//             Describe: desc,
+		//             Image:    image,
+		//             Command:  command,
+		//             Async:    false,
+		//         }
+		//         fmt.Printf("Enabling log encryption: %s\n", name)
+		//         fmt.Printf("Command: %v\n", command)
+		//         fmt.Printf("Task Description: %s\n", desc)
+		//
+		//         s.Cm.Run(&task)
+	}
 
-    s.Spec.ApplyToServers(operation, 0, 1)
+	s.Spec.ApplyToServers(operation, 0, 1)
 }
 
 func (s *Scope) RebalanceClusters() {
@@ -810,93 +849,93 @@ func (s *Scope) ApplyInternalSettings() {
 }
 
 func (s *Scope) CreateBuckets() {
-    var image = s.GetCliImage()
+	var image = s.GetCliImage()
 
-    if s.Spec.Servers[0].NumberOfBuckets != "" {
-        s.Rest.updateNumberOfBucktes(s.Spec.Servers[0].NumberOfBuckets)
-    }
+	if s.Spec.Servers[0].NumberOfBuckets != "" {
+		s.Rest.updateNumberOfBucktes(s.Spec.Servers[0].NumberOfBuckets)
+	}
 
-    // configure rebalance operation
-    operation := func(name string, server *ServerSpec) {
-        orchestrator := server.Names[0]
-        ip := s.Provider.GetHostAddress(orchestrator)
-        for _, bucket := range server.BucketSpecs {
-            for _, bucketName := range bucket.Names {
-                ramQuota := bucket.Ram
-                if strings.Index(ramQuota, "%") > -1 {
-                    // convert bucket ram to value within context of server ram
-                    ramQuota = strings.Replace(ramQuota, "%", "", 1)
-                    ramVal, _ := strconv.Atoi(ramQuota)
-                    nodeRam, _ := strconv.Atoi(server.Ram)
-                    ramQuota = strconv.Itoa((nodeRam * ramVal) / 100)
-                }
-                var replica uint8 = 1
-                if bucket.Replica != nil {
-                    replica = *bucket.Replica
-                }
-                command := []string{"bucket-create", "-c", ip,
-                    "-u", server.RestUsername, "-p", server.RestPassword,
-                    "--bucket", bucketName,
-                    "--bucket-ramsize", ramQuota,
-                    "--bucket-type", bucket.Type,
-                    "--bucket-replica", strconv.Itoa(int(replica)),
-                    "--enable-flush", "1", "--wait",
-                }
-                if bucket.Eviction != "" {
-                    command = append(command, "--bucket-eviction-policy", bucket.Eviction)
-                }
-                if bucket.Compression != "" {
-                    command = append(command, "--compression-mode", bucket.Compression)
-                }
-                if bucket.TTL != "" {
-                    command = append(command, "--max-ttl", bucket.TTL)
-                }
-                if bucket.Storage != "" {
-                    command = append(command, "--storage-backend", bucket.Storage)
-                }
-                if bucket.Durability != "" {
-                    command = append(command, "--durability-min-level", bucket.Durability)
-                }
-                if bucket.HistoryRetentionBytes != "" {
-                   command = append(command, "--history-retention-bytes", bucket.HistoryRetentionBytes)
-                }
-                if bucket.HistoryRetentionSeconds != "" {
-                    command = append(command, "--history-retention-seconds", bucket.HistoryRetentionSeconds)
-                }
-                if bucket.EnableHistoryRetentionByDefault != "" {
-                    command = append(command, "--enable-history-retention-by-default", bucket.EnableHistoryRetentionByDefault)
-                }
-                if bucket.Rank != "" {
-                    command = append(command, "--rank", bucket.Rank)
-                }
-                if bucket.EnableEncryptionAtRest {
-                    command = append(command, "--encryption-key", "0")
-                    if bucket.DekRotateEvery != "" {
-                        command = append(command, "--dek-rotate-every", bucket.DekRotateEvery)
-                    }
-                    if bucket.DekLifetime != "" {
-                        command = append(command, "--dek-lifetime", bucket.DekLifetime)
-                    }
-                }
+	// configure rebalance operation
+	operation := func(name string, server *ServerSpec) {
+		orchestrator := server.Names[0]
+		ip := s.Provider.GetHostAddress(orchestrator)
+		for _, bucket := range server.BucketSpecs {
+			for _, bucketName := range bucket.Names {
+				ramQuota := bucket.Ram
+				if strings.Index(ramQuota, "%") > -1 {
+					// convert bucket ram to value within context of server ram
+					ramQuota = strings.Replace(ramQuota, "%", "", 1)
+					ramVal, _ := strconv.Atoi(ramQuota)
+					nodeRam, _ := strconv.Atoi(server.Ram)
+					ramQuota = strconv.Itoa((nodeRam * ramVal) / 100)
+				}
+				var replica uint8 = 1
+				if bucket.Replica != nil {
+					replica = *bucket.Replica
+				}
+				command := []string{"bucket-create", "-c", ip,
+					"-u", server.RestUsername, "-p", server.RestPassword,
+					"--bucket", bucketName,
+					"--bucket-ramsize", ramQuota,
+					"--bucket-type", bucket.Type,
+					"--bucket-replica", strconv.Itoa(int(replica)),
+					"--enable-flush", "1", "--wait",
+				}
+				if bucket.Eviction != "" {
+					command = append(command, "--bucket-eviction-policy", bucket.Eviction)
+				}
+				if bucket.Compression != "" {
+					command = append(command, "--compression-mode", bucket.Compression)
+				}
+				if bucket.TTL != "" {
+					command = append(command, "--max-ttl", bucket.TTL)
+				}
+				if bucket.Storage != "" {
+					command = append(command, "--storage-backend", bucket.Storage)
+				}
+				if bucket.Durability != "" {
+					command = append(command, "--durability-min-level", bucket.Durability)
+				}
+				if bucket.HistoryRetentionBytes != "" {
+					command = append(command, "--history-retention-bytes", bucket.HistoryRetentionBytes)
+				}
+				if bucket.HistoryRetentionSeconds != "" {
+					command = append(command, "--history-retention-seconds", bucket.HistoryRetentionSeconds)
+				}
+				if bucket.EnableHistoryRetentionByDefault != "" {
+					command = append(command, "--enable-history-retention-by-default", bucket.EnableHistoryRetentionByDefault)
+				}
+				if bucket.Rank != "" {
+					command = append(command, "--rank", bucket.Rank)
+				}
+				if bucket.EnableEncryptionAtRest {
+					command = append(command, "--encryption-key", "0")
+					if bucket.DekRotateEvery != "" {
+						command = append(command, "--dek-rotate-every", bucket.DekRotateEvery)
+					}
+					if bucket.DekLifetime != "" {
+						command = append(command, "--dek-lifetime", bucket.DekLifetime)
+					}
+				}
 
-                desc := "bucket create " + bucketName
-                task := ContainerTask{
-                    Describe: desc,
-                    Image:    image,
-                    Command:  command,
-                    Async:    false,
-                }
-                if s.Provider.GetType() == "docker" {
-                    task.LinksTo = orchestrator
-                }
+				desc := "bucket create " + bucketName
+				task := ContainerTask{
+					Describe: desc,
+					Image:    image,
+					Command:  command,
+					Async:    false,
+				}
+				if s.Provider.GetType() == "docker" {
+					task.LinksTo = orchestrator
+				}
 
-                s.Cm.Run(&task)
-            }
-        }
-    }
+				s.Cm.Run(&task)
+			}
+		}
+	}
 
-    // apply only to orchestrator
-    s.Spec.ApplyToServers(operation, 0, 1)
+	// apply only to orchestrator
+	s.Spec.ApplyToServers(operation, 0, 1)
 }
 
 func (s *Scope) CreateScope() {
@@ -976,10 +1015,8 @@ func (s *Scope) CompileCommand(actionCommand string) []string {
 	return commandFinal
 }
 
-//
 // cliCommandValidator checks the cli command for opts that
 // could possibly be invalid based on version
-//
 func cliCommandValidator(version string, command []string) []string {
 
 	if version == "" {
@@ -1220,11 +1257,19 @@ func (s *Scope) ConfigSyncGateway() {
 		cbs := []string{}
 		for _, sn := range serverNames {
 			ip := s.Provider.GetHostAddress(sn)
+			if ip == "" {
+				fmt.Printf("Warning: Empty IP address for server %s, skipping sync gateway config\n", sn)
+				return
+			}
 			cbs = append(cbs, ip)
 		}
 		cbsIps := strings.Join(cbs, ",")
 
 		sgwIp := s.Provider.GetHostAddress(name)
+		if sgwIp == "" {
+			fmt.Printf("Warning: Empty IP address for sync gateway %s, skipping sync gateway config\n", name)
+			return
+		}
 
 		command := []string{"MOBILE_TESTKIT_BRANCH=sequoia/sgw-component-testing",
 			"SSH_USER=" + ssh_user,

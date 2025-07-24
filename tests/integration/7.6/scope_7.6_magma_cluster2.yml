@@ -59,38 +59,35 @@ users:
 servers: # each server tag represents a cluster
   -
       name: local
-      count: 31
+      count: 25
       ram: 50%
       index_ram: 80%
       fts_ram: 80%
       eventing_ram: 90%
       analytics_ram: 90%
       index_storage: default
-      enable_encryption_at_rest: true
       services:
-        index: 6
+        index: 4
         query: 2
         backup: 1
-        fts: 3
-        eventing: 3
+        fts: 2
+        eventing: 2
         analytics: 3
       rest_username: Administrator
       rest_password: password
       ssh_username: root
       ssh_password: couchbase
-      dekRotateEvery: 50
-      dekLifetime: 100
       data_path: "/data/couchbase"
       index_path: "/data/couchbase"
       analytics_path: "/data/couchbase"
       rest_port: 8091
       query_port: 8093
-      init_nodes: 29
-      buckets: default,WAREHOUSE,NEW_ORDER,ITEM,bucket4,bucket5,bucket6,bucket7,bucket8,bucket9,bucket10, bucket11
+      init_nodes: 23
+      buckets: default,WAREHOUSE,NEW_ORDER,ITEM,bucket4,bucket5,bucket6,bucket7,bucket8,bucket9
       users: default,WAREHOUSE,NEW_ORDER,ITEM,bucket4,bucket5,bucket6,bucket7,bucket8,bucket9
   -
       name: remote
-      count: 6
+      count: 3
       ram: 60%
       rest_username: Administrator
       rest_password: password
@@ -98,7 +95,7 @@ servers: # each server tag represents a cluster
       index_path: "/data/couchbase"
       analytics_path: "/data/couchbase"
       rest_port: 8091
-      init_nodes: 6
+      init_nodes: 3
       buckets: remote,bucket4,bucket8,bucket9
       users: remote,bucket4,bucket8,bucket9
 
@@ -109,9 +106,6 @@ buckets:
       ram: 35%
       storage: magma
       eviction: fullEviction
-      enableEncryptionAtRest: true
-      dekLifetime: 100
-      dekRotateEvery: 50
       ddocs: scale
       compression: active
       historyretentionbytes : 134217728000
@@ -124,9 +118,6 @@ buckets:
       storage: magma
       eviction: fullEviction
       historyretentionbytes: 268435456000
-      enableEncryptionAtRest: true
-      dekLifetime: 100
-      dekRotateEvery: 50
       historyretentionseconds: 43200
       enablehistoryretentionbydefault: 1
       rank : 3
@@ -137,9 +128,6 @@ buckets:
       eviction: fullEviction
       ttl: 10800
       historyretentionbytes: 2147483648
-      enableEncryptionAtRest: true
-      dekLifetime: 100
-      dekRotateEvery: 50
       historyretentionseconds: 3600
       enablehistoryretentionbydefault: 1
       rank : 2
@@ -150,9 +138,6 @@ buckets:
       eviction: fullEviction
       ddocs: all
       historyretentionbytes: 53687091200
-      enableEncryptionAtRest: true
-      dekLifetime: 100
-      dekRotateEvery: 50
       historyretentionseconds: 7200
       enablehistoryretentionbydefault: 1
       rank : 2
@@ -162,9 +147,6 @@ buckets:
       storage: magma
       eviction: fullEviction
       historyretentionbytes: 2147483648
-      enableEncryptionAtRest: true
-      dekLifetime: 100
-      dekRotateEvery: 50
       historyretentionseconds: 14440
       enablehistoryretentionbydefault: 1
       rank : 1
@@ -174,90 +156,50 @@ buckets:
       storage: magma
       eviction: fullEviction
       historyretentionbytes: 2147483648
-      enableEncryptionAtRest: true
-      dekLifetime: 100
-      dekRotateEvery: 50
       historyretentionseconds: 86400
       enablehistoryretentionbydefault: 1
       rank : 1
   -
       name: bucket6
-      ram: 4%
+      ram: 5%
       storage: magma
       eviction: fullEviction
       historyretentionbytes: 2147483648
-      enableEncryptionAtRest: true
-      dekLifetime: 100
-      dekRotateEvery: 50
       historyretentionseconds: 86400
       enablehistoryretentionbydefault: 1
       rank : 1
   -
       name: bucket7
-      ram: 4%
+      ram: 5%
       storage: magma
       eviction: fullEviction
       historyretentionbytes: 2147483648
-      enableEncryptionAtRest: true
-      dekLifetime: 100
-      dekRotateEvery: 50
       historyretentionseconds: 86400
       enablehistoryretentionbydefault: 1
       rank : 1
   -
       name: bucket8
-      ram: 4%
+      ram: 5%
       storage: magma
       eviction: fullEviction
       historyretentionbytes: 2147483648
-      enableEncryptionAtRest: true
-      dekLifetime: 100
-      dekRotateEvery: 50
       historyretentionseconds: 86400
       enablehistoryretentionbydefault: 1
       rank : 1
   -
       name: bucket9
-      ram: 4%
-      storage: magma
-      eviction: fullEviction
-      historyretentionbytes: 2147483648
-      enableEncryptionAtRest: true
-      dekLifetime: 100
-      dekRotateEvery: 50
-      historyretentionseconds: 86400
-      enablehistoryretentionbydefault: 1
-
-  -
-      name: bucket10
-      ram: 5%
-      storage: magma
-      eviction: fullEviction
-      historyretentionbytes: 2147483648
-      enableEncryptionAtRest: true
-      dekLifetime: 100
-      dekRotateEvery: 50
-      historyretentionseconds: 86400
-      enablehistoryretentionbydefault: 1
-  
-  -
-      name: bucket11
       ram: 5%
       storage: magma
       eviction: fullEviction
       historyretentionbytes: 2147483648
       historyretentionseconds: 86400
       enablehistoryretentionbydefault: 1
-
   -
       name: remote
       ram: 80%
       storage: magma
       eviction: fullEviction
       historyretentionbytes: 2147483648
-      enableEncryptionAtRest: true
-      dekLifetime: 100
-      dekRotateEvery: 50
       historyretentionseconds: 86400
       enablehistoryretentionbydefault: 1
 

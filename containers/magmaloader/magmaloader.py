@@ -231,10 +231,15 @@ class MagmaLoader:
     def run_command(self, command: str) -> None:
         """Execute a single command and handle its output"""
         print(f"Running command: {command}")
-        proc = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True)
-        out = proc.communicate()
+        proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        stdout, stderr = proc.communicate()
         if proc.returncode != 0:
-            raise Exception(f"Exception in magma loader: {out}")
+            error_msg = f"Command failed with return code {proc.returncode}\n"
+            error_msg += f"STDOUT: {stdout.decode('utf-8', errors='ignore')}\n"
+            error_msg += f"STDERR: {stderr.decode('utf-8', errors='ignore')}"
+            raise Exception(f"Exception in magma loader: {error_msg}")
+        else:
+            print(f"Command completed successfully: {stdout.decode('utf-8', errors='ignore')}")
     
 
     def get_expiry_range(self):
@@ -245,8 +250,8 @@ class MagmaLoader:
         
         Returns: tuple (expiry_start, expiry_end)
         """
-        start = int(self.start) if self.start else 0
-        end = int(self.end) if self.end else 1000000
+        start = int(self.start) if self.start is not None else 0
+        end = int(self.end) if self.end is not None else 1000000
         
         total_range = end - start
         expiry_size = int(total_range * (self.expiry_percentage / 100))
@@ -287,7 +292,7 @@ class MagmaLoader:
                             f"-cr 100 -up 0 -rd 0" \
                             f" -docSize {self.doc_size} -keyPrefix {self.key_prefix} " \
                             f"-scope {scope} -collection {coll} " \
-                            f"-workers {self.workers} -maxTTL 1800 -ops {self.ops_rate} -valueType {self.doc_template} "\
+                            f"-workers {self.workers} -ops {self.ops_rate} -valueType {self.doc_template} "\
                             f"-model {self.model} -base64 {self.base64}"
                 else:
                     create_s, create_e, update_s, update_e, delete_s, delete_e = self.get_mutations_range()
@@ -313,19 +318,27 @@ class MagmaLoader:
         if self.all_coll:
             scope_coll_map = self.get_all_collections(self.bucket_name)
         else:
+            if not self.scope or not self.collection:
+                raise ValueError("Scope and collection must be provided when not using all_coll mode")
             scope_coll_map = {self.scope: [self.collection]}
 
         commands = self.get_commands(scope_coll_map, random_key_prefix)
         
+        self.log.info(f"Generated {len(commands)} commands to execute")
+        for i, cmd in enumerate(commands):
+            self.log.info(f"Command {i+1}: {cmd}")
+        
         # Execute commands in parallel using a ThreadPoolExecutor
         with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
             futures = [executor.submit(self.run_command, cmd) for cmd in commands]
-            concurrent.futures.wait(futures)
             
-            # Check for exceptions
-            for future in futures:
-                if future.exception():
-                    raise future.exception()
+            # Use as_completed to handle exceptions immediately
+            for future in concurrent.futures.as_completed(futures):
+                try:
+                    future.result()  # This will raise any exception that occurred
+                except Exception as e:
+                    self.log.error(f"Command execution failed: {e}")
+                    raise e
 
     def load_sift_data(self, random_key_prefix=False, bucket_name="default", mutations_mode=False):
         self.bucket_name = bucket_name
@@ -371,8 +384,8 @@ class MagmaLoader:
         - delete range is 20% of total range
         - update and delete ranges don't overlap
         """
-        start = int(self.start) if self.start else 0
-        end = int(self.end) if self.end else 1000000
+        start = int(self.start) if self.start is not None else 0
+        end = int(self.end) if self.end is not None else 1000000
 
         total_range = end - start
         update_size = int(total_range * 0.3)  # 30% of total range
