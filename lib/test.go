@@ -230,6 +230,8 @@ func (t *Test) Run(scope Scope) {
 	// start topology watcher
 	if t.Flags.Mode == "" {
 		scope.StartTopologyWatcher()
+		// start periodic cluster info printing every 2 hours
+		scope.StartPeriodicClusterInfo()
 	}
 
 	// run at least <repeat> times or forever if -1

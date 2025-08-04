@@ -286,6 +286,8 @@ class IndexManager:
                             help="are vector embeddings part of xattrs?")
         parser.add_argument("--set_max_replicas", default=None,
                             help="max replica count for indexes")
+        parser.add_argument("--set_max_partitions", default=None,
+                            help="max partition count for indexes")
         parser.add_argument("--all_docs_indexed", default="false",
                             help="have all mutations been processed?")
         parser.add_argument("--log_level",
@@ -449,11 +451,10 @@ class IndexManager:
         self.log.info(f"N1QL nodes {self.n1ql_nodes} and Index nodes : {self.index_nodes}")
         # Set max number of replica for the test. For that, fetch the number of indexer nodes in the cluster.
         self.max_num_replica = 0
-        self.max_num_partitions = 64
-        ## TODO What should be done with this?
-        # self.set_max_num_replica()
-
-        # Node SSH default credentials
+        if args.set_max_partitions:
+            self.max_num_partitions = int(args.set_max_partitions)
+        else:
+            self.max_num_partitions = 64
         self.ssh_username = "root"
         self.ssh_password = "couchbase"
 
@@ -828,7 +829,7 @@ class IndexManager:
                             with_clause_list.append("\'num_partition\':8")
                         else:
                             if is_partitioned_idx:
-                                num_partition = random.randint(2, 64)
+                                num_partition = random.randint(2, self.max_num_partitions)
                                 with_clause_list.append("\'num_partition\':%s" % num_partition)
                     if self.install_mode == "ee" and self.max_num_replica > 0:
                         num_replica = random.randint(1, self.max_num_replica)
@@ -1878,7 +1879,7 @@ class IndexManager:
             try:
                 # Get index stats from the indexer node
                 response = requests.get(endpoint, auth=(
-                    self.username, self.password), verify=True, )
+                    self.username, self.password), verify=False, )
                 need_retry = False
                 if response.ok:
                     response = json.loads(response.text)
@@ -1946,7 +1947,7 @@ class IndexManager:
         # Get map of indexes in the cluster
         self.log.debug(f"URL used for get_index_map is {endpoint}")
         response = requests.get(endpoint, auth=(
-            self.username, self.password), verify=True, )
+            self.username, self.password), verify=False, )
         idx_map = []
 
         if (response.ok):
@@ -1965,7 +1966,7 @@ class IndexManager:
         # Get map of indexes in the cluster
         self.log.info(f"URL used for get_index_map is {endpoint}")
         response = requests.get(endpoint, auth=(
-            self.username, self.password), verify=True, )
+            self.username, self.password), verify=False, )
         idx_map = []
         if response.ok:
             response = json.loads(response.text)
@@ -1994,7 +1995,7 @@ class IndexManager:
         # Get map of indexes in the cluster
         self.log.info(f"URL used for get_index_map is {endpoint}")
         response = requests.get(endpoint, auth=(
-            self.username, self.password), verify=True, )
+            self.username, self.password), verify=False, )
         idx_map = {}
         if response.ok:
             response = json.loads(response.text)
@@ -2221,11 +2222,13 @@ class IndexManager:
             drop_idx_query_gen_template = "SELECT RAW 'DROP INDEX `' || name || '` on keyspacename;'  " \
                                           "FROM system:all_indexes WHERE '`' || `bucket_id` || '`.`' || `scope_id` " \
                                           "|| '`.`' || `keyspace_id` || '`' = 'keyspacename' " \
-                                          f"and name like '%{self.user_specified_prefix}%';"
+                                          f"and name like '%{self.user_specified_prefix}%' " \
+                                          "and name not like '%#sequentialscan%';"
         else:
             drop_idx_query_gen_template = "SELECT RAW 'DROP INDEX `' || name || '` on keyspacename;'  " \
                                           "FROM system:all_indexes WHERE '`' || `bucket_id` || '`.`' || `scope_id` " \
-                                          "|| '`.`' || `keyspace_id` || '`' = 'keyspacename';"
+                                          "|| '`.`' || `keyspace_id` || '`' = 'keyspacename' " \
+                                          "and name not like '%#sequentialscan%';"
 
         self.log.info("Starting to drop all indexes ")
         for keyspace in keyspace_name_list:
@@ -2244,7 +2247,11 @@ class IndexManager:
             for keyspace in keyspace_name_list:
                 keyspace = keyspace.replace('`', '')
                 if keyspace in index_map_from_system_indexes:
-                    self.log.error(f"All indexes not dropped for keyspace:{keyspace}")
+                    # Filter out #sequentialscan indexes from validation
+                    remaining_indexes = {name: details for name, details in index_map_from_system_indexes[keyspace].items() 
+                                       if '#sequentialscan' not in name}
+                    if remaining_indexes:
+                        self.log.error(f"All indexes not dropped for keyspace:{keyspace}")
             self.log.info("Validation completed")
 
     def drop_indexes_in_a_loop(self, timeout, interval):
@@ -2582,7 +2589,7 @@ class IndexManager:
             return False
         self.log.info(f"Error while fetching rebalanceProgress - {endpoint}")
 
-    def wait_until_rebalance_cleanup_done(self, timeout=3600):
+    def wait_until_rebalance_cleanup_done(self, timeout=7200):
         nodes_list = self.get_indexer_nodes()
         time_end, all_nodes_cleaned_up = time.time() + timeout, False
         while time.time() < time_end and not all_nodes_cleaned_up:
@@ -2601,6 +2608,8 @@ class IndexManager:
             if len(nodes_cleaned_up) == len(nodes_list):
                 all_nodes_cleaned_up = True
             time.sleep(30)
+        if not all_nodes_cleaned_up:
+            raise Exception("Rebalance cleanup not done after timeout")
 
     def poll_total_requests_during_rebalance(self):
         nodes_list = self.get_indexer_nodes()

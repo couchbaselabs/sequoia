@@ -160,11 +160,11 @@
 ###############  create indexes ################
 - section_start: create_replica_indexes
 - image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.Bucket}} -i {{.Scale 1}} -a create_n_indexes_on_buckets --set_max_partitions 24 -v --num_of_indexes_per_bucket 13 --skip_default_collection false"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.Bucket}} -i {{.Scale 1}} -a create_n_indexes_on_buckets -v --num_of_indexes_per_bucket 13 --skip_default_collection false"
   wait: true
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 1}} -i {{.Scale 1}} -a create_n_indexes_on_buckets --set_max_partitions 24 -v --num_of_indexes_per_bucket 13 --skip_default_collection false"
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 1}} -i {{.Scale 1}} -a create_n_indexes_on_buckets -v --num_of_indexes_per_bucket 26 --skip_default_collection false"
   wait: true
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 2}} -i {{.Scale 1}} -a create_n_indexes_on_buckets --set_max_partitions 24 -v --num_of_indexes_per_bucket 13 --skip_default_collection false"
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 2}} -i {{.Scale 1}} -a create_n_indexes_on_buckets -v --num_of_indexes_per_bucket 13 --skip_default_collection false"
   wait: true
 
 ############### incremental data loading ################
@@ -241,21 +241,25 @@
 ##### bucket2, bucket4, bucket5 both BHIVE and composite. bucket6 default is composite. bucket9 is BHIVE
 - section_start: create_replica_indexes
 - image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.Bucket}}  -a create_n_indexes_on_buckets --set_max_partitions 24 --timeout 30 --num_of_indexes_per_bucket 6  --create_vector_indexes true --num_dimensions 128 --skip_default_collection false --num_vectors 1000000 --distance_algo EUCLIDEAN_SQUARED --use_description IVF,PQ8x8"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.Bucket}}  -a create_n_indexes_on_buckets --timeout 30 --num_of_indexes_per_bucket 6  --create_vector_indexes true --num_dimensions 128 --skip_default_collection false --num_vectors 1000000 --distance_algo EUCLIDEAN_SQUARED --use_description IVF,PQ8x8"
   wait: true
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 1}}  -a create_n_indexes_on_buckets --set_max_partitions 24 --timeout 30  -v --num_of_indexes_per_bucket 4  --create_bhive_indexes true --num_dimensions 960 --skip_default_collection false --num_vectors 1000000 --distance_algo DOT"
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 1}}  -a create_n_indexes_on_buckets --timeout 30  -v --num_of_indexes_per_bucket 4  --create_bhive_indexes true --num_dimensions 960 --skip_default_collection false --num_vectors 1000000 --distance_algo DOT --use_description IVF,PQ32x4FS"
   wait: true
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 8}}  -a create_n_indexes_on_buckets --set_max_partitions 24 --timeout 30  -v --num_of_indexes_per_bucket 4  --create_bhive_indexes true  --dataset shoes --num_dimensions 128 --skip_default_collection false --num_vectors 50000000 --distance_algo L2 --defer_build true --set_max_replicas 1 --use_description IVF,SQ8"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.Bucket}}  -a create_n_indexes_on_buckets --timeout 30 --num_of_indexes_per_bucket 6  --create_vector_indexes true --num_dimensions 128 --skip_default_collection false --num_vectors 1000000 --distance_algo EUCLIDEAN_SQUARED --use_description IVF,PQ64x8"
   wait: true
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 5}}  -a create_n_indexes_on_buckets --set_max_partitions 24 --timeout 30  -v --num_of_indexes_per_bucket 6  --create_vector_indexes true  --dataset shoes --num_dimensions 128 --skip_default_collection false --num_vectors 50000000 --distance_algo L2 --defer_build true --set_max_replicas 1 --use_description IVF,SQ8"
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 1}}  -a create_n_indexes_on_buckets --timeout 30  -v --num_of_indexes_per_bucket 4  --create_bhive_indexes true --num_dimensions 960 --skip_default_collection false --num_vectors 1000000 --distance_algo DOT"
   wait: true
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 6}}  -a create_n_indexes_on_buckets --set_max_partitions 24 --timeout 30  -v --num_of_indexes_per_bucket 6  --create_vector_indexes true --num_dimensions 128 --skip_default_collection false --num_vectors 1000000 --distance_algo L2 --base64_encoding_vectors true"
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 8}}  -a create_n_indexes_on_buckets --timeout 30  -v --num_of_indexes_per_bucket 4  --create_bhive_indexes true  --dataset shoes --num_dimensions 128 --skip_default_collection false --num_vectors 50000000 --distance_algo L2 --defer_build true --set_max_replicas 1 --use_description IVF,SQ8"
   wait: true
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 7}}  -a create_n_indexes_on_buckets --set_max_partitions 24 --timeout 30  -v --num_of_indexes_per_bucket 4  --create_vector_indexes true --num_dimensions 128 --skip_default_collection false --num_vectors 1000000 --distance_algo L2 --xattrs_vectors true"
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 5}}  -a create_n_indexes_on_buckets --timeout 30  -v --num_of_indexes_per_bucket 6  --create_vector_indexes true  --dataset shoes --num_dimensions 128 --skip_default_collection false --num_vectors 50000000 --distance_algo L2 --defer_build true --set_max_replicas 1 --use_description IVF,SQ8"
   wait: true
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 6}}  -a create_n_indexes_on_buckets --set_max_partitions 24 --timeout 30  -v --num_of_indexes_per_bucket 4  --create_bhive_indexes true --num_dimensions 128 --skip_default_collection false --num_vectors 1000000 --distance_algo L2 --base64_encoding_vectors true"
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 6}}  -a create_n_indexes_on_buckets --timeout 30  -v --num_of_indexes_per_bucket 6  --create_vector_indexes true --num_dimensions 128 --skip_default_collection false --num_vectors 1000000 --distance_algo L2 --base64_encoding_vectors true"
   wait: true
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 7}}  -a create_n_indexes_on_buckets --set_max_partitions 24 --timeout 30  -v --num_of_indexes_per_bucket 6  --create_bhive_indexes true --num_dimensions 128 --skip_default_collection false --num_vectors 1000000 --distance_algo L2 --xattrs_vectors true"
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 7}}  -a create_n_indexes_on_buckets --timeout 30  -v --num_of_indexes_per_bucket 4  --create_vector_indexes true --num_dimensions 128 --skip_default_collection false --num_vectors 1000000 --distance_algo L2 --xattrs_vectors true"
+  wait: true
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 6}}  -a create_n_indexes_on_buckets --timeout 30  -v --num_of_indexes_per_bucket 4  --create_bhive_indexes true --num_dimensions 128 --skip_default_collection false --num_vectors 1000000 --distance_algo L2 --base64_encoding_vectors true"
+  wait: true
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 7}}  -a create_n_indexes_on_buckets --timeout 30  -v --num_of_indexes_per_bucket 6  --create_bhive_indexes true --num_dimensions 128 --skip_default_collection false --num_vectors 1000000 --distance_algo L2 --xattrs_vectors true"
   wait: true
 
 # Sleep for some more time after memcached-kill completes (10 minutes)

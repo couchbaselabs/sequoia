@@ -1322,6 +1322,23 @@ func (s *Scope) getClusteInfo() {
 	}
 }
 
+// StartPeriodicClusterInfo starts a goroutine that prints cluster info every 2 hours
+func (s *Scope) StartPeriodicClusterInfo() {
+	go func() {
+		ticker := time.NewTicker(2 * time.Hour)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ticker.C:
+				fmt.Println("########## Periodic Cluster Info (Every 2 Hours) ##################")
+				s.getClusteInfo()
+				fmt.Println("########## End Periodic Cluster Info ##################")
+			}
+		}
+	}()
+}
+
 func (s *Scope) ConfigSyncGateway() {
 	var image = "sequoiatools/sgw-config"
 

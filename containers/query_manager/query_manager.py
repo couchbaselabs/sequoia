@@ -614,7 +614,7 @@ class QueryManager:
             table.wrap_on_max_width = True
             
             for item in query_error_resp_dict.keys():
-                request_time = query_error_resp_dict[item].get("request_time", "NA")
+                request_time = query_error_resp_dict[item].get("requestTime", "NA")
                 statement = query_error_resp_dict[item]["statement"]
                 # Truncate statement if longer than 50 characters
                 # if len(statement) > 50:
@@ -934,7 +934,7 @@ if __name__ == '__main__':
                 
                 for item in query_error_resp_dict.keys():
                     try:
-                        request_time = str(query_error_resp_dict[item].get("request_time", "NA"))
+                        request_time = str(query_error_resp_dict[item].get("requestTime", "NA"))
                         statement = str(query_error_resp_dict[item].get("statement", ""))
                         error_message = str(query_error_resp_dict[item].get("first_error_message", ""))
                         

@@ -398,10 +398,6 @@
     -
       template: rebalance
       wait: true
-    -
-      template: disable_autofailover
-      wait: true
-
 # rebalance the cluster
 # $0 = optional orchestrator node
 -

@@ -48,7 +48,6 @@ class MagmaLoader:
         self.expiry_duration = 0
         self.sift_path = None
         self.log = logging.getLogger("magmaloader")
-        self.log.setLevel(logging.INFO)
 
     def run(self):
         usage = '''%prog -n hostname(connection string) -u username -p password -b bucket -s scope_name -c collection_name
@@ -146,7 +145,7 @@ class MagmaLoader:
                     if not self.mutations_mode or self.mutate > 0: # No mutation or single mutation
                         break
                     if time.time() - start_time >= self.mutations_timeout: # continuous mutations
-                        print(f"Mutations timeout of {self.mutations_timeout} seconds reached")
+                        self.log.info(f"Mutations timeout of {self.mutations_timeout} seconds reached")
                         break
         else:
             self.load_data_till_rr()
@@ -312,7 +311,7 @@ class MagmaLoader:
                             f"-cr {cr} -up {up} -dl {dl}" \
                             f" -docSize {self.doc_size} -keyPrefix {self.key_prefix} " \
                             f"-scope {scope} -collection {coll} " \
-                            f"-workers {self.workers} -maxTTL 1800 -ops {self.ops_rate} -valueType {self.doc_template} " \
+                            f"-workers {self.workers} -ops {self.ops_rate} -valueType {self.doc_template} " \
                             f"-model {self.model} -base64 {self.base64} -mutate {self.mutate}"
                 commands.append(command)
         return commands
@@ -372,11 +371,11 @@ class MagmaLoader:
                 else:
                     command = f"java -cp magmadocloader.jar SIFTLoader -n {self.host} " \
                           f"-user '{self.username}' -pwd '{self.password}' -b {self.bucket_name} " \
-                          f"-create_s {self.start} -create_e {self.end} -update_s {self.start} -update_e {self.end} -cr 100 -up 100" \
+                          f"-create_s 0 -create_e 0 -update_s {self.start} -update_e {self.end} -cr 0 -up 100 -dl 0 " \
                           f"-scope {scope} -collection {coll} -p 11207 " \
-                          f"-workers {self.workers} -ops {self.ops_rate} -valueType siftBigANN "\
+                          f"-workers 1 -ops {self.ops_rate} -valueType siftBigANN "\
                           f"-baseVectorsFilePath {self.sift_path} -mutate 5"
-                print("Will run this {}".format(command))
+                self.log.info("Will run this {}".format(command))
                 proc = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True)
                 out = proc.communicate()
                 if proc.returncode != 0:

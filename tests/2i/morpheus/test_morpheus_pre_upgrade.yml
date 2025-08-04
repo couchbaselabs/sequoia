@@ -114,13 +114,13 @@
 ###############  create indexes ################
 - section_start: create_replica_indexes
 - image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -i {{.Scale 6}} -a create_index -v"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -i {{.Scale 3}} -a create_index -v"
   wait: true
 
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -i {{.Scale 6}} -a create_index -v"
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -i {{.Scale 3}} -a create_index -v"
   wait: true
 
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -i {{.Scale 6}} -a create_index -v"
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -i {{.Scale 3}} -a create_index -v"
   wait: true
 
 ###############  Indexer Random Recovery ################
@@ -713,7 +713,7 @@
 ############### Start creating indexes in a loop on bucket4 & bucket5 (Collection CRUD workload) ###############
 - section_start: create_replica_indexes
 - image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -i {{.Scale 2}} -a create_index -v"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -i {{.Scale 1}} -a create_index -v"
   wait: true
 
 - image: sequoiatools/indexmanager
@@ -722,7 +722,7 @@
 
 - section_start: create_replica_indexes
 - image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 3}} -i {{.Scale 2}} -a create_index -v"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 3}} -i {{.Scale 1}} -a create_index -v"
   wait: true
 
 - image: sequoiatools/indexmanager
@@ -850,17 +850,6 @@
 -
   template: wait_for_rebalance
   wait: true
-
-############### shardAffinity ################
-- template: set_gsi_config
-  args: "{{.ActiveIndexNode 0}}, 'indexer.settings.enable_shard_affinity':false"
-  requires:  "{{eq true .DoOnce }}"
-
-## To test file based rebalance improvements
-############### shardAffinity ################
-- template: set_gsi_config
-  args: "{{.ActiveIndexNode 0}}, 'indexer.settings.provisioned.enable_shard_affinity':false"
-  requires:  "{{eq true .DoOnce }}"
 
 ###############  Rebalance-in single node ################
 - template: rebalance_in
@@ -1296,20 +1285,6 @@
 -
   template: wait_for_rebalance
   wait: true
-
-
-
-############### shardAffinity ################
-- template: set_gsi_config
-  args: "{{.ActiveIndexNode 0}}, 'indexer.settings.enable_shard_affinity':true"
-  requires:  "{{eq true .DoOnce }}"
-
-## To test file based rebalance improvements
-############### shardAffinity ################
-- template: set_gsi_config
-  args: "{{.ActiveIndexNode 0}}, 'indexer.settings.provisioned.enable_shard_affinity':true"
-  requires:  "{{eq true .DoOnce }}"
-
 
 
 ###############  Drop all Indexes ################
