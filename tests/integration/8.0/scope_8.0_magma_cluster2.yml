@@ -67,6 +67,7 @@ servers: # each server tag represents a cluster
       analytics_ram: 90%
       index_storage: default
       enable_encryption_at_rest: true
+      enable_client_certificate_handling: true
       services:
         index: 4
         query: 2

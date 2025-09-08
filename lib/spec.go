@@ -31,6 +31,7 @@ type BucketSpec struct {
 	DekRotateEvery  string `yaml:"dekRotateEvery"`
 	DekLifetime     string `yaml:"dekLifetime"`
     EnableEncryptionAtRest bool `yaml:"enableEncryptionAtRest"`
+    EnableClientCertificateHandling bool `yaml:"enable_client_certificate_handling"`
 	HistoryRetentionBytes string
 	HistoryRetentionSeconds string
 	EnableHistoryRetentionByDefault string
@@ -78,6 +79,7 @@ type ServerSpec struct {
 	DekRotateEvery  string `yaml:"dekRotateEvery"`
 	DekLifetime     string `yaml:"dekLifetime"`
 	EnableEncryptionAtRest bool `yaml:"enable_encryption_at_rest"`
+	EnableClientCertificateHandling bool `yaml:"enable_client_certificate_handling"`
 	Buckets         string
 	BucketSpecs     []BucketSpec
 	NodesActive     uint8

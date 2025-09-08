@@ -11,15 +11,16 @@ package sequoia
  * couchbase resources.
  *
  */
-
 import (
-	"fmt"
-	"regexp"
-	"strconv"
-	"strings"
-	"time"
-
-	cmap "github.com/streamrail/concurrent-map"
+    "fmt"
+    "regexp"
+    "strconv"
+    "strings"
+    "time"
+    "encoding/json"
+    "os"
+    "path/filepath"
+    cmap "github.com/streamrail/concurrent-map"
 )
 
 type Scope struct {
@@ -138,6 +139,13 @@ func (s *Scope) SetupServer() {
 		s.AddUsers()
 		s.CreateEncryptionKeys()
 		s.EnableLogAndConfigEncryption()
+		s.EnableClientCertAuth(
+        		"hybrid",
+        		"subject.cn",
+        		"",
+        		"",
+        		"/tmp",
+        	)
 		s.AddNodes()
 		s.RebalanceClusters()
 		s.ApplyInternalSettings()
@@ -710,6 +718,72 @@ func (s *Scope) AddNodes() {
 
 	// add nodes
 	s.Spec.ApplyToAllServers(addNodesOp)
+}
+
+func (s *Scope) CreateClientAuthFile(state, pathVal, prefix, delimiter, outputDir string) (string, error) {
+
+	config := map[string]interface{}{
+		"state": state,
+		"prefixes": []map[string]string{
+			{
+				"path":      pathVal,
+				"prefix":    prefix,
+				"delimiter": delimiter,
+			},
+		},
+	}
+
+	data, err := json.MarshalIndent(config, "", "  ")
+	if err != nil {
+		return "", err
+	}
+
+	if err := os.MkdirAll(outputDir, 0755); err != nil {
+		return "", err
+	}
+
+	filePath := filepath.Join(outputDir, "client-auth-settings.json")
+	if err := os.WriteFile(filePath, data, 0644); err != nil {
+		return "", err
+	}
+	return filePath, nil
+}
+
+func (s *Scope) EnableClientCertAuth(state, pathVal, prefix, delimiter, outputDir string) error {
+    var image = s.GetCliImage()
+
+    operation := func(name string, server *ServerSpec) {
+        orchestrator := server.Names[0]
+        filePath, err := s.CreateClientAuthFile(state, pathVal, prefix, delimiter, "/tmp")
+        if err != nil {
+            fmt.Printf("Error creating client auth file: %v\n", err)
+            return
+        }
+        ip := s.Provider.GetHostAddress(orchestrator)
+
+        command := []string{
+            "ssl-manage",
+            "-c", ip,
+            "-u", server.RestUsername,
+            "-p", server.RestPassword,
+            "--set-client-auth", "/tmp/client-auth-settings.json",
+        }
+
+        command = cliCommandValidator(s.Version, command)
+        desc := "enable client certificate handling " + name
+        task := ContainerTask{
+            Describe: desc,
+            Image:    image,
+            Command:  command,
+            Async:    false,
+            Volumes:  []string{filePath + ":/tmp/client-auth-settings.json"},
+        }
+
+        s.Cm.Run(&task)
+    }
+
+    s.Spec.ApplyToServers(operation, 0, 1)
+    return nil
 }
 
 func (s *Scope) EnableLogAndConfigEncryption() {
