@@ -42,6 +42,7 @@ class MagmaLoader:
         self.skip_default = False
         self.doc_template = "Hotel"
         self.mutations_mode = False
+        self.mutate = 0
         self.expiry_mode = False
         self.expiry_percentage = 0
         self.expiry_duration = 0
@@ -82,6 +83,8 @@ class MagmaLoader:
         parser.add_argument("--doc_template", dest="doc_template", help="doc template to be used for loader", default="Hotel")
         parser.add_argument("--mutations_mode", dest="mutations_mode", help="running magmaloader in continuous mutations mode",
                             default="false")
+        parser.add_argument("--mutate", dest="mutate", help="mutation count",
+                            default=0)
         parser.add_argument("--expiry_mode", dest="expiry_mode", help="running magmaloader with expiry workload",
                             default="false")
         parser.add_argument("--percentage_expiry", dest="percentage_expiry", help="percentage of documents to be expired",
@@ -112,6 +115,7 @@ class MagmaLoader:
         self.bucket_name = args.bucket
         self.model = args.model
         self.mutations_mode = args.mutations_mode.lower() == 'true'
+        self.mutate = int(args.mutate)
         self.expiry_mode = args.expiry_mode.lower() == 'true'
         self.mutations_timeout = int(args.mutations_timeout)
         self.sift_path = args.sift_path
@@ -139,9 +143,9 @@ class MagmaLoader:
                 start_time = time.time()
                 while True:
                     self.load_data(bucket_name=self.bucket_name, random_key_prefix=False)
-                    if not self.mutations_mode:
+                    if not self.mutations_mode or self.mutate > 0: # No mutation or single mutation
                         break
-                    if time.time() - start_time >= self.mutations_timeout:
+                    if time.time() - start_time >= self.mutations_timeout: # continuous mutations
                         print(f"Mutations timeout of {self.mutations_timeout} seconds reached")
                         break
         else:
@@ -295,7 +299,10 @@ class MagmaLoader:
                             f"-workers {self.workers} -ops {self.ops_rate} -valueType {self.doc_template} "\
                             f"-model {self.model} -base64 {self.base64}"
                 else:
-                    create_s, create_e, update_s, update_e, delete_s, delete_e = self.get_mutations_range()
+                    if self.mutate > 0:
+                        update_s, update_e, create_s, create_e, delete_s, delete_e = self.start, self.end, 0, 0, 0, 0
+                    else:
+                        create_s, create_e, update_s, update_e, delete_s, delete_e = self.get_mutations_range()
                     cr = self.percent_create
                     up = self.percent_update
                     dl = self.percent_delete
@@ -306,7 +313,7 @@ class MagmaLoader:
                             f" -docSize {self.doc_size} -keyPrefix {self.key_prefix} " \
                             f"-scope {scope} -collection {coll} " \
                             f"-workers {self.workers} -maxTTL 1800 -ops {self.ops_rate} -valueType {self.doc_template} " \
-                            f"-model {self.model} -base64 {self.base64}"
+                            f"-model {self.model} -base64 {self.base64} -mutate {self.mutate}"
                 commands.append(command)
         return commands
 
