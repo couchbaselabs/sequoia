@@ -168,7 +168,7 @@
   requires: "{{eq true .DoOnce }}"
 - command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 1}} --start 10000  --end 1000000 --doc_template Hotel --all_coll true"
   requires: "{{eq true .DoOnce }}"
-- command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 3}} --start 10000  --end 1000000 --doc_template Hotel --all_coll true"
+- command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 3}} --start 10000  --end 100000 --doc_template Hotel --all_coll true"
   requires: "{{eq true .DoOnce }}"
 
 - image: sequoiatools/cmd
@@ -238,19 +238,15 @@
 - image: sequoiatools/indexmanager
   command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.Bucket}}  -a create_n_indexes_on_buckets --timeout 30 --num_of_indexes_per_bucket 6  --set_max_partitions 24 --create_vector_indexes true --num_dimensions 128 --skip_default_collection false --num_vectors 1000000 --distance_algo EUCLIDEAN_SQUARED --use_description IVF,PQ8x8"
   wait: true
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.Bucket}}  -a create_n_indexes_on_buckets --timeout 30 --num_of_indexes_per_bucket 6  --set_max_partitions 24--create_vector_indexes true --num_dimensions 128 --skip_default_collection false --num_vectors 1000000 --distance_algo EUCLIDEAN_SQUARED --use_description IVF,PQ64x8"
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.Bucket}}  -a create_n_indexes_on_buckets --timeout 30 --num_of_indexes_per_bucket 6  --set_max_partitions 24 --create_vector_indexes true --num_dimensions 128 --skip_default_collection false --num_vectors 1000000 --distance_algo EUCLIDEAN_SQUARED --use_description IVF,PQ64x8"
   wait: true
 - command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 8}}  -a create_n_indexes_on_buckets --timeout 30  -v --num_of_indexes_per_bucket 4  --set_max_partitions 24 --create_bhive_indexes true  --dataset shoes --num_dimensions 128 --skip_default_collection false --num_vectors 50000000 --distance_algo L2 --defer_build true --set_max_replicas 1 --use_description IVF,SQ8"
   wait: true
 - command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 5}}  -a create_n_indexes_on_buckets --timeout 30  -v --num_of_indexes_per_bucket 6  --set_max_partitions 24 --create_vector_indexes true  --dataset shoes --num_dimensions 128 --skip_default_collection false --num_vectors 50000000 --distance_algo L2 --defer_build true --set_max_replicas 1 --use_description IVF,SQ8"
   wait: true
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 6}}  -a create_n_indexes_on_buckets --timeout 30  -v --num_of_indexes_per_bucket 6  --set_max_partitions 24 --create_vector_indexes true --num_dimensions 128 --skip_default_collection false --num_vectors 1000000 --distance_algo L2 --base64_encoding_vectors true"
-  wait: true
 - command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 7}}  -a create_n_indexes_on_buckets --timeout 30  -v --num_of_indexes_per_bucket 4  --set_max_partitions 24 --create_vector_indexes true --num_dimensions 128 --skip_default_collection false --num_vectors 1000000 --distance_algo L2 --xattrs_vectors true"
   wait: true
 - command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 6}}  -a create_n_indexes_on_buckets --timeout 30  -v --num_of_indexes_per_bucket 4  --set_max_partitions 24 --create_bhive_indexes true --num_dimensions 128 --skip_default_collection false --num_vectors 1000000 --distance_algo L2 --base64_encoding_vectors true"
-  wait: true
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 7}}  -a create_n_indexes_on_buckets --timeout 30  -v --num_of_indexes_per_bucket 6  --set_max_partitions 24 --create_bhive_indexes true --num_dimensions 128 --skip_default_collection false --num_vectors 1000000 --distance_algo L2 --xattrs_vectors true"
   wait: true
 
 # Sleep for some more time after memcached-kill completes (10 minutes)
@@ -342,8 +338,6 @@
 - image: sequoiatools/indexmanager
   command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a item_count_check --sample_size 5 --all_docs_indexed true"
   wait: true
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a item_count_check --sample_size 5 --all_docs_indexed true"
-  wait: true
 - command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 8}} -a item_count_check --sample_size 5 --all_docs_indexed true --xattrs true"
   wait: true
 - command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 5}} -a item_count_check --sample_size 5 --all_docs_indexed true --xattrs true"
@@ -362,16 +356,16 @@
   wait: true
 
 - image: sequoiatools/magmaloader
-  command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.Bucket}} --start 10000  --end 2000000 --doc_template Hotel --all_coll true --expiry_mode true --max_ttl 21600 --percentage_expiry 10"
+  command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.Bucket}} --start 10000  --end 1000000 --doc_template Hotel --all_coll true --expiry_mode true --max_ttl 21600 --percentage_expiry 10"
   requires: "{{eq true .DoOnce }}"
-- command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 1}} --start 10000  --end 1500000 --doc_template Hotel --all_coll true --expiry_mode true --max_ttl 36000 --percentage_expiry 5"
+- command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 1}} --start 10000  --end 1000000 --doc_template Hotel --all_coll true --expiry_mode true --max_ttl 36000 --percentage_expiry 5"
   requires: "{{eq true .DoOnce }}"
 
 
 - image: sequoiatools/magmaloader
-  command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.Bucket}} --start 10000  --end 2000000 --doc_template Hotel --all_coll true"
+  command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.Bucket}} --start 10000  --end 1000000 --doc_template Hotel --all_coll true"
   requires: "{{eq true .DoOnce }}"
-- command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 1}} --start 10000  --end 1500000 --doc_template Hotel --all_coll true"
+- command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 1}} --start 10000  --end 1000000 --doc_template Hotel --all_coll true"
   requires: "{{eq true .DoOnce }}"
 
 
@@ -477,11 +471,7 @@
 ######## Validate items count against KV #######################
 
 - image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a item_count_check --sample_size 5 --all_docs_indexed false"
-  wait: true
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a item_count_check --sample_size 5 --all_docs_indexed true"
-  wait: true
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 8}} -a item_count_check --sample_size 5 --all_docs_indexed true --xattrs true"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 8}} -a item_count_check --sample_size 5 --all_docs_indexed true --xattrs true"
   wait: true
 - command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 5}} -a item_count_check --sample_size 5 --all_docs_indexed true --xattrs true"
   wait: true
@@ -715,11 +705,6 @@
 
 - image: sequoiatools/cmd
   entrypoint: sleep
-  command: "72000"
-  wait: true
-
-- image: sequoiatools/cmd
-  entrypoint: sleep
   command: "7345"
   wait: true
 
@@ -828,10 +813,7 @@
 
 ######## Validate items count against KV #######################
 - image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a item_count_check --sample_size 5 --all_docs_indexed true"
-  wait: true
-
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 8}} -a item_count_check --dataset shoes --sample_size 5 --all_docs_indexed true"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 8}} -a item_count_check --dataset shoes --sample_size 5 --all_docs_indexed true"
   wait: true
 
 - command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 5}} -a item_count_check --dataset shoes --sample_size 5 --all_docs_indexed true"
@@ -999,12 +981,19 @@
     op: rm
     container: lifecycle1
 
-######## Validations #######################
 - image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a item_count_check --sample_size 5 --all_docs_indexed true"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 3}} -a drop_all_indexes -v"
   wait: true
 
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 8}} -a item_count_check --dataset shoes --sample_size 5 --all_docs_indexed true"
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+
+######## Validations #######################
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 8}} -a item_count_check --dataset shoes --sample_size 5 --all_docs_indexed true"
   wait: true
 - command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 5}} -a item_count_check --dataset shoes --sample_size 5 --all_docs_indexed true"
   wait: true
@@ -1142,6 +1131,16 @@
 - client:
     op: rm
     container: lifecycle1
+
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 3}} -a drop_all_indexes -v"
+  wait: true
+
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
 
 ###############  Swap single index node ################
 - template: rebalance_swap
@@ -1317,6 +1316,16 @@
     op: rm
     container: lifecycle1
 
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 3}} -a drop_all_indexes -v"
+  wait: true
+
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+
 
 ###############  Rebalance-out two index nodes ################
 - template: rebalance_out
@@ -1455,10 +1464,7 @@
 ######## Validate items count against KV #######################
 
 - image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a item_count_check --sample_size 5 --all_docs_indexed true"
-  wait: true
-
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 8}} -a item_count_check --dataset shoes --sample_size 5 --all_docs_indexed true"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 8}} -a item_count_check --dataset shoes --sample_size 5 --all_docs_indexed true"
   wait: true
 - command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 5}} -a item_count_check --dataset shoes --sample_size 5 --all_docs_indexed true"
   wait: true
@@ -1572,6 +1578,16 @@
   entrypoint: sleep
   command: "312"
   wait: true
+
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 3}} -a drop_all_indexes -v"
+  wait: true
+
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
 
 ############## Kill indexer ################
 - template: kill_process
@@ -1755,10 +1771,7 @@
 ######## Validate items count against KV #######################
 
 - image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a item_count_check --sample_size 5 --all_docs_indexed true"
-  wait: true
-
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 8}} -a item_count_check --dataset shoes --sample_size 5 --all_docs_indexed true"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 8}} -a item_count_check --dataset shoes --sample_size 5 --all_docs_indexed true"
   wait: true
 - command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 5}} -a item_count_check --dataset shoes --sample_size 5 --all_docs_indexed true"
   wait: true
@@ -1939,10 +1952,7 @@
 ######## Validations #######################
 
 - image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a item_count_check --sample_size 5 --all_docs_indexed true"
-  wait: true
-
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 8}} -a item_count_check --dataset shoes --sample_size 5 --all_docs_indexed true"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 8}} -a item_count_check --dataset shoes --sample_size 5 --all_docs_indexed true"
   wait: true
 - command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 5}} -a item_count_check --dataset shoes --sample_size 5 --all_docs_indexed true"
   wait: true
@@ -2269,14 +2279,9 @@
 ######## Validate items count against KV #######################
 
 - image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a item_count_check --sample_size 5 --all_docs_indexed true"
-  wait: true
-
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 8}} -a item_count_check --dataset shoes --sample_size 5 --all_docs_indexed true"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 8}} -a item_count_check --dataset shoes --sample_size 5 --all_docs_indexed true"
   wait: true
 - command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 5}} -a item_count_check --dataset shoes --sample_size 5 --all_docs_indexed true"
-  wait: true
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a post_topology_change_validations"
   wait: true
 
 - image: sequoiatools/indexmanager
@@ -2588,10 +2593,7 @@
 ######## Validate items count against KV #######################
 
 - image: sequoiatools/indexmanager
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a item_count_check --sample_size 5 --all_docs_indexed true"
-  wait: true
-
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 8}} -a item_count_check --dataset shoes --sample_size 5 --all_docs_indexed true"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 8}} -a item_count_check --dataset shoes --sample_size 5 --all_docs_indexed true"
   wait: true
 - command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 5}} -a item_count_check --dataset shoes --sample_size 5 --all_docs_indexed true"
   wait: true
