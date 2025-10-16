@@ -388,8 +388,8 @@
 
 # replica data loading for eventing source with docs that will expire after 1 hour
 - image: sequoiatools/gideon_latest
-  command: "kv --ops {{.Scale 150}} --create 80 --delete 20 --get 82 --sizes 64 96  --expire 100 --ttl 3600  --hosts {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.Bucket}} --scope event_0 --collection coll0"
-- command: "kv --ops {{.Scale 150}} --create 80 --delete 20 --get 82 --sizes 64 96  --expire 100 --ttl 3600  --hosts {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 1}} --scope event_0 --collection coll0"
+  command: "kv --ops {{.Scale 150}} --create 20 --delete 20 --get 82 --sizes 64 96  --expire 100 --ttl 3600  --hosts {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.Bucket}} --scope event_0 --collection coll0"
+- command: "kv --ops {{.Scale 150}} --create 20 --delete 20 --get 82 --sizes 64 96  --expire 100 --ttl 3600  --hosts {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 1}} --scope event_0 --collection coll0"
 
 ################# incremental data loading to collections ################
 - image: sequoiatools/catapult
@@ -454,7 +454,7 @@
 # more json docs on default bucket
 - image: sequoiatools/gideon_latest
   command: "kv --ops {{.Scale 500}} --create 10 --delete 8 --get 92 --expire 100 --ttl 660 --user {{.RestUsername}} --password {{.RestPassword}}  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes  512 128 1024 2048 16000"
-- command: "kv --ops {{.Scale 500}} --create 100  --expire 100 --ttl 660 --hosts {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.Bucket}} --sizes 64"
+- command: "kv --ops {{.Scale 500}} --create 20  --expire 100 --ttl 660 --hosts {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.Bucket}} --sizes 64"
   duration: 600
 - command: "kv --ops {{.Scale 600}} --create 15 --get 80 --delete 5  --expire 100 --ttl 660 --hosts {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.Bucket}} --sizes 128"
   duration: 7200
