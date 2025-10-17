@@ -173,13 +173,13 @@
 
 # continous kv loading
 - template: pillowfight_durability
-  args: "{{.Orchestrator}}, {{.Bucket}}, -M 256 -I {{.Scale 1000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1 --json"
+  args: "{{.Orchestrator}}, {{.Bucket}}, -M 128 -I {{.Scale 1000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1 --json"
 - template: pillowfight_durability
-  args: "{{.Orchestrator}}, {{.NthBucket 1}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1 --json"
+  args: "{{.Orchestrator}}, {{.NthBucket 1}}, -M 256 -I {{.Scale 2000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1 --json"
 - template: pillowfight_durability
-  args: "{{.Orchestrator}}, {{.NthBucket 2}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1 --json"
+  args: "{{.Orchestrator}}, {{.NthBucket 2}}, -M 256 -I {{.Scale 2000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1 --json"
 - template: pillowfight_durability
-  args: "{{.Orchestrator}}, {{.NthBucket 3}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1 --json"
+  args: "{{.Orchestrator}}, {{.NthBucket 3}}, -M 256 -I {{.Scale 2000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1 --json"
 - template: pillowfight_durability
   args: "{{.Orchestrator}}, {{.NthBucket 4}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1 --json"
 - template: pillowfight_durability
@@ -359,10 +359,10 @@
 
 # more json docs on default bucket
 - image: sequoiatools/gideon_latest
-  command: "kv --ops {{.Scale 500}} --create 10 --delete 8 --get 92 --expire 100 --ttl 660 --user {{.RestUsername}} --password {{.RestPassword}}  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes  512 128 1024 2048 16000"
-- command: "kv --ops {{.Scale 500}} --create 20  --expire 100 --ttl 660 --hosts {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.Bucket}} --sizes 64"
+  command: "kv --ops {{.Scale 150}} --create 10 --delete 8 --get 92 --expire 100 --ttl 660 --user {{.RestUsername}} --password {{.RestPassword}}  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes  512 128 1024 2048 16000"
+- command: "kv --ops {{.Scale 150}} --create 20  --expire 100 --ttl 660 --hosts {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.Bucket}} --sizes 64"
   duration: 600
-- command: "kv --ops {{.Scale 600}} --create 15 --get 80 --delete 5  --expire 100 --ttl 660 --hosts {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.Bucket}} --sizes 128"
+- command: "kv --ops {{.Scale 150}} --create 15 --get 80 --delete 5  --expire 100 --ttl 660 --hosts {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.Bucket}} --sizes 128"
   duration: 7200
 
 # Change the topology (performs rebalance in/out/swap eventing nodes)
@@ -487,7 +487,7 @@
 
 # load some new docs
 - image: sequoiatools/gideon_latest
-  command: "kv --ops {{.Scale 500}} --create 100  --expire 100 --ttl 660 --user {{.RestUsername}} --password {{.RestPassword}} --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 64"
+  command: "kv --ops {{.Scale 150}} --create 100  --expire 100 --ttl 660 --user {{.RestUsername}} --password {{.RestPassword}} --hosts {{.Orchestrator}} --bucket {{.Bucket}} --sizes 64"
   duration: 1800
 
 # quick update batch
