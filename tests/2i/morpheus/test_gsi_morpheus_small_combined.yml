@@ -173,7 +173,7 @@
   requires: "{{eq true .DoOnce }}"
 - command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 1}} --start 10000  --end 1000000 --doc_template Hotel --all_coll true"
   requires: "{{eq true .DoOnce }}"
-- command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 3}} --start 10000  --end 1000000 --doc_template Hotel --all_coll true"
+- command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 3}} --start 10000  --end 10000 --doc_template Hotel --all_coll true"
   requires: "{{eq true .DoOnce }}"
 
 - image: sequoiatools/cmd

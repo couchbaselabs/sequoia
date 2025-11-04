@@ -383,33 +383,52 @@ class MagmaLoader:
     
     def get_mutations_range(self):
         """
-        Calculate mutation ranges for create, update, and delete operations.
+        Calculate mutation ranges for create, update, and delete operations based on percentages.
         Returns: (create_s, create_e, update_s, update_e, delete_s, delete_e)
-        - create range is the full range (start to end)
-        - update range is 30% of total range
-        - delete range is 20% of total range
-        - update and delete ranges don't overlap
+        
+        - Creates always get full range (they can create anywhere)
+        - Updates and deletes get non-overlapping sub-ranges based on their percentages
         """
         start = int(self.start) if self.start is not None else 0
         end = int(self.end) if self.end is not None else 1000000
 
         total_range = end - start
-        update_size = int(total_range * 0.3)  # 30% of total range
-        delete_size = int(total_range * 0.2)  # 20% of total range
-
-        # Create range is the full range
-        create_s = start
-        create_e = end
-
-        # Generate non-overlapping ranges for update and delete
-        # Update range starts at a random position in the first half
-        max_update_start = end - update_size - delete_size
-        update_s = random.randint(start, max_update_start)
-        update_e = update_s + update_size
-
-        # Delete range starts after update range
-        delete_s = update_e
-        delete_e = delete_s + delete_size
+        
+        create_pct = int(self.percent_create)
+        update_pct = int(self.percent_update)
+        delete_pct = int(self.percent_delete)
+        
+        # Creates: full range if percentage > 0, else no range
+        if create_pct > 0:
+            create_s = start
+            create_e = end
+        else:
+            create_s = 0
+            create_e = 0
+        
+        # Updates and Deletes: allocate non-overlapping ranges
+        current_pos = start
+        
+        if update_pct > 0:
+            update_size = int(total_range * (update_pct / 100.0))
+            update_s = current_pos
+            update_e = current_pos + update_size
+            current_pos = update_e  # Next range starts after update
+        else:
+            update_s = 0
+            update_e = 0
+        
+        if delete_pct > 0:
+            delete_size = int(total_range * (delete_pct / 100.0))
+            delete_s = current_pos
+            delete_e = current_pos + delete_size
+            # Special case: if only deletes (100%), use full range
+            if delete_pct == 100 and create_pct == 0 and update_pct == 0:
+                delete_s = start
+                delete_e = end
+        else:
+            delete_s = 0
+            delete_e = 0
 
         return create_s, create_e, update_s, update_e, delete_s, delete_e
 

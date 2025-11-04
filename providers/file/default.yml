@@ -1,7 +1,0 @@
----
-127.0.0.1  # couchbase running on localhost
-
-# list additional nodes, ie: 
-# 172.23.106.14
-# 172.23.106.213
-
