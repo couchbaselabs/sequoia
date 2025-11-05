@@ -59,7 +59,7 @@ users:
 servers: # each server tag represents a cluster
   -
       name: local
-      count: 25
+      count: 31
       ram: 50%
       index_ram: 80%
       fts_ram: 80%
@@ -69,11 +69,11 @@ servers: # each server tag represents a cluster
       enable_encryption_at_rest: true
       enable_client_certificate_handling: true
       services:
-        index: 4
+        index: 6
         query: 2
         backup: 1
-        fts: 2
-        eventing: 2
+        fts: 3
+        eventing: 3
         analytics: 3
       rest_username: Administrator
       rest_password: password
@@ -86,12 +86,12 @@ servers: # each server tag represents a cluster
       analytics_path: "/data/couchbase"
       rest_port: 8091
       query_port: 8093
-      init_nodes: 23
+      init_nodes: 29
       buckets: default,WAREHOUSE,NEW_ORDER,ITEM,bucket4,bucket5,bucket6,bucket7,bucket8,bucket9,bucket10, bucket11
       users: default,WAREHOUSE,NEW_ORDER,ITEM,bucket4,bucket5,bucket6,bucket7,bucket8,bucket9
   -
       name: remote
-      count: 3
+      count: 6
       ram: 60%
       rest_username: Administrator
       rest_password: password
@@ -99,7 +99,7 @@ servers: # each server tag represents a cluster
       index_path: "/data/couchbase"
       analytics_path: "/data/couchbase"
       rest_port: 8091
-      init_nodes: 3
+      init_nodes: 6
       buckets: remote,bucket4,bucket8,bucket9
       users: remote,bucket4,bucket8,bucket9
 
@@ -115,8 +115,8 @@ buckets:
       dekRotateEvery: 50
       ddocs: scale
       compression: active
-      historyretentionbytes : 134217728000
-      historyretentionseconds : 86400
+      historyretentionbytes : 2147483648
+      historyretentionseconds : 3600
       enablehistoryretentionbydefault : 1
       rank : 3
   -
@@ -128,7 +128,7 @@ buckets:
       enableEncryptionAtRest: true
       dekLifetime: 100
       dekRotateEvery: 50
-      historyretentionseconds: 43200
+      historyretentionseconds: 3600
       enablehistoryretentionbydefault: 1
       rank : 3
   -
