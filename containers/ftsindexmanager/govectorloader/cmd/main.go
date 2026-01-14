@@ -7,6 +7,8 @@ import (
 	"github.com/couchbase/gocb/v2"
 	"log"
 	"main/internal"
+	"math/rand"
+	"strings"
 	"sync"
 	"time"
 )
@@ -19,6 +21,7 @@ func main() {
 	var username string
 	var password string
 	var fieldName string
+	var embeddingFieldName string
 	var collectionName string
 	var documentIdPrefix string
 	var startIndex int
@@ -26,6 +29,12 @@ func main() {
 	var batchSize int
 	var datasetName string
 	var xattrFlag bool
+	var docSchema string
+	var departmentsCount int
+	var employeesPerDept int
+	var projectsPerDept int
+	var locationsCount int
+	var seed int64
 
 	var percentagesToResize []float32
 	var dimensionsForResize []int
@@ -48,6 +57,7 @@ func main() {
 	flag.StringVar(&username, "username", "", "username")
 	flag.StringVar(&password, "password", "", "password")
 	flag.StringVar(&fieldName, "fieldName", "vector_data", "fieldName")
+	flag.StringVar(&embeddingFieldName, "embeddingFieldName", "embedding", "Field name to use for embeddings in nested schemas")
 	flag.StringVar(&documentIdPrefix, "documentIdPrefix", "", "documentIdPrefix")
 	flag.IntVar(&startIndex, "startIndex", 0, "startIndex")
 	flag.IntVar(&endIndex, "endIndex", 50, "endIndex")
@@ -55,6 +65,12 @@ func main() {
 	flag.BoolVar(&provideDefaultDocs, "provideDefaultDocs", false, "provideDefaultDocs = true will upsert docs and then update docs for xattr (metadata)")
 	flag.BoolVar(&capella, "capella", false, "pushing docs to capella?")
 	flag.StringVar(&datasetName, "datasetName", "siftsmall", "Name of the dataset ('sift', 'siftsmall', 'gist')")
+	flag.StringVar(&docSchema, "docSchema", "flat", "Document schema to write: flat (existing) | company (nested company schema)")
+	flag.IntVar(&departmentsCount, "departmentsCount", 2, "Number of departments to create in company schema")
+	flag.IntVar(&employeesPerDept, "employeesPerDept", 2, "Number of employees per department in company schema")
+	flag.IntVar(&projectsPerDept, "projectsPerDept", 2, "Number of projects per department in company schema")
+	flag.IntVar(&locationsCount, "locationsCount", 2, "Number of locations to create in company schema")
+	flag.Int64Var(&seed, "seed", 0, "Random seed (0 means use current time)")
 	flag.BoolVar(&xattrFlag, "xattrFlag", false, "xattrFlag = true will upsert vectors into xattr (metadata) and false will upsert vectors into document")
 	flag.StringVar(&percentagesToResizeStr, "percentagesToResize", "", "Comma-separated list of float32 values")
 	flag.StringVar(&dimensionsForResizeStr, "dimensionsForResize", "", "Comma-separated list of int values")
@@ -130,44 +146,117 @@ func main() {
 	if invalidVecsLoader {
 		internal.InvalidVecsLoader(invalidDimensions, collection, xattrFlag, base64Flag)
 	} else {
-		var encodedVectors []string
-		if base64Flag {
-			for _, vector := range vectors {
-				byteSlice := internal.FloatsToLittleEndianBytes(vector)
-				base64String := base64.StdEncoding.EncodeToString(byteSlice)
-				encodedVectors = append(encodedVectors, base64String)
-			}
-		}
-
 		var wg sync.WaitGroup
-		for startIndex != endIndex {
-			end := startIndex + batchSize
-			if end > endIndex {
-				end = endIndex
+		docSchema = strings.ToLower(strings.TrimSpace(docSchema))
+		// Backwards-compat: if docSchema isn't provided (or is empty/unknown), behave exactly like the legacy loader.
+		if docSchema == "" {
+			docSchema = "flat"
+		}
+		switch docSchema {
+		case "company":
+			if xattrFlag {
+				log.Printf("docSchema=company currently supports only document fields (xattrFlag=false)")
+				return
 			}
-			wg.Add(end - startIndex)
-			for j := startIndex; j < end; j++ {
-				if xattrFlag {
-					if base64Flag {
-						vectArr := encodedVectors[j%len(encodedVectors)]
-						go internal.UpsertXattrBase64(&wg, collection, fmt.Sprintf("%s%d", documentIdPrefix, j+1), vectArr, j+1, provideDefaultDocs)
-					} else {
-						vectArr := vectors[j%len(vectors)]
-						go internal.UpsertXattr(&wg, collection, fmt.Sprintf("%s%d", documentIdPrefix, j+1), vectArr, j+1, provideDefaultDocs)
-					}
-				} else {
-					if base64Flag {
-						vectArr := encodedVectors[j%len(encodedVectors)]
-						go internal.UpsertBase64(&wg, collection, fmt.Sprintf("%s%d", documentIdPrefix, j+1), vectArr, j+1, provideDefaultDocs)
-					} else {
-						vectArr := vectors[j%len(vectors)]
-						go internal.UpsertVectors(&wg, collection, fmt.Sprintf("%s%d", documentIdPrefix, j+1), vectArr, j+1, provideDefaultDocs)
-					}
-				}
+			if len(vectors) == 0 {
+				log.Printf("No vectors loaded; cannot build company docs")
+				return
+			}
+			if seed == 0 {
+				seed = time.Now().UnixNano()
+			}
+			rng := rand.New(rand.NewSource(seed))
 
+			embedPerDoc, err := internal.CompanyEmbeddingsNeeded(departmentsCount, employeesPerDept, projectsPerDept, locationsCount)
+			if err != nil {
+				log.Printf("Invalid company schema params: %v", err)
+				return
 			}
-			wg.Wait()
-			startIndex = end
+
+			totalDocs := endIndex - startIndex
+			if totalDocs <= 0 {
+				log.Printf("Nothing to do: endIndex (%d) must be > startIndex (%d)", endIndex, startIndex)
+				return
+			}
+			totalEmbeddingsNeeded := totalDocs * embedPerDoc
+
+			// Build a shuffled pool of vector indices large enough for all docs.
+			// This avoids a predictable repeating pattern; repeats happen only when totalEmbeddingsNeeded > len(vectors),
+			// in which case we append another permutation, etc.
+			vectorIdxPool := make([]int, 0, totalEmbeddingsNeeded)
+			for len(vectorIdxPool) < totalEmbeddingsNeeded {
+				vectorIdxPool = append(vectorIdxPool, rng.Perm(len(vectors))...)
+			}
+
+			originalStart := startIndex
+			for startIndex != endIndex {
+				end := startIndex + batchSize
+				if end > endIndex {
+					end = endIndex
+				}
+				wg.Add(end - startIndex)
+				for j := startIndex; j < end; j++ {
+					docID := fmt.Sprintf("%s%d", documentIdPrefix, j+1)
+					docNum := j - originalStart
+					offset := docNum * embedPerDoc
+					vectorIdxs := vectorIdxPool[offset : offset+embedPerDoc]
+					go internal.UpsertCompanyDoc(
+						&wg,
+						collection,
+						docID,
+						vectors,
+						vectorIdxs,
+						embeddingFieldName,
+						base64Flag,
+						departmentsCount,
+						employeesPerDept,
+						projectsPerDept,
+						locationsCount,
+					)
+				}
+				wg.Wait()
+				startIndex = end
+			}
+		default:
+			// Default path = legacy behavior (flat).
+			var encodedVectors []string
+			if base64Flag {
+				for _, vector := range vectors {
+					byteSlice := internal.FloatsToLittleEndianBytes(vector)
+					base64String := base64.StdEncoding.EncodeToString(byteSlice)
+					encodedVectors = append(encodedVectors, base64String)
+				}
+			}
+
+			for startIndex != endIndex {
+				end := startIndex + batchSize
+				if end > endIndex {
+					end = endIndex
+				}
+				wg.Add(end - startIndex)
+				for j := startIndex; j < end; j++ {
+					if xattrFlag {
+						if base64Flag {
+							vectArr := encodedVectors[j%len(encodedVectors)]
+							go internal.UpsertXattrBase64(&wg, collection, fmt.Sprintf("%s%d", documentIdPrefix, j+1), vectArr, j+1, provideDefaultDocs)
+						} else {
+							vectArr := vectors[j%len(vectors)]
+							go internal.UpsertXattr(&wg, collection, fmt.Sprintf("%s%d", documentIdPrefix, j+1), vectArr, j+1, provideDefaultDocs)
+						}
+					} else {
+						if base64Flag {
+							vectArr := encodedVectors[j%len(encodedVectors)]
+							go internal.UpsertBase64(&wg, collection, fmt.Sprintf("%s%d", documentIdPrefix, j+1), vectArr, j+1, provideDefaultDocs)
+						} else {
+							vectArr := vectors[j%len(vectors)]
+							go internal.UpsertVectors(&wg, collection, fmt.Sprintf("%s%d", documentIdPrefix, j+1), vectArr, j+1, provideDefaultDocs)
+						}
+					}
+
+				}
+				wg.Wait()
+				startIndex = end
+			}
 		}
 	}
 }
