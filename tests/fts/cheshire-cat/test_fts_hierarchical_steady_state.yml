@@ -1,0 +1,107 @@
+- include: tests/templates/kv.yml, tests/templates/rebalance.yml, tests/templates/fts.yml
+
+############### Set FTS bleveMaxResultWindow to 100000 ################
+- template: set_fts_manager_options
+  args: "{{.Nodes | .Service `fts` | net 0}}, 'bleveMaxResultWindow':'100000'"
+
+############### Set FTS bleveMaxClauseCount to 2500 ################
+- template: set_fts_manager_options
+  args: "{{.Nodes | .Service `fts` | net 0}}, 'bleveMaxClauseCount':'2500'"
+
+############### create scopes and collections across buckets ###############
+- image: sequoiatools/collections:1.0
+  command: "-i {{.Orchestrator}}:8091 -b {{.Bucket}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count=3 --collection_count=30 --collection_distribution=random"
+  wait: true
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 1}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count=3 --collection_count=30 --collection_distribution=random"
+  wait: true
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 2}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count=3 --collection_count=30 --collection_distribution=random"
+  wait: true
+
+############### Sleep for some time to allow collections manifest to sync ###############
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+############### Load hierarchical data using catapult ###############
+- image: sequoiatools/catapult
+  command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -n {{.Scale 50000}} -pc 50 -pu 25 -pd 25
+    -dt hierarchical -de {{.Scale 7200}} -ds 1000 -lf True -li 60 -ac True"
+  alias: hier_bucket_doc_ops
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 1}} -n {{.Scale 50000}} -pc 50 -pu 25
+    -pd 25 -dt hierarchical -de {{.Scale 7200}} -ds 1000 -lf True -li 60 -ac True"
+  alias: hier_bucket1_doc_ops
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 2}} -n {{.Scale 50000}} -pc 50 -pu 25
+    -pd 25 -dt hierarchical -de {{.Scale 7200}} -ds 1000 -lf True -li 60 -ac True"
+  alias: hier_bucket2_doc_ops
+
+###############  Create hierarchical FTS indexes ################
+- section_start: create_hierarchical_fts_indexes
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -m 1:1:10,2:2:6 -s {{.Scale 1}} -d hierarchical -a create_hierarchical_index_from_map"
+  wait: true
+
+- command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -m 2:1:5,1:2:8 -s {{.Scale 1}} -d hierarchical -a create_hierarchical_index_from_map"
+  wait: true
+
+- command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -m 1:1:6,2:0:4 -s {{.Scale 1}} -d hierarchical -a create_hierarchical_index_from_map"
+  wait: true
+- section_end: create_hierarchical_fts_indexes
+
+############### Wait for some time till all indexes are completely built ###############
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+################ Check for active queries #####################################
+- section_start: monitor_active_queries
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a active_queries_check"
+- section_end: monitor_active_queries
+
+# ###############  Run hierarchical queries ################
+- section_start: query_hierarchical_fts_indexes
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -d hierarchical -a run_hierarchical_queries -t 7200 -nq 20 --print_interval 600"
+- command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -d hierarchical -a run_hierarchical_queries -t 7200 -nq 20 --print_interval 600"
+- command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -d hierarchical -a run_hierarchical_queries -t 7200 -nq 20 --print_interval 600"
+  wait: true
+- section_end: query_hierarchical_fts_indexes
+
+############### Stop Data loading to cool down system for item count check ###############
+- client:
+    op: rm
+    container: hier_bucket_doc_ops
+- client:
+    op: rm
+    container: hier_bucket1_doc_ops
+- client:
+    op: rm
+    container: hier_bucket2_doc_ops
+
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+################ Check for item count #####################################
+- section_start: fts_indexes_item_count_check
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a item_count_check -vt 1200"
+  wait: true
+- section_end: fts_indexes_item_count_check
+
+###############  Drop all Indexes ################
+- section_start: drop_all_indexes
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a delete_all_indexes"
+- command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a delete_all_indexes"
+- command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}} -a delete_all_indexes"
+  wait: true
+
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+- section_end: drop_all_indexes

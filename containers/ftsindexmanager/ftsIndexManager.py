@@ -270,6 +270,342 @@ VECTOR_BASE_64_SINGLE_FIELD = [
     }
 ]
 
+# Hierarchical document schema fields - matching the exact index definition with nested: true
+# Fields indexed: company.name, company.departments.name/budget, company.departments.employees.name/role/home,
+# company.departments.projects.title/status, company.locations.city/country, id
+HIERARCHICAL_DS_FIELDS = [
+    {
+        "name": "company.name",
+        "type": "text",
+        "is_nested_object": True,
+        "field_code": "company_name",
+        "queries": [
+            {
+                "match": "TechCorp",
+                "field": "company.name"
+            },
+            {
+                "wildcard": "Tech*",
+                "field": "company.name"
+            },
+            {
+                "prefix": "Tech",
+                "field": "company.name"
+            }
+        ],
+        "flex_queries": [
+            "company.name = \"TechCorp\"",
+            "company.name like \"Tech%\""
+        ]
+    },
+    {
+        "name": "company.departments.name",
+        "type": "text",
+        "is_nested_object": True,
+        "field_code": "dept_name",
+        "queries": [
+            {
+                "match": "Engineering",
+                "field": "company.departments.name"
+            },
+            {
+                "match": "Sales",
+                "field": "company.departments.name"
+            },
+            {
+                "match": "Marketing",
+                "field": "company.departments.name"
+            },
+            {
+                "disjuncts": [
+                    {
+                        "match": "Engineering",
+                        "field": "company.departments.name"
+                    },
+                    {
+                        "match": "Marketing",
+                        "field": "company.departments.name"
+                    }
+                ]
+            }
+        ],
+        "flex_queries": [
+            "ANY d IN company.departments SATISFIES d.name = \"Engineering\" END",
+            "ANY d IN company.departments SATISFIES d.name = \"Sales\" END"
+        ]
+    },
+    {
+        "name": "company.departments.budget",
+        "type": "number",
+        "is_nested_object": True,
+        "field_code": "dept_budget",
+        "queries": [
+            {
+                "min": 100000, "max": 5000000,
+                "inclusive_min": True,
+                "inclusive_max": True,
+                "field": "company.departments.budget"
+            },
+            {
+                "min": 500000, "max": 3000000,
+                "inclusive_min": False,
+                "inclusive_max": True,
+                "field": "company.departments.budget"
+            }
+        ],
+        "flex_queries": [
+            "ANY d IN company.departments SATISFIES d.budget > 100000 AND d.budget < 5000000 END"
+        ]
+    },
+    {
+        "name": "company.departments.employees.name",
+        "type": "text",
+        "is_nested_object": True,
+        "field_code": "emp_name",
+        "queries": [
+            {
+                "match": "Alice",
+                "field": "company.departments.employees.name"
+            },
+            {
+                "match": "Bob",
+                "field": "company.departments.employees.name"
+            },
+            {
+                "wildcard": "Cha*",
+                "field": "company.departments.employees.name"
+            },
+            {
+                "prefix": "Al",
+                "field": "company.departments.employees.name"
+            }
+        ],
+        "flex_queries": [
+            "ANY d IN company.departments SATISFIES ANY e IN d.employees SATISFIES e.name = \"Alice\" END END"
+        ]
+    },
+    {
+        "name": "company.departments.employees.role",
+        "type": "text",
+        "is_nested_object": True,
+        "field_code": "emp_role",
+        "queries": [
+            {
+                "match": "Engineer",
+                "field": "company.departments.employees.role"
+            },
+            {
+                "match": "Manager",
+                "field": "company.departments.employees.role"
+            },
+            {
+                "match": "Analyst",
+                "field": "company.departments.employees.role"
+            },
+            {
+                "disjuncts": [
+                    {
+                        "match": "Engineer",
+                        "field": "company.departments.employees.role"
+                    },
+                    {
+                        "match": "Manager",
+                        "field": "company.departments.employees.role"
+                    }
+                ]
+            }
+        ],
+        "flex_queries": [
+            "ANY d IN company.departments SATISFIES ANY e IN d.employees SATISFIES e.role = \"Engineer\" END END"
+        ]
+    },
+    {
+        "name": "company.departments.employees.home",
+        "type": "text",
+        "is_nested_object": True,
+        "field_code": "emp_home",
+        "queries": [
+            {
+                "match": "London",
+                "field": "company.departments.employees.home"
+            },
+            {
+                "match": "New York",
+                "field": "company.departments.employees.home"
+            },
+            {
+                "wildcard": "San*",
+                "field": "company.departments.employees.home"
+            }
+        ],
+        "flex_queries": [
+            "ANY d IN company.departments SATISFIES ANY e IN d.employees SATISFIES e.home = \"London\" END END"
+        ]
+    },
+    {
+        "name": "company.departments.projects.title",
+        "type": "text",
+        "is_nested_object": True,
+        "field_code": "proj_title",
+        "queries": [
+            {
+                "wildcard": "Project*",
+                "field": "company.departments.projects.title"
+            },
+            {
+                "prefix": "Proj",
+                "field": "company.departments.projects.title"
+            },
+            {
+                "match": "Alpha",
+                "field": "company.departments.projects.title"
+            }
+        ],
+        "flex_queries": [
+            "ANY d IN company.departments SATISFIES ANY p IN d.projects SATISFIES p.title like \"Project%\" END END"
+        ]
+    },
+    {
+        "name": "company.departments.projects.status",
+        "type": "text",
+        "is_nested_object": True,
+        "field_code": "proj_status",
+        "queries": [
+            {
+                "match": "ongoing",
+                "field": "company.departments.projects.status"
+            },
+            {
+                "match": "completed",
+                "field": "company.departments.projects.status"
+            },
+            {
+                "match": "planned",
+                "field": "company.departments.projects.status"
+            },
+            {
+                "disjuncts": [
+                    {
+                        "match": "ongoing",
+                        "field": "company.departments.projects.status"
+                    },
+                    {
+                        "match": "planned",
+                        "field": "company.departments.projects.status"
+                    }
+                ]
+            }
+        ],
+        "flex_queries": [
+            "ANY d IN company.departments SATISFIES ANY p IN d.projects SATISFIES p.status = \"ongoing\" END END"
+        ]
+    },
+    {
+        "name": "company.locations.city",
+        "type": "text",
+        "is_nested_object": True,
+        "field_code": "loc_city",
+        "queries": [
+            {
+                "match": "London",
+                "field": "company.locations.city"
+            },
+            {
+                "match": "Tokyo",
+                "field": "company.locations.city"
+            },
+            {
+                "match": "Paris",
+                "field": "company.locations.city"
+            },
+            {
+                "wildcard": "New*",
+                "field": "company.locations.city"
+            }
+        ],
+        "flex_queries": [
+            "ANY l IN company.locations SATISFIES l.city = \"London\" END"
+        ]
+    },
+    {
+        "name": "company.locations.country",
+        "type": "text",
+        "is_nested_object": True,
+        "field_code": "loc_country",
+        "queries": [
+            {
+                "match": "USA",
+                "field": "company.locations.country"
+            },
+            {
+                "match": "UK",
+                "field": "company.locations.country"
+            },
+            {
+                "match": "Japan",
+                "field": "company.locations.country"
+            },
+            {
+                "disjuncts": [
+                    {
+                        "match": "USA",
+                        "field": "company.locations.country"
+                    },
+                    {
+                        "match": "UK",
+                        "field": "company.locations.country"
+                    }
+                ]
+            }
+        ],
+        "flex_queries": [
+            "ANY l IN company.locations SATISFIES l.country = \"USA\" END"
+        ]
+    },
+    {
+        "name": "id",
+        "type": "text",
+        "is_nested_object": False,
+        "field_code": "doc_id",
+        "queries": [
+            {
+                "wildcard": "hier_*",
+                "field": "id"
+            },
+            {
+                "prefix": "hier_",
+                "field": "id"
+            }
+        ],
+        "flex_queries": [
+            "id like \"hier_%\""
+        ]
+    }
+]
+
+# Single field for simpler hierarchical tests
+HIERARCHICAL_DS_SINGLE_FIELD = [
+    {
+        "name": "company.departments.employees.name",
+        "type": "text",
+        "is_nested_object": True,
+        "field_code": "emp_name",
+        "queries": [
+            {
+                "match": "Alice",
+                "field": "company.departments.employees.name"
+            },
+            {
+                "wildcard": "Bob*",
+                "field": "company.departments.employees.name"
+            }
+        ],
+        "flex_queries": [
+            "ANY d IN company.departments SATISFIES ANY e IN d.employees SATISFIES e.name = \"Alice\" END END"
+        ]
+    }
+]
+
 NUM_WORKERS = 2  # Max number of worker threads to execute queries
 FTS_PORT = 8094
 class FTSIndexManager:
@@ -317,9 +653,12 @@ class FTSIndexManager:
                                      "create_index_from_map_on_bucket", "create_index_for_each_collection",
                                      "run_queries_on_each_index", "copy_docs_from_source_collection",
                                      "update_docs_on_all_collections", "run_knn_queries",
-                                     "run_knn_queries_parallely"],
+                                     "run_knn_queries_parallely",
+                                     "create_hierarchical_index", "create_hierarchical_index_from_map",
+                                     "run_hierarchical_queries", "run_hierarchical_flex_queries"],
                             help="Choose an action to be performed. Valid actions : create_index, run_queries, "
-                                 "delete_all_indexes, create_index_loop, item_count_check",
+                                 "delete_all_indexes, create_index_loop, item_count_check, create_hierarchical_index, "
+                                 "run_hierarchical_queries",
                             default="create_index")
         parser.add_argument("-skip_def", "--skip_default", default=False,
                             help="skip default scope and collection")
@@ -385,6 +724,10 @@ class FTSIndexManager:
             self.idx_def_templates = copy.deepcopy(HOTEL_DS_SINGLE_FIELD)
         elif self.dataset == "siftsmall":
             self.idx_def_templates = copy.deepcopy(VECTOR_DS_SINGLE_FIELD)
+        elif self.dataset == "hierarchical":
+            self.idx_def_templates = copy.deepcopy(HIERARCHICAL_DS_FIELDS)
+        elif self.dataset == "hierarchical_single_field":
+            self.idx_def_templates = copy.deepcopy(HIERARCHICAL_DS_SINGLE_FIELD)
         else:
             self.idx_def_templates = copy.deepcopy(VECTOR_DS_FIELDS)
         self.knn_query = {
@@ -1830,6 +2173,494 @@ class FTSIndexManager:
                     nodelist.append(node["hostname"])
         return nodelist
 
+    """
+    Create FTS index for hierarchical (nested) document schema.
+    This creates an index with proper nested field mappings for company-like structures.
+    Uses the exact index definition required for hierarchical search with nested: true flags.
+    """
+    def create_hierarchical_fts_index(self, collections, count=None, num_replica=None, num_partitions=None, scope=None):
+        random.seed(datetime.now())
+
+        if not num_partitions:
+            num_partitions = random.randint(1, min(6, self.max_num_partitions))
+        if not num_replica and num_replica != 0:
+            num_replica = random.randint(0, self.max_num_replica)
+
+        # Generate unique index name
+        for i in range(5):
+            idx_name = "bucket_" + self.bucket_name + "_hier_idx_" + ''.join(
+                random.choice(string.ascii_lowercase) for i in range(5))
+            if count:
+                idx_name += "_" + str(count)
+            cur_indexes = self.get_fts_index_list()
+            if idx_name not in cur_indexes:
+                break
+
+        self.log.info("Creating Hierarchical FTS index {0} on {1} with {2} replicas and {3} partitions".format(
+            idx_name, collections, num_replica, num_partitions))
+
+        # Extract scope and collection from the first collection in the list
+        if scope is None:
+            scope_coll = collections[0].split(".")
+            scope = scope_coll[0]
+            coll_name = scope_coll[1]
+        else:
+            coll_name = collections[0].split(".")[1] if "." in collections[0] else collections[0]
+
+        # Build the exact hierarchical index definition
+        index_def_dict = {
+            "name": idx_name,
+            "type": "fulltext-index",
+            "params": {
+                "doc_config": {
+                    "docid_prefix_delim": "",
+                    "docid_regexp": "",
+                    "mode": "scope.collection.type_field",
+                    "type_field": "type"
+                },
+                "mapping": {
+                    "default_analyzer": "standard",
+                    "default_datetime_parser": "dateTimeOptional",
+                    "default_field": "_all",
+                    "default_mapping": {
+                        "dynamic": False,
+                        "enabled": False
+                    },
+                    "default_type": "_default",
+                    "docvalues_dynamic": False,
+                    "index_dynamic": False,
+                    "scoring_model": "tf-idf",
+                    "store_dynamic": False,
+                    "type_field": "_type",
+                    "types": {
+                        f"{scope}.{coll_name}": {
+                            "dynamic": False,
+                            "enabled": True,
+                            "properties": {
+                                "company": {
+                                    "dynamic": False,
+                                    "enabled": True,
+                                    "properties": {
+                                        "departments": {
+                                            "dynamic": False,
+                                            "enabled": True,
+                                            "nested": True,
+                                            "properties": {
+                                                "employees": {
+                                                    "dynamic": False,
+                                                    "enabled": True,
+                                                    "nested": True,
+                                                    "properties": {
+                                                        "home": {
+                                                            "enabled": True,
+                                                            "dynamic": False,
+                                                            "fields": [
+                                                                {
+                                                                    "analyzer": "en",
+                                                                    "index": True,
+                                                                    "name": "home",
+                                                                    "type": "text"
+                                                                }
+                                                            ]
+                                                        },
+                                                        "name": {
+                                                            "enabled": True,
+                                                            "dynamic": False,
+                                                            "fields": [
+                                                                {
+                                                                    "analyzer": "en",
+                                                                    "index": True,
+                                                                    "name": "name",
+                                                                    "type": "text"
+                                                                }
+                                                            ]
+                                                        },
+                                                        "role": {
+                                                            "enabled": True,
+                                                            "dynamic": False,
+                                                            "fields": [
+                                                                {
+                                                                    "analyzer": "en",
+                                                                    "index": True,
+                                                                    "name": "role",
+                                                                    "type": "text"
+                                                                }
+                                                            ]
+                                                        }
+                                                    }
+                                                },
+                                                "projects": {
+                                                    "dynamic": False,
+                                                    "enabled": True,
+                                                    "nested": True,
+                                                    "properties": {
+                                                        "status": {
+                                                            "enabled": True,
+                                                            "dynamic": False,
+                                                            "fields": [
+                                                                {
+                                                                    "analyzer": "en",
+                                                                    "index": True,
+                                                                    "name": "status",
+                                                                    "type": "text"
+                                                                }
+                                                            ]
+                                                        },
+                                                        "title": {
+                                                            "enabled": True,
+                                                            "dynamic": False,
+                                                            "fields": [
+                                                                {
+                                                                    "analyzer": "en",
+                                                                    "index": True,
+                                                                    "name": "title",
+                                                                    "type": "text"
+                                                                }
+                                                            ]
+                                                        }
+                                                    }
+                                                },
+                                                "budget": {
+                                                    "enabled": True,
+                                                    "dynamic": False,
+                                                    "fields": [
+                                                        {
+                                                            "index": True,
+                                                            "name": "budget",
+                                                            "type": "number"
+                                                        }
+                                                    ]
+                                                },
+                                                "name": {
+                                                    "enabled": True,
+                                                    "dynamic": False,
+                                                    "fields": [
+                                                        {
+                                                            "analyzer": "en",
+                                                            "index": True,
+                                                            "name": "name",
+                                                            "type": "text"
+                                                        }
+                                                    ]
+                                                }
+                                            }
+                                        },
+                                        "locations": {
+                                            "dynamic": False,
+                                            "enabled": True,
+                                            "nested": True,
+                                            "properties": {
+                                                "city": {
+                                                    "enabled": True,
+                                                    "dynamic": False,
+                                                    "fields": [
+                                                        {
+                                                            "analyzer": "en",
+                                                            "index": True,
+                                                            "name": "city",
+                                                            "type": "text"
+                                                        }
+                                                    ]
+                                                },
+                                                "country": {
+                                                    "enabled": True,
+                                                    "dynamic": False,
+                                                    "fields": [
+                                                        {
+                                                            "analyzer": "en",
+                                                            "index": True,
+                                                            "name": "country",
+                                                            "type": "text"
+                                                        }
+                                                    ]
+                                                }
+                                            }
+                                        },
+                                        "name": {
+                                            "enabled": True,
+                                            "dynamic": False,
+                                            "fields": [
+                                                {
+                                                    "analyzer": "en",
+                                                    "index": True,
+                                                    "name": "name",
+                                                    "type": "text"
+                                                }
+                                            ]
+                                        }
+                                    }
+                                },
+                                "id": {
+                                    "enabled": True,
+                                    "dynamic": False,
+                                    "fields": [
+                                        {
+                                            "analyzer": "en",
+                                            "index": True,
+                                            "name": "id",
+                                            "type": "text"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                },
+                "store": {
+                    "indexType": "scorch",
+                    "scorchMergePlanOptions": {
+                        "floorSegmentFileSize": 20971520
+                    },
+                    "scorchPersisterOptions": {
+                        "maxSizeInMemoryMergePerWorker": 20971520,
+                        "numPersisterWorkers": 4
+                    },
+                    "segmentVersion": 16
+                }
+            },
+            "sourceType": "gocbcore",
+            "sourceName": self.bucket_name,
+            "sourceParams": {},
+            "planParams": {
+                "maxPartitionsPerPIndex": 128,
+                "indexPartitions": num_partitions,
+                "numReplicas": num_replica
+            }
+        }
+
+        self.log.debug("Final hierarchical index definition - \n{0}".format(json.dumps(index_def_dict, indent=2)))
+        index_definition = json.dumps(index_def_dict)
+
+        all_collections = self.get_all_collections()
+        for collection in collections:
+            if collection not in all_collections:
+                return False, "Collection did not exist. Did not create index", "None", idx_name
+
+        status, content, response = self.http_request(self.rest_url, self.fts_port, "/api/index/{0}".format(idx_name),
+                                                      method="PUT", body=index_definition)
+        return status, content, response, idx_name
+
+    def create_hierarchical_indexes_from_map(self):
+        """
+        Create hierarchical indexes based on partition map for the bucket.
+        """
+        coll_list = self.get_all_collections()
+        if self.skip_default:
+            if '_default._default' in coll_list:
+                coll_list.remove('_default._default')
+
+        partition_map_list = self.index_partition_map.split(",")
+        for index_map in partition_map_list:
+            num_indexes, num_replicas, num_partitions = index_map.split(":")
+            num_indexes = int(self.scale) * int(num_indexes)
+            for i in range(num_indexes):
+                random.seed(datetime.now())
+                collections = []
+                collections.append(coll_list[i % len(coll_list)])
+                if self.collection is not None:
+                    coll = self.scope + '.' + self.collection
+                    collections = [coll]
+                self.log.info("===== Creating Hierarchical FTS index on {0} =====".format(collections))
+                status, content, response, idx_name = self.create_hierarchical_fts_index(
+                    collections,
+                    num_replica=int(num_replicas),
+                    num_partitions=int(num_partitions),
+                    count=i
+                )
+                if not status:
+                    self.log.info("Content = {0} \nResponse = {1}".format(content, response))
+                    self.log.info("Hierarchical index creation on {0} did not succeed.".format(collections))
+
+    def create_hierarchical_index_for_each_collection(self):
+        """
+        Create a hierarchical FTS index for each collection in the bucket.
+        """
+        coll_list = self.get_all_collections()
+        if '_default._default' in coll_list:
+            coll_list.remove("_default._default")
+        count = 0
+        for coll in coll_list:
+            if self.scope:
+                if self.scope + "." not in coll:
+                    continue
+            collections = [coll]
+            self.log.info("===== Creating Hierarchical FTS index on {0} =====".format(collections))
+            status, content, response, idx_name = self.create_hierarchical_fts_index(
+                collections,
+                num_replica=0,
+                num_partitions=1,
+                count=count
+            )
+            if not status:
+                self.log.info("Content = {0} \nResponse = {1}".format(content, response))
+                self.log.info("Hierarchical index creation on {0} did not succeed.".format(collections))
+            count += 1
+
+    def hierarchical_query_runner(self):
+        """
+        Run hierarchical FTS queries with multi-threading.
+        """
+        threads = []
+        queries_run = 0
+        queries_passed = 0
+        queries_failed = 0
+        with ThreadPoolExecutor(max_workers=NUM_WORKERS) as executor:
+            end_time = 0
+            print_time = 0
+            if self.duration > 0:
+                end_time = time.time() + self.duration
+            if self.print_interval > 0:
+                print_time = time.time() + self.print_interval
+            while True:
+                random.seed(datetime.now())
+                for i in range(self.num_queries_per_worker):
+                    threads.append(executor.submit(self.generate_and_run_hierarchical_query))
+                    time.sleep(5)
+                for task in as_completed(threads):
+                    result = task.result()
+                    queries_run += 1
+                    if result:
+                        queries_passed += 1
+                    else:
+                        queries_failed += 1
+                if self.print_interval > 0 and time.time() > print_time:
+                    self.log.info(
+                        "======== Hierarchical Queries Run = {0} | Passed = {1} | Failed = {2} ========".format(
+                            queries_run, queries_passed, queries_failed))
+                    print_time = time.time() + self.print_interval
+                if self.duration > 0 and time.time() > end_time:
+                    break
+                alive_threads = len(threading.enumerate())
+                if alive_threads > 5:
+                    self.log.info("Waiting for {0} threads to complete...".format(len(threads)))
+                    time.sleep(60)
+
+    def generate_and_run_hierarchical_query(self, index_name=None):
+        """
+        Generate and run a hierarchical FTS query on a random index.
+        Uses all fields from HIERARCHICAL_DS_FIELDS since the index has a fixed complete schema.
+        """
+        index_names = self.get_fts_index_list(self.bucket_name)
+        hier_index_names = [idx for idx in index_names if "_hier_idx_" in idx]
+        if not hier_index_names:
+            self.log.info("No hierarchical indexes found for bucket {0}".format(self.bucket_name))
+            return False
+
+        try:
+            if not index_name:
+                index_name = random.choice(hier_index_names)
+        except Exception as e:
+            self.log.info("Exception fetching index names : {0} - {1}".format(hier_index_names, str(e)))
+            return False
+
+        # Use all fields from HIERARCHICAL_DS_FIELDS since the index has the complete schema
+        index_fields = HIERARCHICAL_DS_FIELDS
+        if not index_fields:
+            self.log.info("No fields defined in HIERARCHICAL_DS_FIELDS")
+            return False
+
+        try:
+            index_field = random.choice(index_fields)
+        except Exception as e:
+            self.log.info("Exception fetching index fields: {0}".format(str(e)))
+            return False
+
+        self.log.info("--------------- Running hierarchical query on {0} field {1} ---------------".format(
+            index_name, index_field["name"]))
+        query = random.choice(index_field["queries"])
+        status, content, response = self.run_fts_query(index_name, query)
+        try:
+            if status:
+                self.log.info(f'Index: {index_name}, Query: {query}, Status: {status}, '
+                              f'Total Hits: {content.get("total_hits", 0)}')
+        except Exception as e:
+            self.log.debug(str(e))
+        return status
+
+    def get_hierarchical_index_fields(self, indexname):
+        """
+        Returns all hierarchical fields since the index uses a fixed complete schema.
+        """
+        return HIERARCHICAL_DS_FIELDS
+
+    def run_hierarchical_flex_queries(self):
+        """
+        Run flex queries on hierarchical indexes.
+        """
+        threads = []
+        queries_run = 0
+        queries_passed = 0
+        queries_failed = 0
+        with ThreadPoolExecutor(max_workers=NUM_WORKERS) as executor:
+            end_time = 0
+            print_time = 0
+            if self.duration > 0:
+                end_time = time.time() + self.duration
+            if self.print_interval > 0:
+                print_time = time.time() + self.print_interval
+            while True:
+                random.seed(datetime.now())
+                for i in range(self.num_queries_per_worker):
+                    threads.append(executor.submit(self.generate_and_run_hierarchical_flex_query))
+                    time.sleep(5)
+                try:
+                    for task in as_completed(threads):
+                        result = task.result()
+                        queries_run += 1
+                        if result:
+                            queries_passed += 1
+                        else:
+                            queries_failed += 1
+                except Exception as e:
+                    self.log.info(str(e))
+                    queries_failed += 1
+                if self.print_interval > 0 and time.time() > print_time:
+                    self.log.info(
+                        "======== Hierarchical Flex Queries Run = {0} | Passed = {1} | Failed = {2} ========".format(
+                            queries_run, queries_passed, queries_failed))
+                    print_time = time.time() + self.print_interval
+                if self.duration > 0 and time.time() > end_time:
+                    break
+                alive_threads = len(threading.enumerate())
+                if alive_threads > 5:
+                    self.log.info("Waiting for {0} threads to complete...".format(len(threads)))
+                    time.sleep(60)
+
+    def generate_and_run_hierarchical_flex_query(self):
+        """
+        Generate and run a hierarchical flex query.
+        """
+        index_names = self.get_fts_index_list(self.bucket_name)
+        hier_index_names = [idx for idx in index_names if "_hier_idx_" in idx]
+        if not hier_index_names:
+            self.log.info("No hierarchical indexes found for bucket {0}".format(self.bucket_name))
+            return False
+
+        try:
+            index_name = random.choice(hier_index_names)
+        except Exception as e:
+            self.log.info("Exception fetching index names : {0}".format(str(e)))
+            return False
+
+        index_fields = self.get_hierarchical_index_fields(index_name)
+        if not index_fields:
+            return False
+
+        try:
+            index_field = random.choice(index_fields)
+        except Exception as e:
+            self.log.info("Exception fetching index fields: {0}".format(str(e)))
+            return False
+
+        if "flex_queries" not in index_field or not index_field["flex_queries"]:
+            self.log.info("No flex queries defined for field {0}".format(index_field["name"]))
+            return False
+
+        query = random.choice(index_field["flex_queries"])
+        self.log.info("--------------- Running hierarchical flex query: {0} ---------------".format(query))
+        status = self.run_flex_query(index_name, query)
+        return status
+
 """
 Main method
 TODO : 1. Validation to check if indexes are created successfully
@@ -1871,6 +2702,14 @@ if __name__ == '__main__':
         ftsIndexMgr.run_knn_queries()
     elif ftsIndexMgr.action == "run_knn_queries_parallely":
         ftsIndexMgr.run_knn_queries_parallely()
+    elif ftsIndexMgr.action == "create_hierarchical_index":
+        ftsIndexMgr.create_hierarchical_index_for_each_collection()
+    elif ftsIndexMgr.action == "create_hierarchical_index_from_map":
+        ftsIndexMgr.create_hierarchical_indexes_from_map()
+    elif ftsIndexMgr.action == "run_hierarchical_queries":
+        ftsIndexMgr.hierarchical_query_runner()
+    elif ftsIndexMgr.action == "run_hierarchical_flex_queries":
+        ftsIndexMgr.run_hierarchical_flex_queries()
     else:
         print(
             "Invalid choice for action. Choose from the following - create_index | build_deferred_index | drop_all_indexes")

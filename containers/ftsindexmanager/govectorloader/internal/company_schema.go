@@ -77,16 +77,24 @@ func BuildCompanyDoc(
 		return vectors[idx]
 	}
 
-	roles := []string{"Engineer", "Manager", "Salesperson", "Analyst", "Designer", "Support"}
-	deptNames := []string{"Engineering", "Sales", "Marketing", "Finance", "HR", "Operations"}
-	projectStatuses := []string{"ongoing", "completed", "blocked"}
-	cities := []string{"Athens", "Berlin", "Dublin", "London", "Paris", "New York", "San Francisco"}
-	countries := []string{"Greece", "USA", "Germany", "Ireland", "UK", "France"}
-
-	companyName := faker.Word()
-	if companyName == "" {
-		companyName = "TechCorp"
+	deptNames := []string{
+		"Engineering", "Sales", "Marketing", "HR", "Finance", "Operations", "Support",
 	}
+
+	roles := []string{
+		"Engineer", "Manager", "Salesperson", "Marketer", "HR", "Support Engineer", "Intern", "Analyst",
+	}
+
+	projectStatuses := []string{"ongoing", "completed", "planned"}
+
+	firstNames := []string{
+		"Alice", "Bob", "Charlie", "David", "Eve", "Frank", "Grace", "Heidi", "Ivan", "Judy", "Mallory",
+	}
+
+	cities := []string{"Athens", "Berlin", "London", "Paris", "Tokyo", "New York", "Chennai", "Edinburgh"}
+	countries := []string{"USA", "UK", "Greece", "Germany", "France", "Japan", "India", "Canada"}
+
+	companyName := "TechCorp"
 
 	// Embedding assignment order:
 	// 0..(departmentsCount*employeesPerDept-1): employees
@@ -101,16 +109,23 @@ func BuildCompanyDoc(
 	projectEmbIdx := 0
 	for d := 0; d < departmentsCount; d++ {
 		deptName := deptNames[rand.Intn(len(deptNames))]
-		// make name slightly varied so we don't repeat too much
-		deptName = fmt.Sprintf("%s-%s", deptName, faker.Word())
 		budget := 100000 + rand.Intn(5000000)
 
 		employees := make([]any, 0, employeesPerDept)
 		for e := 0; e < employeesPerDept; e++ {
 			emb := embeddingValue(get(employeeEmbOffset+employeeEmbIdx), base64Flag)
 			employeeEmbIdx++
+			first := firstNames[rand.Intn(len(firstNames))]
+			last := faker.LastName()
+			if last == "" {
+				last = faker.Word()
+			}
+			fullName := first
+			if last != "" {
+				fullName = fmt.Sprintf("%s %s", first, last)
+			}
 			employees = append(employees, map[string]any{
-				"name":             faker.Name(),
+				"name":             fullName,
 				"role":             roles[rand.Intn(len(roles))],
 				embeddingFieldName: emb,
 			})
@@ -120,8 +135,9 @@ func BuildCompanyDoc(
 		for p := 0; p < projectsPerDept; p++ {
 			emb := embeddingValue(get(projectEmbOffset+projectEmbIdx), base64Flag)
 			projectEmbIdx++
+			projectTitle := fmt.Sprintf("Project %s", firstNames[rand.Intn(len(firstNames))])
 			projects = append(projects, map[string]any{
-				"title":            fmt.Sprintf("Project-%s", faker.Word()),
+				"title":            projectTitle,
 				"status":           projectStatuses[rand.Intn(len(projectStatuses))],
 				embeddingFieldName: emb,
 			})
