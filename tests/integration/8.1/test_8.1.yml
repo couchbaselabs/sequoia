@@ -71,17 +71,16 @@
 - template: create-multi-scopes-collections
   args: "{{.Orchestrator}}, {{.NthBucket 4}}, {{.Scale 2}}, {{.Scale 10}}, uniform"
   requires:  "{{eq true .DoOnce }}"
-- args: "{{.Orchestrator}}, {{.NthBucket 5}}, {{.Scale 10000}}, {{.Scale 10000}}, uniform"
+- args: "{{.Orchestrator}}, {{.NthBucket 5}}, {{.Scale 3000}}, {{.Scale 8000}}, uniform"
   requires:  "{{eq true .DoOnce }}"
-- args: "{{.Orchestrator}}, {{.NthBucket 6}}, {{.Scale 30}}, {{.Scale 9000}}, uniform"
+- args: "{{.Orchestrator}}, {{.NthBucket 6}}, {{.Scale 10}}, {{.Scale 500}}, uniform"
   requires:  "{{eq true .DoOnce }}"
-- args: "{{.Orchestrator}}, {{.NthBucket 7}}, {{.Scale 15}}, {{.Scale 6000}}, uniform"
+- args: "{{.Orchestrator}}, {{.NthBucket 7}}, {{.Scale 5}}, {{.Scale 500}}, uniform"
   requires:  "{{eq true .DoOnce }}"
-- args: "{{.Orchestrator}}, {{.NthBucket 8}}, {{.Scale 10}}, {{.Scale 10000}}, uniform"
+- args: "{{.Orchestrator}}, {{.NthBucket 8}}, {{.Scale 10}}, {{.Scale 500}}, uniform"
   requires:  "{{eq true .DoOnce }}"
-- args: "{{.Orchestrator}}, {{.NthBucket 9}}, {{.Scale 1}}, {{.Scale 10000}}, uniform"
+- args: "{{.Orchestrator}}, {{.NthBucket 9}}, {{.Scale 1}}, {{.Scale 700}}, uniform"
   requires:  "{{eq true .DoOnce }}"
-
 
 ###### Create scopes and collections in remote cluster  ######
 - template: create-multi-scopes-collections
@@ -184,19 +183,19 @@
   command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 4}} -n {{.Scale 2000}} -pc 100 -dt Hotel -ds 1000 -ac True"
   requires:  "{{eq true .DoOnce }}"
   alias: catapult_bucket4_doc_ops1
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 5}} -n {{.Scale 3}} -pc 100 -dt Hotel -ds 1000 -ac True"
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 5}} -n {{.Scale 2}} -pc 100 -dt Hotel -ds 1000 -ac True"
   requires:  "{{eq true .DoOnce }}"
   alias: catapult_bucket5_doc_ops1
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 6}} -n {{.Scale 7}} -pc 100 -dt Hotel -ds 1000 -ac True"
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 6}} -n {{.Scale 40}} -pc 100 -dt Hotel -ds 1000 -ac True"
   requires:  "{{eq true .DoOnce }}"
   alias: catapult_bucket6_doc_ops1
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 7}} -n {{.Scale 3}} -pc 100 -dt Hotel -ds 1000 -ac True"
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 7}} -n {{.Scale 40}} -pc 100 -dt Hotel -ds 1000 -ac True"
   requires:  "{{eq true .DoOnce }}"
   alias: catapult_bucket7_doc_ops1
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 8}} -n {{.Scale 3}} -pc 100 -dt Hotel -ds 1000 -ac True"
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 8}} -n {{.Scale 40}} -pc 100 -dt Hotel -ds 1000 -ac True"
   requires:  "{{eq true .DoOnce }}"
   alias: catapult_bucket8_doc_ops1
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 9}} -n {{.Scale 3}} -pc 100 -dt Hotel -ds 1000 -ac True"
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 9}} -n {{.Scale 35}} -pc 100 -dt Hotel -ds 1000 -ac True"
   requires:  "{{eq true .DoOnce }}"
   alias: catapult_bucket9_doc_ops1
 
@@ -244,10 +243,10 @@
 # Start Collections CRUD on bucket 4 & bucket5
 -
   image: sequoiatools/collections:1.0
-  command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 8}} -o crud_mode --crud_interval=120 --max_scopes=10 --max_collections=1000"
+  command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 8}} -o crud_mode --crud_interval=120 --max_scopes=10 --max_collections=500"
   alias: collection_crud1
 -
-  command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 9}} -o crud_mode --crud_interval=120 --max_scopes=5 --max_collections=1200"
+  command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 9}} -o crud_mode --crud_interval=120 --max_scopes=5 --max_collections=700"
   alias: collection_crud2
 
 # continous kv loading
@@ -260,17 +259,17 @@
 - template: pillowfight_durability
   args: "{{.Orchestrator}}, {{.NthBucket 3}}, -M 256 -I {{.Scale 2000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1 --json"
 - template: pillowfight_durability
-  args: "{{.Orchestrator}}, {{.NthBucket 4}}, -M 512 -I {{.Scale 3}} -B {{.Scale 1}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1 --json"
+  args: "{{.Orchestrator}}, {{.NthBucket 4}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1 --json"
 - template: pillowfight_durability
-  args: "{{.Orchestrator}}, {{.NthBucket 5}}, -M 512 -I {{.Scale 2}} -B {{.Scale 1}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1 --json"
+  args: "{{.Orchestrator}}, {{.NthBucket 5}}, -M 512 -I {{.Scale 500}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1 --json"
 - template: pillowfight_durability
-  args: "{{.Orchestrator}}, {{.NthBucket 6}}, -M 512 -I {{.Scale 2}} -B {{.Scale 1}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1 --json"
+  args: "{{.Orchestrator}}, {{.NthBucket 6}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1 --json"
 - template: pillowfight_durability
-  args: "{{.Orchestrator}}, {{.NthBucket 7}}, -M 512 -I {{.Scale 3}} -B {{.Scale 1}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1 --json"
+  args: "{{.Orchestrator}}, {{.NthBucket 7}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1 --json"
 - template: pillowfight_durability
-  args: "{{.Orchestrator}}, {{.NthBucket 8}}, -M 512 -I {{.Scale 2}} -B {{.Scale 1}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1 --json"
+  args: "{{.Orchestrator}}, {{.NthBucket 8}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1 --json"
 - template: pillowfight_durability
-  args: "{{.Orchestrator}}, {{.NthBucket 9}}, -M 512 -I {{.Scale 2}} -B {{.Scale 1}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1 --json"
+  args: "{{.Orchestrator}}, {{.NthBucket 9}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1 --json"
 
 # Sleep for some time to allow some docs to be loaded to the collections
 -
@@ -398,9 +397,9 @@
   alias: catapult_bucket4_doc_ops2
 - command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 5}} -n {{.Scale 3}} -pc 100 -pu 25 -pd 25 -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 300 -fu price,free_parking -ac True --num_threads 1"
   alias: catapult_bucket5_doc_ops2
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 6}} -n {{.Scale 3}} -pc 100 -pu 25 -pd 25 -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 300 -fu price,free_parking -ac True --num_threads 1"
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 6}} -n {{.Scale 40}} -pc 100 -pu 25 -pd 25 -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 300 -fu price,free_parking -ac True --num_threads 1"
   alias: catapult_bucket6_doc_ops2
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 7}} -n {{.Scale 7}} -pc 100 -pu 25 -pd 25 -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 300 -fu price,free_parking -ac True --num_threads 1"
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 7}} -n {{.Scale 40}} -pc 100 -pu 25 -pd 25 -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 300 -fu price,free_parking -ac True --num_threads 1"
   alias: catapult_bucket7_doc_ops2
 
 
