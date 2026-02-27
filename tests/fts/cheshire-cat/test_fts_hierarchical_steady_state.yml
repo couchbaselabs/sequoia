@@ -24,15 +24,28 @@
   wait: true
 
 ############### Load hierarchical data using catapult ###############
+# Initial load with -pc 100 (100% creates)
 - image: sequoiatools/catapult
-  command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -n {{.Scale 50000}} -pc 50 -pu 25 -pd 25
-    -dt hierarchical -de {{.Scale 7200}} -ds 1000 -lf True -li 60 -ac True"
+  command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -n {{.Scale 50000}} -pc 100
+    -dt hierarchical -dpx hier_ -ds 1000 -nt 4 -ac True"
+  wait: true
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 1}} -n {{.Scale 50000}} -pc 100
+    -dt hierarchical -dpx hier_ -ds 1000 -nt 4 -ac True"
+  wait: true
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 2}} -n {{.Scale 50000}} -pc 100
+    -dt hierarchical -dpx hier_ -ds 1000 -nt 4 -ac True"
+  wait: true
+
+############### Start continuous workload after initial load ###############
+- image: sequoiatools/catapult
+  command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -n {{.Scale 50000}} -pc 30 -pu 50 -pd 20
+    -dt hierarchical -dpx hier_ -ds 1000 -de {{.Scale 7200}} -nt 2 -ac True"
   alias: hier_bucket_doc_ops
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 1}} -n {{.Scale 50000}} -pc 50 -pu 25
-    -pd 25 -dt hierarchical -de {{.Scale 7200}} -ds 1000 -lf True -li 60 -ac True"
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 1}} -n {{.Scale 50000}} -pc 30 -pu 50 -pd 20
+    -dt hierarchical -dpx hier_ -ds 1000 -de {{.Scale 7200}} -nt 2 -ac True"
   alias: hier_bucket1_doc_ops
-- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 2}} -n {{.Scale 50000}} -pc 50 -pu 25
-    -pd 25 -dt hierarchical -de {{.Scale 7200}} -ds 1000 -lf True -li 60 -ac True"
+- command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 2}} -n {{.Scale 50000}} -pc 30 -pu 50 -pd 20
+    -dt hierarchical -dpx hier_ -ds 1000 -de {{.Scale 7200}} -nt 2 -ac True"
   alias: hier_bucket2_doc_ops
 
 ###############  Create hierarchical FTS indexes ################

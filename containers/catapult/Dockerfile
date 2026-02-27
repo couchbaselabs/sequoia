@@ -7,9 +7,10 @@ RUN apt-get update
 RUN apt-get install -y git wget
 
 # install maven 3.6.3
-RUN wget https://downloads.apache.org/maven/maven-3/3.6.3/binaries/apache-maven-3.6.3-bin.tar.gz
-RUN tar xzf apache-maven-3.6.3-bin.tar.gz
-RUN ln -s apache-maven-3.6.3 maven
+RUN wget https://archive.apache.org/dist/maven/maven-3/3.6.3/binaries/apache-maven-3.6.3-bin.tar.gz \
+    && tar xzf apache-maven-3.6.3-bin.tar.gz \
+    && ln -s apache-maven-3.6.3 maven \
+    && rm apache-maven-3.6.3-bin.tar.gz
 ENV PATH=${PATH}:/root/maven/bin
 
 # src

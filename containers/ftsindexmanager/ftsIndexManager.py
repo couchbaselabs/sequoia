@@ -8,8 +8,8 @@ import threading
 import os
 from concurrent.futures import as_completed
 from concurrent.futures.thread import ThreadPoolExecutor
-from datetime import datetime
-from http.client import RemoteDisconnected, IncompleteRead
+from datetime import datetime, timedelta
+from http.client import RemoteDisconnected, IncompleteRead, HTTPException
 from couchbase.cluster import Cluster, ClusterOptions, QueryOptions, ClusterTimeoutOptions
 from couchbase.exceptions import CouchbaseException, QueryIndexAlreadyExistsException, TimeoutException
 from couchbase.auth import PasswordAuthenticator
@@ -606,6 +606,36 @@ HIERARCHICAL_DS_SINGLE_FIELD = [
     }
 ]
 
+HIERARCHICAL_KNN_QUERY_FIELDS = [
+    {
+        "embedding_field": "company.departments.employees.embedding",
+        "filters": [
+            {"match": "Engineer", "field": "company.departments.employees.role"},
+            {"match": "Alice", "field": "company.departments.employees.name"},
+            {"wildcard": "Bob*", "field": "company.departments.employees.name"},
+            {"match": "Manager", "field": "company.departments.employees.role"},
+        ]
+    },
+    {
+        "embedding_field": "company.departments.projects.embedding",
+        "filters": [
+            {"match": "ongoing", "field": "company.departments.projects.status"},
+            {"match": "completed", "field": "company.departments.projects.status"},
+            {"wildcard": "Project*", "field": "company.departments.projects.title"},
+            {"match": "planned", "field": "company.departments.projects.status"},
+        ]
+    },
+    {
+        "embedding_field": "company.locations.embedding",
+        "filters": [
+            {"match": "USA", "field": "company.locations.country"},
+            {"match": "London", "field": "company.locations.city"},
+            {"wildcard": "New*", "field": "company.locations.city"},
+            {"match": "UK", "field": "company.locations.country"},
+        ]
+    }
+]
+
 NUM_WORKERS = 2  # Max number of worker threads to execute queries
 FTS_PORT = 8094
 class FTSIndexManager:
@@ -655,7 +685,9 @@ class FTSIndexManager:
                                      "update_docs_on_all_collections", "run_knn_queries",
                                      "run_knn_queries_parallely",
                                      "create_hierarchical_index", "create_hierarchical_index_from_map",
-                                     "run_hierarchical_queries", "run_hierarchical_flex_queries"],
+                                     "run_hierarchical_queries", "run_hierarchical_flex_queries",
+                                     "create_hierarchical_knn_index_from_map",
+                                     "run_hierarchical_knn_queries"],
                             help="Choose an action to be performed. Valid actions : create_index, run_queries, "
                                  "delete_all_indexes, create_index_loop, item_count_check, create_hierarchical_index, "
                                  "run_hierarchical_queries",
@@ -2661,6 +2693,341 @@ class FTSIndexManager:
         status = self.run_flex_query(index_name, query)
         return status
 
+    def _build_hierarchical_knn_text_field(self, name):
+        return {
+            "enabled": True,
+            "dynamic": False,
+            "fields": [
+                {
+                    "analyzer": "en",
+                    "docvalues": True,
+                    "include_in_all": True,
+                    "include_term_vectors": True,
+                    "index": True,
+                    "name": name,
+                    "store": True,
+                    "type": "text"
+                }
+            ]
+        }
+
+    def _build_hierarchical_knn_vector_field(self, name="embedding"):
+        return {
+            "enabled": True,
+            "dynamic": False,
+            "fields": [
+                {
+                    "dims": self.vector_index_dimension,
+                    "index": True,
+                    "name": name,
+                    "similarity": "cosine",
+                    "type": "vector",
+                    "vector_index_optimized_for": "recall"
+                }
+            ]
+        }
+
+    def _build_hierarchical_knn_nested_node(self, name, properties, has_text_self_field=True):
+        node = {
+            "dynamic": False,
+            "enabled": True,
+            "nested": True,
+            "properties": properties
+        }
+        if has_text_self_field:
+            node["fields"] = [
+                {
+                    "analyzer": "en",
+                    "docvalues": True,
+                    "include_in_all": True,
+                    "include_term_vectors": True,
+                    "index": True,
+                    "name": name,
+                    "store": True,
+                    "type": "text"
+                }
+            ]
+        return node
+
+    def create_hierarchical_knn_index(self, collections, count=None, num_replica=None, num_partitions=None):
+        random.seed(datetime.now())
+
+        if not num_partitions:
+            num_partitions = random.randint(1, min(6, self.max_num_partitions))
+        if not num_replica and num_replica != 0:
+            num_replica = random.randint(0, self.max_num_replica)
+
+        for i in range(5):
+            idx_name = "bucket_" + self.bucket_name + "_hier_knn_idx_" + ''.join(
+                random.choice(string.ascii_lowercase) for i in range(5))
+            if count is not None:
+                idx_name += "_" + str(count)
+            cur_indexes = self.get_fts_index_list()
+            if idx_name not in cur_indexes:
+                break
+
+        self.log.info("Creating Hierarchical KNN index {0} on {1} with {2} replicas and {3} partitions".format(
+            idx_name, collections, num_replica, num_partitions))
+
+        scope_coll = collections[0].split(".")
+        scope = scope_coll[0]
+        coll_name = scope_coll[1]
+
+        employees_props = {
+            "embedding": self._build_hierarchical_knn_vector_field("embedding"),
+            "name": self._build_hierarchical_knn_text_field("name"),
+            "role": self._build_hierarchical_knn_text_field("role"),
+        }
+        projects_props = {
+            "embedding": self._build_hierarchical_knn_vector_field("embedding"),
+            "status": self._build_hierarchical_knn_text_field("status"),
+            "title": self._build_hierarchical_knn_text_field("title"),
+        }
+        departments_props = {
+            "employees": self._build_hierarchical_knn_nested_node("employees", employees_props),
+            "projects": self._build_hierarchical_knn_nested_node("projects", projects_props),
+            "budget": {
+                "enabled": True,
+                "dynamic": False,
+                "fields": [
+                    {
+                        "docvalues": True,
+                        "include_in_all": True,
+                        "index": True,
+                        "name": "budget",
+                        "store": True,
+                        "type": "number"
+                    }
+                ]
+            },
+            "name": self._build_hierarchical_knn_text_field("name"),
+        }
+        locations_props = {
+            "city": self._build_hierarchical_knn_text_field("city"),
+            "country": self._build_hierarchical_knn_text_field("country"),
+            "embedding": self._build_hierarchical_knn_vector_field("embedding"),
+        }
+
+        company_props = {
+            "departments": self._build_hierarchical_knn_nested_node("departments", departments_props),
+            "locations": self._build_hierarchical_knn_nested_node("locations", locations_props),
+            "id": self._build_hierarchical_knn_text_field("id"),
+            "name": self._build_hierarchical_knn_text_field("name"),
+        }
+
+        index_def_dict = {
+            "name": idx_name,
+            "type": "fulltext-index",
+            "params": {
+                "doc_config": {
+                    "docid_prefix_delim": "",
+                    "docid_regexp": "",
+                    "mode": "scope.collection.type_field",
+                    "type_field": "type"
+                },
+                "mapping": {
+                    "default_analyzer": "standard",
+                    "default_datetime_parser": "dateTimeOptional",
+                    "default_field": "_all",
+                    "default_mapping": {
+                        "dynamic": False,
+                        "enabled": False
+                    },
+                    "default_type": "_default",
+                    "docvalues_dynamic": False,
+                    "index_dynamic": False,
+                    "scoring_model": "tf-idf",
+                    "store_dynamic": False,
+                    "type_field": "_type",
+                    "types": {
+                        f"{scope}.{coll_name}": {
+                            "dynamic": False,
+                            "enabled": True,
+                            "properties": {
+                                "company": {
+                                    "dynamic": False,
+                                    "enabled": True,
+                                    "fields": [
+                                        {
+                                            "analyzer": "en",
+                                            "docvalues": True,
+                                            "include_in_all": True,
+                                            "include_term_vectors": True,
+                                            "index": True,
+                                            "name": "company",
+                                            "store": True,
+                                            "type": "text"
+                                        }
+                                    ],
+                                    "properties": company_props
+                                }
+                            }
+                        }
+                    }
+                },
+                "store": {
+                    "indexType": "scorch",
+                    "scorchMergePlanOptions": {
+                        "floorSegmentFileSize": 139810133
+                    },
+                    "scorchPersisterOptions": {
+                        "maxSizeInMemoryMergePerWorker": 419430400,
+                        "numPersisterWorkers": 4
+                    },
+                    "segmentVersion": 16
+                }
+            },
+            "sourceType": "gocbcore",
+            "sourceName": self.bucket_name,
+            "sourceParams": {},
+            "planParams": {
+                "maxPartitionsPerPIndex": 128,
+                "indexPartitions": num_partitions,
+                "numReplicas": num_replica
+            }
+        }
+
+        self.log.debug("Final hierarchical KNN index definition - \n{0}".format(json.dumps(index_def_dict, indent=2)))
+        index_definition = json.dumps(index_def_dict)
+
+        all_collections = self.get_all_collections()
+        for collection in collections:
+            if collection not in all_collections:
+                return False, "Collection did not exist. Did not create index", "None", idx_name
+
+        status, content, response = self.http_request(self.rest_url, self.fts_port, "/api/index/{0}".format(idx_name),
+                                                      method="PUT", body=index_definition)
+        return status, content, response, idx_name
+
+    def create_hierarchical_knn_indexes_from_map(self):
+        coll_list = self.get_all_collections()
+        if self.skip_default:
+            if '_default._default' in coll_list:
+                coll_list.remove('_default._default')
+
+        partition_map_list = self.index_partition_map.split(",")
+        for index_map in partition_map_list:
+            num_indexes, num_replicas, num_partitions = index_map.split(":")
+            num_indexes = int(self.scale) * int(num_indexes)
+            for i in range(num_indexes):
+                random.seed(datetime.now())
+                collections = []
+                collections.append(coll_list[i % len(coll_list)])
+                if self.collection is not None:
+                    coll = self.scope + '.' + self.collection
+                    collections = [coll]
+                self.log.info("===== Creating Hierarchical KNN index on {0} =====".format(collections))
+                status, content, response, idx_name = self.create_hierarchical_knn_index(
+                    collections,
+                    num_replica=int(num_replicas),
+                    num_partitions=int(num_partitions),
+                    count=i
+                )
+                if not status:
+                    self.log.info("Content = {0} \nResponse = {1}".format(content, response))
+                    self.log.info("Hierarchical KNN index creation on {0} did not succeed.".format(collections))
+
+    def hierarchical_knn_query_runner(self):
+        threads = []
+        queries_run = 0
+        queries_passed = 0
+        queries_failed = 0
+        with ThreadPoolExecutor(max_workers=NUM_WORKERS) as executor:
+            end_time = 0
+            print_time = 0
+            if self.duration > 0:
+                end_time = time.time() + self.duration
+            if self.print_interval > 0:
+                print_time = time.time() + self.print_interval
+            while True:
+                random.seed(datetime.now())
+                for i in range(self.num_queries_per_worker):
+                    threads.append(executor.submit(self.generate_and_run_hierarchical_knn_query))
+                    time.sleep(5)
+                for task in as_completed(threads):
+                    result = task.result()
+                    queries_run += 1
+                    if result:
+                        queries_passed += 1
+                    else:
+                        queries_failed += 1
+                if self.print_interval > 0 and time.time() > print_time:
+                    self.log.info(
+                        "======== Hierarchical KNN Queries Run = {0} | Passed = {1} | Failed = {2} ========".format(
+                            queries_run, queries_passed, queries_failed))
+                    print_time = time.time() + self.print_interval
+                if self.duration > 0 and time.time() > end_time:
+                    break
+                alive_threads = len(threading.enumerate())
+                if alive_threads > 5:
+                    self.log.info("Waiting for {0} threads to complete...".format(len(threads)))
+                    time.sleep(60)
+
+    def generate_and_run_hierarchical_knn_query(self, index_name=None):
+        index_names = self.get_fts_index_list(self.bucket_name)
+        hier_knn_index_names = [idx for idx in index_names if "_hier_knn_idx_" in idx]
+        if not hier_knn_index_names:
+            self.log.info("No hierarchical KNN indexes found for bucket {0}".format(self.bucket_name))
+            return False
+
+        try:
+            if not index_name:
+                index_name = random.choice(hier_knn_index_names)
+        except Exception as e:
+            self.log.info("Exception fetching index names : {0} - {1}".format(hier_knn_index_names, str(e)))
+            return False
+
+        query_field_config = random.choice(HIERARCHICAL_KNN_QUERY_FIELDS)
+        embedding_field = query_field_config["embedding_field"]
+
+        query_vectors = self.get_query_vectors()
+        if not query_vectors or len(query_vectors) == 0:
+            self.log.info("No query vectors available")
+            return False
+
+        query_vector = random.choice(query_vectors).tolist()
+
+        use_filter = random.choice([True, False])
+
+        knn_entry = {
+            "field": embedding_field,
+            "vector": query_vector,
+            "k": self.knn_value,
+        }
+        if use_filter:
+            filter_query = random.choice(query_field_config["filters"])
+            knn_entry["filter"] = filter_query
+            self.log.info("Running filtered hierarchical KNN query on {0}, field={1}, filter={2}".format(
+                index_name, embedding_field, filter_query))
+        else:
+            self.log.info("Running non-filtered hierarchical KNN query on {0}, field={1}".format(
+                index_name, embedding_field))
+
+        body = {
+            "query": {"match_none": {}},
+            "knn": [knn_entry],
+            "fields": ["*"],
+            "size": random.randint(5, 20),
+            "ctl": {"timeout": 120000}
+        }
+
+        fts_node_list = self.find_nodes_with_service(self.get_services_map(), "fts")
+        query_host = random.choice(fts_node_list)
+        uri = "/api/index/" + index_name + "/query"
+        status, content, response = self.http_request(query_host, self.fts_port, uri, method="POST",
+                                                      body=json.dumps(body))
+        try:
+            if status:
+                self.log.info(f'KNN Query Result - Index: {index_name}, Field: {embedding_field}, '
+                              f'Filtered: {use_filter}, Total Hits: {content.get("total_hits", 0)}')
+            else:
+                self.log.info(f'KNN Query Failed - Index: {index_name}, Field: {embedding_field}, '
+                              f'Content: {content}')
+        except Exception as e:
+            self.log.debug(str(e))
+        return status
+
+
 """
 Main method
 TODO : 1. Validation to check if indexes are created successfully
@@ -2710,6 +3077,10 @@ if __name__ == '__main__':
         ftsIndexMgr.hierarchical_query_runner()
     elif ftsIndexMgr.action == "run_hierarchical_flex_queries":
         ftsIndexMgr.run_hierarchical_flex_queries()
+    elif ftsIndexMgr.action == "create_hierarchical_knn_index_from_map":
+        ftsIndexMgr.create_hierarchical_knn_indexes_from_map()
+    elif ftsIndexMgr.action == "run_hierarchical_knn_queries":
+        ftsIndexMgr.hierarchical_knn_query_runner()
     else:
         print(
             "Invalid choice for action. Choose from the following - create_index | build_deferred_index | drop_all_indexes")

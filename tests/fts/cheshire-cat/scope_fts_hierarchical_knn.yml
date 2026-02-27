@@ -1,0 +1,41 @@
+---
+users:
+  -
+      name: bucket1
+      password: password
+      roles: admin
+      auth_domain: local
+  -
+      name: bucket2
+      password: password
+      roles: admin
+      auth_domain: local
+
+buckets:
+  -
+      name: bucket1
+      ram: 40%
+      eviction: fullEviction
+  -
+      name: bucket2
+      ram: 40%
+      eviction: fullEviction
+
+servers:
+  -
+      name: local
+      count: 12
+      ram: 90%
+      fts_ram: 70%
+      services:
+        fts: 4
+        fts_start: 5
+        query: 2
+        query_start: 3
+      rest_username: Administrator
+      rest_password: password
+      data_path: "/data"
+      index_path: "/data"
+      init_nodes: 9
+      buckets: bucket1, bucket2
+      users: bucket1, bucket2
