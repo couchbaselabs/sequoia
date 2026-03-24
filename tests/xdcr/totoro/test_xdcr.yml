@@ -33,13 +33,15 @@
   -dt Person -ac True"
   wait: true
 - image: sequoiatools/gideon:3.0.0a4
+  command: "kv --ops {{.Scale 500}} --create 50 --get 10 --delete 40  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --durability majority"
+- image: sequoiatools/gideon:3.0.0a4
   command: "kv --ops {{.Scale 500}} --create 50 --get 10 --delete 40  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}} --durability majority"
 - template: pillowfight_durability
-  args: "{{.Orchestrator}}, {{.NthBucket 2}}, -M 128 -I {{.Scale 1000}} -B {{.Scale 500}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1 --json"
+  args: "{{.Orchestrator}}, {{.NthBucket 2}}, -M 128 -I {{.Scale 10000}} -B {{.Scale 500}} -t 1  --rate-limit {{.Scale 3000}}, {{.AuthPassword}} --durability majority -c -1 --json"
 - template: pillowfight_durability
-  args: "{{.Orchestrator}}, {{.NthBucket 3}}, -M 128 -I {{.Scale 1000}} -B {{.Scale 500}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1 --json"
+  args: "{{.Orchestrator}}, {{.NthBucket 3}}, -M 128 -I {{.Scale 10000}} -B {{.Scale 500}} -t 1  --rate-limit {{.Scale 2000}}, {{.AuthPassword}} --durability majority -c -1 --json"
 - template: pillowfight_durability
-  args: "{{.Orchestrator}}, {{.NthBucket 4}}, -M 128 -I {{.Scale 1000}} -B {{.Scale 500}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1 --json"
+  args: "{{.Orchestrator}}, {{.NthBucket 4}}, -M 128 -I {{.Scale 10000}} -B {{.Scale 500}} -t 1  --rate-limit {{.Scale 2000}}, {{.AuthPassword}} --durability majority -c -1 --json"
 
 #============ Create replications ============
 - image: sequoiatools/couchbase-cli:7.0
