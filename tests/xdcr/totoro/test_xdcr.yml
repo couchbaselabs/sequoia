@@ -1,4 +1,36 @@
 - include: tests/templates/rebalance.yml, tests/templates/multinode_failure.yml, tests/templates/stats.yml, tests/templates/kv.yml
+
+###### update Tombstone Purge Interval ######
+-
+  image: sequoiatools/couchbase-cli:7.6
+  requires:  "{{eq true .DoOnce }}"
+  command: "setting-compaction -c {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}} --metadata-purge-interval 0.25 --compaction-db-percentage 30 --compaction-view-percentage 30"
+  wait: true
+
+###### enable n2n encryption & ipv4only ######
+-
+  template: disable_autofailover
+  requires:  "{{eq true .DoOnce }}"
+-
+  image: sequoiatools/couchbase-cli:7.6
+  requires:  "{{eq true .DoOnce }}"
+  command: "node-to-node-encryption -c {{.Orchestrator}}:8091 -u {{.RestUsername}} -p {{.RestPassword}} --enable"
+  wait: true
+-
+  image: sequoiatools/couchbase-cli:7.6
+  requires:  "{{eq true .DoOnce }}"
+  command: "setting-security -c {{.Orchestrator}}:8091 -u {{.RestUsername}} -p {{.RestPassword}} --set --cluster-encryption-level control"
+  wait: true
+-
+  image: sequoiatools/couchbase-cli:7.6
+  requires:  "{{eq true .DoOnce }}"
+  command: "ip-family -c {{.Orchestrator}}:8091 -u {{.RestUsername}} -p {{.RestPassword}} --set --ipv4only"
+  wait: true
+-
+  template: enable_autofailover
+  args: "120,1"
+  requires:  "{{eq true .DoOnce }}"
+
 #=========== create 20 scopes and 200 collections across 3 buckets as scope_1,scope_2 ... =============
 - image: sequoiatools/collections:1.0
   command: "-i {{.Orchestrator}}:{{$.RestPort}} -b {{.Bucket}} -o create_multi_scope_collection
@@ -42,6 +74,22 @@
   args: "{{.Orchestrator}}, {{.NthBucket 3}}, -M 128 -I {{.Scale 10000}} -B {{.Scale 500}} -t 1  --rate-limit {{.Scale 2000}}, {{.AuthPassword}} --durability majority -c -1 --json"
 - template: pillowfight_durability
   args: "{{.Orchestrator}}, {{.NthBucket 4}}, -M 128 -I {{.Scale 10000}} -B {{.Scale 500}} -t 1  --rate-limit {{.Scale 2000}}, {{.AuthPassword}} --durability majority -c -1 --json"
+
+# Enable cross-cluster versioning for few buckets ######
+- image: sequoiatools/couchbase-cli:8.0
+  requires:  "{{eq true .DoOnce }}"
+  command: "bucket-edit -c {{.Orchestrator}}:{{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket {{.NthBucket 1}} --enable-cross-cluster-versioning --force"
+  wait: true
+- command: "bucket-edit -c {{.Orchestrator}}:{{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket {{.NthBucket 4}} --enable-cross-cluster-versioning --force"
+  wait: true
+
+# Enable cross-cluster versioning in remote cluster
+- image: sequoiatools/couchbase-cli:8.0
+  requires:  "{{eq true .DoOnce }}"
+  command: "bucket-edit -c {{.Nodes | .Cluster 1 | net 0}}:{{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket {{.Nodes | .Cluster 1 | bucket 1}} --enable-cross-cluster-versioning --force"
+  wait: true
+- command: "bucket-edit -c {{.Nodes | .Cluster 1 | net 0}}:{{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket {{.Nodes | .Cluster 1 | bucket 4}} --enable-cross-cluster-versioning --force"
+  wait: true
 
 #============ Create replications ============
 - image: sequoiatools/couchbase-cli:7.0

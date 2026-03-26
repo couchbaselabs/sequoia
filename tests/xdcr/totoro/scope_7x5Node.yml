@@ -32,10 +32,12 @@ buckets:
       name: bucket0
       ram: 15%
       eviction: fullEviction
+      storage: couchstore
   -
       name: bucket1
       ram: 15%
       eviction: fullEviction
+      replica: 2
   -
       name: bucket2
       ram: 15%
@@ -57,6 +59,8 @@ servers:
       rest_username: Administrator
       rest_password: password
       init_nodes: 5
+      enable_encryption_at_rest: true
+      enable_client_certificate_handling: true
       data_path: "/data"
       index_path: "/data"
       buckets: bucket0, bucket1, bucket2, bucket3, bucket4
@@ -68,6 +72,8 @@ servers:
       rest_username: Administrator
       rest_password: password
       init_nodes: 3
+      enable_encryption_at_rest: true
+      enable_client_certificate_handling: true
       data_path: "/data"
       index_path: "/data"
       buckets: bucket0, bucket1, bucket2, bucket3, bucket4
