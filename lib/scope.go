@@ -982,6 +982,12 @@ func (s *Scope) CreateBuckets() {
 				if bucket.Rank != "" {
 					command = append(command, "--rank", bucket.Rank)
 				}
+                if bucket.ConflictResolution != "" {
+					command = append(command, "--conflict-resolution", bucket.ConflictResolution)
+				}
+                if bucket.Vbuckets != "" {
+					command = append(command, "--num-vbuckets", bucket.Vbuckets)
+				}
 				if bucket.EnableEncryptionAtRest {
 					command = append(command, "--encryption-key", "0")
 					if bucket.DekRotateEvery != "" {

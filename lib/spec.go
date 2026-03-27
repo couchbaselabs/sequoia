@@ -36,6 +36,8 @@ type BucketSpec struct {
 	HistoryRetentionSeconds string
 	EnableHistoryRetentionByDefault string
 	Rank            string
+	ConflictResolution  string
+	Vbuckets        string
 	BucketScopeSpec []BucketScopeSpec
 }
 

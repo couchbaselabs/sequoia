@@ -33,15 +33,28 @@ buckets:
       ram: 15%
       eviction: fullEviction
       storage: couchstore
+      conflictresolution : timestamp
+      rank : 2
   -
       name: bucket1
       ram: 15%
       eviction: fullEviction
       replica: 2
+      enableEncryptionAtRest: true
+      dekLifetime: 100
+      dekRotateEvery: 50
+      ddocs: scale
+      compression: active
+      rank : 1
   -
       name: bucket2
       ram: 15%
       eviction: fullEviction
+      vbuckets: 1024
+      historyretentionbytes: 2147483648
+      historyretentionseconds: 3600
+      enablehistoryretentionbydefault: 1
+      conflictresolution : timestamp
   -
       name: bucket3
       ram: 15%
@@ -50,6 +63,7 @@ buckets:
       name: bucket4
       ram: 15%
       type: ephemeral
+      conflictresolution : timestamp
 
 servers:
   -
