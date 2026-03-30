@@ -263,13 +263,13 @@
   wait: true
 
 # failover and full recover a node
--
-  template: failover_and_recover
+- template: hard_failover_node
+  args: "{{.NthDataNode 1}}"
+- template: recover_node
   args: "{{.NthDataNode 1}}, full"
+- template: rebalance
   wait: true
--
-  template: rebalance
-  wait: true
+
 -
   image: sequoiatools/cmd
   entrypoint: sleep
@@ -470,13 +470,14 @@
   wait: true
 
 # failover and full recover a node
--
-  template: failover_and_recover
+###############  Failover and addback ################
+- template: hard_failover_node
+  args: "{{.NthDataNode 1}}"
+- template: recover_node
   args: "{{.NthDataNode 1}}, full"
+- template: rebalance
   wait: true
--
-  template: rebalance
-  wait: true
+
 -
   image: sequoiatools/cmd
   entrypoint: sleep
