@@ -2,7 +2,7 @@
 
 ###### update Tombstone Purge Interval ######
 -
-  image: sequoiatools/couchbase-cli:7.6
+  image: sequoiatools/couchbase-cli:8.1
   requires:  "{{eq true .DoOnce }}"
   command: "setting-compaction -c {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}} --metadata-purge-interval 0.25 --compaction-db-percentage 30 --compaction-view-percentage 30"
   wait: true
@@ -12,17 +12,17 @@
   template: disable_autofailover
   requires:  "{{eq true .DoOnce }}"
 -
-  image: sequoiatools/couchbase-cli:7.6
+  image: sequoiatools/couchbase-cli:8.1
   requires:  "{{eq true .DoOnce }}"
   command: "node-to-node-encryption -c {{.Orchestrator}}:8091 -u {{.RestUsername}} -p {{.RestPassword}} --enable"
   wait: true
 -
-  image: sequoiatools/couchbase-cli:7.6
+  image: sequoiatools/couchbase-cli:8.1
   requires:  "{{eq true .DoOnce }}"
   command: "setting-security -c {{.Orchestrator}}:8091 -u {{.RestUsername}} -p {{.RestPassword}} --set --cluster-encryption-level control"
   wait: true
 -
-  image: sequoiatools/couchbase-cli:7.6
+  image: sequoiatools/couchbase-cli:8.1
   requires:  "{{eq true .DoOnce }}"
   command: "ip-family -c {{.Orchestrator}}:8091 -u {{.RestUsername}} -p {{.RestPassword}} --set --ipv4only"
   wait: true
@@ -263,17 +263,8 @@
   wait: true
 
 # failover and full recover a node
-- template: hard_failover_node
-  args: "{{.NthDataNode 1}}"
-- template: recover_node
-  args: "{{.NthDataNode 1}}, full"
-- template: rebalance
-  wait: true
-
--
-  image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "600"
+- template: failover_force_and_recover_wait
+  args: "{{.ActiveDataNode 1}}, full"
   wait: true
 
 #============ Kill goxdcr ============
@@ -470,18 +461,8 @@
   wait: true
 
 # failover and full recover a node
-###############  Failover and addback ################
-- template: hard_failover_node
-  args: "{{.NthDataNode 1}}"
-- template: recover_node
-  args: "{{.NthDataNode 1}}, full"
-- template: rebalance
-  wait: true
-
--
-  image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "600"
+- template: failover_force_and_recover_wait
+  args: "{{.ActiveDataNode 2}}, full"
   wait: true
 
 #============ Kill goxdcr ============

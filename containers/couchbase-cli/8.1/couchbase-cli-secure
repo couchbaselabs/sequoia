@@ -1,0 +1,25 @@
+# parses references to mounted secrets for securely performing tasks via cli
+# the following is example args:
+# CMD="collect-logs-start -c data-service.default -u {auth.admin.username} -p {auth.admin.password} --all-nodes"
+# where  {auth.admin.username} refers to the secret at path /auth/admin/username
+
+
+CMD="$@"
+
+# while VARS in CMD
+while echo $CMD | grep -q "{"; do
+  # get first var
+  VAR=$(echo $CMD | sed -e 's/[^}]*{\([^}]*\).*/\1/')
+  FILE=$(echo /$VAR | sed 's/\./\//g')
+
+  if [ -f $FILE ]; then
+    # substitue with secret value
+    VALUE=$(cat $FILE)
+  else
+    echo "$FILE: Not found"
+    exit -1
+  fi
+  CMD=$(echo $CMD | sed "s/{[^}]*}/$VALUE/")
+done
+
+/couchbase-cli/couchbase-cli $CMD
