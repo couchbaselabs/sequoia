@@ -366,23 +366,6 @@
   command: "300"
   wait: true
 
-#=========== Flush all buckets ==============
-- foreach: "{{range $i, $offset := mkrange 0 2}}"
-  image: appropriate/curl
-  command: "-u {{$.RestUsername}}:{{$.RestPassword}} -X POST
-            http://{{$.Nodes | $.Cluster 1 | net 0}}:{{$.RestPort}}/pools/default/buckets/bucket{{$offset}}/controller/doFlush"
-  wait: true
-# sleep
-- image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "300"
-  wait: true
-- foreach: "{{range $i, $offset := mkrange 0 2}}"
-  image: appropriate/curl
-  command: "-u {{$.RestUsername}}:{{$.RestPassword}} -X POST
-            http://{{$.Orchestrator}}:{{$.RestPort}}/pools/default/buckets/bucket{{$offset}}/controller/doFlush"
-  wait: true
-
 #=========== Collections settings =============
 # toggle explicit mapping for C1.bucket0 -> C2.bucket0
 - image: appropriate/curl
@@ -420,6 +403,7 @@
   entrypoint: sleep
   command: "120"
   wait: true
+
 # toggle oso mode for all buckets
 - foreach: "{{range $i, $offset := mkrange 0 2}}"
   image: appropriate/curl
@@ -452,6 +436,87 @@
   command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}}
             -a validate -rn {{.Nodes | .Cluster 1 | net 0}} -ro {{.RestPort}} -ru {{.RestUsername}}
             -rp {{.RestPassword}} -b {{.NthBucket 1}} -rb {{.NthBucket 1}}"
+  wait: true
+
+#============ Cluster Ops ============
+# Rebalance-in node
+-
+  template: add_node
+  args: "{{.NthInActiveNode 0}}"
+  wait: true
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+-
+  template: rebalance
+  wait: true
+
+#============  Swap Rebalance ################
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+-
+  template: rebalance_swap
+  args: "{{.NthInActiveNode 0}},{{.ActiveDataNode 1}}"
+  wait: true
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# failover and full recover a node
+-
+  template: failover_and_recover
+  args: "{{.NthDataNode 1}}, full"
+  wait: true
+-
+  template: rebalance
+  wait: true
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+#============ Kill goxdcr ============
+-
+  template: kill_process
+  args: "{{.NthDataNode 1}}, goxdcr"
+
+# Sleep for some more time after goxdcr-kill completes (10 minutes)
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "600"
+   wait: true
+
+#============ item count check for bucket1 ============
+- image: sequoiatools/xdcrmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}}
+            -a validate -rn {{.Nodes | .Cluster 1 | net 0}} -ro {{.RestPort}} -ru {{.RestUsername}}
+            -rp {{.RestPassword}} -b {{.NthBucket 1}} -rb {{.NthBucket 1}}"
+  wait: true
+
+#=========== Flush all buckets ==============
+- foreach: "{{range $i, $offset := mkrange 0 2}}"
+  image: appropriate/curl
+  command: "-u {{$.RestUsername}}:{{$.RestPassword}} -X POST
+            http://{{$.Nodes | $.Cluster 1 | net 0}}:{{$.RestPort}}/pools/default/buckets/bucket{{$offset}}/controller/doFlush"
+  wait: true
+# sleep
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+- foreach: "{{range $i, $offset := mkrange 0 2}}"
+  image: appropriate/curl
+  command: "-u {{$.RestUsername}}:{{$.RestPassword}} -X POST
+            http://{{$.Orchestrator}}:{{$.RestPort}}/pools/default/buckets/bucket{{$offset}}/controller/doFlush"
   wait: true
 
 #============ delete xdcr replications ============

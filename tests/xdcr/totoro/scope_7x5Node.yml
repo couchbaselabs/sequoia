@@ -30,14 +30,14 @@ users:
 buckets:
   -
       name: bucket0
-      ram: 15%
+      ram: 20%
       eviction: fullEviction
       storage: couchstore
       conflictresolution : timestamp
       rank : 2
   -
       name: bucket1
-      ram: 15%
+      ram: 20%
       eviction: fullEviction
       replica: 2
       enableEncryptionAtRest: true
@@ -57,11 +57,11 @@ buckets:
       conflictresolution : timestamp
   -
       name: bucket3
-      ram: 15%
+      ram: 10%
       type: ephemeral
   -
       name: bucket4
-      ram: 15%
+      ram: 10%
       type: ephemeral
       conflictresolution : timestamp
 
