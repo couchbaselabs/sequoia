@@ -8,5 +8,6 @@ RUN python3 -m  pip install requests six future couchbase==3.2.7 httplib2 parami
 
 COPY ftsIndexManager.py /ftsIndexManager.py
 COPY vectorloader/* vectorloader/
+COPY rrf_loader/* rrf_loader/
 
 ENTRYPOINT ["python3","ftsIndexManager.py"]

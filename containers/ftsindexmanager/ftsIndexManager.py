@@ -636,6 +636,235 @@ HIERARCHICAL_KNN_QUERY_FIELDS = [
     }
 ]
 
+RRF_MSMARCO_DS_FIELDS = [
+    {
+        "name": "passage_text",
+        "type": "text",
+        "is_nested_object": False,
+        "field_code": "passage_text",
+        "queries": [
+            {
+                "match": "what is a physician assistant",
+                "field": "passage_text",
+                "operator": "or"
+            },
+            {
+                "match": "average salary registered nurse",
+                "field": "passage_text",
+                "operator": "and"
+            },
+            {
+                "match_phrase": "cost of living in seattle",
+                "field": "passage_text"
+            },
+            {
+                "match": "define visceral",
+                "field": "passage_text",
+                "fuzziness": 1,
+                "operator": "or"
+            },
+            {
+                "disjuncts": [
+                    {
+                        "match": "medical treatment",
+                        "field": "passage_text"
+                    },
+                    {
+                        "match": "health insurance coverage",
+                        "field": "passage_text"
+                    }
+                ]
+            },
+            {
+                "match": "how long is the life cycle of a jellyfish",
+                "field": "passage_text",
+                "operator": "or"
+            },
+            {
+                "match": "side effects of ibuprofen",
+                "field": "passage_text",
+                "operator": "and"
+            },
+            {
+                "wildcard": "cardio*",
+                "field": "passage_text"
+            },
+            {
+                "prefix": "pneu",
+                "field": "passage_text"
+            }
+        ],
+        "flex_queries": [
+            "passage_text = \"what is a physician assistant\"",
+            "passage_text like \"average salary%\"",
+            "passage_text = \"medical treatment\" or passage_text = \"health insurance\"",
+            "passage_text = \"side effects of ibuprofen\""
+        ]
+    },
+    {
+        "name": "vector_data",
+        "type": "vector",
+        "is_nested_object": False,
+        "field_code": "vector_data"
+    }
+]
+
+RRF_BEIR_SCIFACT_DS_FIELDS = [
+    {
+        "name": "passage_text",
+        "type": "text",
+        "is_nested_object": False,
+        "field_code": "passage_text",
+        "queries": [
+            {
+                "match": "0-dimensional biomaterials show inductive properties",
+                "field": "passage_text",
+                "operator": "or"
+            },
+            {
+                "match": "ALDH1 expression is associated with poor prognosis",
+                "field": "passage_text",
+                "operator": "and"
+            },
+            {
+                "match_phrase": "tumor suppressor gene",
+                "field": "passage_text"
+            },
+            {
+                "match": "gene expression cancer metastasis",
+                "field": "passage_text",
+                "fuzziness": 1,
+                "operator": "or"
+            },
+            {
+                "disjuncts": [
+                    {
+                        "match": "protein folding",
+                        "field": "passage_text"
+                    },
+                    {
+                        "match": "molecular structure",
+                        "field": "passage_text"
+                    }
+                ]
+            },
+            {
+                "wildcard": "immun*",
+                "field": "passage_text"
+            },
+            {
+                "prefix": "neuro",
+                "field": "passage_text"
+            }
+        ],
+        "flex_queries": [
+            "passage_text = \"tumor suppressor gene\"",
+            "passage_text like \"immun%\"",
+            "passage_text = \"protein folding\" or passage_text = \"molecular structure\""
+        ]
+    },
+    {
+        "name": "vector_data",
+        "type": "vector",
+        "is_nested_object": False,
+        "field_code": "vector_data"
+    }
+]
+
+RRF_BEIR_NFCORPUS_DS_FIELDS = [
+    {
+        "name": "passage_text",
+        "type": "text",
+        "is_nested_object": False,
+        "field_code": "passage_text",
+        "queries": [
+            {
+                "match": "How does physical activity affect blood pressure",
+                "field": "passage_text",
+                "operator": "or"
+            },
+            {
+                "match": "vitamin D deficiency treatment",
+                "field": "passage_text",
+                "operator": "and"
+            },
+            {
+                "match_phrase": "diabetes mellitus type 2",
+                "field": "passage_text"
+            },
+            {
+                "match": "cardiovascular risk factors diet",
+                "field": "passage_text",
+                "fuzziness": 1,
+                "operator": "or"
+            },
+            {
+                "disjuncts": [
+                    {
+                        "match": "cholesterol lowering",
+                        "field": "passage_text"
+                    },
+                    {
+                        "match": "statin therapy",
+                        "field": "passage_text"
+                    }
+                ]
+            },
+            {
+                "wildcard": "hypert*",
+                "field": "passage_text"
+            },
+            {
+                "prefix": "nutri",
+                "field": "passage_text"
+            }
+        ],
+        "flex_queries": [
+            "passage_text = \"diabetes mellitus type 2\"",
+            "passage_text like \"hypert%\"",
+            "passage_text = \"cholesterol lowering\" or passage_text = \"statin therapy\""
+        ]
+    },
+    {
+        "name": "vector_data",
+        "type": "vector",
+        "is_nested_object": False,
+        "field_code": "vector_data"
+    }
+]
+
+RRF_MSMARCO_DS_SINGLE_FIELD = [
+    {
+        "name": "passage_text",
+        "type": "text",
+        "is_nested_object": False,
+        "field_code": "passage_text",
+        "queries": [
+            {
+                "match": "what is a physician assistant",
+                "field": "passage_text",
+                "operator": "or"
+            },
+            {
+                "disjuncts": [
+                    {
+                        "match": "medical treatment",
+                        "field": "passage_text"
+                    },
+                    {
+                        "match": "health insurance coverage",
+                        "field": "passage_text"
+                    }
+                ]
+            }
+        ],
+        "flex_queries": [
+            "passage_text = \"what is a physician assistant\"",
+            "passage_text = \"medical treatment\" or passage_text = \"health insurance\""
+        ]
+    }
+]
+
 NUM_WORKERS = 2  # Max number of worker threads to execute queries
 FTS_PORT = 8094
 class FTSIndexManager:
@@ -687,10 +916,11 @@ class FTSIndexManager:
                                      "create_hierarchical_index", "create_hierarchical_index_from_map",
                                      "run_hierarchical_queries", "run_hierarchical_flex_queries",
                                      "create_hierarchical_knn_index_from_map",
-                                     "run_hierarchical_knn_queries"],
+                                     "run_hierarchical_knn_queries",
+                                     "run_rrf_queries"],
                             help="Choose an action to be performed. Valid actions : create_index, run_queries, "
                                  "delete_all_indexes, create_index_loop, item_count_check, create_hierarchical_index, "
-                                 "run_hierarchical_queries",
+                                 "run_hierarchical_queries, run_rrf_queries",
                             default="create_index")
         parser.add_argument("-skip_def", "--skip_default", default=False,
                             help="skip default scope and collection")
@@ -760,6 +990,14 @@ class FTSIndexManager:
             self.idx_def_templates = copy.deepcopy(HIERARCHICAL_DS_FIELDS)
         elif self.dataset == "hierarchical_single_field":
             self.idx_def_templates = copy.deepcopy(HIERARCHICAL_DS_SINGLE_FIELD)
+        elif self.dataset == "msmarco_rrf":
+            self.idx_def_templates = copy.deepcopy(RRF_MSMARCO_DS_FIELDS)
+        elif self.dataset == "msmarco_rrf_single_field":
+            self.idx_def_templates = copy.deepcopy(RRF_MSMARCO_DS_SINGLE_FIELD)
+        elif self.dataset == "scifact_rrf":
+            self.idx_def_templates = copy.deepcopy(RRF_BEIR_SCIFACT_DS_FIELDS)
+        elif self.dataset == "nfcorpus_rrf":
+            self.idx_def_templates = copy.deepcopy(RRF_BEIR_NFCORPUS_DS_FIELDS)
         else:
             self.idx_def_templates = copy.deepcopy(VECTOR_DS_FIELDS)
         self.knn_query = {
@@ -1270,6 +1508,14 @@ class FTSIndexManager:
             ds_fields = copy.deepcopy(HOTEL_DS_SINGLE_FIELD)
         elif self.dataset == "siftsmall":
             ds_fields = copy.deepcopy(VECTOR_DS_SINGLE_FIELD)
+        elif self.dataset == "msmarco_rrf":
+            ds_fields = copy.deepcopy(RRF_MSMARCO_DS_FIELDS)
+        elif self.dataset == "msmarco_rrf_single_field":
+            ds_fields = copy.deepcopy(RRF_MSMARCO_DS_SINGLE_FIELD)
+        elif self.dataset == "scifact_rrf":
+            ds_fields = copy.deepcopy(RRF_BEIR_SCIFACT_DS_FIELDS)
+        elif self.dataset == "nfcorpus_rrf":
+            ds_fields = copy.deepcopy(RRF_BEIR_NFCORPUS_DS_FIELDS)
         elif self.store_in_xattr:
             ds_fields = copy.deepcopy(VECTOR_XATTRS_SINGLE_FIELD)
         elif self.base_64:
@@ -1498,6 +1744,14 @@ class FTSIndexManager:
             ds_fields = copy.deepcopy(HOTEL_DS_SINGLE_FIELD)
         elif self.dataset == "siftsmall":
             ds_fields = copy.deepcopy(VECTOR_DS_SINGLE_FIELD)
+        elif self.dataset == "msmarco_rrf":
+            ds_fields = copy.deepcopy(RRF_MSMARCO_DS_FIELDS)
+        elif self.dataset == "msmarco_rrf_single_field":
+            ds_fields = copy.deepcopy(RRF_MSMARCO_DS_SINGLE_FIELD)
+        elif self.dataset == "scifact_rrf":
+            ds_fields = copy.deepcopy(RRF_BEIR_SCIFACT_DS_FIELDS)
+        elif self.dataset == "nfcorpus_rrf":
+            ds_fields = copy.deepcopy(RRF_BEIR_NFCORPUS_DS_FIELDS)
         else:
             ds_fields = copy.deepcopy(VECTOR_DS_FIELDS)
         num_fields = random.randint(1, len(ds_fields))
@@ -3028,6 +3282,120 @@ class FTSIndexManager:
         return status
 
 
+    def run_rrf_queries(self):
+        """Run RRF (Reciprocal Rank Fusion) queries combining FTS text search + KNN vector search."""
+        threads = []
+        queries_run = 0
+        queries_passed = 0
+        queries_failed = 0
+
+        rrf_queries = self._load_rrf_query_docs()
+        if not rrf_queries:
+            self.log.info("No RRF query documents found. Load queries using rrf_loader first.")
+            return
+
+        self.log.info(f"Loaded {len(rrf_queries)} RRF query documents for combined text+KNN search")
+
+        with ThreadPoolExecutor(max_workers=NUM_WORKERS) as executor:
+            end_time = 0
+            print_time = 0
+            if self.duration > 0:
+                end_time = time.time() + self.duration
+            if self.print_interval > 0:
+                print_time = time.time() + self.print_interval
+            while True:
+                random.seed(datetime.now())
+                for i in range(self.num_queries_per_worker):
+                    query_doc = random.choice(rrf_queries)
+                    threads.append(executor.submit(self._run_single_rrf_query, query_doc))
+                    time.sleep(5)
+                for task in as_completed(threads):
+                    result = task.result()
+                    queries_run += 1
+                    if result:
+                        queries_passed += 1
+                    else:
+                        queries_failed += 1
+                if self.print_interval > 0 and time.time() > print_time:
+                    self.log.info(
+                        "======== RRF Queries Run = {0} | Passed = {1} | Failed = {2} ========".format(
+                            queries_run, queries_passed, queries_failed))
+                    print_time = time.time() + self.print_interval
+                if self.duration > 0 and time.time() > end_time:
+                    break
+                alive_threads = len(threading.enumerate())
+                if alive_threads > 5:
+                    self.log.info("Waiting for {0} threads to complete...".format(len(threads)))
+                    time.sleep(60)
+
+    def _load_rrf_query_docs(self):
+        """Load RRF query documents from the queries collection via N1QL."""
+        scope_name = self.scope if self.scope else "rrf_scope"
+        query = (f"SELECT q.query_id, q.query_text, q.query_vector, q.relevant_passages "
+                 f"FROM `{self.bucket_name}`.`{scope_name}`.`queries` q "
+                 f"WHERE q.type = 'query' LIMIT 1000")
+        try:
+            status, results, queryResult = self._execute_query(query)
+            if status and results:
+                query_list = list(results)
+                self.log.info(f"Loaded {len(query_list)} RRF query documents")
+                return query_list
+        except Exception as e:
+            self.log.info(f"Error loading RRF queries via N1QL: {e}")
+        return []
+
+    def _run_single_rrf_query(self, query_doc):
+        """Run a single RRF query combining text match + KNN vector search."""
+        index_names = self.get_fts_index_list(self.bucket_name)
+        if not index_names:
+            self.log.info("No FTS indexes found for RRF query")
+            return False
+
+        index_name = random.choice(index_names)
+
+        query_text = query_doc.get("query_text", "")
+        query_vector = query_doc.get("query_vector", [])
+
+        if not query_text or not query_vector:
+            self.log.info("RRF query doc missing query_text or query_vector")
+            return False
+
+        text_query = {
+            "match": query_text,
+            "field": "passage_text"
+        }
+
+        knn = [{
+            "field": "vector_data",
+            "k": self.knn_value,
+            "vector": query_vector
+        }]
+
+        self.log.info(f"Running RRF query on {index_name}: text='{query_text[:80]}...'")
+        status, content, response = self.run_fts_query(index_name, text_query, knn=knn)
+
+        try:
+            if status:
+                total_hits = content.get("total_hits", 0) if isinstance(content, dict) else 0
+                self.log.info(f"RRF Result - Index: {index_name}, Total Hits: {total_hits}, "
+                              f"Query: {query_text[:80]}")
+                relevant = query_doc.get("relevant_passages", {})
+                if relevant and isinstance(content, dict):
+                    hits = content.get("hits", [])
+                    hit_ids = [h.get("id", "") for h in hits[:self.knn_value]]
+                    relevant_pids = set(str(pid) for pid in relevant.keys())
+                    found = sum(1 for hid in hit_ids
+                                if any(rpid in hid for rpid in relevant_pids))
+                    self.log.info(f"RRF Relevance - Found {found}/{len(relevant_pids)} relevant "
+                                  f"passages in top-{self.knn_value} results")
+            else:
+                self.log.info(f"RRF Query Failed - Index: {index_name}, Content: {content}")
+        except Exception as e:
+            self.log.debug(str(e))
+
+        return status
+
+
 """
 Main method
 TODO : 1. Validation to check if indexes are created successfully
@@ -3081,6 +3449,8 @@ if __name__ == '__main__':
         ftsIndexMgr.create_hierarchical_knn_indexes_from_map()
     elif ftsIndexMgr.action == "run_hierarchical_knn_queries":
         ftsIndexMgr.hierarchical_knn_query_runner()
+    elif ftsIndexMgr.action == "run_rrf_queries":
+        ftsIndexMgr.run_rrf_queries()
     else:
         print(
             "Invalid choice for action. Choose from the following - create_index | build_deferred_index | drop_all_indexes")
