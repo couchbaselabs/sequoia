@@ -91,18 +91,30 @@
 - command: "bucket-edit -c {{.Nodes | .Cluster 1 | net 0}}:{{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket {{.Nodes | .Cluster 1 | bucket 4}} --enable-cross-cluster-versioning --force"
   wait: true
 
+#============ get remote cluster pem  ============
+- image:  appropriate/curl
+  command: "-o /tmp/remote_cluster.pem -u {{.Nodes | .Cluster 1 | .Attr `rest_username`}}:{{.Nodes | .Cluster 1 | .Attr `rest_password`}} http://{{.Nodes | .Cluster 1 | net 0}}:{{$.RestPort}}/pools/default/certificate"
+  volumes: "/tmp:/tmp"
+  wait: true
+
 #============ Create replications ============
 - image: sequoiatools/couchbase-cli:7.0
-  command:  "xdcr-setup -c {{.Orchestrator}}:{{.RestPort}} --create --xdcr-cluster-name remote
+  command:  "xdcr-setup -c {{.Orchestrator}}:{{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} 
+        --create --xdcr-cluster-name remote
         --xdcr-hostname {{.Nodes | .Cluster 1 | net 0}}
         --xdcr-username {{.Nodes | .Cluster 1 | .Attr `rest_username`}}
-        --xdcr-password {{.Nodes | .Cluster 1 | .Attr `rest_password`}}"
+        --xdcr-password {{.Nodes | .Cluster 1 | .Attr `rest_password`}}
+        --xdcr-secure-connection full  --xdcr-certificate /tmp/remote_cluster.pem"
+  volumes: "/tmp:/tmp"
   wait: true
-- command:  "xdcr-setup -c {{.Nodes | .Cluster 1 | net 0}} --create --xdcr-cluster-name remote
+
+- command:  "xdcr-setup -c {{.Nodes | .Cluster 1 | net 0}} -u {{.RestUsername}} -p {{.RestPassword}}  
+        --create --xdcr-cluster-name remote
         --xdcr-hostname {{.Orchestrator}}
         --xdcr-username {{.RestUsername}}
         --xdcr-password {{.RestPassword}}"
   wait: true
+
 # unidirectional : C1.bucket0 -> C2.bucket0
 - command: "xdcr-replicate -c {{.Orchestrator}}:{{.RestPort}}
         --create
@@ -110,6 +122,7 @@
         --xdcr-from-bucket {{.Bucket}}
         --xdcr-to-bucket {{.Bucket}}"
   wait: true
+
 # unidirectional : C1.bucket1 -> C2.bucket1
 - command: "xdcr-replicate -c {{.Orchestrator}}:{{.RestPort}}
         --create
@@ -117,6 +130,7 @@
         --xdcr-from-bucket {{.NthBucket 1}}
         --xdcr-to-bucket {{.NthBucket 1}}"
   wait: true
+
 # bi-directional: C1.bucket2 <-> C2.bucket2
 - command: "xdcr-replicate -c {{.Orchestrator}}:{{.RestPort}}
         --create
@@ -124,12 +138,14 @@
         --xdcr-from-bucket {{.NthBucket 2}}
         --xdcr-to-bucket {{.NthBucket 2}}"
   wait: true
+
 - command: "xdcr-replicate -c {{.Nodes | .Cluster 1 | net 0}}
         --create
         --xdcr-cluster-name remote
         --xdcr-from-bucket {{.NthBucket 2}}
         --xdcr-to-bucket {{.NthBucket 2}}"
   wait: true
+
 # unidirectional : C1.bucket3 -> C2.bucket3
 - command: "xdcr-replicate -c {{.Orchestrator}}:{{.RestPort}}
         --create
@@ -137,6 +153,7 @@
         --xdcr-from-bucket {{.NthBucket 3}}
         --xdcr-to-bucket {{.NthBucket 3}}"
   wait: true
+
 # unidirectional : C2.bucket4 -> C1.bucket4
 - command: "xdcr-replicate -c {{.Nodes | .Cluster 1 | net 0}}
         --create
@@ -144,7 +161,6 @@
         --xdcr-from-bucket {{.NthBucket 4}}
         --xdcr-to-bucket {{.NthBucket 4}}"
   wait: true
-
 #============ Cluster Ops ============
 # Rebalance-in node
 -
