@@ -31,6 +31,16 @@
   args: "120,1"
   requires:  "{{eq true .DoOnce }}"
 
+# Create buckets outside of scope file as we want different types of buckets/vbuckets with different settings to test various xdcr scenarios.
+-
+  image: sequoiatools/couchbase-cli:8.1
+  command:  "bucket-create -c {{.Orchestrator}}:{{.RestPort}} -u  {{.RestUsername}} -p  {{.RestPassword}} --bucket=bucket5_magma  --bucket-ramsize 2281 --bucket-type couchbase --bucket-replica 1 --enable-flush 1 --wait --bucket-eviction-policy fullEviction --conflict-resolution timestamp"
+  wait: true
+-
+  image: sequoiatools/couchbase-cli:8.1
+  command:  "bucket-create -c {{$.Nodes | $.Cluster 1 | net 0}}:{{$.RestPort}} -u  {{.RestUsername}} -p  {{.RestPassword}} --bucket=bucket5_couchstore --bucket-ramsize 2281 --bucket-type couchbase --bucket-replica 1 --enable-flush 1 --wait --bucket-eviction-policy fullEviction --storage-backend couchstore --conflict-resolution timestamp"
+  wait: true
+
 #=========== create 20 scopes and 200 collections across 3 buckets as scope_1,scope_2 ... =============
 - image: sequoiatools/collections:1.0
   command: "-i {{.Orchestrator}}:{{$.RestPort}} -b {{.Bucket}} -o create_multi_scope_collection
@@ -43,6 +53,8 @@
             -s scope- -c coll --scope_count=10 --collection_count=200"
 - command: "-i {{.Orchestrator}}:{{$.RestPort}} -b {{.NthBucket 4}} -o create_multi_scope_collection
             -s scope- -c coll --scope_count=10 --collection_count=200"
+- command: "-i {{.Orchestrator}}:{{$.RestPort}} -b bucket5_magma -o create_multi_scope_collection
+              -s scope- -c coll --scope_count=10 --collection_count=200"
 
 - image: sequoiatools/collections:1.0
   command: "-i {{$.Nodes | $.Cluster 1 | net 0}}:{{$.RestPort}} -b {{.Bucket}} -o create_multi_scope_collection
@@ -54,6 +66,8 @@
 - command: "-i {{$.Nodes | $.Cluster 1 | net 0}}:{{$.RestPort}} -b {{.NthBucket 3}} -o create_multi_scope_collection
             -s scope- -c coll --scope_count=5 --collection_count=200"
 - command: "-i {{$.Nodes | $.Cluster 1 | net 0}}:{{$.RestPort}} -b {{.NthBucket 4}} -o create_multi_scope_collection
+            -s scope- -c coll --scope_count=5 --collection_count=200"
+- command: "-i {{$.Nodes | $.Cluster 1 | net 0}}:{{$.RestPort}} -b bucket5_couchstore -o create_multi_scope_collection
             -s scope- -c coll --scope_count=5 --collection_count=200"
 
 #============ Initial data load on local ============
@@ -74,6 +88,8 @@
   args: "{{.Orchestrator}}, {{.NthBucket 3}}, -M 128 -I {{.Scale 10000}} -B {{.Scale 500}} -t 1  --rate-limit {{.Scale 2000}}, {{.AuthPassword}} --durability majority -c -1 --json"
 - template: pillowfight_durability
   args: "{{.Orchestrator}}, {{.NthBucket 4}}, -M 128 -I {{.Scale 10000}} -B {{.Scale 500}} -t 1  --rate-limit {{.Scale 2000}}, {{.AuthPassword}} --durability majority -c -1 --json"
+- template: pillowfight_durability
+  args: "{{.Orchestrator}}, bucket5_magma, -M 128 -I {{.Scale 10000}} -B {{.Scale 500}} -t 1  --rate-limit {{.Scale 2000}}, {{.AuthPassword}} --durability majority -c -1 --json"
 
 # Enable cross-cluster versioning for few buckets ######
 - image: sequoiatools/couchbase-cli:8.1
@@ -169,6 +185,22 @@
         --conflict-logging-default bucket0.scope-0.coll0
         --force"
   wait: true
+
+# bidirectional: C1.bucket5_magma <-> C2.bucket5_couchstore
+- command: "xdcr-replicate -c {{.Orchestrator}}:{{.RestPort}}
+        --create
+        --xdcr-cluster-name remote
+        --xdcr-from-bucket bucket5_magma
+        --xdcr-to-bucket bucket5_couchstore"
+  wait: true
+
+- command: "xdcr-replicate -c {{.Nodes | .Cluster 1 | net 0}}
+        --create
+        --xdcr-cluster-name remote
+        --xdcr-from-bucket bucket5_couchstore
+        --xdcr-to-bucket bucket5_magma"
+  wait: true
+
 #============ Cluster Ops ============
 # Rebalance-in node
 -
@@ -201,10 +233,16 @@
 - command: "-i {{.Orchestrator}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}}
             -n {{.Scale 500}} -pc 60 -pu 40 -pd 60 -dt Employee -de 100
             -ac True -sd True -lf True -li 1000"
+- command: "-i {{.Orchestrator}} -u {{.RestUsername}} -p {{.RestPassword}} -b bucket5_magma
+            -n {{.Scale 500}} -pc 60 -pu 40 -pd 60 -dt Employee -de 100
+            -ac True -sd True -lf True -li 1000"
 - command: "-i {{.Nodes | .Cluster 1 | net 0}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}}
             -n {{.Scale 600}} -pc 50 -pu 60 -pd 40 -dt Employee -de 600
             -ac True -sd True -lf True -li 1000"
 - command: "-i {{.Nodes | .Cluster 1 | net 0}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}}
+              -n {{.Scale 700}} -pc 40 -pu 40 -pd 60 -dt Employee -de 600
+              -ac True -sd True -lf True -li 1000"
+- command: "-i {{.Nodes | .Cluster 1 | net 0}} -u {{.RestUsername}} -p {{.RestPassword}} -b bucket5_couchstore
               -n {{.Scale 700}} -pc 40 -pu 40 -pd 60 -dt Employee -de 600
               -ac True -sd True -lf True -li 1000"
 
@@ -450,7 +488,32 @@
 - image: sequoiatools/xdcrmanager
   command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}}
             -a validate -rn {{.Nodes | .Cluster 1 | net 0}} -ro {{.RestPort}} -ru {{.RestUsername}}
+            -rp {{.RestPassword}} -b {{.Bucket}} -rb {{.Bucket}}"
+  wait: true
+- image: sequoiatools/xdcrmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}}
+            -a validate -rn {{.Nodes | .Cluster 1 | net 0}} -ro {{.RestPort}} -ru {{.RestUsername}}
             -rp {{.RestPassword}} -b {{.NthBucket 1}} -rb {{.NthBucket 1}}"
+  wait: true
+- image: sequoiatools/xdcrmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}}
+            -a validate -rn {{.Nodes | .Cluster 1 | net 0}} -ro {{.RestPort}} -ru {{.RestUsername}}
+            -rp {{.RestPassword}} -b {{.NthBucket 1}} -rb {{.NthBucket 2}}"
+  wait: true
+- image: sequoiatools/xdcrmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}}
+            -a validate -rn {{.Nodes | .Cluster 1 | net 0}} -ro {{.RestPort}} -ru {{.RestUsername}}
+            -rp {{.RestPassword}} -b {{.NthBucket 1}} -rb {{.NthBucket 3}}"
+  wait: true
+- image: sequoiatools/xdcrmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}}
+            -a validate -rn {{.Nodes | .Cluster 1 | net 0}} -ro {{.RestPort}} -ru {{.RestUsername}}
+            -rp {{.RestPassword}} -b {{.NthBucket 1}} -rb {{.NthBucket 4}}"
+  wait: true
+- image: sequoiatools/xdcrmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}}
+            -a validate -rn {{.Nodes | .Cluster 1 | net 0}} -ro {{.RestPort}} -ru {{.RestUsername}}
+            -rp {{.RestPassword}} -b bucket5_magma -rb bucket5_couchstore"
   wait: true
 
 #============ Cluster Ops ============
@@ -505,7 +568,32 @@
 - image: sequoiatools/xdcrmanager
   command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}}
             -a validate -rn {{.Nodes | .Cluster 1 | net 0}} -ro {{.RestPort}} -ru {{.RestUsername}}
+            -rp {{.RestPassword}} -b {{.Bucket}} -rb {{.Bucket}}"
+  wait: true
+- image: sequoiatools/xdcrmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}}
+            -a validate -rn {{.Nodes | .Cluster 1 | net 0}} -ro {{.RestPort}} -ru {{.RestUsername}}
             -rp {{.RestPassword}} -b {{.NthBucket 1}} -rb {{.NthBucket 1}}"
+  wait: true
+- image: sequoiatools/xdcrmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}}
+            -a validate -rn {{.Nodes | .Cluster 1 | net 0}} -ro {{.RestPort}} -ru {{.RestUsername}}
+            -rp {{.RestPassword}} -b {{.NthBucket 1}} -rb {{.NthBucket 2}}"
+  wait: true
+- image: sequoiatools/xdcrmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}}
+            -a validate -rn {{.Nodes | .Cluster 1 | net 0}} -ro {{.RestPort}} -ru {{.RestUsername}}
+            -rp {{.RestPassword}} -b {{.NthBucket 1}} -rb {{.NthBucket 3}}"
+  wait: true
+- image: sequoiatools/xdcrmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}}
+            -a validate -rn {{.Nodes | .Cluster 1 | net 0}} -ro {{.RestPort}} -ru {{.RestUsername}}
+            -rp {{.RestPassword}} -b {{.NthBucket 1}} -rb {{.NthBucket 4}}"
+  wait: true
+- image: sequoiatools/xdcrmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}}
+            -a validate -rn {{.Nodes | .Cluster 1 | net 0}} -ro {{.RestPort}} -ru {{.RestUsername}}
+            -rp {{.RestPassword}} -b bucket5_magma -rb bucket5_couchstore"
   wait: true
 
 #=========== Flush all buckets ==============
@@ -514,6 +602,7 @@
   command: "-u {{$.RestUsername}}:{{$.RestPassword}} -X POST
             http://{{$.Nodes | $.Cluster 1 | net 0}}:{{$.RestPort}}/pools/default/buckets/bucket{{$offset}}/controller/doFlush"
   wait: true
+  
 # sleep
 - image: sequoiatools/cmd
   entrypoint: sleep

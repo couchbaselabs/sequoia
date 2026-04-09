@@ -25,7 +25,16 @@ users:
       password: password
       roles: admin
       auth_domain: local
-
+  -
+      name: bucket5_magma
+      password: password
+      roles: admin
+      auth_domain: local
+  -
+      name: bucket5_couchstore
+      password: password
+      roles: admin
+      auth_domain: local
 
 buckets:
   -
@@ -78,7 +87,7 @@ servers:
       data_path: "/data"
       index_path: "/data"
       buckets: bucket0, bucket1, bucket2, bucket3, bucket4
-      users: bucket0, bucket1, bucket2, bucket3, bucket4
+      users: bucket0, bucket1, bucket2, bucket3, bucket4, bucket5_magma
   -
       name: remote
       count: 5
@@ -91,4 +100,4 @@ servers:
       data_path: "/data"
       index_path: "/data"
       buckets: bucket0, bucket1, bucket2, bucket3, bucket4
-      users: bucket0, bucket1, bucket2, bucket3, bucket4
+      users: bucket0, bucket1, bucket2, bucket3, bucket4, bucket5_couchstore
