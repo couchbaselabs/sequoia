@@ -5,7 +5,7 @@
     -
       image: "vijayviji/sshpass"
       command: "sshpass -p {{.SSHPassword}}
-                  ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0 /opt/couchbase/bin/cbbackupmgr config -a $1 -r backup"
+                  ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0 mkdir -p $1 ;chmod -R 777 $1; /opt/couchbase/bin/cbbackupmgr config -a $1 -r $2"
 
 -
 # Backup
@@ -15,34 +15,25 @@
     -
       image: "vijayviji/sshpass"
       command: "sshpass -p {{.SSHPassword}}
-                  ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0 /opt/couchbase/bin/cbbackupmgr backup -c $1 -u  {{.RestUsername}} -p  {{.RestPassword}} -a $2 -r backup -t 16"
+                  ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0 /opt/couchbase/bin/cbbackupmgr backup -c $1 -u {{.RestUsername}} -p {{.RestPassword}} -a $2 -r $3 -t 10"
 -
-# Backup & Compact
+# Resume Backup
 # $0 = Cluster to be backed up
-  name: backup_cluster_and_compact
+  name: resume_backup_cluster
   actions:
     -
       image: "vijayviji/sshpass"
       command: "sshpass -p {{.SSHPassword}}
-                  ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0 /opt/couchbase/bin/cbbackupmgr backup -c $1 -u  {{.RestUsername}} -p  {{.RestPassword}} -a $2 -r backup -t 16"
-    -
-      image: mihirkamdar/cbbackupmgr
-      command: "cbbackupcompact.py {{.Orchestrator}} {{.SSHUsername}} {{.SSHPassword}} $2"
-      wait: true
-
+                  ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0 /opt/couchbase/bin/cbbackupmgr backup -c $1 -u {{.RestUsername}} -p {{.RestPassword}} -a $2 -r $3 -t 10 --resume"
 -
-# Merge all backups & Compact
-  name: merge_backups_and_compact
+# Purge Backup
+# $0 = Cluster to be backed up
+  name: purge_backup_cluster
   actions:
-  -
-    image: mihirkamdar/cbbackupmgr
-    command: "cbbackupmerge.py {{.Orchestrator}} {{.SSHUsername}} {{.SSHPassword}} $0"
-    wait: true
-  -
-    image: mihirkamdar/cbbackupmgr
-    command: "cbbackupcompact.py {{.Orchestrator}} {{.SSHUsername}} {{.SSHPassword}} $0"
-    wait: true
-
+    -
+      image: "vijayviji/sshpass"
+      command: "sshpass -p {{.SSHPassword}}
+                  ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0 /opt/couchbase/bin/cbbackupmgr backup -c $1 -u {{.RestUsername}} -p {{.RestPassword}} -a $2 -r $3 -t 10 --purge"
 -
 # Restore
 # $0 = Destination cluster to restore to
@@ -51,7 +42,7 @@
     -
       image: "vijayviji/sshpass"
       command: "sshpass -p {{.SSHPassword}}
-                    ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0 /opt/couchbase/bin/cbbackupmgr restore -c $1 -u  {{.RestUsername}} -p  {{.RestPassword}} -a $2 -r backup  -t 16"
+                    ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0 /opt/couchbase/bin/cbbackupmgr restore -c $1 -u  {{.RestUsername}} -p  {{.RestPassword}} -a $2 -r $3 -t 10"
 
 -
 # Remove backup repo
@@ -60,4 +51,4 @@
     -
       image: "vijayviji/sshpass"
       command: "sshpass -p {{.SSHPassword}}
-                  ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0 /opt/couchbase/bin/cbbackupmgr remove -a $1 -r backup"
+                  ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0 /opt/couchbase/bin/cbbackupmgr remove -a $1 -r $2"

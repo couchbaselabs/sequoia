@@ -1,0 +1,1210 @@
+-
+  include: tests/templates/kv.yml, tests/templates/backuprestore.yml, tests/templates/rebalance.yml
+
+#### TODO : Replace query node with serviceless node
+
+-
+  section_start: initial_data_load
+
+############### Initial data loading ################
+-
+  image: sequoiatools/gideon_latest
+  command: "kv --ops {{.Scale 10000}} --create 100 --hosts {{.Orchestrator}} --bucket {{.Bucket}}  --user {{.RestUsername}} --password {{.RestPassword}}"
+  duration: 300
+  alias: GideonContainer1
+-
+  command: "kv --ops {{.Scale 10000}} --create 100 --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}} --user {{.RestUsername}} --password {{.RestPassword}}"
+  duration: 300
+  alias: GideonContainer2
+-
+  command: "kv --ops {{.Scale 10000}} --create 100 --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}} --user {{.RestUsername}} --password {{.RestPassword}}"
+  duration: 300
+  alias: GideonContainer3
+-
+  command: "kv --ops {{.Scale 10000}} --create 100 --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}} --user {{.RestUsername}} --password {{.RestPassword}}"
+  duration: 300
+  alias: GideonContainer4
+-
+  command: "kv --ops {{.Scale 10000}} --create 100 --hosts {{.Orchestrator}} --bucket {{.NthBucket 4}} --user {{.RestUsername}} --password {{.RestPassword}}"
+  duration: 300
+  alias: GideonContainer5
+
+# Wait for some time to let the load stabilize before taking backup
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "600"
+   wait: true
+-
+  section_end: initial_data_load
+
+
+-
+  section_start: incremental_backup_merge
+
+# Configure backup repo
+-
+  template: configure_backup_repo
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  wait: true
+
+############### data loading ################
+-
+  image: sequoiatools/gideon_latest
+  command: "kv --ops {{.Scale 2000}} --create 60 --update 25 --delete 20 --expire 10 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.Bucket}}  --user {{.RestUsername}} --password {{.RestPassword}}"
+  alias: GideonContainer1
+-
+  command: "kv --ops {{.Scale 2000}} --create 60 --update 25 --delete 20 --expire 10 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}} --user {{.RestUsername}} --password {{.RestPassword}}"
+  alias: GideonContainer2
+-
+  command: "kv --ops {{.Scale 2000}} --create 60 --update 25 --delete 20 --expire 10 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}} --user {{.RestUsername}} --password {{.RestPassword}}"
+  alias: GideonContainer3
+-
+  command: "kv --ops {{.Scale 2000}} --create 60 --update 25 --delete 20 --expire 10 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}} --user {{.RestUsername}} --password {{.RestPassword}}"
+  alias: GideonContainer4
+-
+  command: "kv --ops {{.Scale 2000}} --create 60 --update 25 --delete 20 --expire 10 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 4}} --user {{.RestUsername}} --password {{.RestPassword}}"
+  alias: GideonContainer5
+
+# Wait for some time to let the load stabilize before taking backup
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# Take first backup
+-
+  template: backup_cluster
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  wait: true
+
+# Rebalance out a node
+-
+  template: rebalance_out
+  args: "{{.Nodes | net 2}}"
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# Take an incremental backup
+-
+  template: backup_cluster
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  wait: true
+
+# Rebalance-in a node
+-
+  template: rebalance_in
+  args: "{{.Nodes | net 2}}"
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# Take an incremental backup
+-
+  template: backup_cluster
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  wait: true
+
+# Failover a node
+-
+  template: failover_node
+  args: "{{.Nodes | net 3}}"
+  wait: true
+-
+  template: rebalance
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# Take an incremental backup
+-
+  template: backup_cluster
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  wait: true
+
+# Rebalance-in a node
+-
+  template: rebalance_in
+  args: "{{.Nodes | net 3}}"
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# Take an incremental backup
+-
+  template: backup_cluster
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  wait: true
+
+# Failover a node
+-
+  template: failover_node
+  args: "{{.Nodes | net 2}}"
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# Take an incremental backup
+-
+  template: backup_cluster
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  wait: true
+
+# Recover node
+-
+  template: recover_node
+  args: "{{.Nodes | net 2}}, delta"
+  wait: true
+-
+  template: rebalance
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# Take an incremental backup
+-
+  template: backup_cluster
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  wait: true
+
+# Merge all backups
+-
+  image: sequoiatools/cbbackupmgr
+  command: "cbbackupmerge.py {{.Nodes | .Service `n1ql` | net 0}} {{.SSHUsername}} {{.SSHPassword}} /data/archive systemtestbackup"
+  wait: true
+
+# Hard Failover a node
+-
+  template: hard_failover_node
+  args: "{{.Nodes | net 2}}"
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# Take an incremental backup
+-
+  template: backup_cluster
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  wait: true
+
+# Recover node
+-
+  template: recover_node
+  args: "{{.Nodes | net 2}}, full"
+  wait: true
+-
+  template: rebalance
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# Take an incremental backup
+-
+  template: backup_cluster
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# Take an incremental backup
+-
+  template: backup_cluster
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  wait: true
+
+# Rebalance-out a node
+-
+  template: rebalance_out
+  args: "{{.Nodes | net 2}}"
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# Take an incremental backup
+-
+  template: backup_cluster
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# Take an incremental backup
+-
+  template: backup_cluster
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  wait: true
+
+# Auto failover node
+-
+  template: autofailover1Node
+  args: "{{.ActiveDataNode 1}}"
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "900"
+  wait: true
+
+# Take an incremental backup
+-
+  template: backup_cluster
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  wait: true
+
+# Merge all backups
+-
+  image: sequoiatools/cbbackupmgr
+  command: "cbbackupmerge.py {{.Nodes | .Service `n1ql` | net 0}} {{.SSHUsername}} {{.SSHPassword}} /data/archive systemtestbackup"
+  wait: true
+
+# Stop data loading
+-
+  client:
+    op: rm
+    container: "GideonContainer1"
+    wait: true
+-
+  client:
+    op: rm
+    container: "GideonContainer2"
+    wait: true
+-
+  client:
+    op: rm
+    container: "GideonContainer3"
+    wait: true
+-
+  client:
+    op: rm
+    container: "GideonContainer4"
+    wait: true
+-
+  client:
+    op: rm
+    container: "GideonContainer5"
+    wait: true
+
+# Wait for some time to let the load stop before flush and restore
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# Flush Bucket
+-
+  image: sequoiatools/couchbase-cli
+  command:  "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 1}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+-
+  command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 2}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+-
+  command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 3}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+-
+  command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 4}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+-
+  command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.Bucket}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+
+# Restore to all buckets
+-
+  template: restore_backup
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  wait: true
+
+-
+  section_end: incremental_backup_merge
+
+-
+  section_start: incremental_backup_full
+
+# Configure backup repo
+-
+  template: configure_backup_repo
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup1"
+  wait: true
+
+############### data loading ################
+-
+  image: sequoiatools/gideon_latest
+  command: "kv --ops {{.Scale 2000}} --create 60 --update 25 --delete 20 --expire 10 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.Bucket}}  --user {{.RestUsername}} --password {{.RestPassword}}"
+  alias: GideonContainer1
+-
+  command: "kv --ops {{.Scale 2000}} --create 60 --update 25 --delete 20 --expire 10 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}} --user {{.RestUsername}} --password {{.RestPassword}}"
+  alias: GideonContainer2
+-
+  command: "kv --ops {{.Scale 2000}} --create 60 --update 25 --delete 20 --expire 10 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}} --user {{.RestUsername}} --password {{.RestPassword}}"
+  alias: GideonContainer3
+-
+  command: "kv --ops {{.Scale 2000}} --create 60 --update 25 --delete 20 --expire 10 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}} --user {{.RestUsername}} --password {{.RestPassword}}"
+  alias: GideonContainer4
+-
+  command: "kv --ops {{.Scale 2000}} --create 60 --update 25 --delete 20 --expire 10 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 4}} --user {{.RestUsername}} --password {{.RestPassword}}"
+  alias: GideonContainer5
+
+# Wait for some time to let the load stabilize before taking backup
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# Take first backup
+-
+  template: backup_cluster
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup1"
+  wait: true
+
+# Rebalance out a node
+-
+  template: rebalance_out
+  args: "{{.Nodes | net 2}}"
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# Take an incremental backup
+-
+  template: backup_cluster
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup1"
+  wait: true
+
+# Rebalance-in a node
+-
+  template: rebalance_in
+  args: "{{.Nodes | net 2}}"
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# Take an incremental backup
+-
+  template: backup_cluster
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup1"
+  wait: true
+
+# Failover a node
+-
+  template: failover_node
+  args: "{{.Nodes | net 3}}"
+  wait: true
+-
+  template: rebalance
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# Configure backup repo
+-
+  template: configure_backup_repo
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup2"
+  wait: true
+
+# Take a full backup
+-
+  template: backup_cluster
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup2"
+  wait: true
+
+# Rebalance-in a node
+-
+  template: rebalance_in
+  args: "{{.Nodes | net 3}}"
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# Take an incremental backup
+-
+  template: backup_cluster
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup2"
+  wait: true
+
+# Failover a node
+-
+  template: failover_node
+  args: "{{.Nodes | net 2}}"
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# Take an incremental backup
+-
+  template: backup_cluster
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup2"
+  wait: true
+
+# Recover node
+-
+  template: recover_node
+  args: "{{.Nodes | net 2}}, delta"
+  wait: true
+-
+  template: rebalance
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# Configure backup repo
+-
+  template: configure_backup_repo
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup3"
+  wait: true
+
+# Take a full backup
+-
+  template: backup_cluster
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup3"
+  wait: true
+
+# Hard Failover a node
+-
+  template: hard_failover_node
+  args: "{{.Nodes | net 2}}"
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# Take an incremental backup
+-
+  template: backup_cluster
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup3"
+  wait: true
+
+# Recover node
+-
+  template: recover_node
+  args: "{{.Nodes | net 2}}, full"
+  wait: true
+-
+  template: rebalance
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# Take an incremental backup
+-
+  template: backup_cluster
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup3"
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# Configure backup repo
+-
+  template: configure_backup_repo
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup4"
+  wait: true
+
+# Take an incremental backup
+-
+  template: backup_cluster
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup4"
+  wait: true
+
+# Rebalance-out a node
+-
+  template: rebalance_out
+  args: "{{.Nodes | net 2}}"
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# Take an incremental backup
+-
+  template: backup_cluster
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup4"
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# Take an incremental backup
+-
+  template: backup_cluster
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup4"
+  wait: true
+
+# Auto failover node
+-
+  template: autofailover1Node
+  args: "{{.ActiveDataNode 1}}"
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "900"
+  wait: true
+
+# Configure backup repo
+-
+  template: configure_backup_repo
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup5"
+  wait: true
+
+# Take full backup
+-
+  template: backup_cluster
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup5"
+  wait: true
+
+# Stop data loading
+-
+  client:
+    op: rm
+    container: "GideonContainer1"
+    wait: true
+-
+  client:
+    op: rm
+    container: "GideonContainer2"
+    wait: true
+-
+  client:
+    op: rm
+    container: "GideonContainer3"
+    wait: true
+-
+  client:
+    op: rm
+    container: "GideonContainer4"
+    wait: true
+-
+  client:
+    op: rm
+    container: "GideonContainer5"
+    wait: true
+
+# Wait for some time to let the load stop before flush and restore
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# Flush Bucket
+-
+  image: sequoiatools/couchbase-cli
+  command:  "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 1}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+-
+  command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 2}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+-
+  command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 3}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+-
+  command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 4}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+-
+  command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.Bucket}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+
+# Restore to all buckets
+-
+  template: restore_backup
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup5"
+  wait: true
+
+-
+  section_end: incremental_backup_full
+
+-
+  section_start: full_backup
+
+# Configure backup repo
+-
+  template: configure_backup_repo
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup6"
+  wait: true
+
+############### data loading ################
+-
+  image: sequoiatools/gideon_latest
+  command: "kv --ops {{.Scale 2000}} --create 60 --update 25 --delete 20 --expire 10 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.Bucket}}  --user {{.RestUsername}} --password {{.RestPassword}}"
+  alias: GideonContainer1
+-
+  command: "kv --ops {{.Scale 2000}} --create 60 --update 25 --delete 20 --expire 10 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}} --user {{.RestUsername}} --password {{.RestPassword}}"
+  alias: GideonContainer2
+-
+  command: "kv --ops {{.Scale 2000}} --create 60 --update 25 --delete 20 --expire 10 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}} --user {{.RestUsername}} --password {{.RestPassword}}"
+  alias: GideonContainer3
+-
+  command: "kv --ops {{.Scale 2000}} --create 60 --update 25 --delete 20 --expire 10 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}} --user {{.RestUsername}} --password {{.RestPassword}}"
+  alias: GideonContainer4
+-
+  command: "kv --ops {{.Scale 2000}} --create 60 --update 25 --delete 20 --expire 10 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 4}} --user {{.RestUsername}} --password {{.RestPassword}}"
+  alias: GideonContainer5
+
+# Wait for some time to let the load stabilize before taking backup
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# Take first backup
+-
+  template: backup_cluster
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup6"
+  wait: true
+
+# Rebalance out a node
+-
+  template: rebalance_out
+  args: "{{.Nodes | net 2}}"
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# Configure backup repo
+-
+  template: configure_backup_repo
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup7"
+  wait: true
+
+# Take a full backup
+-
+  template: backup_cluster
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup7"
+  wait: true
+
+# Rebalance-in a node
+-
+  template: rebalance_in
+  args: "{{.Nodes | net 2}}"
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# Configure backup repo
+-
+  template: configure_backup_repo
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup8"
+  wait: true
+
+# Take a full backup
+-
+  template: backup_cluster
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup8"
+  wait: true
+
+# Failover a node
+-
+  template: failover_node
+  args: "{{.Nodes | net 3}}"
+  wait: true
+-
+  template: rebalance
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# Configure backup repo
+-
+  template: configure_backup_repo
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup9"
+  wait: true
+
+# Take a full backup
+-
+  template: backup_cluster
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup9"
+  wait: true
+
+# Rebalance-in a node
+-
+  template: rebalance_in
+  args: "{{.Nodes | net 3}}"
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# Configure backup repo
+-
+  template: configure_backup_repo
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup10"
+  wait: true
+
+# Take a full backup
+-
+  template: backup_cluster
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup10"
+  wait: true
+
+# Failover a node
+-
+  template: failover_node
+  args: "{{.Nodes | net 2}}"
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# Configure backup repo
+-
+  template: configure_backup_repo
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup11"
+  wait: true
+
+# Take a full backup
+-
+  template: backup_cluster
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup11"
+  wait: true
+
+# Recover node
+-
+  template: recover_node
+  args: "{{.Nodes | net 2}}, delta"
+  wait: true
+-
+  template: rebalance
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# Configure new backup repo
+-
+  template: configure_backup_repo
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup12"
+  wait: true
+
+# Take a full backup
+-
+  template: backup_cluster
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup12"
+  wait: true
+
+# Hard Failover a node
+-
+  template: hard_failover_node
+  args: "{{.Nodes | net 2}}"
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# Configure new backup repo
+-
+  template: configure_backup_repo
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup13"
+  wait: true
+
+# Take a full backup
+-
+  template: backup_cluster
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup13"
+  wait: true
+
+# Recover node
+-
+  template: recover_node
+  args: "{{.Nodes | net 2}}, full"
+  wait: true
+-
+  template: rebalance
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# Configure new backup repo
+-
+  template: configure_backup_repo
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup14"
+  wait: true
+
+# Take a full backup
+-
+  template: backup_cluster
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup14"
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# Configure new backup repo
+-
+  template: configure_backup_repo
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup15"
+  wait: true
+
+# Take a full backup
+-
+  template: backup_cluster
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup15"
+  wait: true
+
+# Rebalance-out a node
+-
+  template: rebalance_out
+  args: "{{.Nodes | net 2}}"
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# Configure new backup repo
+-
+  template: configure_backup_repo
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup16"
+  wait: true
+
+# Take a full backup
+-
+  template: backup_cluster
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup16"
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# Configure new backup repo
+-
+  template: configure_backup_repo
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup17"
+  wait: true
+
+# Take a full backup
+-
+  template: backup_cluster
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup17"
+  wait: true
+
+# Auto failover node
+-
+  template: autofailover1Node
+  args: "{{.ActiveDataNode 1}}"
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "900"
+  wait: true
+
+# Configure new backup repo
+-
+  template: configure_backup_repo
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup18"
+  wait: true
+
+# Take a full backup
+-
+  template: backup_cluster
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup18"
+  wait: true
+
+# Stop data loading
+-
+  client:
+    op: rm
+    container: "GideonContainer1"
+    wait: true
+-
+  client:
+    op: rm
+    container: "GideonContainer2"
+    wait: true
+-
+  client:
+    op: rm
+    container: "GideonContainer3"
+    wait: true
+-
+  client:
+    op: rm
+    container: "GideonContainer4"
+    wait: true
+-
+  client:
+    op: rm
+    container: "GideonContainer5"
+    wait: true
+
+# Wait for some time to let the load stop before flush and restore
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# Flush Bucket
+-
+  image: sequoiatools/couchbase-cli
+  command:  "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 1}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+-
+  command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 2}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+-
+  command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 3}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+-
+  command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 4}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+-
+  command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.Bucket}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+
+# Restore to all buckets
+-
+  template: restore_backup
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup18"
+  wait: true
+
+-
+  section_end: full_backup
+
+-
+  section_start: cleanup
+
+# Cleanup all backup repos
+-
+  template: clean_backup_repo
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  wait: true
+-
+  template: clean_backup_repo
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup1"
+  wait: true
+-
+  template: clean_backup_repo
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup2"
+  wait: true
+-
+  template: clean_backup_repo
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup3"
+  wait: true
+-
+  template: clean_backup_repo
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup4"
+  wait: true
+-
+  template: clean_backup_repo
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup5"
+  wait: true
+-
+  template: clean_backup_repo
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup6"
+  wait: true
+-
+  template: clean_backup_repo
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup7"
+  wait: true
+-
+  template: clean_backup_repo
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup8"
+  wait: true
+-
+  template: clean_backup_repo
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup9"
+  wait: true
+-
+  template: clean_backup_repo
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup10"
+  wait: true
+-
+  template: clean_backup_repo
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup11"
+  wait: true
+-
+  template: clean_backup_repo
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup12"
+  wait: true
+-
+  template: clean_backup_repo
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup13"
+  wait: true
+-
+  template: clean_backup_repo
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup14"
+  wait: true
+-
+  template: clean_backup_repo
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup15"
+  wait: true
+-
+  template: clean_backup_repo
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup16"
+  wait: true
+-
+  template: clean_backup_repo
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup17"
+  wait: true
+-
+  template: clean_backup_repo
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup18"
+  wait: true
+
+-
+  section_end: cleanup
