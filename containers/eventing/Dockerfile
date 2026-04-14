@@ -30,5 +30,6 @@ COPY mad-hatter/* mad-hatter/
 COPY mad-hatter/ABO/* mad-hatter/ABO/
 COPY CC/* CC/
 COPY neo/* neo/
+COPY totoro/* totoro/
 
 ENTRYPOINT ["python3"]

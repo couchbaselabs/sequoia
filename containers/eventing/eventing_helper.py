@@ -10,7 +10,7 @@ import dns.resolver
 
 
 class EventingHelper:
-    handler_map={"bucket_op":"neo/bucket_op.js","timers":"neo/timers.js","n1ql":"neo/n1ql.js","sbm":"neo/sbm.js","curl":"neo/curl.js","bucket_op_sbm":"neo/bucket_op_sbm.js"}
+    handler_map={"bucket_op":"totoro/bucket_op.js","timers":"totoro/timers.js","n1ql":"totoro/n1ql.js","sbm":"totoro/sbm.js","curl":"totoro/curl.js","bucket_op_sbm":"totoro/bucket_op_sbm.js"}
 
     def __init__(self):
         self.hostname = None

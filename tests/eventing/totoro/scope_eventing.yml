@@ -51,15 +51,38 @@ buckets:
   -
       name: bucket_op
       ram: 25%
+      eviction: fullEviction
+      storage: couchstore
+      conflictresolution: timestamp
+      rank: 2
   -
       name: timer_op
       ram: 4%
+      eviction: fullEviction
+      vbuckets: 1024
+      historyretentionbytes: 2147483648
+      historyretentionseconds: 3600
+      enablehistoryretentionbydefault: 1
+      conflictresolution: timestamp
   -
       name: source_op
       ram: 25%
+      eviction: fullEviction
+      vbuckets: 1024
+      historyretentionbytes: 2147483648
+      historyretentionseconds: 3600
+      enablehistoryretentionbydefault: 1
+      conflictresolution: timestamp
+      enableEncryptionAtRest: true
+      dekLifetime: 100
+      dekRotateEvery: 50
+      ddocs: scale
+      compression: active
   -
       name: n1ql_op
       ram: 4%
+      eviction: fullEviction
+      storage: couchstore
   -
       name: analytics_op
       ram: 4%
@@ -72,21 +95,30 @@ buckets:
   -
       name: src_bucket
       ram: 22%
+      eviction: fullEviction
+      replica: 2
+      dekLifetime: 100
+      dekRotateEvery: 50
+      ddocs: scale
+      compression: active
+      rank: 1
+      enableEncryptionAtRest: true
   -
       name: metadata
       ram: 3%
 
-
 servers: # each server tag represents a cluster
   -
       name: local
-      count: 12
+      count: 15
       ram: 90%
       eventing_ram: 90%
       index_ram: 90%
       analytics_ram: 90%
       fts_ram: 80%
       init_nodes: 9
+      enable_encryption_at_rest: true
+      enable_client_certificate_handling: true
       services:
         eventing: 2
         index: 1
