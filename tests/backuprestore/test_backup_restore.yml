@@ -1,32 +1,39 @@
 -
-  include: tests/templates/kv.yml, tests/templates/backuprestore.yml, tests/templates/rebalance.yml
+  include: tests/templates/kv.yml, tests/templates/backuprestore.yml, tests/templates/rebalance.yml, tests/templates/multinode_failure.yml
 
 #### TODO : Replace query node with serviceless node
 
 -
   section_start: initial_data_load
 
+###### update Tombstone Purge Interval ######
+-
+  image: sequoiatools/couchbase-cli:7.6
+  requires:  "{{eq true .DoOnce }}"
+  command: "setting-compaction -c {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}} --metadata-purge-interval 0.25 --compaction-db-percentage 30 --compaction-view-percentage 30"
+  wait: true
+
 ############### Initial data loading ################
 -
   image: sequoiatools/gideon_latest
-  command: "kv --ops {{.Scale 10000}} --create 100 --hosts {{.Orchestrator}} --bucket {{.Bucket}}  --user {{.RestUsername}} --password {{.RestPassword}}"
-  duration: 300
+  command: "kv --ops {{.Scale 5000}} --create 100 --hosts {{.Orchestrator}} --bucket {{.Bucket}}  --user {{.RestUsername}} --password {{.RestPassword}}"
+  duration: 600
   alias: GideonContainer1
 -
-  command: "kv --ops {{.Scale 10000}} --create 100 --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}} --user {{.RestUsername}} --password {{.RestPassword}}"
-  duration: 300
+  command: "kv --ops {{.Scale 5000}} --create 100 --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}} --user {{.RestUsername}} --password {{.RestPassword}}"
+  duration: 600
   alias: GideonContainer2
 -
-  command: "kv --ops {{.Scale 10000}} --create 100 --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}} --user {{.RestUsername}} --password {{.RestPassword}}"
-  duration: 300
+  command: "kv --ops {{.Scale 5000}} --create 100 --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}} --user {{.RestUsername}} --password {{.RestPassword}}"
+  duration: 600
   alias: GideonContainer3
 -
-  command: "kv --ops {{.Scale 10000}} --create 100 --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}} --user {{.RestUsername}} --password {{.RestPassword}}"
-  duration: 300
+  command: "kv --ops {{.Scale 5000}} --create 100 --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}} --user {{.RestUsername}} --password {{.RestPassword}}"
+  duration: 600
   alias: GideonContainer4
 -
-  command: "kv --ops {{.Scale 10000}} --create 100 --hosts {{.Orchestrator}} --bucket {{.NthBucket 4}} --user {{.RestUsername}} --password {{.RestPassword}}"
-  duration: 300
+  command: "kv --ops {{.Scale 5000}} --create 100 --hosts {{.Orchestrator}} --bucket {{.NthBucket 4}} --user {{.RestUsername}} --password {{.RestPassword}}"
+  duration: 600
   alias: GideonContainer5
 
 # Wait for some time to let the load stabilize before taking backup
@@ -37,7 +44,6 @@
    wait: true
 -
   section_end: initial_data_load
-
 
 -
   section_start: incremental_backup_merge
@@ -51,19 +57,19 @@
 ############### data loading ################
 -
   image: sequoiatools/gideon_latest
-  command: "kv --ops {{.Scale 2000}} --create 60 --update 25 --delete 20 --expire 10 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.Bucket}}  --user {{.RestUsername}} --password {{.RestPassword}}"
+  command: "kv --ops {{.Scale 1000}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.Bucket}}  --user {{.RestUsername}} --password {{.RestPassword}}"
   alias: GideonContainer1
 -
-  command: "kv --ops {{.Scale 2000}} --create 60 --update 25 --delete 20 --expire 10 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}} --user {{.RestUsername}} --password {{.RestPassword}}"
+  command: "kv --ops {{.Scale 1000}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}} --user {{.RestUsername}} --password {{.RestPassword}}"
   alias: GideonContainer2
 -
-  command: "kv --ops {{.Scale 2000}} --create 60 --update 25 --delete 20 --expire 10 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}} --user {{.RestUsername}} --password {{.RestPassword}}"
+  command: "kv --ops {{.Scale 1000}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}} --user {{.RestUsername}} --password {{.RestPassword}}"
   alias: GideonContainer3
 -
-  command: "kv --ops {{.Scale 2000}} --create 60 --update 25 --delete 20 --expire 10 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}} --user {{.RestUsername}} --password {{.RestPassword}}"
+  command: "kv --ops {{.Scale 1000}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}} --user {{.RestUsername}} --password {{.RestPassword}}"
   alias: GideonContainer4
 -
-  command: "kv --ops {{.Scale 2000}} --create 60 --update 25 --delete 20 --expire 10 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 4}} --user {{.RestUsername}} --password {{.RestPassword}}"
+  command: "kv --ops {{.Scale 1000}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 4}} --user {{.RestUsername}} --password {{.RestPassword}}"
   alias: GideonContainer5
 
 # Wait for some time to let the load stabilize before taking backup
@@ -285,6 +291,19 @@
   command: "600"
   wait: true
 
+# Rebalance-in a node
+-
+  template: rebalance_in
+  args: "{{.Nodes | net 2}}"
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
 # Take an incremental backup
 -
   template: backup_cluster
@@ -302,6 +321,483 @@
   image: sequoiatools/cmd
   entrypoint: sleep
   command: "900"
+  wait: true
+
+# Take an incremental backup
+-
+  template: backup_cluster
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  wait: true
+
+# Merge all backups
+-
+  image: sequoiatools/cbbackupmgr
+  command: "cbbackupmerge.py {{.Nodes | .Service `n1ql` | net 0}} {{.SSHUsername}} {{.SSHPassword}} /data/archive systemtestbackup"
+  wait: true
+
+# Change auto failover settings back to default
+-
+    template: enable_autofailover
+    args: "120,1"
+    wait: true
+
+# Chaos: Rebalance out and kill memcached during rebalance, then retry
+-
+  template: rebalance_out_wo_wait
+  args: "{{.Nodes | net 2}}"
+  expect_error: true
+
+# Wait 1 minute before killing memcached (let rebalance start)
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "60"
+  wait: true
+
+# Kill memcached on a node during rebalance
+-
+  template: kill_process
+  args: "{{.Nodes | net 3}}, memcached"
+
+# Wait for rebalance to fail
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "120"
+  wait: true
+
+# Wait before retry
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "60"
+  wait: true
+
+# Retry rebalance out
+-
+  template: rebalance_out
+  args: "{{.Nodes | net 2}}"
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# Rebalance in the node to restore cluster
+-
+  template: rebalance_in
+  args: "{{.Nodes | net 2}}"
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# Take an incremental backup
+-
+  template: backup_cluster
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# Chaos : Kill memcached before a backup
+# Kill memcached on a node randomly
+-
+  template: kill_process
+  args: "{{.Nodes | net 3}}, memcached"
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# Take an incremental backup
+-
+  template: backup_cluster
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# Chaos: Stop couchbase on one node during incremental backup
+-
+  template: backup_cluster
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  expect_error: true
+
+# Wait for backup to start
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "60"
+  wait: true
+
+# Stop couchbase on a node during backup
+-
+  image: sequoiatools/cbutil
+  command: "/cbinit.py {{.Nodes | net 3}} root couchbase stop"
+  wait: true
+
+# Wait for backup to fail
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "60"
+  wait: true
+
+# Start couchbase on the node
+-
+  image: sequoiatools/cbutil
+  command: "/cbinit.py {{.Nodes | net 3}} root couchbase start"
+  wait: true
+
+# Wait for node to come back up
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "120"
+  wait: true
+
+# Resume the backup
+-
+  template: resume_backup_cluster
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# Chaos: Kill memcached during incremental backup and resume
+-
+  template: backup_cluster
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  expect_error: true
+
+# Wait for backup to start
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "60"
+  wait: true
+
+# Kill memcached on a node during backup
+-
+  template: kill_process
+  args: "{{.Nodes | net 3}}, memcached"
+
+# Wait for backup to fail and memcached to come back up
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "120"
+  wait: true
+
+# Resume the backup
+-
+  template: resume_backup_cluster
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# Chaos: Kill memcached during incremental backup and purge
+-
+  template: backup_cluster
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  expect_error: true
+
+# Wait for backup to start
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "60"
+  wait: true
+
+# Kill memcached on a node during backup
+-
+  template: kill_process
+  args: "{{.Nodes | net 3}}, memcached"
+
+# Wait for backup to fail and memcached to come back up
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "120"
+  wait: true
+
+# Purge the backup and restart
+-
+  template: purge_backup_cluster
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# Rebalance out and rebalance in a node before backup
+-
+  template: rebalance_out
+  args: "{{.Nodes | net 2}}"
+  wait: true
+-  
+  template: rebalance_in
+  args: "{{.Nodes | net 2}}"
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# Chaos: Kill cbbackupmgr process during backup and resume
+-
+  template: backup_cluster
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  expect_error: true
+
+# Wait for backup to start
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "60"
+  wait: true
+
+# Kill cbbackupmgr process on the backup node
+-
+  template: kill_process
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, cbbackupmgr"
+
+# Wait for backup to fail
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "60"
+  wait: true
+
+# Resume the backup
+-
+  template: resume_backup_cluster
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  wait: true
+
+# Merge all backups
+-
+  image: sequoiatools/cbbackupmgr
+  command: "cbbackupmerge.py {{.Nodes | .Service `n1ql` | net 0}} {{.SSHUsername}} {{.SSHPassword}} /data/archive systemtestbackup"
+  wait: true
+
+# Stop data loading
+-
+  client:
+    op: rm
+    container: "GideonContainer1"
+    wait: true
+-
+  client:
+    op: rm
+    container: "GideonContainer2"
+    wait: true
+-
+  client:
+    op: rm
+    container: "GideonContainer3"
+    wait: true
+-
+  client:
+    op: rm
+    container: "GideonContainer4"
+    wait: true
+-
+  client:
+    op: rm
+    container: "GideonContainer5"
+    wait: true
+
+# Wait for some time to let the load stop before flush and restore
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# Flush Bucket
+-
+  image: sequoiatools/couchbase-cli
+  command:  "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 1}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+-
+  command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 2}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+-
+  command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 3}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+-
+  command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 4}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+-
+  command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.Bucket}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+
+# Restore to all buckets
+-
+  template: restore_backup
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  wait: true
+
+# Flush buckets again and try restoring again
+-
+  image: sequoiatools/couchbase-cli
+  command:  "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 1}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+-
+  command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 2}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+-
+  command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 3}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+-
+  command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 4}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+-
+  command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.Bucket}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+
+# Restore to all buckets
+-
+  template: restore_backup
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  wait: true
+
+############### data loading ################
+-
+  image: sequoiatools/gideon_latest
+  command: "kv --ops {{.Scale 1000}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.Bucket}}  --user {{.RestUsername}} --password {{.RestPassword}}"
+  alias: GideonContainer1
+-
+  command: "kv --ops {{.Scale 1000}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}} --user {{.RestUsername}} --password {{.RestPassword}}"
+  alias: GideonContainer2
+-
+  command: "kv --ops {{.Scale 1000}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}} --user {{.RestUsername}} --password {{.RestPassword}}"
+  alias: GideonContainer3
+-
+  command: "kv --ops {{.Scale 1000}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}} --user {{.RestUsername}} --password {{.RestPassword}}"
+  alias: GideonContainer4
+-
+  command: "kv --ops {{.Scale 1000}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 4}} --user {{.RestUsername}} --password {{.RestPassword}}"
+  alias: GideonContainer5
+
+# Wait for some time to let the load stabilize before taking backup
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# Rebalance out a node
+-
+  template: rebalance_out
+  args: "{{.Nodes | net 2}}"
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# Take an incremental backup
+-
+  template: backup_cluster
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  wait: true
+
+# Rebalance-in a node
+-
+  template: rebalance_in
+  args: "{{.Nodes | net 2}}"
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# Take an incremental backup
+-
+  template: backup_cluster
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  wait: true
+
+# Failover a node
+-
+  template: failover_node
+  args: "{{.Nodes | net 3}}"
+  wait: true
+-
+  template: rebalance
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# Take an incremental backup
+-
+  template: backup_cluster
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  wait: true
+
+# Rebalance-in a node
+-
+  template: rebalance_in
+  args: "{{.Nodes | net 3}}"
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
   wait: true
 
 # Take an incremental backup
@@ -374,6 +870,274 @@
   args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
   wait: true
 
+# Flush buckets again and try restoring again with chaos
+-
+  image: sequoiatools/couchbase-cli
+  command:  "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 1}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+-
+  command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 2}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+-
+  command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 3}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+-
+  command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 4}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+-
+  command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.Bucket}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+
+# Kill memcached on a node before restore
+-
+  template: kill_process
+  args: "{{.Nodes | net 3}}, memcached"
+
+# Wait for node to come back up
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+# Restore to all buckets
+-
+  template: restore_backup
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  wait: true
+
+############### data loading ################
+-
+  image: sequoiatools/gideon_latest
+  command: "kv --ops {{.Scale 1000}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.Bucket}}  --user {{.RestUsername}} --password {{.RestPassword}}"
+  alias: GideonContainer1
+-
+  command: "kv --ops {{.Scale 1000}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}} --user {{.RestUsername}} --password {{.RestPassword}}"
+  alias: GideonContainer2
+-
+  command: "kv --ops {{.Scale 1000}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}} --user {{.RestUsername}} --password {{.RestPassword}}"
+  alias: GideonContainer3
+-
+  command: "kv --ops {{.Scale 1000}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}} --user {{.RestUsername}} --password {{.RestPassword}}"
+  alias: GideonContainer4
+-
+  command: "kv --ops {{.Scale 1000}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 4}} --user {{.RestUsername}} --password {{.RestPassword}}"
+  alias: GideonContainer5
+
+# Wait for some time to let the load stabilize before taking backup
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# Kill memcached on a node after restore
+-
+  template: kill_process
+  args: "{{.Nodes | net 3}}, memcached"
+
+# Wait for node to come back up
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+# Wait for some time to let the load stabilize before taking backup
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# Rebalance out a node
+-
+  template: rebalance_out
+  args: "{{.Nodes | net 2}}"
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# Take an incremental backup
+-
+  template: backup_cluster
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  wait: true
+
+# Rebalance-in a node
+-
+  template: rebalance_in
+  args: "{{.Nodes | net 2}}"
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# Take an incremental backup
+-
+  template: backup_cluster
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  wait: true
+
+# Merge all backups
+-
+  image: sequoiatools/cbbackupmgr
+  command: "cbbackupmerge.py {{.Nodes | .Service `n1ql` | net 0}} {{.SSHUsername}} {{.SSHPassword}} /data/archive systemtestbackup"
+  wait: true
+
+# Stop data loading
+-
+  client:
+    op: rm
+    container: "GideonContainer1"
+    wait: true
+-
+  client:
+    op: rm
+    container: "GideonContainer2"
+    wait: true
+-
+  client:
+    op: rm
+    container: "GideonContainer3"
+    wait: true
+-
+  client:
+    op: rm
+    container: "GideonContainer4"
+    wait: true
+-
+  client:
+    op: rm
+    container: "GideonContainer5"
+    wait: true
+
+# Wait for some time to let the load stop before flush and restore
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# Flush Bucket
+-
+  image: sequoiatools/couchbase-cli
+  command:  "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 1}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+-
+  command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 2}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+-
+  command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 3}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+-
+  command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 4}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+-
+  command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.Bucket}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+
+# Chaos : Kill cbbackupmgr process during restore and resume
+-
+  template: restore_backup
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+
+# Wait for restore to start
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "60"
+  wait: true
+
+# Kill cbbackupmgr process on the backup node
+-
+  template: kill_process
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, cbbackupmgr"
+
+# Wait for restore to fail
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "60"
+  wait: true
+
+# Resume the restore
+-
+  template: resume_restore_backup
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  wait: true
+
+# Wait after restore
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+# Flush Bucket again
+-
+  image: sequoiatools/couchbase-cli
+  command:  "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 1}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+-
+  command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 2}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+-
+  command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 3}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+-
+  command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 4}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+-
+  command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.Bucket}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+
+# Chaos : Kill cbbackupmgr process during restore and purge
+-
+  template: restore_backup
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+
+# Wait for restore to start
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "60"
+  wait: true
+
+# Kill cbbackupmgr process on the backup node
+-
+  template: kill_process
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, cbbackupmgr"
+
+# Wait for restore to fail
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "60"
+  wait: true
+
+# Purge the restore
+-
+  template: purge_restore_backup
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  wait: true
+
+
+# Clean backup repo
+-
+  template: clean_backup_repo
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  wait: true
+
 -
   section_end: incremental_backup_merge
 
@@ -389,19 +1153,19 @@
 ############### data loading ################
 -
   image: sequoiatools/gideon_latest
-  command: "kv --ops {{.Scale 2000}} --create 60 --update 25 --delete 20 --expire 10 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.Bucket}}  --user {{.RestUsername}} --password {{.RestPassword}}"
+  command: "kv --ops {{.Scale 1000}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.Bucket}}  --user {{.RestUsername}} --password {{.RestPassword}}"
   alias: GideonContainer1
 -
-  command: "kv --ops {{.Scale 2000}} --create 60 --update 25 --delete 20 --expire 10 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}} --user {{.RestUsername}} --password {{.RestPassword}}"
+  command: "kv --ops {{.Scale 1000}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}} --user {{.RestUsername}} --password {{.RestPassword}}"
   alias: GideonContainer2
 -
-  command: "kv --ops {{.Scale 2000}} --create 60 --update 25 --delete 20 --expire 10 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}} --user {{.RestUsername}} --password {{.RestPassword}}"
+  command: "kv --ops {{.Scale 1000}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}} --user {{.RestUsername}} --password {{.RestPassword}}"
   alias: GideonContainer3
 -
-  command: "kv --ops {{.Scale 2000}} --create 60 --update 25 --delete 20 --expire 10 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}} --user {{.RestUsername}} --password {{.RestPassword}}"
+  command: "kv --ops {{.Scale 1000}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}} --user {{.RestUsername}} --password {{.RestPassword}}"
   alias: GideonContainer4
 -
-  command: "kv --ops {{.Scale 2000}} --create 60 --update 25 --delete 20 --expire 10 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 4}} --user {{.RestUsername}} --password {{.RestPassword}}"
+  command: "kv --ops {{.Scale 1000}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 4}} --user {{.RestUsername}} --password {{.RestPassword}}"
   alias: GideonContainer5
 
 # Wait for some time to let the load stabilize before taking backup
@@ -724,6 +1488,28 @@
   args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup5"
   wait: true
 
+# Clean backup repo
+-
+  template: clean_backup_repo
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup1"
+  wait: true
+-
+  template: clean_backup_repo
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup2"
+  wait: true
+-
+  template: clean_backup_repo
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup3"
+  wait: true
+-
+  template: clean_backup_repo
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup4"
+  wait: true
+-
+  template: clean_backup_repo
+  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup5"
+  wait: true
+
 -
   section_end: incremental_backup_full
 
@@ -739,19 +1525,19 @@
 ############### data loading ################
 -
   image: sequoiatools/gideon_latest
-  command: "kv --ops {{.Scale 2000}} --create 60 --update 25 --delete 20 --expire 10 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.Bucket}}  --user {{.RestUsername}} --password {{.RestPassword}}"
+  command: "kv --ops {{.Scale 1000}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.Bucket}}  --user {{.RestUsername}} --password {{.RestPassword}}"
   alias: GideonContainer1
 -
-  command: "kv --ops {{.Scale 2000}} --create 60 --update 25 --delete 20 --expire 10 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}} --user {{.RestUsername}} --password {{.RestPassword}}"
+  command: "kv --ops {{.Scale 1000}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}} --user {{.RestUsername}} --password {{.RestPassword}}"
   alias: GideonContainer2
 -
-  command: "kv --ops {{.Scale 2000}} --create 60 --update 25 --delete 20 --expire 10 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}} --user {{.RestUsername}} --password {{.RestPassword}}"
+  command: "kv --ops {{.Scale 1000}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}} --user {{.RestUsername}} --password {{.RestPassword}}"
   alias: GideonContainer3
 -
-  command: "kv --ops {{.Scale 2000}} --create 60 --update 25 --delete 20 --expire 10 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}} --user {{.RestUsername}} --password {{.RestPassword}}"
+  command: "kv --ops {{.Scale 1000}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}} --user {{.RestUsername}} --password {{.RestPassword}}"
   alias: GideonContainer4
 -
-  command: "kv --ops {{.Scale 2000}} --create 60 --update 25 --delete 20 --expire 10 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 4}} --user {{.RestUsername}} --password {{.RestPassword}}"
+  command: "kv --ops {{.Scale 1000}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 4}} --user {{.RestUsername}} --password {{.RestPassword}}"
   alias: GideonContainer5
 
 # Wait for some time to let the load stabilize before taking backup
@@ -1122,37 +1908,7 @@
   args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup18"
   wait: true
 
--
-  section_end: full_backup
-
--
-  section_start: cleanup
-
 # Cleanup all backup repos
--
-  template: clean_backup_repo
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
-  wait: true
--
-  template: clean_backup_repo
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup1"
-  wait: true
--
-  template: clean_backup_repo
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup2"
-  wait: true
--
-  template: clean_backup_repo
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup3"
-  wait: true
--
-  template: clean_backup_repo
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup4"
-  wait: true
--
-  template: clean_backup_repo
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup5"
-  wait: true
 -
   template: clean_backup_repo
   args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup6"
@@ -1207,4 +1963,4 @@
   wait: true
 
 -
-  section_end: cleanup
+  section_end: full_backup

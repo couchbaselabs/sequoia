@@ -43,7 +43,24 @@
       image: "vijayviji/sshpass"
       command: "sshpass -p {{.SSHPassword}}
                     ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0 /opt/couchbase/bin/cbbackupmgr restore -c $1 -u  {{.RestUsername}} -p  {{.RestPassword}} -a $2 -r $3 -t 10"
-
+-
+# Resume Restore
+# $0 = Destination cluster to restore to
+  name: resume_restore_backup
+  actions:
+    -
+      image: "vijayviji/sshpass"
+      command: "sshpass -p {{.SSHPassword}}
+                    ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0 /opt/couchbase/bin/cbbackupmgr restore -c $1 -u  {{.RestUsername}} -p  {{.RestPassword}} -a $2 -r $3 -t 10 --resume"
+-
+# Purge Restore
+# $0 = Destination cluster to restore to
+  name: purge_restore_backup
+  actions:
+    -
+      image: "vijayviji/sshpass"
+      command: "sshpass -p {{.SSHPassword}}
+                    ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0 /opt/couchbase/bin/cbbackupmgr restore -c $1 -u  {{.RestUsername}} -p  {{.RestPassword}} -a $2 -r $3 -t 10 --purge"
 -
 # Remove backup repo
   name: clean_backup_repo
