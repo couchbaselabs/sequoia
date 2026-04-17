@@ -37,13 +37,18 @@ docker build -t sequoiatools/testrunner containers/testrunner
 
 ## Repo Layout
 
-- `lib/` - Core Go framework (test execution, scope management, Docker providers, REST API client)
-  - `run.go` - CLI entry point
+- `run.go` - CLI entry point (package main, imports from `lib/`)
+- `lib/` - Core Go framework (package sequoia)
   - `test.go` - Test runner and action execution
   - `scope.go` - Infrastructure provisioning and configuration
-  - `provider.go` - Docker/File/Dev provider implementations
+  - `provider.go` - Docker/File/Dev/Swarm provider implementations
   - `spec.go` - YAML spec structures for servers, buckets, users, actions
   - `container.go` - Docker container lifecycle management
+  - `rest.go` - REST API client for Couchbase services
+  - `template.go` - Template rendering for test YAML
+  - `flags.go` - CLI flag definitions
+  - `hostserializer.go` - Host serialization to `hosts.json`
+  - `common.go` - Shared utilities
 - `containers/` - Docker test frameworks
   - `testrunner/` - Python-based test framework (submodule: github.com/couchbase/testrunner)
   - `perfrunner/` - Performance testing framework
@@ -55,6 +60,7 @@ docker build -t sequoiatools/testrunner containers/testrunner
   - `templates/` - Reusable test snippets (kv.yml, n1ql.yml, fts.yml, etc.)
   - Service directories: `analytics/`, `eventing/`, `fts/`, `n1ql/`, `view/`, `xdcr/`, `mobile/`, `2i/`, `integration/`, etc.
 - `config.yml` - Default configuration (client endpoint, provider, scope/test defaults)
+- `local/` - Local override files (`scope_local.yml`, `test_local.yml`) for dev use
 - `build.sh` - Container build script
 
 ## Development Patterns and Constraints
@@ -84,10 +90,21 @@ docker build -t sequoiatools/testrunner containers/testrunner
 - Support for conditional waits, retries, and duration-based tests
 - Automatic cleanup via `skip_teardown` flag
 
+## Toolchain Requirements
+
+- **Go version:** 1.24.0 (see `go.mod`)
+- **Docker:** Required for the default docker provider; ensure daemon is running
+- **Linting:** `golangci-lint` — config in `.golangci.yml`
+  - Enabled linters: `govet`, `staticcheck`, `errcheck`, `ineffassign`, `unused`, `gocritic`, `misspell`
+  - Formatters: `gofmt`, `goimports` (local prefix: `github.com/couchbaselabs/sequoia`)
+  - Run: `golangci-lint run`
+- **Pre-commit hooks:** `.pre-commit-config.yaml` — install with `pre-commit install`
+
 ## Validation and Evidence Required Before Completion
 
 **Code Changes:**
 - Go code: Ensure `go build -o sequoia` succeeds without errors
+- Linting: Run `golangci-lint run` and resolve any reported issues
 - Docker containers: Verify container builds with `docker build` or `./build.sh`
 - Test YAML: Validate YAML syntax and spec structure
 
@@ -131,8 +148,7 @@ docker build -t sequoiatools/testrunner containers/testrunner
 
 ## Unknowns
 
-- No Go test files found in the repo (no unit test evidence)
+- No Go unit test files in the repo (integration tests only, via Docker)
 - No CI/CD pipelines detected (no .github/, .gitlab-ci.yml, etc.)
-- No linting or formatting configurations visible (no golangci-lint, fmt commands)
-- Documentation wiki referenced (Test Syntax, Providers) but not in this repo
+- Documentation wiki referenced (Test Syntax, Providers) exists externally, not in this repo
 - Specific version compatibility matrix for Couchbase releases not documented locally
