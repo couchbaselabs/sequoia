@@ -1,5 +1,5 @@
 -
-  include: tests/templates/kv.yml, tests/templates/vegeta.yml, tests/templates/rebalance.yml, tests/templates/n1ql.yml
+  include: tests/templates/kv.yml, tests/templates/vegeta.yml, tests/templates/rebalance.yml, tests/templates/n1ql.yml, tests/templates/analytics.yml
 
 ####### cleanup stale handlers from previous runs #####
 - image: sequoiatools/eventing:8.1
@@ -76,24 +76,52 @@
 - command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 8}} -o create_multi_scope_collection -s scope_ -c coll --scope_count=10 --collection_count=100 --collection_distribution=uniform"
   wait: true
 
+##### create analytics shadow dataset on analytics_op #####
+- image: sequoiatools/analyticsmanager:1.0
+  command: "-i {{.AnalyticsNode | noport}} -b {{.NthBucket 5}} -o create_cbas_infra --dv_cnt 1 --ds_cnt 1 --idx_cnt 0 --data_src gideon --inc_scp scope_0 --inc_coll coll0 -w false --ingestion_timeout 1800 --api_timeout 3600"
+  wait: true
+
+- template: analytics_rest
+  args: "create index idx_result1 on ds_1\\(result:string);"
+  wait: true
+
+##### create FTS index on fts_op #####
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 6}} -m 1:0:1 -s 1 -sc scope_0 -coll coll0 -a create_index_from_map"
+  wait: true
+
+############### data loading for fts bucket ################
+- image: sequoiatools/catapult
+  command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 6}} -n {{.Scale 100000}} -pc 50 -pu 25 -pd 25
+    -dt Hotel -de {{.Scale 10000}} -nt 1 -ds 1000 -lf True -li 60 -fu price,free_parking -sc scope_0 -coll coll0"
+
+############### initial data loading ################
+- image: sequoiatools/magmaloader
+  command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.Bucket}} --start 0 --end 10000 --doc_template Hotel --all_coll true"
+  requires: "{{eq true .DoOnce }}"
+  wait: true
+- command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 1}} --start 0 --end 10000 --doc_template Hotel --all_coll true"
+  requires: "{{eq true .DoOnce }}"
+  wait: true
+
 ####### load data into few collections #######
 -
   image: sequoiatools/gideon_latest
-  command: "kv --ops {{.Scale 5000}} --create 30 --get 70  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --scope scope_0 --collection coll0,coll1,coll2,coll3,coll4"
+  command: "kv --ops {{.Scale 10000}} --create 70 --get 30  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --scope scope_0 --collection coll0,coll1,coll2,coll3,coll4"
   duration: 1000
-- command: "kv --ops {{.Scale 5000}} --create 30 --get 70  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}} --scope scope_0 --collection coll0,coll1,coll2,coll3,coll4"
+- command: "kv --ops {{.Scale 10000}} --create 70 --get 30  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}} --scope scope_0 --collection coll0,coll1,coll2,coll3,coll4"
   duration: 1000
-- command: "kv --ops {{.Scale 5000}} --create 30 --get 70  --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}} --scope scope_0 --collection coll0,coll1,coll2,coll3,coll4"
+- command: "kv --ops {{.Scale 10000}} --create 70 --get 30  --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}} --scope scope_0 --collection coll0,coll1,coll2,coll3,coll4"
   duration: 1000
-- command: "kv --ops {{.Scale 5000}} --create 30 --get 70  --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}} --scope scope_0 --collection coll0,coll1,coll2,coll3,coll4"
+- command: "kv --ops {{.Scale 10000}} --create 70 --get 30  --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}} --scope scope_0 --collection coll0,coll1,coll2,coll3,coll4"
   duration: 1000
-- command: "kv --ops {{.Scale 5000}} --create 30 --get 70  --hosts {{.Orchestrator}} --bucket {{.NthBucket 4}} --scope scope_0 --collection coll0,coll1,coll2,coll3,coll4"
+- command: "kv --ops {{.Scale 10000}} --create 70 --get 30  --hosts {{.Orchestrator}} --bucket {{.NthBucket 4}} --scope scope_0 --collection coll0,coll1,coll2,coll3,coll4"
   duration: 1000
-- command: "kv --ops {{.Scale 5000}} --create 30 --get 70  --hosts {{.Orchestrator}} --bucket {{.NthBucket 5}} --scope scope_0 --collection coll0,coll1,coll2,coll3,coll4"
+- command: "kv --ops {{.Scale 10000}} --create 70 --get 30  --hosts {{.Orchestrator}} --bucket {{.NthBucket 5}} --scope scope_0 --collection coll0,coll1,coll2,coll3,coll4"
   duration: 1000
-- command: "kv --ops {{.Scale 5000}} --create 30 --get 70  --hosts {{.Orchestrator}} --bucket {{.NthBucket 6}} --scope scope_0 --collection coll0,coll1,coll2,coll3,coll4"
+- command: "kv --ops {{.Scale 10000}} --create 70 --get 30  --hosts {{.Orchestrator}} --bucket {{.NthBucket 6}} --scope scope_0 --collection coll0,coll1,coll2,coll3,coll4"
   duration: 1000
-- command: "kv --ops {{.Scale 5000}} --create 30 --get 70  --hosts {{.Orchestrator}} --bucket {{.NthBucket 7}} --scope scope_0 --collection coll0,coll1,coll2,coll3,coll4"
+- command: "kv --ops {{.Scale 10000}} --create 70 --get 30  --hosts {{.Orchestrator}} --bucket {{.NthBucket 7}} --scope scope_0 --collection coll0,coll1,coll2,coll3,coll4"
   duration: 1000
 
 - template: pillowfight_durability
@@ -116,28 +144,40 @@
 #### create handlers #####
 - foreach: "{{range $i, $sc := mkrange 0 1}}"
   image: sequoiatools/eventing:8.1
-  command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -s {{$.Bucket}}.scope_0.coll{{$sc}} -m {{$.NthBucket 8}}.scope_0.coll{{$sc}} -d dst_bucket.{{$.Bucket}}.scope_1.coll{{$sc}}.rw -d dst_bucket2.{{$.NthBucket 2}}.scope_0.coll{{$sc}}.rw  -t bucket_op_sbm -o create --name bucket_op{{$sc}}"
+  command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -s {{$.Bucket}}.scope_0.coll{{$sc}} -m {{$.NthBucket 8}}.scope_0.coll{{$sc}} -d dst_bucket.{{$.Bucket}}.scope_1.coll{{$sc}}.rw -d dst_bucket2.{{$.NthBucket 2}}.scope_0.coll{{$sc}}.rw  -t multiple_bucket_op -o create --name bucket_op{{$sc}}"
   wait: true
 - image: sequoiatools/eventing:8.1
-  command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -s {{.NthBucket 1}}.*.* -m {{.NthBucket 8}}.scope_1.coll0 -d dst_bucket.{{.NthBucket 1}}.*.*.rw -t timers -o create --name timers"
+  command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -s {{.NthBucket 2}}.*.* -m {{.NthBucket 8}}.scope_1.coll0 -d dst_bucket.{{.NthBucket 2}}.*.*.rw -t timers -o create --name timers"
   wait: true
 - image: sequoiatools/eventing:8.1
-  command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -s {{.NthBucket 6}}.scope_0.* -m {{.NthBucket 8}}.scope_2.coll0 -d dst_bucket.{{.NthBucket 6}}.scope_0.*.rw -t curl -o create --name curl"
+  command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -s {{.NthBucket 3}}.scope_0.* -m {{.NthBucket 8}}.scope_2.coll0 -d dst_bucket.{{.NthBucket 3}}.scope_0.*.rw -t curl -o create --name curl"
   wait: true
 - image: sequoiatools/eventing:8.1
   command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -s {{.NthBucket 3}}.*.* -m {{.NthBucket 8}}.scope_3.coll0 -d dst_bucket.{{.NthBucket 4}}.scope_0.coll0.rw -t n1ql -o create --name n1ql"
   wait: true
 - foreach: "{{range $i, $sc := mkrange 0 1}}"
   image: sequoiatools/eventing:8.1
-  command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -s {{$.NthBucket 2}}.scope_0.coll{{$sc}} -m {{$.NthBucket 8}}.scope_4.coll{{$sc}} -d dst_bucket.{{$.NthBucket 2}}.scope_0.coll{{$sc}}.rw -t sbm -o create --name sbm{{$sc}}"
+  command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -s {{$.NthBucket 1}}.scope_0.coll{{$sc}} -m {{$.NthBucket 8}}.scope_4.coll{{$sc}} -d dst_bucket.{{$.NthBucket 1}}.scope_0.coll{{$sc}}.rw -t sbm -o create --name sbm{{$sc}}"
+  wait: true
+- image: sequoiatools/eventing:8.1
+  command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -s {{.NthBucket 5}}.scope_0.* -m {{.NthBucket 8}}.scope_5.coll0 -d dst_bucket.{{.NthBucket 7}}.scope_0.coll0.rw -t analytics -o create --name analytics --analytics_node {{.AnalyticsNode | noport}}"
+  wait: true
+- image: sequoiatools/eventing:8.1
+  command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -s {{.NthBucket 6}}.scope_0.* -m {{.NthBucket 8}}.scope_6.coll0 -d dst_bucket.{{.NthBucket 7}}.scope_1.coll0.rw -t fts -o create --name fts --fts_node {{.FTSNode | noport}}"
   wait: true
 
-##### deploy bucket op, timers, N1ql #####
+# ###############  connect queries ################
+- template: analytics_rest
+  args: "connect link Local;"
+  wait: true
+
+##### deploy bucket op, timers, N1ql, analytics, fts #####
 - image: sequoiatools/eventing:8.1
   command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o deploy --name bucket_op"
 - command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o deploy --name timers"
 - command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o deploy --name n1ql"
-
+- command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o deploy --name analytics"
+- command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o deploy --name fts"
 
 #### wait for handler to be deployed ####
 - image: sequoiatools/eventing:8.1
@@ -146,6 +186,10 @@
 - command: "eventing_helper.py -i {{.EventingNode}} -u {{.RestUsername}} -p {{.RestPassword}} -o wait_for_state --state deployed --name timers"
   wait: true
 - command: "eventing_helper.py -i {{.EventingNode}} -u {{.RestUsername}} -p {{.RestPassword}} -o wait_for_state --state deployed --name n1ql"
+  wait: true
+- command: "eventing_helper.py -i {{.EventingNode}} -u {{.RestUsername}} -p {{.RestPassword}} -o wait_for_state --state deployed --name analytics"
+  wait: true
+- command: "eventing_helper.py -i {{.EventingNode}} -u {{.RestUsername}} -p {{.RestPassword}} -o wait_for_state --state deployed --name fts"
   wait: true
 
 ###############  Rebalance-in eventing ################
@@ -172,6 +216,13 @@
   duration: 1000
 - command: "kv --ops {{.Scale 200}} --create 30 --get 70  --hosts {{.Orchestrator}} --bucket {{.NthBucket 7}} --scope scope_1 --collection coll0,coll1,coll2,coll3,coll4"
   duration: 1000
+
+# set expiry on some docs
+- image: sequoiatools/magmaloader
+  command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.Bucket}} --start 10000 --end 200000 --doc_template Hotel --all_coll true --expiry_mode true --max_ttl 1200 --percentage_expiry 50"
+  requires: "{{eq true .DoOnce }}"
+- command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 1}} --start 10000 --end 150000 --doc_template Hotel --all_coll true --expiry_mode true --max_ttl 1200 --percentage_expiry 50"
+  requires: "{{eq true .DoOnce }}"
 
 ###############  Rebalance-in multiple kv nodes################
 -
@@ -200,12 +251,18 @@
   args: "({{.ActiveDataNode 1}},{{.ActiveDataNode 2}})"
   wait: true
 
-#### pause bucket op,timers ####
+#### pause bucket op, timers, analytics, fts ####
 - image: sequoiatools/eventing:8.1
   command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o pause --name bucket_op"
   wait: true
 - image: sequoiatools/eventing:8.1
   command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o pause --name timers"
+  wait: true
+- image: sequoiatools/eventing:8.1
+  command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o pause --name analytics"
+  wait: true
+- image: sequoiatools/eventing:8.1
+  command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o pause --name fts"
   wait: true
 
 
@@ -218,11 +275,15 @@
   args: "{{.NthInActiveNode 0}},{{.ActiveDataNode 2}}, data"
   wait: true
 
-#### wait for bucket handler to be paused and curl,sbm to be deployed ####
+#### wait for bucket, timers, analytics, fts to be paused ####
 - image: sequoiatools/eventing:8.1
   command: "eventing_helper.py -i {{.EventingNode}} -u {{.RestUsername}} -p {{.RestPassword}} -o wait_for_state --state paused --name bucket_op"
   wait: true
 - command: "eventing_helper.py -i {{.EventingNode}} -u {{.RestUsername}} -p {{.RestPassword}} -o wait_for_state --state paused --name timers"
+  wait: true
+- command: "eventing_helper.py -i {{.EventingNode}} -u {{.RestUsername}} -p {{.RestPassword}} -o wait_for_state --state paused --name analytics"
+  wait: true
+- command: "eventing_helper.py -i {{.EventingNode}} -u {{.RestUsername}} -p {{.RestPassword}} -o wait_for_state --state paused --name fts"
   wait: true
 
 ####### load data into all collections #######
@@ -246,19 +307,44 @@
   template: rebalance
   wait: true
 
-#### resume bucket op,timers ####
+#### resume all handlers ####
 - image: sequoiatools/eventing:8.1
   command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o resume --name bucket_op"
   wait: true
 - image: sequoiatools/eventing:8.1
   command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o resume --name timers"
   wait: true
+- image: sequoiatools/eventing:8.1
+  command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o resume --name curl"
+  wait: true
+- image: sequoiatools/eventing:8.1
+  command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o resume --name n1ql"
+  wait: true
+- image: sequoiatools/eventing:8.1
+  command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o resume --name sbm"
+  wait: true
+- image: sequoiatools/eventing:8.1
+  command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o resume --name analytics"
+  wait: true
+- image: sequoiatools/eventing:8.1
+  command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o resume --name fts"
+  wait: true
 
-#### wait for bucket and timers to be deployed ####
+#### wait for all handlers to be deployed ####
 - image: sequoiatools/eventing:8.1
   command: "eventing_helper.py -i {{.EventingNode}} -u {{.RestUsername}} -p {{.RestPassword}} -o wait_for_state --state deployed --name bucket_op"
   wait: true
 - command: "eventing_helper.py -i {{.EventingNode}} -u {{.RestUsername}} -p {{.RestPassword}} -o wait_for_state --state deployed --name timers"
+  wait: true
+- command: "eventing_helper.py -i {{.EventingNode}} -u {{.RestUsername}} -p {{.RestPassword}} -o wait_for_state --state deployed --name curl"
+  wait: true
+- command: "eventing_helper.py -i {{.EventingNode}} -u {{.RestUsername}} -p {{.RestPassword}} -o wait_for_state --state deployed --name n1ql"
+  wait: true
+- command: "eventing_helper.py -i {{.EventingNode}} -u {{.RestUsername}} -p {{.RestPassword}} -o wait_for_state --state deployed --name sbm"
+  wait: true
+- command: "eventing_helper.py -i {{.EventingNode}} -u {{.RestUsername}} -p {{.RestPassword}} -o wait_for_state --state deployed --name analytics"
+  wait: true
+- command: "eventing_helper.py -i {{.EventingNode}} -u {{.RestUsername}} -p {{.RestPassword}} -o wait_for_state --state deployed --name fts"
   wait: true
 
 ####### load data into all collections #######
@@ -336,3 +422,17 @@
   args: "{{.NthInActiveNode 0}},{{.ActiveEventingNode 1}}, eventing"
   wait: true
 
+# failover and full recover a data node
+- template: failover_force_and_recover_wait
+  args: "{{.ActiveDataNode 1}}, full"
+  wait: true
+
+# failover and full recover a eventing node
+- template: failover_force_and_recover_wait
+  args: "{{.ActiveEventingNode 1}}, full"
+  wait: true
+
+# ###############  disconnect queries ################
+- template: analytics_rest
+  args: "disconnect link Local;"
+  wait: true

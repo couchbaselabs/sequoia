@@ -10,7 +10,7 @@ import dns.resolver
 
 
 class EventingHelper:
-    handler_map={"bucket_op":"totoro/bucket_op.js","timers":"totoro/timers.js","n1ql":"totoro/n1ql.js","sbm":"totoro/sbm.js","curl":"totoro/curl.js","bucket_op_sbm":"totoro/bucket_op_sbm.js"}
+    handler_map={"bucket_op":"totoro/bucket_op.js","timers":"totoro/timers.js","n1ql":"totoro/n1ql.js","sbm":"totoro/sbm.js","curl":"totoro/curl.js","multiple_bucket_op":"totoro/multiple_bucket_op.js","analytics":"totoro/analytics.js","fts":"totoro/fts.js"}
 
     def __init__(self):
         self.hostname = None
@@ -46,6 +46,8 @@ class EventingHelper:
         parser.add_option("--sbm",dest="sbm",default=False)
         parser.add_option("--capella", dest="capella", help="Set to True if tests need to run on Capella", default=False)
         parser.add_option("--tls", dest="tls", help="Set to True if tests need to run with TLS enabled", default=False)
+        parser.add_option("--analytics_node", dest="analytics_node", help="analytics node host (default: eventing node)", default=None)
+        parser.add_option("--fts_node", dest="fts_node", help="fts node host (default: eventing node)", default=None)
         options, args = parser.parse_args()
         print(options)
         self.username = options.username
@@ -113,7 +115,14 @@ class EventingHelper:
         print(handlers)
         for handler in handlers:
             print("deploying : "+handler)
-            self.perform_lifecycle_operation(handler,"deploy")
+            try:
+                self.perform_lifecycle_operation(handler,"deploy")
+            except Exception as e:
+                err = str(e)
+                if '"code": 63' in err or "ERR_INVALID_REQUEST" in err:
+                    print("handler {} already in target state, skipping deploy".format(handler))
+                else:
+                    raise
             if wait_for_state:
                 self.check_handler_status(handler,"deployed")
                 print(handler," Deployed successfully")
@@ -129,7 +138,14 @@ class EventingHelper:
         print(handlers)
         for handler in handlers:
             print("pausing : "+handler)
-            self.perform_lifecycle_operation(handler,"pause")
+            try:
+                self.perform_lifecycle_operation(handler,"pause")
+            except Exception as e:
+                err = str(e)
+                if '"code": 63' in err or "ERR_INVALID_REQUEST" in err:
+                    print("handler {} already in target state, skipping pause".format(handler))
+                else:
+                    raise
             if wait_for_state:
                 self.check_handler_status(handler,"paused")
                 print(handler," Deployed successfully")
@@ -145,7 +161,14 @@ class EventingHelper:
         print(handlers)
         for handler in handlers:
             print("resuming : "+handler)
-            self.perform_lifecycle_operation(handler,"resume")
+            try:
+                self.perform_lifecycle_operation(handler,"resume")
+            except Exception as e:
+                err = str(e)
+                if '"code": 63' in err or "ERR_INVALID_REQUEST" in err:
+                    print("handler {} already in target state, skipping resume".format(handler))
+                else:
+                    raise
             if wait_for_state:
                 self.check_handler_status(handler,"deployed")
                 print(handler," Deployed successfully")
@@ -161,7 +184,21 @@ class EventingHelper:
         print(handlers)
         for handler in handlers:
             print("undeploying : "+handler)
-            self.perform_lifecycle_operation(handler,"undeploy")
+            try:
+                self.perform_lifecycle_operation(handler,"undeploy")
+            except Exception as e:
+                err = str(e)
+                if '"code": 63' in err or "ERR_INVALID_REQUEST" in err:
+                    state = self.get_handler_state(handler)
+                    if state == "paused":
+                        print("handler {} is paused, resuming before undeploy".format(handler))
+                        self.perform_lifecycle_operation(handler, "resume")
+                        self.check_handler_status(handler, "deployed")
+                        self.perform_lifecycle_operation(handler, "undeploy")
+                    else:
+                        print("handler {} already undeployed, skipping".format(handler))
+                else:
+                    raise
             if wait_for_state:
                 self.check_handler_status(handler,"undeployed")
                 print(handler," Deployed successfully")
@@ -224,6 +261,34 @@ class EventingHelper:
         except Exception as e:
             raise e
 
+    def get_analytics_dataset_for_bucket(self, bucket, node=None):
+        host = node if node else self.rest_url
+        url = "{0}://{1}:8095/query/service".format(self.protocol, host)
+        headers = {'Authorization': 'Basic ' + base64.b64encode(
+            "{}:{}".format(self.username, self.password).encode()).decode(),
+                   'Content-Type': 'application/x-www-form-urlencoded'}
+        stmt = "SELECT RAW DatasetName FROM Metadata.`Dataset` WHERE BucketName=\"{}\" LIMIT 1;".format(bucket)
+        body = "statement=" + stmt
+        _, content = httplib2.Http(timeout=30, disable_ssl_certificate_validation=True).request(
+            uri=url, method="POST", headers=headers, body=body)
+        data = json.loads(content)
+        results = data.get("results", [])
+        return results[0] if results else None
+
+    def get_fts_index_for_bucket(self, bucket, node=None):
+        host = node if node else self.rest_url
+        url = "{0}://{1}:8094/api/index".format(self.protocol, host)
+        headers = {'Authorization': 'Basic ' + base64.b64encode(
+            "{}:{}".format(self.username, self.password).encode()).decode()}
+        _, content = httplib2.Http(timeout=30, disable_ssl_certificate_validation=True).request(
+            uri=url, method="GET", headers=headers)
+        data = json.loads(content)
+        index_defs = data.get("indexDefs", {}).get("indexDefs", {})
+        for name, defn in index_defs.items():
+            if defn.get("sourceName") == bucket:
+                return name
+        return None
+
     def create_handler(self,appname,options,dcp_stream_boundary="everything"):
         appcode=self.handler_map[options.type]
         source_binding=options.source
@@ -247,7 +312,35 @@ class EventingHelper:
         body['depcfg']['source_collection'] = src[2]
         body['depcfg']['buckets'] = []
         body['depcfg']['curl'] = []
-        if options.type !='n1ql':
+        if options.type == 'n1ql':
+            bind= destination_bindings[0].split(".")
+            collection = bind[1] + "." + bind[2] + ".`" + bind[3] + "`"
+            body['appcode']=Template(body['appcode']).substitute(namespace=collection.strip())
+        elif options.type == 'analytics':
+            ds_name = self.get_analytics_dataset_for_bucket(src[0], node=getattr(options, 'analytics_node', None))
+            if not ds_name:
+                raise Exception("No analytics dataset found for bucket {}".format(src[0]))
+            body['appcode'] = Template(body['appcode']).substitute(analytics_dataset_name=ds_name)
+            for binding in destination_bindings:
+                bind_map = binding.split(".")
+                if len(bind_map) < 5:
+                    raise Exception("Binding {} doesn't have all the fields".format(binding))
+                body['depcfg']['buckets'].append(
+                    {"alias": bind_map[0], "bucket_name": bind_map[1], "scope_name": bind_map[2],
+                     "collection_name": bind_map[3], "access": bind_map[4]})
+        elif options.type == 'fts':
+            fts_index = self.get_fts_index_for_bucket(src[0], node=getattr(options, 'fts_node', None))
+            if not fts_index:
+                raise Exception("No FTS index found for bucket {}".format(src[0]))
+            body['appcode'] = Template(body['appcode']).substitute(fts_index_name=fts_index)
+            for binding in destination_bindings:
+                bind_map = binding.split(".")
+                if len(bind_map) < 5:
+                    raise Exception("Binding {} doesn't have all the fields".format(binding))
+                body['depcfg']['buckets'].append(
+                    {"alias": bind_map[0], "bucket_name": bind_map[1], "scope_name": bind_map[2],
+                     "collection_name": bind_map[3], "access": bind_map[4]})
+        else:
             for binding in destination_bindings:
                 bind_map=binding.split(".")
                 if  len(bind_map)< 5:
@@ -255,10 +348,6 @@ class EventingHelper:
                 body['depcfg']['buckets'].append(
                     {"alias": bind_map[0], "bucket_name": bind_map[1], "scope_name": bind_map[2],
                      "collection_name": bind_map[3], "access": bind_map[4]})
-        else:
-            bind= destination_bindings[0].split(".")
-            collection = bind[1] + "." + bind[2] + ".`" + bind[3] + "`"
-            body['appcode']=Template(body['appcode']).substitute(namespace=collection.strip())
         body['settings'] = {}
         body['settings']['dcp_stream_boundary'] = dcp_stream_boundary
         body['settings']['deployment_status'] = False
@@ -274,6 +363,16 @@ class EventingHelper:
         body['function_scope'] = {"bucket": "*", "scope": "*"}
         print(body)
         return body
+
+    def get_handler_state(self, appname):
+        credentials = '{}:{}'.format(self.username, self.password)
+        authorization = base64.encodebytes(credentials.encode('utf-8'))
+        authorization = authorization.decode('utf-8').rstrip('\n')
+        headers = {'Content-type': 'application/json', 'Authorization': 'Basic %s' % authorization}
+        url = "{0}://{1}:{2}/api/v1/status/{3}".format(self.protocol, self.rest_url, self.eventing_port, appname)
+        _, content = httplib2.Http(timeout=30, disable_ssl_certificate_validation=True).request(uri=url, method="GET", headers=headers)
+        result = json.loads(content)
+        return result.get('app', {}).get('composite_status')
 
     def check_handler_status(self,appname,app_status):
         credentials = '{}:{}'.format(self.username, self.password)
