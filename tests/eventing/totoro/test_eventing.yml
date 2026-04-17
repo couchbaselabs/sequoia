@@ -125,7 +125,7 @@
   command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -s {{.NthBucket 6}}.scope_0.* -m {{.NthBucket 8}}.scope_2.coll0 -d dst_bucket.{{.NthBucket 6}}.scope_0.*.rw -t curl -o create --name curl"
   wait: true
 - image: sequoiatools/eventing:8.1
-  command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -s {{.NthBucket 3}}.*.* -m {{.NthBucket 8}}.scope_3.coll0 -d dst_bucket.{{.NthBucket 3}}.scope_0.coll0.rw -t n1ql -o create --name n1ql"
+  command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -s {{.NthBucket 3}}.*.* -m {{.NthBucket 8}}.scope_3.coll0 -d dst_bucket.{{.NthBucket 4}}.scope_0.coll0.rw -t n1ql -o create --name n1ql"
   wait: true
 - foreach: "{{range $i, $sc := mkrange 0 1}}"
   image: sequoiatools/eventing:8.1
