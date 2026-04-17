@@ -2,10 +2,17 @@ FROM ubuntu:20.04
 RUN apt-get update
 RUN apt-get upgrade -s
 RUN apt-get install -y git python3-pip curl tar
-RUN apt-get install -y build-essential libssl-dev libffi-dev python3-dev python3-setuptools
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    build-essential \
+    libssl-dev \
+    libffi-dev \
+    python3-dev \
+    python3-setuptools && \
+    rm -rf /var/lib/apt/lists/*
 
 
-RUN pip install httplib2 docker
+RUN pip install httplib2 docker dnspython
 RUN mkdir alice
 COPY eventing.py /eventing.py
 COPY eventing_helper.py /eventing_helper.py
