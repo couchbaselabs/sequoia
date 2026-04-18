@@ -73,6 +73,7 @@ type ActionSpec struct {
 	SectionEnd   string `yaml:"section_end"`
 	SectionTag   string `yaml:"section_tag"`
 	SectionSkip  string `yaml:"section_skip"`
+	ExpectError  bool   `yaml:"expect_error"`
 	Client       ClientActionSpec
 }
 
@@ -783,7 +784,7 @@ func (t *Test) runTask(scope *Scope, task *ContainerTask, action *ActionSpec) {
 	// run once
 	cid, echan := t.Cm.Run(task)
 	scope.SetVarsKV(aliasKey, cid)
-	go t.WatchErrorChan(echan, task.Concurrency, scope)
+	go t.WatchErrorChan(echan, task.Concurrency, scope, action.ExpectError)
 
 	go t.RepeatTask(scope, cid, repeat, rChan)
 	if repeat > 0 {
@@ -924,6 +925,9 @@ func (t *Test) ResolveTemplateActions(scope Scope, action ActionSpec) []ActionSp
 		if subAction.Until == "" {
 			subAction.Until = action.Until
 		}
+		if subAction.ExpectError == false {
+			subAction.ExpectError = action.ExpectError
+		}
 
 		resolvedActions = append(resolvedActions, subAction)
 	}
@@ -984,14 +988,21 @@ func (t *Test) RestoreConditionalValues(originalAction ActionSpec, action *Actio
 	action.Until = originalAction.Until
 	action.Before = originalAction.Before
 	action.Requires = originalAction.Requires
+	action.ExpectError = originalAction.ExpectError
 }
 
-func (t *Test) WatchErrorChan(echan chan error, n int, scope *Scope) {
+func (t *Test) WatchErrorChan(echan chan error, n int, scope *Scope, expectError bool) {
 	if n == 0 {
 		n = 1
 	}
 	for i := 0; i < n; i++ {
 		if err := <-echan; err != nil {
+			if expectError {
+				// action is expected to fail, continue running test
+				colorsay("expected error occurred, continuing test")
+				continue
+			}
+
 			if *t.Flags.CollectOnError == true {
 
 				// add a new collect channel
