@@ -13,32 +13,35 @@ type RbacSpec struct {
 }
 
 type BucketSpec struct {
-	Name            string
-	Names           []string
-	Count           uint8
-	Ram             string
-	Replica         *uint8
-	Type            string
-	Eviction        string
-	DDocs           string
-	DDocSpecs       []DDocSpec
-	Compression     string
-	TTL             string
-	BucketScopes    string
-	Storage         string
-	Durability      string
-	EncryptionKeyID *uint8 `default:"0"`
-	DekRotateEvery  string `yaml:"dekRotateEvery"`
-	DekLifetime     string `yaml:"dekLifetime"`
-    EnableEncryptionAtRest bool `yaml:"enableEncryptionAtRest"`
-    EnableClientCertificateHandling bool `yaml:"enable_client_certificate_handling"`
-	HistoryRetentionBytes string
-	HistoryRetentionSeconds string
+	Name                            string
+	Names                           []string
+	Count                           uint8
+	Ram                             string
+	Replica                         *uint8
+	Type                            string
+	Eviction                        string
+	DDocs                           string
+	DDocSpecs                       []DDocSpec
+	Compression                     string
+	TTL                             string
+	BucketScopes                    string
+	Storage                         string
+	Durability                      string
+	EncryptionKeyID                 *uint8 `default:"0"`
+	DekRotateEvery                  string `yaml:"dekRotateEvery"`
+	DekLifetime                     string `yaml:"dekLifetime"`
+	EnableEncryptionAtRest          bool   `yaml:"enableEncryptionAtRest"`
+	EnableClientCertificateHandling bool   `yaml:"enable_client_certificate_handling"`
+	HistoryRetentionBytes           string
+	HistoryRetentionSeconds         string
 	EnableHistoryRetentionByDefault string
-	Rank            string
-	ConflictResolution  string
-	Vbuckets        string
-	BucketScopeSpec []BucketScopeSpec
+	Rank                            string
+	ConflictResolution              string
+	Vbuckets                        string
+	BucketScopeSpec                 []BucketScopeSpec
+	EnableContinuousBackup          bool   `yaml:"enable_continuous_backup"`
+	ContinuousBackupInterval        string `yaml:"continuous_backup_interval"`
+	ContinuousBackupLocation        string `yaml:"continuous_backup_location"`
 }
 
 type BucketScopeSpec struct {
@@ -47,49 +50,49 @@ type BucketScopeSpec struct {
 }
 
 type ServerSpec struct {
-	Name            string
-	Names           []string
-	Count           uint8
-	CountOffset     uint8
-	Ram             string
-	IndexRam        string `yaml:"index_ram"`
-	FtsRam          string `yaml:"fts_ram"`
-	AnalyticsRam    string `yaml:"analytics_ram"`
-	EventingRam     string `yaml:"eventing_ram"`
-	RestUsername    string `yaml:"rest_username"`
-	RestPassword    string `yaml:"rest_password"`
-	CapellaUsername string `yaml:"capella_username"`
-	CapellaPassword string `yaml:"capella_password"`
-	CapellaAccess   string `yaml:"capella_access"`
-	CapellaSecret   string `yaml:"capella_secret"`
-	AWSAccess       string `yaml:"aws_access_key"`
-	AWSSecret       string `yaml:"aws_secret_key"`
-	SSHUsername     string `yaml:"ssh_username"`
-	SSHPassword     string `yaml:"ssh_password"`
-	RestPort        string `yaml:"rest_port"`
-	ViewPort        string `yaml:"view_port"`
-	FTSPort         string `yaml:"fts_port"`
-	QueryPort       string `yaml:"query_port"`
-	EventingPort    string `yaml:"eventing_port"`
-	BackupPort      string `yaml:"backup_port"`
-	AnalyticsPort   string `yaml:"analytics_port"`
-	InitNodes       uint8  `yaml:"init_nodes"`
-	DataPath        string `yaml:"data_path"`
-	IndexPath       string `yaml:"index_path"`
-	AnalyticsPath   string `yaml:"analytics_path"`
-	IndexStorage    string `yaml:"index_storage"`
-	DekRotateEvery  string `yaml:"dekRotateEvery"`
-	DekLifetime     string `yaml:"dekLifetime"`
-	EnableEncryptionAtRest bool `yaml:"enable_encryption_at_rest"`
-	EnableClientCertificateHandling bool `yaml:"enable_client_certificate_handling"`
-	Buckets         string
-	BucketSpecs     []BucketSpec
-	NodesActive     uint8
-	Services        map[string]uint8
-	NodeServices    map[string][]string
-	Users           string
-	RbacSpecs       []RbacSpec
-	NumberOfBuckets string
+	Name                            string
+	Names                           []string
+	Count                           uint8
+	CountOffset                     uint8
+	Ram                             string
+	IndexRam                        string `yaml:"index_ram"`
+	FtsRam                          string `yaml:"fts_ram"`
+	AnalyticsRam                    string `yaml:"analytics_ram"`
+	EventingRam                     string `yaml:"eventing_ram"`
+	RestUsername                    string `yaml:"rest_username"`
+	RestPassword                    string `yaml:"rest_password"`
+	CapellaUsername                 string `yaml:"capella_username"`
+	CapellaPassword                 string `yaml:"capella_password"`
+	CapellaAccess                   string `yaml:"capella_access"`
+	CapellaSecret                   string `yaml:"capella_secret"`
+	AWSAccess                       string `yaml:"aws_access_key"`
+	AWSSecret                       string `yaml:"aws_secret_key"`
+	SSHUsername                     string `yaml:"ssh_username"`
+	SSHPassword                     string `yaml:"ssh_password"`
+	RestPort                        string `yaml:"rest_port"`
+	ViewPort                        string `yaml:"view_port"`
+	FTSPort                         string `yaml:"fts_port"`
+	QueryPort                       string `yaml:"query_port"`
+	EventingPort                    string `yaml:"eventing_port"`
+	BackupPort                      string `yaml:"backup_port"`
+	AnalyticsPort                   string `yaml:"analytics_port"`
+	InitNodes                       uint8  `yaml:"init_nodes"`
+	DataPath                        string `yaml:"data_path"`
+	IndexPath                       string `yaml:"index_path"`
+	AnalyticsPath                   string `yaml:"analytics_path"`
+	IndexStorage                    string `yaml:"index_storage"`
+	DekRotateEvery                  string `yaml:"dekRotateEvery"`
+	DekLifetime                     string `yaml:"dekLifetime"`
+	EnableEncryptionAtRest          bool   `yaml:"enable_encryption_at_rest"`
+	EnableClientCertificateHandling bool   `yaml:"enable_client_certificate_handling"`
+	Buckets                         string
+	BucketSpecs                     []BucketSpec
+	NodesActive                     uint8
+	Services                        map[string]uint8
+	NodeServices                    map[string][]string
+	Users                           string
+	RbacSpecs                       []RbacSpec
+	NumberOfBuckets                 string
 }
 
 type SyncGatewaySpec struct {

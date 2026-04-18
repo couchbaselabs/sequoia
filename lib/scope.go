@@ -12,15 +12,16 @@ package sequoia
  *
  */
 import (
-    "fmt"
-    "regexp"
-    "strconv"
-    "strings"
-    "time"
-    "encoding/json"
-    "os"
-    "path/filepath"
-    cmap "github.com/streamrail/concurrent-map"
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
+	"regexp"
+	"strconv"
+	"strings"
+	"time"
+
+	cmap "github.com/streamrail/concurrent-map"
 )
 
 type Scope struct {
@@ -140,12 +141,12 @@ func (s *Scope) SetupServer() {
 		s.CreateEncryptionKeys()
 		s.EnableLogAndConfigEncryption()
 		s.EnableClientCertAuth(
-        		"hybrid",
-        		"subject.cn",
-        		"",
-        		"",
-        		"/tmp",
-        	)
+			"hybrid",
+			"subject.cn",
+			"",
+			"",
+			"/tmp",
+		)
 		s.AddNodes()
 		s.RebalanceClusters()
 		s.ApplyInternalSettings()
@@ -770,40 +771,40 @@ func (s *Scope) CreateClientAuthFile(state, pathVal, prefix, delimiter, outputDi
 }
 
 func (s *Scope) EnableClientCertAuth(state, pathVal, prefix, delimiter, outputDir string) error {
-    var image = s.GetCliImage()
+	var image = s.GetCliImage()
 
-    operation := func(name string, server *ServerSpec) {
-        orchestrator := server.Names[0]
-        filePath, err := s.CreateClientAuthFile(state, pathVal, prefix, delimiter, "/tmp")
-        if err != nil {
-            fmt.Printf("Error creating client auth file: %v\n", err)
-            return
-        }
-        ip := s.Provider.GetHostAddress(orchestrator)
+	operation := func(name string, server *ServerSpec) {
+		orchestrator := server.Names[0]
+		filePath, err := s.CreateClientAuthFile(state, pathVal, prefix, delimiter, "/tmp")
+		if err != nil {
+			fmt.Printf("Error creating client auth file: %v\n", err)
+			return
+		}
+		ip := s.Provider.GetHostAddress(orchestrator)
 
-        command := []string{
-            "ssl-manage",
-            "-c", ip,
-            "-u", server.RestUsername,
-            "-p", server.RestPassword,
-            "--set-client-auth", "/tmp/client-auth-settings.json",
-        }
+		command := []string{
+			"ssl-manage",
+			"-c", ip,
+			"-u", server.RestUsername,
+			"-p", server.RestPassword,
+			"--set-client-auth", "/tmp/client-auth-settings.json",
+		}
 
-        command = cliCommandValidator(s.Version, command)
-        desc := "enable client certificate handling " + name
-        task := ContainerTask{
-            Describe: desc,
-            Image:    image,
-            Command:  command,
-            Async:    false,
-            Volumes:  []string{filePath + ":/tmp/client-auth-settings.json"},
-        }
+		command = cliCommandValidator(s.Version, command)
+		desc := "enable client certificate handling " + name
+		task := ContainerTask{
+			Describe: desc,
+			Image:    image,
+			Command:  command,
+			Async:    false,
+			Volumes:  []string{filePath + ":/tmp/client-auth-settings.json"},
+		}
 
-        s.Cm.Run(&task)
-    }
+		s.Cm.Run(&task)
+	}
 
-    s.Spec.ApplyToServers(operation, 0, 1)
-    return nil
+	s.Spec.ApplyToServers(operation, 0, 1)
+	return nil
 }
 
 func (s *Scope) EnableLogAndConfigEncryption() {
@@ -1002,10 +1003,10 @@ func (s *Scope) CreateBuckets() {
 				if bucket.Rank != "" {
 					command = append(command, "--rank", bucket.Rank)
 				}
-                if bucket.ConflictResolution != "" {
+				if bucket.ConflictResolution != "" {
 					command = append(command, "--conflict-resolution", bucket.ConflictResolution)
 				}
-                if bucket.Vbuckets != "" {
+				if bucket.Vbuckets != "" {
 					command = append(command, "--num-vbuckets", bucket.Vbuckets)
 				}
 				if bucket.EnableEncryptionAtRest {
@@ -1015,6 +1016,15 @@ func (s *Scope) CreateBuckets() {
 					}
 					if bucket.DekLifetime != "" {
 						command = append(command, "--dek-lifetime", bucket.DekLifetime)
+					}
+				}
+				if bucket.EnableContinuousBackup {
+					command = append(command, "--continuous-backup-enabled", "1")
+					if bucket.ContinuousBackupInterval != "" {
+						command = append(command, "--continuous-backup-interval", bucket.ContinuousBackupInterval)
+					}
+					if bucket.ContinuousBackupLocation != "" {
+						command = append(command, "--continuous-backup-location", bucket.ContinuousBackupLocation)
 					}
 				}
 
