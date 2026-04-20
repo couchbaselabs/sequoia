@@ -103,10 +103,10 @@ servers: # each server tag represents a cluster
       users: default,role1,role2,role3,role4,role5,role6,role7,role8
   -
       name: remote
-      count: 3
+      count: 1
       ram: 75%
       rest_username: Administrator
       rest_password: password
       data_path: "/data/dta"
       index_path: "/data/index"
-      init_nodes: 3
+      init_nodes: 1

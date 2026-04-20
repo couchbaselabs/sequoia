@@ -1,5 +1,5 @@
 -
-  include: tests/templates/kv.yml, tests/templates/backuprestore.yml, tests/templates/rebalance.yml, tests/templates/multinode_failure.yml
+  include: tests/templates/kv.yml, tests/templates/backuprestore.yml, tests/templates/rebalance.yml, tests/templates/multinode_failure.yml, tests/templates/collections.yml
 
 #### TODO : Replace query node with serviceless node
 
@@ -13,28 +13,76 @@
   command: "setting-compaction -c {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}} --metadata-purge-interval 0.25 --compaction-db-percentage 30 --compaction-view-percentage 30"
   wait: true
 
+############### Create scopes and collections across all buckets ###############
+- template: create-multi-scopes-collections
+  args: "{{.Orchestrator}}, {{.Bucket}}, {{.Scale 2}}, {{.Scale 10}}, uniform"
+  requires:  "{{eq true .DoOnce }}"
+-
+  args: "{{.Orchestrator}}, {{.NthBucket 1}}, {{.Scale 2}}, {{.Scale 10}}, uniform"
+  requires:  "{{eq true .DoOnce }}"
+-
+  args: "{{.Orchestrator}}, {{.NthBucket 2}}, {{.Scale 2}}, {{.Scale 10}}, uniform"
+  requires:  "{{eq true .DoOnce }}"
+-
+  args: "{{.Orchestrator}}, {{.NthBucket 3}}, {{.Scale 2}}, {{.Scale 10}}, uniform"
+  requires:  "{{eq true .DoOnce }}"
+-
+  args: "{{.Orchestrator}}, {{.NthBucket 4}}, {{.Scale 2}}, {{.Scale 10}}, uniform"
+  requires:  "{{eq true .DoOnce }}"
+
+############### Sleep for some time to allow collections manifest to sync ###############
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "60"
+  wait: true
+
 ############### Initial data loading ################
 -
   image: sequoiatools/gideon_latest
-  command: "kv --ops {{.Scale 5000}} --create 100 --hosts {{.Orchestrator}} --bucket {{.Bucket}}  --user {{.RestUsername}} --password {{.RestPassword}}"
+  command: "kv --ops {{.Scale 500}} --create 100 --hosts {{.Orchestrator}} --bucket {{.Bucket}}  --user {{.RestUsername}} --password {{.RestPassword}}"
   duration: 600
   alias: GideonContainer1
 -
-  command: "kv --ops {{.Scale 5000}} --create 100 --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}} --user {{.RestUsername}} --password {{.RestPassword}}"
+  command: "kv --ops {{.Scale 500}} --create 100 --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}} --user {{.RestUsername}} --password {{.RestPassword}}"
   duration: 600
   alias: GideonContainer2
 -
-  command: "kv --ops {{.Scale 5000}} --create 100 --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}} --user {{.RestUsername}} --password {{.RestPassword}}"
+  command: "kv --ops {{.Scale 500}} --create 100 --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}} --user {{.RestUsername}} --password {{.RestPassword}}"
   duration: 600
   alias: GideonContainer3
 -
-  command: "kv --ops {{.Scale 5000}} --create 100 --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}} --user {{.RestUsername}} --password {{.RestPassword}}"
+  command: "kv --ops {{.Scale 500}} --create 100 --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}} --user {{.RestUsername}} --password {{.RestPassword}}"
   duration: 600
   alias: GideonContainer4
 -
-  command: "kv --ops {{.Scale 5000}} --create 100 --hosts {{.Orchestrator}} --bucket {{.NthBucket 4}} --user {{.RestUsername}} --password {{.RestPassword}}"
+  command: "kv --ops {{.Scale 500}} --create 100 --hosts {{.Orchestrator}} --bucket {{.NthBucket 4}} --user {{.RestUsername}} --password {{.RestPassword}}"
   duration: 600
   alias: GideonContainer5
+
+############### Initial data loading across all collections ################
+- image: sequoiatools/magmaloader
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.Bucket}} --start 0 --end {{.Scale 100000}} --pc 100 --doc_template Hotel --all_coll True"
+  alias: magmaloader_bucket_doc_ops1
+  requires: "{{eq true .DoOnce }}"
+  wait: true
+- command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 1}} --start 0 --end {{.Scale 100000}} --pc 100 --doc_template Hotel --all_coll True"
+  alias: magmaloader_bucket1_doc_ops1
+  requires: "{{eq true .DoOnce }}"
+  wait: true
+- command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 2}} --start 0 --end {{.Scale 100000}} --pc 100 --doc_template Hotel --all_coll True"
+  alias: magmaloader_bucket2_doc_ops1
+  requires: "{{eq true .DoOnce }}"
+  wait: true
+- command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 3}} --start 0 --end {{.Scale 100000}} --pc 100 --doc_template Hotel --all_coll True"
+  alias: magmaloader_bucket3_doc_ops1
+  requires: "{{eq true .DoOnce }}"
+  wait: true
+- command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 4}} --start 0 --end {{.Scale 100000}} --pc 100 --doc_template Hotel --all_coll True"
+  alias: magmaloader_bucket4_doc_ops1
+  requires: "{{eq true .DoOnce }}"
+  wait: true
+
 
 # Wait for some time to let the load stabilize before taking backup
 -
@@ -42,6 +90,14 @@
    entrypoint: sleep
    command: "600"
    wait: true
+
+# Wait for some time to let the load stabilize before taking backup
+-
+   image: sequoiatools/cmd
+   entrypoint: sleep
+   command: "120"
+   wait: true
+
 -
   section_end: initial_data_load
 
@@ -57,20 +113,38 @@
 ############### data loading ################
 -
   image: sequoiatools/gideon_latest
-  command: "kv --ops {{.Scale 1000}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.Bucket}}  --user {{.RestUsername}} --password {{.RestPassword}}"
+  command: "kv --ops {{.Scale 500}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.Bucket}}  --user {{.RestUsername}} --password {{.RestPassword}}"
   alias: GideonContainer1
 -
-  command: "kv --ops {{.Scale 1000}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}} --user {{.RestUsername}} --password {{.RestPassword}}"
+  command: "kv --ops {{.Scale 500}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}} --user {{.RestUsername}} --password {{.RestPassword}}"
   alias: GideonContainer2
 -
-  command: "kv --ops {{.Scale 1000}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}} --user {{.RestUsername}} --password {{.RestPassword}}"
+  command: "kv --ops {{.Scale 500}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}} --user {{.RestUsername}} --password {{.RestPassword}}"
   alias: GideonContainer3
 -
-  command: "kv --ops {{.Scale 1000}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}} --user {{.RestUsername}} --password {{.RestPassword}}"
+  command: "kv --ops {{.Scale 500}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}} --user {{.RestUsername}} --password {{.RestPassword}}"
   alias: GideonContainer4
 -
-  command: "kv --ops {{.Scale 1000}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 4}} --user {{.RestUsername}} --password {{.RestPassword}}"
+  command: "kv --ops {{.Scale 500}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 4}} --user {{.RestUsername}} --password {{.RestPassword}}"
   alias: GideonContainer5
+
+############### data loading across all collections ################
+-
+  image: sequoiatools/magmaloader
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.Bucket}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
+  alias: magmaloader_bucket_doc_ops
+-
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 1}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
+  alias: magmaloader_bucket1_doc_ops
+-
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 2}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
+  alias: magmaloader_bucket2_doc_ops
+-
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 3}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
+  alias: magmaloader_bucket3_doc_ops
+-
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 4}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
+  alias: magmaloader_bucket4_doc_ops
 
 # Wait for some time to let the load stabilize before taking backup
 -
@@ -335,10 +409,10 @@
   command: "cbbackupmerge.py {{.Nodes | .Service `n1ql` | net 0}} {{.SSHUsername}} {{.SSHPassword}} /data/archive systemtestbackup"
   wait: true
 
-# Change auto failover settings back to default
+# Change auto failover settings before chaos
 -
     template: enable_autofailover
-    args: "120,1"
+    args: "600,1"
     wait: true
 
 # Chaos: Rebalance out and kill memcached during rebalance, then retry
@@ -571,7 +645,7 @@
   template: rebalance_out
   args: "{{.Nodes | net 2}}"
   wait: true
--  
+-
   template: rebalance_in
   args: "{{.Nodes | net 2}}"
   wait: true
@@ -624,6 +698,31 @@
 -
   client:
     op: rm
+    container: "magmaloader_bucket_doc_ops"
+    wait: true
+-
+  client:
+    op: rm
+    container: "magmaloader_bucket1_doc_ops"
+    wait: true
+-
+  client:
+    op: rm
+    container: "magmaloader_bucket2_doc_ops"
+    wait: true
+-
+  client:
+    op: rm
+    container: "magmaloader_bucket3_doc_ops"
+    wait: true
+-
+  client:
+    op: rm
+    container: "magmaloader_bucket4_doc_ops"
+    wait: true
+-
+  client:
+    op: rm
     container: "GideonContainer1"
     wait: true
 -
@@ -672,6 +771,13 @@
   command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.Bucket}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
   wait: true
 
+# Wait before restore
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "120"
+  wait: true
+
 # Restore to all buckets
 -
   template: restore_backup
@@ -696,29 +802,55 @@
   command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.Bucket}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
   wait: true
 
+# Wait before restore
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "120"
+  wait: true
+
 # Restore to all buckets
 -
   template: restore_backup
   args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
   wait: true
 
+
 ############### data loading ################
 -
   image: sequoiatools/gideon_latest
-  command: "kv --ops {{.Scale 1000}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.Bucket}}  --user {{.RestUsername}} --password {{.RestPassword}}"
+  command: "kv --ops {{.Scale 500}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.Bucket}}  --user {{.RestUsername}} --password {{.RestPassword}}"
   alias: GideonContainer1
 -
-  command: "kv --ops {{.Scale 1000}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}} --user {{.RestUsername}} --password {{.RestPassword}}"
+  command: "kv --ops {{.Scale 500}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}} --user {{.RestUsername}} --password {{.RestPassword}}"
   alias: GideonContainer2
 -
-  command: "kv --ops {{.Scale 1000}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}} --user {{.RestUsername}} --password {{.RestPassword}}"
+  command: "kv --ops {{.Scale 500}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}} --user {{.RestUsername}} --password {{.RestPassword}}"
   alias: GideonContainer3
 -
-  command: "kv --ops {{.Scale 1000}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}} --user {{.RestUsername}} --password {{.RestPassword}}"
+  command: "kv --ops {{.Scale 500}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}} --user {{.RestUsername}} --password {{.RestPassword}}"
   alias: GideonContainer4
 -
-  command: "kv --ops {{.Scale 1000}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 4}} --user {{.RestUsername}} --password {{.RestPassword}}"
+  command: "kv --ops {{.Scale 500}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 4}} --user {{.RestUsername}} --password {{.RestPassword}}"
   alias: GideonContainer5
+
+############### data loading across all collections ################
+-
+  image: sequoiatools/magmaloader
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.Bucket}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
+  alias: magmaloader_bucket_doc_ops
+-
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 1}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
+  alias: magmaloader_bucket1_doc_ops
+-
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 2}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
+  alias: magmaloader_bucket2_doc_ops
+-
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 3}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
+  alias: magmaloader_bucket3_doc_ops
+-
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 4}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
+  alias: magmaloader_bucket4_doc_ops
 
 # Wait for some time to let the load stabilize before taking backup
 -
@@ -816,6 +948,31 @@
 -
   client:
     op: rm
+    container: "magmaloader_bucket_doc_ops"
+    wait: true
+-
+  client:
+    op: rm
+    container: "magmaloader_bucket1_doc_ops"
+    wait: true
+-
+  client:
+    op: rm
+    container: "magmaloader_bucket2_doc_ops"
+    wait: true
+-
+  client:
+    op: rm
+    container: "magmaloader_bucket3_doc_ops"
+    wait: true
+-
+  client:
+    op: rm
+    container: "magmaloader_bucket4_doc_ops"
+    wait: true
+-
+  client:
+    op: rm
     container: "GideonContainer1"
     wait: true
 -
@@ -888,6 +1045,13 @@
   command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.Bucket}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
   wait: true
 
+# Wait before restore
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "120"
+  wait: true
+
 # Kill memcached on a node before restore
 -
   template: kill_process
@@ -906,23 +1070,42 @@
   args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
   wait: true
 
+
 ############### data loading ################
 -
   image: sequoiatools/gideon_latest
-  command: "kv --ops {{.Scale 1000}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.Bucket}}  --user {{.RestUsername}} --password {{.RestPassword}}"
+  command: "kv --ops {{.Scale 500}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.Bucket}}  --user {{.RestUsername}} --password {{.RestPassword}}"
   alias: GideonContainer1
 -
-  command: "kv --ops {{.Scale 1000}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}} --user {{.RestUsername}} --password {{.RestPassword}}"
+  command: "kv --ops {{.Scale 500}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}} --user {{.RestUsername}} --password {{.RestPassword}}"
   alias: GideonContainer2
 -
-  command: "kv --ops {{.Scale 1000}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}} --user {{.RestUsername}} --password {{.RestPassword}}"
+  command: "kv --ops {{.Scale 500}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}} --user {{.RestUsername}} --password {{.RestPassword}}"
   alias: GideonContainer3
 -
-  command: "kv --ops {{.Scale 1000}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}} --user {{.RestUsername}} --password {{.RestPassword}}"
+  command: "kv --ops {{.Scale 500}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}} --user {{.RestUsername}} --password {{.RestPassword}}"
   alias: GideonContainer4
 -
-  command: "kv --ops {{.Scale 1000}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 4}} --user {{.RestUsername}} --password {{.RestPassword}}"
+  command: "kv --ops {{.Scale 500}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 4}} --user {{.RestUsername}} --password {{.RestPassword}}"
   alias: GideonContainer5
+
+############### data loading across all collections ################
+-
+  image: sequoiatools/magmaloader
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.Bucket}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
+  alias: magmaloader_bucket_doc_ops
+-
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 1}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
+  alias: magmaloader_bucket1_doc_ops
+-
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 2}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
+  alias: magmaloader_bucket2_doc_ops
+-
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 3}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
+  alias: magmaloader_bucket3_doc_ops
+-
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 4}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
+  alias: magmaloader_bucket4_doc_ops
 
 # Wait for some time to let the load stabilize before taking backup
 -
@@ -998,6 +1181,31 @@
 -
   client:
     op: rm
+    container: "magmaloader_bucket_doc_ops"
+    wait: true
+-
+  client:
+    op: rm
+    container: "magmaloader_bucket1_doc_ops"
+    wait: true
+-
+  client:
+    op: rm
+    container: "magmaloader_bucket2_doc_ops"
+    wait: true
+-
+  client:
+    op: rm
+    container: "magmaloader_bucket3_doc_ops"
+    wait: true
+-
+  client:
+    op: rm
+    container: "magmaloader_bucket4_doc_ops"
+    wait: true
+-
+  client:
+    op: rm
     container: "GideonContainer1"
     wait: true
 -
@@ -1044,6 +1252,13 @@
   wait: true
 -
   command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.Bucket}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+
+# Wait before restore
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "120"
   wait: true
 
 # Chaos : Kill cbbackupmgr process during restore and resume
@@ -1101,6 +1316,13 @@
   command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.Bucket}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
   wait: true
 
+# Wait before restore
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "120"
+  wait: true
+
 # Chaos : Kill cbbackupmgr process during restore and purge
 -
   template: restore_backup
@@ -1153,20 +1375,38 @@
 ############### data loading ################
 -
   image: sequoiatools/gideon_latest
-  command: "kv --ops {{.Scale 1000}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.Bucket}}  --user {{.RestUsername}} --password {{.RestPassword}}"
+  command: "kv --ops {{.Scale 500}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.Bucket}}  --user {{.RestUsername}} --password {{.RestPassword}}"
   alias: GideonContainer1
 -
-  command: "kv --ops {{.Scale 1000}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}} --user {{.RestUsername}} --password {{.RestPassword}}"
+  command: "kv --ops {{.Scale 500}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}} --user {{.RestUsername}} --password {{.RestPassword}}"
   alias: GideonContainer2
 -
-  command: "kv --ops {{.Scale 1000}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}} --user {{.RestUsername}} --password {{.RestPassword}}"
+  command: "kv --ops {{.Scale 500}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}} --user {{.RestUsername}} --password {{.RestPassword}}"
   alias: GideonContainer3
 -
-  command: "kv --ops {{.Scale 1000}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}} --user {{.RestUsername}} --password {{.RestPassword}}"
+  command: "kv --ops {{.Scale 500}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}} --user {{.RestUsername}} --password {{.RestPassword}}"
   alias: GideonContainer4
 -
-  command: "kv --ops {{.Scale 1000}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 4}} --user {{.RestUsername}} --password {{.RestPassword}}"
+  command: "kv --ops {{.Scale 500}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 4}} --user {{.RestUsername}} --password {{.RestPassword}}"
   alias: GideonContainer5
+
+############### data loading across all collections ################
+-
+  image: sequoiatools/magmaloader
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.Bucket}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
+  alias: magmaloader_bucket_doc_ops
+-
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 1}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
+  alias: magmaloader_bucket1_doc_ops
+-
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 2}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
+  alias: magmaloader_bucket2_doc_ops
+-
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 3}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
+  alias: magmaloader_bucket3_doc_ops
+-
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 4}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
+  alias: magmaloader_bucket4_doc_ops
 
 # Wait for some time to let the load stabilize before taking backup
 -
@@ -1434,6 +1674,31 @@
 -
   client:
     op: rm
+    container: "magmaloader_bucket_doc_ops"
+    wait: true
+-
+  client:
+    op: rm
+    container: "magmaloader_bucket1_doc_ops"
+    wait: true
+-
+  client:
+    op: rm
+    container: "magmaloader_bucket2_doc_ops"
+    wait: true
+-
+  client:
+    op: rm
+    container: "magmaloader_bucket3_doc_ops"
+    wait: true
+-
+  client:
+    op: rm
+    container: "magmaloader_bucket4_doc_ops"
+    wait: true
+-
+  client:
+    op: rm
     container: "GideonContainer1"
     wait: true
 -
@@ -1482,6 +1747,13 @@
   command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.Bucket}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
   wait: true
 
+# Wait before restore
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "120"
+  wait: true
+
 # Restore to all buckets
 -
   template: restore_backup
@@ -1522,23 +1794,42 @@
   args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup6"
   wait: true
 
+
 ############### data loading ################
 -
   image: sequoiatools/gideon_latest
-  command: "kv --ops {{.Scale 1000}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.Bucket}}  --user {{.RestUsername}} --password {{.RestPassword}}"
+  command: "kv --ops {{.Scale 500}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.Bucket}}  --user {{.RestUsername}} --password {{.RestPassword}}"
   alias: GideonContainer1
 -
-  command: "kv --ops {{.Scale 1000}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}} --user {{.RestUsername}} --password {{.RestPassword}}"
+  command: "kv --ops {{.Scale 500}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}} --user {{.RestUsername}} --password {{.RestPassword}}"
   alias: GideonContainer2
 -
-  command: "kv --ops {{.Scale 1000}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}} --user {{.RestUsername}} --password {{.RestPassword}}"
+  command: "kv --ops {{.Scale 500}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}} --user {{.RestUsername}} --password {{.RestPassword}}"
   alias: GideonContainer3
 -
-  command: "kv --ops {{.Scale 1000}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}} --user {{.RestUsername}} --password {{.RestPassword}}"
+  command: "kv --ops {{.Scale 500}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}} --user {{.RestUsername}} --password {{.RestPassword}}"
   alias: GideonContainer4
 -
-  command: "kv --ops {{.Scale 1000}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 4}} --user {{.RestUsername}} --password {{.RestPassword}}"
+  command: "kv --ops {{.Scale 500}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 4}} --user {{.RestUsername}} --password {{.RestPassword}}"
   alias: GideonContainer5
+
+############### data loading across all collections ################
+-
+  image: sequoiatools/magmaloader
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.Bucket}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
+  alias: magmaloader_bucket_doc_ops
+-
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 1}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
+  alias: magmaloader_bucket1_doc_ops
+-
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 2}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
+  alias: magmaloader_bucket2_doc_ops
+-
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 3}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
+  alias: magmaloader_bucket3_doc_ops
+-
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 4}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
+  alias: magmaloader_bucket4_doc_ops
 
 # Wait for some time to let the load stabilize before taking backup
 -
@@ -1854,6 +2145,31 @@
 -
   client:
     op: rm
+    container: "magmaloader_bucket_doc_ops"
+    wait: true
+-
+  client:
+    op: rm
+    container: "magmaloader_bucket1_doc_ops"
+    wait: true
+-
+  client:
+    op: rm
+    container: "magmaloader_bucket2_doc_ops"
+    wait: true
+-
+  client:
+    op: rm
+    container: "magmaloader_bucket3_doc_ops"
+    wait: true
+-
+  client:
+    op: rm
+    container: "magmaloader_bucket4_doc_ops"
+    wait: true
+-
+  client:
+    op: rm
     container: "GideonContainer1"
     wait: true
 -
@@ -1900,6 +2216,13 @@
   wait: true
 -
   command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.Bucket}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+
+# Wait before restore
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "120"
   wait: true
 
 # Restore to all buckets
