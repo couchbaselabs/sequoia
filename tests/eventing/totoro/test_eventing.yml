@@ -78,11 +78,7 @@
 
 ##### create analytics shadow dataset on analytics_op #####
 - image: sequoiatools/analyticsmanager:1.0
-  command: "-i {{.AnalyticsNode | noport}} -b {{.NthBucket 5}} -o create_cbas_infra --dv_cnt 1 --ds_cnt 1 --idx_cnt 0 --data_src gideon --inc_scp scope_0 --inc_coll coll0 -w false --ingestion_timeout 1800 --api_timeout 3600"
-  wait: true
-
-- template: analytics_rest
-  args: "create index idx_result1 on ds_1\\(result:string);"
+  command: "-i {{.AnalyticsNode | noport}} -b {{.NthBucket 5}} -o create_cbas_infra --dv_cnt 1 --ds_cnt 2 --idx_cnt 2 --data_src gideon --inc_scp scope_0 --inc_coll coll0 -w false --ingestion_timeout 1800 --api_timeout 3600"
   wait: true
 
 ##### create FTS index on fts_op #####
@@ -164,11 +160,6 @@
   wait: true
 - image: sequoiatools/eventing:8.1
   command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -s {{.NthBucket 6}}.scope_0.* -m {{.NthBucket 8}}.scope_6.coll0 -d dst_bucket.{{.NthBucket 7}}.scope_1.coll0.rw -t fts -o create --name fts --fts_node {{.FTSNode | noport}}"
-  wait: true
-
-# ###############  connect queries ################
-- template: analytics_rest
-  args: "connect link Local;"
   wait: true
 
 ##### deploy bucket op, timers, N1ql, analytics, fts #####
@@ -430,9 +421,4 @@
 # failover and full recover a eventing node
 - template: failover_force_and_recover_wait
   args: "{{.ActiveEventingNode 1}}, full"
-  wait: true
-
-# ###############  disconnect queries ################
-- template: analytics_rest
-  args: "disconnect link Local;"
   wait: true
