@@ -46,7 +46,6 @@ users:
       roles: admin
       auth_domain: local
 
-
 buckets:
   -
       name: bucket_op

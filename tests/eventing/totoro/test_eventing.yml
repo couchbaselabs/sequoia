@@ -1,5 +1,5 @@
 -
-  include: tests/templates/kv.yml, tests/templates/vegeta.yml, tests/templates/rebalance.yml, tests/templates/n1ql.yml, tests/templates/analytics.yml
+  include: tests/templates/kv.yml, tests/templates/vegeta.yml, tests/templates/rebalance.yml, tests/templates/n1ql.yml, tests/templates/analytics.yml, tests/templates/bucket.yml
 
 ###### update Tombstone Purge Interval ######
 -
@@ -199,6 +199,20 @@
   command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -s {{.NthBucket 6}}.scope_0.* -m {{.NthBucket 8}}.scope_6.coll0 -d dst_bucket.{{.NthBucket 7}}.scope_1.coll0.rw -t fts -o create --name fts --fts_node {{.FTSNode | noport}}"
   wait: true
 
+##### create RBAC user and handler as non-admin user #####
+- image: sequoiatools/couchbase-cli:8.1
+  command: "user-manage -c {{.Orchestrator}} -u {{.RestUsername}} -p {{.RestPassword}} --rbac-username eventing_rbac --rbac-password password --roles eventing_admin,bucket_admin[bucket_op] --auth-domain local --set"
+  wait: true
+- image: sequoiatools/eventing:8.1
+  command: "eventing_helper.py -i {{$.EventingNode}} -u eventing_rbac -p password -s {{.Bucket}}.scope_0.coll2 -m {{.NthBucket 8}}.scope_7.coll0 -d dst_bucket.{{.Bucket}}.scope_0.coll2.rw -t bucket_op -o create --name bucket_op_rbac"
+  wait: true
+- image: sequoiatools/eventing:8.1
+  command: "eventing_helper.py -i {{$.EventingNode}} -u eventing_rbac -p password -o deploy --name bucket_op_rbac"
+  wait: true
+- image: sequoiatools/eventing:8.1
+  command: "eventing_helper.py -i {{$.EventingNode}} -u eventing_rbac -p password -o wait_for_state --state deployed --name bucket_op_rbac"
+  wait: true
+
 ##### deploy bucket op, timers, N1ql, analytics, fts #####
 - image: sequoiatools/eventing:8.1
   command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o deploy --name bucket_op"
@@ -274,9 +288,14 @@
   wait: true
 
 
-###############  Rebalance-out multiple kv nodes ################
+###############  Rebalance-out multiple kv nodes (with stop/resume) ################
 - template: rebalance_out
   args: "({{.ActiveDataNode 1}},{{.ActiveDataNode 2}})"
+
+- template: rebalance_stop
+  wait: true
+
+- template: rebalance
   wait: true
 
 #### pause bucket op, timers, analytics, fts ####
@@ -292,7 +311,9 @@
 - image: sequoiatools/eventing:8.1
   command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o pause --name fts"
   wait: true
-
+- image: sequoiatools/eventing:8.1
+  command: "eventing_helper.py -i {{$.EventingNode}} -u eventing_rbac -p password -o pause --name bucket_op_rbac"
+  wait: true
 
 ###############  Swap Rebalance kv ################
 - template: rebalance_swap
@@ -312,6 +333,8 @@
 - command: "eventing_helper.py -i {{.EventingNode}} -u {{.RestUsername}} -p {{.RestPassword}} -o wait_for_state --state paused --name analytics"
   wait: true
 - command: "eventing_helper.py -i {{.EventingNode}} -u {{.RestUsername}} -p {{.RestPassword}} -o wait_for_state --state paused --name fts"
+  wait: true
+- command: "eventing_helper.py -i {{$.EventingNode}} -u eventing_rbac -p password -o wait_for_state --state paused --name bucket_op_rbac"
   wait: true
 
 ####### load data into all collections #######
@@ -357,6 +380,9 @@
 - image: sequoiatools/eventing:8.1
   command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o resume --name fts"
   wait: true
+- image: sequoiatools/eventing:8.1
+  command: "eventing_helper.py -i {{$.EventingNode}} -u eventing_rbac -p password -o resume --name bucket_op_rbac"
+  wait: true
 
 #### wait for all handlers to be deployed ####
 - image: sequoiatools/eventing:8.1
@@ -373,6 +399,8 @@
 - command: "eventing_helper.py -i {{.EventingNode}} -u {{.RestUsername}} -p {{.RestPassword}} -o wait_for_state --state deployed --name analytics"
   wait: true
 - command: "eventing_helper.py -i {{.EventingNode}} -u {{.RestUsername}} -p {{.RestPassword}} -o wait_for_state --state deployed --name fts"
+  wait: true
+- command: "eventing_helper.py -i {{$.EventingNode}} -u eventing_rbac -p password -o wait_for_state --state deployed --name bucket_op_rbac"
   wait: true
 
 ####### load data into all collections #######
@@ -458,4 +486,29 @@
 # failover and full recover a eventing node
 - template: failover_force_and_recover_wait
   args: "{{.ActiveEventingNode 1}}, full"
+  wait: true
+
+###############  Bucket flush during active handlers ################
+- template: flush-bucket
+  args: "{{.Bucket}}"
+  wait: true
+
+- template: flush-bucket
+  args: "{{.NthBucket 1}}"
+  wait: true
+
+# graceful failover and delta recover a data node
+- template: failover_and_recover
+  args: "{{.ActiveDataNode 1}}, delta"
+  wait: true
+
+# undeploy and delete handlers as non-admin user #####
+- image: sequoiatools/eventing:8.1
+  command: "eventing_helper.py -i {{$.EventingNode}} -u eventing_rbac -p password -o undeploy --name bucket_op_rbac"
+  wait: true
+- image: sequoiatools/eventing:8.1
+  command: "eventing_helper.py -i {{$.EventingNode}} -u eventing_rbac -p password -o wait_for_state --state undeployed --name bucket_op_rbac"
+  wait: true
+- image: sequoiatools/eventing:8.1
+  command: "eventing_helper.py -i {{$.EventingNode}} -u eventing_rbac -p password -o delete --name bucket_op_rbac"
   wait: true
