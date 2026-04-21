@@ -1,6 +1,37 @@
 -
   include: tests/templates/kv.yml, tests/templates/vegeta.yml, tests/templates/rebalance.yml, tests/templates/n1ql.yml, tests/templates/analytics.yml
 
+###### update Tombstone Purge Interval ######
+-
+  image: sequoiatools/couchbase-cli:8.1
+  requires:  "{{eq true .DoOnce }}"
+  command: "setting-compaction -c {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}} --metadata-purge-interval 0.25 --compaction-db-percentage 30 --compaction-view-percentage 30"
+  wait: true
+
+###### enable n2n encryption & ipv4only ######
+-
+  template: disable_autofailover
+  requires:  "{{eq true .DoOnce }}"
+-
+  image: sequoiatools/couchbase-cli:8.1
+  requires:  "{{eq true .DoOnce }}"
+  command: "node-to-node-encryption -c {{.Orchestrator}}:8091 -u {{.RestUsername}} -p {{.RestPassword}} --enable"
+  wait: true
+-
+  image: sequoiatools/couchbase-cli:8.1
+  requires:  "{{eq true .DoOnce }}"
+  command: "setting-security -c {{.Orchestrator}}:8091 -u {{.RestUsername}} -p {{.RestPassword}} --set --cluster-encryption-level control"
+  wait: true
+-
+  image: sequoiatools/couchbase-cli:8.1
+  requires:  "{{eq true .DoOnce }}"
+  command: "ip-family -c {{.Orchestrator}}:8091 -u {{.RestUsername}} -p {{.RestPassword}} --set --ipv4only"
+  wait: true
+-
+  template: enable_autofailover
+  args: "120,1"
+  requires:  "{{eq true .DoOnce }}"
+
 ####### cleanup stale handlers from previous runs #####
 - image: sequoiatools/eventing:8.1
   command: "eventing_helper.py -i {{.EventingNode}} -u {{.RestUsername}} -p {{.RestPassword}} -o undeploy"
@@ -84,6 +115,12 @@
 ##### create FTS index on fts_op #####
 - image: sequoiatools/ftsindexmanager
   command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 6}} -m 1:0:1 -s 1 -sc scope_0 -coll coll0 -a create_index_from_map"
+  wait: true
+
+############### load vector datasets with xattrs ################
+- image: sequoiatools/govectorloader
+  command: "-nodeAddress={{$.Orchestrator}} -username=Administrator -password=password -bucketName={{.NthBucket 6}} -scopeName=scope_0 -collectionName=coll0 -startIndex=0 -endIndex=150000 -datasetName=sift -xattrFlag=True -percentagesToResize=1 -dimensionsForResize=1536 -provideDefaultDocs=True"
+  requires: "{{eq true $.DoOnce }}"
   wait: true
 
 ############### data loading for fts bucket ################

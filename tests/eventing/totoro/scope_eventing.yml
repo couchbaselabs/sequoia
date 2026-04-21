@@ -119,6 +119,8 @@ servers: # each server tag represents a cluster
       init_nodes: 9
       enable_encryption_at_rest: true
       enable_client_certificate_handling: true
+      dekRotateEvery: 50
+      dekLifetime: 100
       services:
         eventing: 2
         index: 1
