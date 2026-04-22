@@ -5,7 +5,7 @@
 -
   image: sequoiatools/couchbase-cli:8.1
   requires:  "{{eq true .DoOnce }}"
-  command: "setting-compaction -c {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}} --metadata-purge-interval 0.25 --compaction-db-percentage 30 --compaction-view-percentage 30"
+  command: "setting-compaction -c {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}} --metadata-purge-interval 0.25 --compaction-db-percentage 10 --compaction-view-percentage 10"
   wait: true
 
 ###### enable n2n encryption & ipv4only ######
@@ -140,21 +140,21 @@
 ####### load data into few collections #######
 -
   image: sequoiatools/gideon_latest
-  command: "kv --ops {{.Scale 10000}} --create 60 --get 20 --delete 20  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --scope scope_0 --collection coll0,coll1,coll2,coll3,coll4"
+  command: "kv --ops {{.Scale 12000}} --create 60 --get 20 --delete 20  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --scope scope_0 --collection coll0,coll1,coll2,coll3,coll4"
   duration: 1000
-- command: "kv --ops {{.Scale 10000}} --create 60 --get 20 --delete 20  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}} --scope scope_0 --collection coll0,coll1,coll2,coll3,coll4"
+- command: "kv --ops {{.Scale 12000}} --create 60 --get 20 --delete 20  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}} --scope scope_0 --collection coll0,coll1,coll2,coll3,coll4"
   duration: 1000
-- command: "kv --ops {{.Scale 10000}} --create 60 --get 20 --delete 20  --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}} --scope scope_0 --collection coll0,coll1,coll2,coll3,coll4"
+- command: "kv --ops {{.Scale 12000}} --create 60 --get 20 --delete 20  --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}} --scope scope_0 --collection coll0,coll1,coll2,coll3,coll4"
   duration: 1000
-- command: "kv --ops {{.Scale 10000}} --create 60 --get 20 --delete 20  --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}} --scope scope_0 --collection coll0,coll1,coll2,coll3,coll4"
+- command: "kv --ops {{.Scale 12000}} --create 60 --get 20 --delete 20  --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}} --scope scope_0 --collection coll0,coll1,coll2,coll3,coll4"
   duration: 1000
-- command: "kv --ops {{.Scale 10000}} --create 60 --get 20 --delete 20  --hosts {{.Orchestrator}} --bucket {{.NthBucket 4}} --scope scope_0 --collection coll0,coll1,coll2,coll3,coll4"
+- command: "kv --ops {{.Scale 12000}} --create 60 --get 20 --delete 20  --hosts {{.Orchestrator}} --bucket {{.NthBucket 4}} --scope scope_0 --collection coll0,coll1,coll2,coll3,coll4"
   duration: 1000
-- command: "kv --ops {{.Scale 10000}} --create 60 --get 20 --delete 20  --hosts {{.Orchestrator}} --bucket {{.NthBucket 5}} --scope scope_0 --collection coll0,coll1,coll2,coll3,coll4"
+- command: "kv --ops {{.Scale 12000}} --create 60 --get 20 --delete 20  --hosts {{.Orchestrator}} --bucket {{.NthBucket 5}} --scope scope_0 --collection coll0,coll1,coll2,coll3,coll4"
   duration: 1000
-- command: "kv --ops {{.Scale 10000}} --create 60 --get 20 --delete 20  --hosts {{.Orchestrator}} --bucket {{.NthBucket 6}} --scope scope_0 --collection coll0,coll1,coll2,coll3,coll4"
+- command: "kv --ops {{.Scale 12000}} --create 60 --get 20 --delete 20  --hosts {{.Orchestrator}} --bucket {{.NthBucket 6}} --scope scope_0 --collection coll0,coll1,coll2,coll3,coll4"
   duration: 1000
-- command: "kv --ops {{.Scale 10000}} --create 60 --get 20 --delete 20  --hosts {{.Orchestrator}} --bucket {{.NthBucket 7}} --scope scope_0 --collection coll0,coll1,coll2,coll3,coll4"
+- command: "kv --ops {{.Scale 12000}} --create 60 --get 20 --delete 20  --hosts {{.Orchestrator}} --bucket {{.NthBucket 7}} --scope scope_0 --collection coll0,coll1,coll2,coll3,coll4"
   duration: 1000
 
 - template: pillowfight_durability
@@ -252,11 +252,11 @@
 ####### load data into all collections #######
 -
   image: sequoiatools/gideon_latest
-  command: "kv --ops {{.Scale 500}} --create 30 --get 40 --delete 30  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --scope scope_0 --collection coll0,coll1"
+  command: "kv --ops {{.Scale 1000}} --create 30 --get 40 --delete 30  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --scope scope_0 --collection coll0,coll1"
   duration: 1000
-- command: "kv --ops {{.Scale 200}} --create 30 --get 40 --delete 30  --hosts {{.Orchestrator}} --bucket {{.NthBucket 7}} --scope scope_0 --collection coll0,coll1,coll2,coll3,coll4"
+- command: "kv --ops {{.Scale 1000}} --create 30 --get 40 --delete 30  --hosts {{.Orchestrator}} --bucket {{.NthBucket 7}} --scope scope_0 --collection coll0,coll1,coll2,coll3,coll4"
   duration: 1000
-- command: "kv --ops {{.Scale 200}} --create 30 --get 40 --delete 30  --hosts {{.Orchestrator}} --bucket {{.NthBucket 7}} --scope scope_1 --collection coll0,coll1,coll2,coll3,coll4"
+- command: "kv --ops {{.Scale 1000}} --create 30 --get 40 --delete 30  --hosts {{.Orchestrator}} --bucket {{.NthBucket 7}} --scope scope_1 --collection coll0,coll1,coll2,coll3,coll4"
   duration: 1000
 
 # set expiry on some docs
@@ -340,11 +340,11 @@
 ####### load data into all collections #######
 -
   image: sequoiatools/gideon_latest
-  command: "kv --ops {{.Scale 500}} --create 30 --get 40 --delete 30  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --scope scope_0 --collection coll0,coll1"
+  command: "kv --ops {{.Scale 1000}} --create 30 --get 40 --delete 30  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --scope scope_0 --collection coll0,coll1"
   duration: 1000
-- command: "kv --ops {{.Scale 200}} --create 30 --get 40 --delete 30  --hosts {{.Orchestrator}} --bucket {{.NthBucket 7}} --scope scope_0 --collection coll0,coll1,coll2,coll3,coll4"
+- command: "kv --ops {{.Scale 1000}} --create 30 --get 40 --delete 30  --hosts {{.Orchestrator}} --bucket {{.NthBucket 7}} --scope scope_0 --collection coll0,coll1,coll2,coll3,coll4"
   duration: 1000
-- command: "kv --ops {{.Scale 200}} --create 30 --get 40 --delete 30  --hosts {{.Orchestrator}} --bucket {{.NthBucket 7}} --scope scope_1 --collection coll0,coll1,coll2,coll3,coll4"
+- command: "kv --ops {{.Scale 1000}} --create 30 --get 40 --delete 30  --hosts {{.Orchestrator}} --bucket {{.NthBucket 7}} --scope scope_1 --collection coll0,coll1,coll2,coll3,coll4"
   duration: 1000
 
 
@@ -403,30 +403,46 @@
 - command: "eventing_helper.py -i {{$.EventingNode}} -u eventing_rbac -p password -o wait_for_state --state deployed --name bucket_op_rbac"
   wait: true
 
+###############  compact metadata bucket to stress checkpoint survival ################
+- image: sequoiatools/couchbase-cli:8.1
+  command: "bucket-compact -c {{.Orchestrator}}:{{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket {{.NthBucket 8}}"
+  wait: true
+
+###############  GSI index build under active eventing write load ################
+- template: cbq
+  args: "'CREATE INDEX idx_hotel_type ON `{{.Bucket}}`(type)'"
+  wait: true
+
 ####### delete-heavy workload to exercise OnDelete handlers on all source buckets #######
 -
   image: sequoiatools/gideon_latest
-  command: "kv --ops {{.Scale 5000}} --create 20 --get 10 --delete 70  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --scope scope_0 --collection coll0,coll1,coll2"
+  command: "kv --ops {{.Scale 10000}} --create 20 --get 10 --delete 70  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --scope scope_0 --collection coll0,coll1,coll2"
   duration: 600
-- command: "kv --ops {{.Scale 5000}} --create 20 --get 10 --delete 70  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}} --scope scope_0 --collection coll0,coll1"
+- command: "kv --ops {{.Scale 10000}} --create 20 --get 10 --delete 70  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}} --scope scope_0 --collection coll0,coll1"
   duration: 600
-- command: "kv --ops {{.Scale 5000}} --create 20 --get 10 --delete 70  --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}} --scope scope_0 --collection coll0,coll1,coll2,coll3,coll4"
+- command: "kv --ops {{.Scale 10000}} --create 20 --get 10 --delete 70  --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}} --scope scope_0 --collection coll0,coll1,coll2,coll3,coll4"
   duration: 600
-- command: "kv --ops {{.Scale 5000}} --create 20 --get 10 --delete 70  --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}} --scope scope_0 --collection coll0,coll1,coll2,coll3,coll4"
+- command: "kv --ops {{.Scale 10000}} --create 20 --get 10 --delete 70  --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}} --scope scope_0 --collection coll0,coll1,coll2,coll3,coll4"
   duration: 600
-- command: "kv --ops {{.Scale 5000}} --create 20 --get 10 --delete 70  --hosts {{.Orchestrator}} --bucket {{.NthBucket 5}} --scope scope_0 --collection coll0,coll1"
+- command: "kv --ops {{.Scale 10000}} --create 20 --get 10 --delete 70  --hosts {{.Orchestrator}} --bucket {{.NthBucket 5}} --scope scope_0 --collection coll0,coll1"
   duration: 600
-- command: "kv --ops {{.Scale 5000}} --create 20 --get 10 --delete 70  --hosts {{.Orchestrator}} --bucket {{.NthBucket 6}} --scope scope_0 --collection coll0,coll1"
+- command: "kv --ops {{.Scale 10000}} --create 20 --get 10 --delete 70  --hosts {{.Orchestrator}} --bucket {{.NthBucket 6}} --scope scope_0 --collection coll0,coll1"
   duration: 600
+
+###############  N1QL DML concurrent with eventing handlers ################
+- template: attack_query
+  args: "600, 50, {{.Orchestrator}}:8093, 'UPDATE `{{.NthBucket 3}}` SET updated_by_n1ql=true WHERE type IS NOT MISSING LIMIT 1000'"
+- template: attack_query
+  args: "600, 50, {{.Orchestrator}}:8093, 'DELETE FROM `{{.NthBucket 3}}` WHERE updated_by_n1ql=true LIMIT 500'"
 
 ####### load data into all collections #######
 -
   image: sequoiatools/gideon_latest
-  command: "kv --ops {{.Scale 500}} --create 30 --get 40 --delete 30  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --scope scope_0 --collection coll0,coll1"
+  command: "kv --ops {{.Scale 4000}} --create 30 --get 40 --delete 30  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --scope scope_0 --collection coll0,coll1"
   duration: 1000
-- command: "kv --ops {{.Scale 200}} --create 30 --get 40 --delete 30  --hosts {{.Orchestrator}} --bucket {{.NthBucket 7}} --scope scope_0 --collection coll0,coll1,coll2,coll3,coll4"
+- command: "kv --ops {{.Scale 4000}} --create 30 --get 40 --delete 30  --hosts {{.Orchestrator}} --bucket {{.NthBucket 7}} --scope scope_0 --collection coll0,coll1,coll2,coll3,coll4"
   duration: 1000
-- command: "kv --ops {{.Scale 200}} --create 30 --get 40 --delete 30  --hosts {{.Orchestrator}} --bucket {{.NthBucket 7}} --scope scope_1 --collection coll0,coll1,coll2,coll3,coll4"
+- command: "kv --ops {{.Scale 4000}} --create 30 --get 40 --delete 30  --hosts {{.Orchestrator}} --bucket {{.NthBucket 7}} --scope scope_1 --collection coll0,coll1,coll2,coll3,coll4"
   duration: 1000
 
 ###############  Rebalance-out multiple eventing nodes ################
@@ -437,11 +453,11 @@
 ####### load data into all collections #######
 -
   image: sequoiatools/gideon_latest
-  command: "kv --ops {{.Scale 500}} --create 30 --get 40 --delete 30  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --scope scope_0 --collection coll0,coll1"
+  command: "kv --ops {{.Scale 3000}} --create 30 --get 40 --delete 30  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --scope scope_0 --collection coll0,coll1"
   duration: 1000
-- command: "kv --ops {{.Scale 200}} --create 30 --get 40 --delete 30  --hosts {{.Orchestrator}} --bucket {{.NthBucket 7}} --scope scope_0 --collection coll0,coll1,coll2,coll3,coll4"
+- command: "kv --ops {{.Scale 3000}} --create 30 --get 40 --delete 30  --hosts {{.Orchestrator}} --bucket {{.NthBucket 7}} --scope scope_0 --collection coll0,coll1,coll2,coll3,coll4"
   duration: 1000
-- command: "kv --ops {{.Scale 200}} --create 30 --get 40 --delete 30  --hosts {{.Orchestrator}} --bucket {{.NthBucket 7}} --scope scope_1 --collection coll0,coll1,coll2,coll3,coll4"
+- command: "kv --ops {{.Scale 3000}} --create 30 --get 40 --delete 30  --hosts {{.Orchestrator}} --bucket {{.NthBucket 7}} --scope scope_1 --collection coll0,coll1,coll2,coll3,coll4"
   duration: 1000
 
 ###############  Swap Rebalance ################
@@ -456,11 +472,11 @@
 ####### load data into all collections #######
 -
   image: sequoiatools/gideon_latest
-  command: "kv --ops {{.Scale 500}} --create 30 --get 40 --delete 30  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --scope scope_0 --collection coll0,coll1"
+  command: "kv --ops {{.Scale 3000}} --create 30 --get 40 --delete 30  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --scope scope_0 --collection coll0,coll1"
   duration: 1000
-- command: "kv --ops {{.Scale 200}} --create 30 --get 40 --delete 30  --hosts {{.Orchestrator}} --bucket {{.NthBucket 7}} --scope scope_0 --collection coll0,coll1,coll2,coll3,coll4"
+- command: "kv --ops {{.Scale 3000}} --create 30 --get 40 --delete 30  --hosts {{.Orchestrator}} --bucket {{.NthBucket 7}} --scope scope_0 --collection coll0,coll1,coll2,coll3,coll4"
   duration: 1000
-- command: "kv --ops {{.Scale 200}} --create 30 --get 40 --delete 30  --hosts {{.Orchestrator}} --bucket {{.NthBucket 7}} --scope scope_1 --collection coll0,coll1,coll2,coll3,coll4"
+- command: "kv --ops {{.Scale 3000}} --create 30 --get 40 --delete 30  --hosts {{.Orchestrator}} --bucket {{.NthBucket 7}} --scope scope_1 --collection coll0,coll1,coll2,coll3,coll4"
   duration: 1000
 
 ###############  Rebalance-in kv+eventing nodes ################
@@ -472,18 +488,17 @@
 ####### load data into all collections #######
 -
   image: sequoiatools/gideon_latest
-  command: "kv --ops {{.Scale 500}} --create 30 --get 40 --delete 30  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --scope scope_0 --collection coll0,coll1"
+  command: "kv --ops {{.Scale 3000}} --create 30 --get 40 --delete 30  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --scope scope_0 --collection coll0,coll1"
   duration: 1000
-- command: "kv --ops {{.Scale 200}} --create 30 --get 40 --delete 30  --hosts {{.Orchestrator}} --bucket {{.NthBucket 7}} --scope scope_0 --collection coll0,coll1,coll2,coll3,coll4"
+- command: "kv --ops {{.Scale 3000}} --create 30 --get 40 --delete 30  --hosts {{.Orchestrator}} --bucket {{.NthBucket 7}} --scope scope_0 --collection coll0,coll1,coll2,coll3,coll4"
   duration: 1000
-- command: "kv --ops {{.Scale 200}} --create 30 --get 40 --delete 30  --hosts {{.Orchestrator}} --bucket {{.NthBucket 7}} --scope scope_1 --collection coll0,coll1,coll2,coll3,coll4"
+- command: "kv --ops {{.Scale 3000}} --create 30 --get 40 --delete 30  --hosts {{.Orchestrator}} --bucket {{.NthBucket 7}} --scope scope_1 --collection coll0,coll1,coll2,coll3,coll4"
   duration: 1000
 
 ###############  Rebalance-out  kv+eventing nodes ################
 - template: rebalance_out
   args: "({{.ActiveDataNode 1}}, {{.ActiveEventingNode 1}})"
   wait: true
-
 
 ###############  Swap Rebalance kv+eventing nodes ################
 - template: rebalance_swap
@@ -492,6 +507,13 @@
 
 - template: rebalance_swap
   args: "{{.NthInActiveNode 0}},{{.ActiveEventingNode 1}}, eventing"
+  wait: true
+
+###############  increase bucket replica during active eventing ################
+- template: enable-replica
+  args: "{{.Bucket}}, 2"
+  wait: true
+- template: rebalance
   wait: true
 
 # failover and full recover a data node
