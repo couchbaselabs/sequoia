@@ -109,19 +109,19 @@ buckets:
 servers: # each server tag represents a cluster
   -
       name: local
-      count: 15
+      count: 17
       ram: 90%
       eventing_ram: 90%
       index_ram: 90%
       analytics_ram: 90%
       fts_ram: 80%
-      init_nodes: 9
+      init_nodes: 10
       enable_encryption_at_rest: true
       enable_client_certificate_handling: true
       dekRotateEvery: 50
       dekLifetime: 100
       services:
-        eventing: 2
+        eventing: 3
         index: 1
         query: 1
         analytics: 1

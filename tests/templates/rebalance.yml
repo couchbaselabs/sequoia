@@ -342,7 +342,7 @@
   actions:
     -
       image: "sequoiatools/cmd"
-      command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0 'kill -SIGKILL $(pgrep $1)'"
+      command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0 'kill -SIGKILL $(pgrep -f $1)'"
 -
 # Fail a node by killing the memcached
 # $0 = Server to fail

@@ -479,6 +479,22 @@
 - command: "kv --ops {{.Scale 3000}} --create 30 --get 40 --delete 30  --hosts {{.Orchestrator}} --bucket {{.NthBucket 7}} --scope scope_1 --collection coll0,coll1,coll2,coll3,coll4"
   duration: 1000
 
+###############  Kill memcached on data node (chaos) ################
+- template: memcached_kill
+  args: "{{.ActiveDataNode 1}}"
+  wait: true
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+- template: start_memcached
+  args: "{{.ActiveDataNode 1}}"
+  wait: true
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
 ###############  Rebalance-in kv+eventing nodes ################
 - template: add_node
   args: "{{.NthInActiveNode 0}}, data"
@@ -494,6 +510,15 @@
   duration: 1000
 - command: "kv --ops {{.Scale 3000}} --create 30 --get 40 --delete 30  --hosts {{.Orchestrator}} --bucket {{.NthBucket 7}} --scope scope_1 --collection coll0,coll1,coll2,coll3,coll4"
   duration: 1000
+
+###############  Kill eventing process (chaos) ################
+- template: kill_process
+  args: "{{.ActiveEventingNode 1}}, eventing-producer"
+  wait: true
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
 
 ###############  Rebalance-out  kv+eventing nodes ################
 - template: rebalance_out
