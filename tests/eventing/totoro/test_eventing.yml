@@ -213,6 +213,17 @@
   command: "eventing_helper.py -i {{$.EventingNode}} -u eventing_rbac -p password -o wait_for_state --state deployed --name bucket_op_rbac"
   wait: true
 
+##### create and deploy ondeploy handler #####
+- image: sequoiatools/eventing:8.1
+  command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -s {{.Bucket}}.scope_0.coll3 -m {{.NthBucket 8}}.scope_8.coll0 -d dst_bucket.{{.NthBucket 7}}.scope_2.coll0.rw -t ondeploy -o create --name ondeploy"
+  wait: true
+- image: sequoiatools/eventing:8.1
+  command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o deploy --name ondeploy"
+  wait: true
+- image: sequoiatools/eventing:8.1
+  command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o wait_for_state --state deployed --name ondeploy"
+  wait: true
+
 ##### deploy bucket op, timers, N1ql, analytics, fts #####
 - image: sequoiatools/eventing:8.1
   command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o deploy --name bucket_op"
@@ -320,10 +331,6 @@
   args: "{{.NthInActiveNode 0}},{{.ActiveDataNode 2}}, data"
   wait: true
 
-- template: rebalance_swap
-  args: "{{.NthInActiveNode 0}},{{.ActiveDataNode 2}}, data"
-  wait: true
-
 #### wait for bucket, timers, analytics, fts to be paused ####
 - image: sequoiatools/eventing:8.1
   command: "eventing_helper.py -i {{.EventingNode}} -u {{.RestUsername}} -p {{.RestPassword}} -o wait_for_state --state paused --name bucket_op"
@@ -403,6 +410,18 @@
 - command: "eventing_helper.py -i {{$.EventingNode}} -u eventing_rbac -p password -o wait_for_state --state deployed --name bucket_op_rbac"
   wait: true
 
+###############  Delete and recreate scope while handlers run (timers handler watches via wildcard) ################
+- image: sequoiatools/collections:1.0
+  command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 2}} -o delete -s scope_3"
+  wait: true
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "120"
+  wait: true
+- image: sequoiatools/collections:1.0
+  command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 2}} -o create_multi_scope_collection -s scope_3 -c coll --scope_count=1 --collection_count=10 --collection_distribution=uniform"
+  wait: true
+
 ###############  compact metadata bucket to stress checkpoint survival ################
 - image: sequoiatools/couchbase-cli:8.1
   command: "bucket-compact -c {{.Orchestrator}}:{{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket {{.NthBucket 8}}"
@@ -435,6 +454,14 @@
 - template: attack_query
   args: "600, 50, {{.Orchestrator}}:8093, 'DELETE FROM `{{.NthBucket 3}}` WHERE updated_by_n1ql=true LIMIT 500'"
 
+###############  Autofailover trigger during active handlers ################
+- template: autofailover
+  args: "{{.ActiveDataNode 1}}, 5, full"
+  wait: true
+- template: enable_autofailover
+  args: "120,1"
+  wait: true
+
 ####### load data into all collections #######
 -
   image: sequoiatools/gideon_latest
@@ -465,10 +492,6 @@
   args: "{{.NthInActiveNode 0}},{{.ActiveEventingNode 1}}, eventing"
   wait: true
 
-- template: rebalance_swap
-  args: "{{.NthInActiveNode 0}},{{.ActiveEventingNode 1}}, eventing"
-  wait: true
-
 ####### load data into all collections #######
 -
   image: sequoiatools/gideon_latest
@@ -490,15 +513,11 @@
 - template: start_memcached
   args: "{{.ActiveDataNode 1}}"
   wait: true
-- image: sequoiatools/cmd
-  entrypoint: sleep
-  command: "300"
-  wait: true
 
 ###############  Rebalance-in kv+eventing nodes ################
 - template: add_node
-  args: "{{.NthInActiveNode 0}}, data"
-- args: "{{.NthInActiveNode 1}}, eventing"
+  args: "{{.NthInActiveNode 1}}, data"
+- args: "{{.NthInActiveNode 2}}, eventing"
   wait: true
 
 ####### load data into all collections #######
@@ -511,7 +530,12 @@
 - command: "kv --ops {{.Scale 3000}} --create 30 --get 40 --delete 30  --hosts {{.Orchestrator}} --bucket {{.NthBucket 7}} --scope scope_1 --collection coll0,coll1,coll2,coll3,coll4"
   duration: 1000
 
-###############  Kill eventing process (chaos) ################
+###############  Rebalance-out  kv+eventing nodes ################
+- template: rebalance_out
+  args: "({{.ActiveDataNode 1}}, {{.ActiveEventingNode 1}})"
+  wait: true
+
+###############  Kill eventing-producer (chaos) ################
 - template: kill_process
   args: "{{.ActiveEventingNode 1}}, eventing-producer"
   wait: true
@@ -520,18 +544,37 @@
   command: "300"
   wait: true
 
-###############  Rebalance-out  kv+eventing nodes ################
-- template: rebalance_out
-  args: "({{.ActiveDataNode 1}}, {{.ActiveEventingNode 1}})"
-  wait: true
-
 ###############  Swap Rebalance kv+eventing nodes ################
 - template: rebalance_swap
-  args: "{{.NthInActiveNode 0}},{{.ActiveDataNode 1}}, data"
+  args: "{{.NthInActiveNode 3}},{{.ActiveDataNode 1}}, data"
   wait: true
 
 - template: rebalance_swap
-  args: "{{.NthInActiveNode 0}},{{.ActiveEventingNode 1}}, eventing"
+  args: "{{.NthInActiveNode 4}},{{.ActiveEventingNode 1}}, eventing"
+  wait: true
+
+###############  Kill eventing-consumer (chaos) ################
+- template: kill_process
+  args: "{{.ActiveEventingNode 1}}, eventing-consumer"
+  wait: true
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+###############  Swap index node while n1ql handler is active ################
+- template: rebalance_swap
+  args: "{{.InActiveNode}}, {{.ActiveIndexNode 0}}, index"
+  wait: true
+
+###############  Swap analytics node while analytics handler is active ################
+- template: rebalance_swap
+  args: "{{.InActiveNode}}, {{.ActiveAnalyticsNode 0}}, analytics"
+  wait: true
+
+###############  Swap FTS node while fts handler is active ################
+- template: rebalance_swap
+  args: "{{.InActiveNode}}, {{.Nodes | .Service `fts` | net 0}}, fts"
   wait: true
 
 ###############  increase bucket replica during active eventing ################
@@ -563,6 +606,22 @@
 # graceful failover and delta recover a data node
 - template: failover_and_recover
   args: "{{.ActiveDataNode 1}}, delta"
+  wait: true
+
+#### final validation: all handlers still deployed after full test lifecycle ####
+- image: sequoiatools/eventing:8.1
+  command: "eventing_helper.py -i {{.EventingNode}} -u {{.RestUsername}} -p {{.RestPassword}} -o wait_for_state --state deployed"
+  wait: true
+
+# undeploy and delete ondeploy handler #####
+- image: sequoiatools/eventing:8.1
+  command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o undeploy --name ondeploy"
+  wait: true
+- image: sequoiatools/eventing:8.1
+  command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o wait_for_state --state undeployed --name ondeploy"
+  wait: true
+- image: sequoiatools/eventing:8.1
+  command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o delete --name ondeploy"
   wait: true
 
 # undeploy and delete handlers as non-admin user #####
