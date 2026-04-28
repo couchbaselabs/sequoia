@@ -406,6 +406,12 @@ func (t *TemplateResolver) ActiveArbiterNode(n int) string {
 	return t.ActiveFilter(n, serviceNodes)
 }
 
+// Returns the NFS server IP from the active provider (parsed from
+// `nfs_server:<IP>` in the providers yaml file).
+func (t *TemplateResolver) NfsServer() string {
+	return t.Scope.Provider.GetNfsServer()
+}
+
 func (t *TemplateResolver) Attr(key string, servers []ServerSpec) string {
 	attr := t.Scope.Spec.ToAttr(key)
 	spec := reflect.ValueOf(servers[0])

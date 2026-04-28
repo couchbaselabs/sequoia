@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
 	"github.com/docker/docker/api/types/swarm"
 	docker "github.com/fsouza/go-dockerclient"
 )
@@ -32,11 +33,13 @@ const DEFAULT_DOCKER_PROVIDER_CONF = "providers/docker/options.yml"
 type Provider interface {
 	ProvideCouchbaseServers(filename *string, servers []ServerSpec)
 	ProvideSyncGateways(syncGateways []SyncGatewaySpec)
+	ProvideNFSServer()
 	ProvideAccels(accels []AccelSpec)
 	ProvideLoadBalancer(loadBalancer LoadBalancerSpec)
 	GetHostAddress(name string) string
 	GetType() string
 	GetRestUrl(name string) string
+	GetNfsServer() string
 }
 
 type FileProvider struct {
@@ -45,12 +48,14 @@ type FileProvider struct {
 	ServerNameIp map[string]string
 	HostFile     string
 	Flags        *TestFlags
+	NfsServer    string
 }
 type ClusterRunProvider struct {
 	Servers      []ServerSpec
 	SyncGateways []SyncGatewaySpec
 	ServerNameIp map[string]string
 	Endpoint     string
+	NfsServer    string
 }
 
 type DockerProvider struct {
@@ -63,6 +68,7 @@ type DockerProvider struct {
 	StartPort        int
 	Opts             *DockerProviderOpts
 	Flags            *TestFlags
+	NfsServer        string
 }
 
 type SwarmProvider struct {
@@ -107,6 +113,7 @@ func NewProvider(flags TestFlags, servers []ServerSpec, syncGateways []SyncGatew
 					startPort,
 					nil,
 					&flags,
+					"",
 				},
 			}
 		} else {
@@ -120,6 +127,7 @@ func NewProvider(flags TestFlags, servers []ServerSpec, syncGateways []SyncGatew
 				startPort,
 				nil,
 				&flags,
+				"",
 			}
 		}
 	case "swarm":
@@ -143,6 +151,7 @@ func NewProvider(flags TestFlags, servers []ServerSpec, syncGateways []SyncGatew
 				startPort,
 				nil,
 				&flags,
+				"",
 			},
 		}
 	case "file":
@@ -156,6 +165,7 @@ func NewProvider(flags TestFlags, servers []ServerSpec, syncGateways []SyncGatew
 			make(map[string]string),
 			hostFile,
 			&flags,
+			"",
 		}
 	case "dev":
 		endpoint := "127.0.0.1"
@@ -167,6 +177,7 @@ func NewProvider(flags TestFlags, servers []ServerSpec, syncGateways []SyncGatew
 			syncGateways,
 			make(map[string]string),
 			endpoint,
+			"",
 		}
 	}
 
@@ -193,7 +204,7 @@ func (p *FileProvider) GetRestUrl(name string) string {
 		scheme = "http"
 	}
 	if *p.Flags.Capella {
-		cname, srvs , err := net.LookupSRV("couchbases", "tcp", p.ServerNameIp[name])
+		cname, srvs, err := net.LookupSRV("couchbases", "tcp", p.ServerNameIp[name])
 		if err != nil {
 			fmt.Printf("\ncname: %s\n", cname)
 			panic(err)
@@ -219,13 +230,38 @@ func (p *FileProvider) ProvideCouchbaseServers(filename *string, servers []Serve
 			if i < len(hosts) {
 				parts := strings.Split(hosts[i], ":")
 				prefix := parts[0]
-				if prefix != "syncgateway" {
+				if prefix != "syncgateway" && prefix != "nfs_server" {
 					p.ServerNameIp[name] = hosts[i]
 				}
 			}
 			i++
 		}
 	}
+}
+
+// ProvideNFSServer parses the file provider's host file looking for an
+// entry of the form `nfs_server:<IP>` and stores the IP/host on the
+// FileProvider. Modeled after ProvideSyncGateways.
+func (p *FileProvider) ProvideNFSServer() {
+	var hostNames string
+	hostFile := fmt.Sprintf("providers/file/%s", p.HostFile)
+	ReadYamlFile(hostFile, &hostNames)
+	hosts := strings.Split(hostNames, " ")
+	for _, host := range hosts {
+		parts := strings.Split(host, ":")
+		prefix := parts[0]
+		if prefix == "nfs_server" {
+			if len(parts) > 1 {
+				p.NfsServer = strings.Join(parts[1:], ":")
+			}
+		}
+	}
+}
+
+// GetNfsServer returns the NFS server IP/host parsed from the file
+// provider's host file (entries of the form `nfs_server:<IP>`).
+func (p *FileProvider) GetNfsServer() string {
+	return p.NfsServer
 }
 
 func (p *FileProvider) ProvideSyncGateways(syncGateways []SyncGatewaySpec) {
@@ -321,6 +357,12 @@ func (p *ClusterRunProvider) ProvideSyncGateways(syncGateways []SyncGatewaySpec)
 	}
 }
 
+// ProvideNFSServer is a no-op for ClusterRunProvider (TODO)
+func (p *ClusterRunProvider) ProvideNFSServer() {
+	// TODO: support NFS server discovery for ClusterRunProvider
+	panic("Unsupported provider (ClusterRunProvider) for NFS Server")
+}
+
 // ProvideAccels should work with ClusterRunProvider (TODO)
 func (p *ClusterRunProvider) ProvideAccels(accels []AccelSpec) {
 	// If user specifies FileProvider and includes a Accel Spec, panic
@@ -333,6 +375,11 @@ func (p *ClusterRunProvider) ProvideAccels(accels []AccelSpec) {
 // ProvideLoadBalancer should work with ClusterRunProvider (TODO)
 func (p *ClusterRunProvider) ProvideLoadBalancer(loadBalancer LoadBalancerSpec) {
 	// TODO
+}
+
+// GetNfsServer returns the NFS server IP if one was configured.
+func (p *ClusterRunProvider) GetNfsServer() string {
+	return p.NfsServer
 }
 
 func (p *DockerProvider) GetType() string {
@@ -545,11 +592,13 @@ func (p *DockerProvider) BuildMobileContainer(options *DockerProviderOpts, produ
 }
 
 // StartMobileContainer will run the following steps
+//
 //  1. Get Couchbase Server url from the first host.
+//
 //  2. Start the Sync Gateway pointing at Couchbase Server
 //
-//  IMPORTANT: This should only be called once we know there are at
-//    least one Couchbase Server running.
+//     IMPORTANT: This should only be called once we know there are at
+//     least one Couchbase Server running.
 func (p *DockerProvider) StartMobileContainer(containerName string, config docker.Config) string {
 
 	// If network is not provided, link pairs so that the Sync Gateway container can talk to server
@@ -620,6 +669,13 @@ func (p *DockerProvider) ProvideSyncGateways(syncGateways []SyncGatewaySpec) {
 			p.Cm.ExecContainer(containerID, cmd, true)
 		}
 	}
+}
+
+// ProvideNFSServer is a no-op for DockerProvider (TODO)
+// SwarmProvider overrides this where applicable.
+func (p *DockerProvider) ProvideNFSServer() {
+	// TODO: support NFS server discovery for DockerProvider
+	panic("Unsupported provider (DockerProvider) for NFS Server")
 }
 
 // ProvideAccels will build and start all sync gateway containers
@@ -863,6 +919,12 @@ func (p *SwarmProvider) ProvideSyncGateways(syncGateways []SyncGatewaySpec) {
 	}
 }
 
+// ProvideNFSServer is a no-op for SwarmProvider (TODO)
+func (p *SwarmProvider) ProvideNFSServer() {
+	// TODO: support NFS server discovery for SwarmProvider
+	panic("Unsupported provider (SwarmProvider) for NFS Server")
+}
+
 // ProvideAccels should work with Swarm (TODO)
 func (p *SwarmProvider) ProvideAccels(accels []AccelSpec) {
 	// If user specifies FileProvider and includes a Accel Spec, panic
@@ -937,6 +999,12 @@ func (p *DockerProvider) GetRestUrl(name string) string {
 
 	addr := fmt.Sprintf("%s:8091", p.GetHostAddress(name))
 	return addr
+}
+
+// GetNfsServer returns the NFS server IP if one was configured.
+// SwarmProvider inherits this method via the embedded DockerProvider.
+func (p *DockerProvider) GetNfsServer() string {
+	return p.NfsServer
 }
 
 func BuildArgsForMobileVersion(version string) []docker.BuildArg {

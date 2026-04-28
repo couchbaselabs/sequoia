@@ -201,6 +201,7 @@ func (t *Test) Run(scope Scope) {
 		}
 
 		scope.Provider.ProvideCouchbaseServers(t.Flags.ProviderConfig, scope.Spec.Servers)
+		scope.Provider.ProvideNFSServer()
 
 		if t.Flags.Mode == "" {
 			scope.SetupServer()
@@ -217,6 +218,7 @@ func (t *Test) Run(scope Scope) {
 		(scope.Provider.GetType() != "swarm") {
 		//non-dynamic IP's need to be extrapolated before test
 		scope.Provider.ProvideCouchbaseServers(t.Flags.ProviderConfig, scope.Spec.Servers)
+		scope.Provider.ProvideNFSServer()
 		scope.Provider.ProvideSyncGateways(scope.Spec.SyncGateways)
 		scope.InitCli()
 	} else {
