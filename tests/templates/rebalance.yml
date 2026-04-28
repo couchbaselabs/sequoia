@@ -95,6 +95,60 @@
            {{if ge .Version 4.0}}--services {{if gt (len `$1`) 2}}$1{{else}}data{{end}}{{end}}"
       wait: true
 
+# add an arbiter (serviceless / manager-only) node to cluster
+# $0 server to add (e.g. https://172.23.104.244:18091)
+# $1 optional orchestrator
+-
+  name: add_arbiter_node
+  actions:
+    -
+      image: sequoiatools/couchbase-cli:7.6
+      command: "server-add
+           -c {{if gt (len `$1`) 2}}$1{{else}}{{.Orchestrator}}{{end}}:{{.RestPort}}
+           --server-add https://$0
+           -u {{.RestUsername}} -p {{.RestPassword}}
+           --server-add-username {{.RestUsername}} --server-add-password {{.RestPassword}}
+           --services manager-only"
+      wait: true
+
+# add an arbiter (serviceless / manager-only) node to cluster without https
+# $0 server to add
+# $1 optional orchestrator
+-
+  name: add_arbiter_node_wo_https
+  actions:
+    -
+      image: sequoiatools/couchbase-cli:7.6
+      command: "server-add
+           -c {{if gt (len `$1`) 2}}$1{{else}}{{.Orchestrator}}{{end}}:{{.RestPort}}
+           --server-add $0
+           -u {{.RestUsername}} -p {{.RestPassword}}
+           --server-add-username {{.RestUsername}} --server-add-password {{.RestPassword}}
+           --services manager-only"
+      wait: true
+
+# rebalance in a single arbiter (serviceless / manager-only) node
+# $0 = server to add
+-
+  name: rebalance_in_arbiter
+  actions:
+    -
+      template: add_arbiter_node
+      args: "$0"
+    -
+      template: rebalance
+
+# rebalance in a single arbiter node without https
+# $0 = server to add
+-
+  name: rebalance_in_arbiter_wo_https
+  actions:
+    -
+      template: add_arbiter_node_wo_https
+      args: "$0"
+    -
+      template: rebalance
+
 # readd a failover node to server
 # $0 node to add back
 # $1 optional orchestrator

@@ -384,6 +384,28 @@ func (t *TemplateResolver) ActiveAnalyticsNode(analytics int) string {
 	return t.ActiveFilter(analytics, serviceNodes)
 }
 
+// Shortcut: .ClusterNodes | .Service `arbiter` | net 0
+// Returns the first arbiter (serviceless) node in the cluster.
+func (t *TemplateResolver) ArbiterNode() string {
+	nodes := t.ClusterNodes()
+	serviceNodes := t.Service("arbiter", nodes)
+	return t.Address(0, serviceNodes)
+}
+
+// Shortcut: .ClusterNodes | .Service `arbiter` | net N
+func (t *TemplateResolver) NthArbiterNode(n int) string {
+	nodes := t.ClusterNodes()
+	serviceNodes := t.Service("arbiter", nodes)
+	return t.Address(n, serviceNodes)
+}
+
+// Shortcut: .ClusterNodes | .Service `arbiter` | active n
+func (t *TemplateResolver) ActiveArbiterNode(n int) string {
+	nodes := t.ClusterNodes()
+	serviceNodes := t.Service("arbiter", nodes)
+	return t.ActiveFilter(n, serviceNodes)
+}
+
 func (t *TemplateResolver) Attr(key string, servers []ServerSpec) string {
 	attr := t.Scope.Spec.ToAttr(key)
 	spec := reflect.ValueOf(servers[0])

@@ -149,12 +149,16 @@ func (s *ServerSpec) InitNodeServices() {
 	numEventingNodes := s.Services["eventing"]
 	numBackupNodes := s.Services["backup"]
 	numAnalyticsNodes := s.Services["analytics"]
+	// Arbiter (serviceless) nodes - mapped to couchbase-cli's "manager-only"
+	// service when the cluster is built. Internally we always use "arbiter".
+	numArbiterNodes := s.Services["arbiter"]
 	customIndexStart := s.Services["index_start"]
 	customQueryStart := s.Services["query_start"]
 	customFtsStart := s.Services["fts_start"]
 	customEventingStart := s.Services["eventing_start"]
 	customBackupStart := s.Services["backup_start"]
 	customAnalyticsStart := s.Services["analytics_start"]
+	customArbiterStart := s.Services["arbiter_start"]
 
 	s.NodeServices = make(map[string][]string)
 
@@ -163,6 +167,17 @@ func (s *ServerSpec) InitNodeServices() {
 	// and second set eventing to avoid
 	// overlapping if possible when specific
 	// number of service types provided
+
+	// Arbiter (serviceless) nodes default to the last positions and are
+	// exclusive: no other services are placed on them.
+	arbiterStartPos := numNodes - numArbiterNodes
+	if customArbiterStart > 0 {
+		// override
+		arbiterStartPos = customArbiterStart - 1
+	}
+	if arbiterStartPos >= numNodes {
+		arbiterStartPos = 0
+	}
 
 	analyticsStartPos := numNodes - numQueryNodes - numIndexNodes - numFtsNodes - numEventingNodes - numAnalyticsNodes - numBackupNodes
 	if customAnalyticsStart > 0 {
@@ -223,6 +238,16 @@ func (s *ServerSpec) InitNodeServices() {
 	for i = 0; i < numNodes; i = i + 1 {
 		name := s.Names[i]
 		s.NodeServices[name] = []string{}
+
+		// arbiter is an exclusive service: a node assigned as an arbiter
+		// cannot run any other service, so we skip the rest of the service
+		// distribution for that node.
+		if i >= arbiterStartPos && numArbiterNodes > 0 {
+			s.NodeServices[name] = append(s.NodeServices[name], "arbiter")
+			numArbiterNodes--
+			continue
+		}
+
 		if i >= analyticsStartPos && numAnalyticsNodes > 0 {
 			s.NodeServices[name] = append(s.NodeServices[name], "analytics")
 			numAnalyticsNodes--

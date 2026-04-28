@@ -466,7 +466,17 @@ func (s *Scope) InitCluster() {
 		orchestrator := server.Names[0]
 		ip := s.Provider.GetHostAddress(orchestrator)
 		servicesList := server.NodeServices[name]
-		services := strings.Join(servicesList, ",")
+		// translate internal "arbiter" service name to the couchbase-cli
+		// "manager-only" service identifier just before invocation.
+		cliServices := make([]string, len(servicesList))
+		for idx, svc := range servicesList {
+			if svc == "arbiter" {
+				cliServices[idx] = "manager-only"
+			} else {
+				cliServices[idx] = svc
+			}
+		}
+		services := strings.Join(cliServices, ",")
 		ramQuota := server.Ram
 		if ramQuota == "" {
 			// use cluster mcdReserved
@@ -687,7 +697,17 @@ func (s *Scope) AddNodes() {
 		}
 
 		servicesList := server.NodeServices[name]
-		services := strings.Join(servicesList, ",")
+		// translate internal "arbiter" service name to the couchbase-cli
+		// "manager-only" service identifier just before invocation.
+		cliServices := make([]string, len(servicesList))
+		for idx, svc := range servicesList {
+			if svc == "arbiter" {
+				cliServices[idx] = "manager-only"
+			} else {
+				cliServices[idx] = svc
+			}
+		}
+		services := strings.Join(cliServices, ",")
 		command := []string{"server-add",
 			"-c", orchestratorIp,
 			"-u", server.RestUsername,
@@ -1319,6 +1339,11 @@ func (s *Scope) getClusteInfo() {
 	serviceMap := make(map[string][]string)
 	for i := 0; i < len(cluster.Nodes); i++ {
 		host := cluster.Nodes[i].Hostname
+		// Arbiter (serviceless) nodes may report no services.
+		if len(cluster.Nodes[i].Services) == 0 {
+			serviceMap["arbiter"] = append(serviceMap["arbiter"], host)
+			continue
+		}
 		service := cluster.Nodes[i].Services[0]
 		serviceMap[service] = append(serviceMap[service], host)
 	}
