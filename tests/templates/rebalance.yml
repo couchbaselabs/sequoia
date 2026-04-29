@@ -401,7 +401,7 @@
 # rebalance the cluster
 # $0 = optional orchestrator node
 -
-  name: rebalance_witout_wait
+  name: rebalance_without_wait
   actions:
     -
       image: sequoiatools/couchbase-cli:7.6
@@ -423,7 +423,7 @@
       template: add_node
       args: "$0, ($1)"
     -
-      template: rebalance_witout_wait
+      template: rebalance_without_wait
 
 
 # rebalance out a single node

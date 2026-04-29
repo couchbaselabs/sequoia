@@ -355,14 +355,19 @@
   duration: 1000
 
 
-###############  Rebalance-in multiple eventing nodes################
+###############  Rebalance-in multiple eventing nodes (with stop/resume) ################
 - template: add_node
   args: "{{.NthInActiveNode 0}}, eventing"
 - args: "{{.NthInActiveNode 1}}, eventing"
   wait: true
 
 -
-  template: rebalance
+  template: rebalance_without_wait
+
+- template: rebalance_stop
+  wait: true
+
+- template: rebalance
   wait: true
 
 #### resume all handlers ####
@@ -562,6 +567,24 @@
   command: "300"
   wait: true
 
+###############  Kill erlang (beam.smp) on data node (chaos) ################
+- template: kill_process
+  args: "{{.ActiveDataNode 1}}, beam.smp"
+  wait: true
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+###############  Kill erlang (beam.smp) on eventing node (chaos) ################
+- template: kill_process
+  args: "{{.ActiveEventingNode 1}}, beam.smp"
+  wait: true
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
 ###############  Swap index node while n1ql handler is active ################
 - template: rebalance_swap
   args: "{{.InActiveNode}}, {{.ActiveIndexNode 0}}, index"
@@ -594,6 +617,11 @@
   args: "{{.ActiveEventingNode 1}}, full"
   wait: true
 
+# graceful failover and delta recover an eventing node
+- template: failover_and_recover
+  args: "{{.ActiveEventingNode 1}}, delta"
+  wait: true
+
 ###############  Bucket flush during active handlers ################
 - template: flush-bucket
   args: "{{.Bucket}}"
@@ -606,6 +634,61 @@
 # graceful failover and delta recover a data node
 - template: failover_and_recover
   args: "{{.ActiveDataNode 1}}, delta"
+  wait: true
+
+###############  Second pause/resume cycle for lifecycle stability ################
+- image: sequoiatools/eventing:8.1
+  command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o pause --name bucket_op0"
+- command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o pause --name curl"
+- command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o pause --name n1ql"
+- command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o pause --name sbm0"
+
+- image: sequoiatools/eventing:8.1
+  command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o wait_for_state --state paused --name bucket_op0"
+  wait: true
+- command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o wait_for_state --state paused --name curl"
+  wait: true
+- command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o wait_for_state --state paused --name n1ql"
+  wait: true
+- command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o wait_for_state --state paused --name sbm0"
+  wait: true
+
+####### load data while handlers are paused (second cycle) #######
+-
+  image: sequoiatools/gideon_latest
+  command: "kv --ops {{.Scale 2000}} --create 30 --get 40 --delete 30 --hosts {{.Orchestrator}} --bucket {{.Bucket}} --scope scope_0 --collection coll0,coll1"
+  duration: 600
+- command: "kv --ops {{.Scale 2000}} --create 30 --get 40 --delete 30 --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}} --scope scope_0 --collection coll0,coll1"
+  duration: 600
+
+- image: sequoiatools/eventing:8.1
+  command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o resume --name bucket_op0"
+- command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o resume --name curl"
+- command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o resume --name n1ql"
+- command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o resume --name sbm0"
+
+- image: sequoiatools/eventing:8.1
+  command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o wait_for_state --state deployed --name bucket_op0"
+  wait: true
+- command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o wait_for_state --state deployed --name curl"
+  wait: true
+- command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o wait_for_state --state deployed --name n1ql"
+  wait: true
+- command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o wait_for_state --state deployed --name sbm0"
+  wait: true
+
+###############  Deploy/Undeploy cycle for lifecycle stress ################
+- image: sequoiatools/eventing:8.1
+  command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o undeploy --name timers"
+  wait: true
+- image: sequoiatools/eventing:8.1
+  command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o wait_for_state --state undeployed --name timers"
+  wait: true
+- image: sequoiatools/eventing:8.1
+  command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o deploy --name timers"
+  wait: true
+- image: sequoiatools/eventing:8.1
+  command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o wait_for_state --state deployed --name timers"
   wait: true
 
 #### final validation: all handlers still deployed after full test lifecycle ####
