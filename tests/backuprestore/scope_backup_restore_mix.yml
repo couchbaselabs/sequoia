@@ -1,0 +1,96 @@
+---
+users:
+  -
+      name: default
+      password: password
+      roles: admin
+      auth_domain: local
+  -
+      name: role1
+      password: password
+      roles: admin
+      auth_domain: local
+  -
+      name: role2
+      password: password
+      roles: admin
+      auth_domain: local
+  -
+      name: role3
+      password: password
+      roles: admin
+      auth_domain: local
+  -
+      name: role4
+      password: password
+      roles: admin
+      auth_domain: local
+  -
+      name: role5
+      password: password
+      roles: admin
+      auth_domain: local
+  -
+      name: role6
+      password: password
+      roles: admin
+      auth_domain: local
+  -
+      name: role7
+      password: password
+      roles: admin
+      auth_domain: local
+  -
+      name: role8
+      password: password
+      roles: admin
+      auth_domain: local
+
+buckets:
+  -
+      name: default
+      ram: 35%
+      eviction: fullEviction
+      replica: 1
+      storage: magma
+      historyretentionbytes: 2147483648
+      historyretentionseconds: 86400
+      enablehistoryretentionbydefault: 1
+  -
+      name: bucket1
+      ram: 30%
+      eviction: fullEviction
+      replica: 2
+      storage: couchstore
+  -
+      name: bucket2
+      ram: 35%
+      eviction: nruEviction
+      type: ephemeral
+      replica: 1
+
+
+servers: # each server tag represents a cluster
+  -
+      name: local
+      count: 6
+      ram: 75%
+      rest_username: Administrator
+      rest_password: password
+      init_nodes: 6
+      data_path: "/data/dta"
+      index_path: "/data/index"
+      buckets: default, bucket1, bucket2, bucket3, bucket4
+      services:
+        data: 5
+        query: 1
+      users: default,role1,role2,role3,role4,role5,role6,role7,role8
+  -
+      name: remote
+      count: 1
+      ram: 75%
+      rest_username: Administrator
+      rest_password: password
+      data_path: "/data/dta"
+      index_path: "/data/index"
+      init_nodes: 1

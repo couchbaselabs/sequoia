@@ -23,12 +23,7 @@
 -
   args: "{{.Orchestrator}}, {{.NthBucket 2}}, {{.Scale 2}}, {{.Scale 10}}, uniform"
   requires:  "{{eq true .DoOnce }}"
--
-  args: "{{.Orchestrator}}, {{.NthBucket 3}}, {{.Scale 2}}, {{.Scale 10}}, uniform"
-  requires:  "{{eq true .DoOnce }}"
--
-  args: "{{.Orchestrator}}, {{.NthBucket 4}}, {{.Scale 2}}, {{.Scale 10}}, uniform"
-  requires:  "{{eq true .DoOnce }}"
+
 
 ############### Sleep for some time to allow collections manifest to sync ###############
 -
@@ -51,14 +46,7 @@
   command: "kv --ops {{.Scale 500}} --create 100 --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}} --user {{.RestUsername}} --password {{.RestPassword}}"
   duration: 600
   alias: GideonContainer3
--
-  command: "kv --ops {{.Scale 500}} --create 100 --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}} --user {{.RestUsername}} --password {{.RestPassword}}"
-  duration: 600
-  alias: GideonContainer4
--
-  command: "kv --ops {{.Scale 500}} --create 100 --hosts {{.Orchestrator}} --bucket {{.NthBucket 4}} --user {{.RestUsername}} --password {{.RestPassword}}"
-  duration: 600
-  alias: GideonContainer5
+
 
 ############### Initial data loading across all collections ################
 - image: sequoiatools/magmaloader
@@ -74,14 +62,7 @@
   alias: magmaloader_bucket2_doc_ops1
   requires: "{{eq true .DoOnce }}"
   wait: true
-- command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 3}} --start 0 --end {{.Scale 100000}} --pc 100 --doc_template Hotel --all_coll True"
-  alias: magmaloader_bucket3_doc_ops1
-  requires: "{{eq true .DoOnce }}"
-  wait: true
-- command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 4}} --start 0 --end {{.Scale 100000}} --pc 100 --doc_template Hotel --all_coll True"
-  alias: magmaloader_bucket4_doc_ops1
-  requires: "{{eq true .DoOnce }}"
-  wait: true
+
 
 
 # Wait for some time to let the load stabilize before taking backup
@@ -121,12 +102,7 @@
 -
   command: "kv --ops {{.Scale 500}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}} --user {{.RestUsername}} --password {{.RestPassword}}"
   alias: GideonContainer3
--
-  command: "kv --ops {{.Scale 500}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}} --user {{.RestUsername}} --password {{.RestPassword}}"
-  alias: GideonContainer4
--
-  command: "kv --ops {{.Scale 500}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 4}} --user {{.RestUsername}} --password {{.RestPassword}}"
-  alias: GideonContainer5
+
 
 ############### data loading across all collections ################
 -
@@ -139,12 +115,7 @@
 -
   command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 2}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
   alias: magmaloader_bucket2_doc_ops
--
-  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 3}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
-  alias: magmaloader_bucket3_doc_ops
--
-  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 4}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
-  alias: magmaloader_bucket4_doc_ops
+
 
 # Wait for some time to let the load stabilize before taking backup
 -
@@ -162,7 +133,7 @@
 # Rebalance out a node
 -
   template: rebalance_out
-  args: "{{.Nodes | net 2}}"
+  args: "{{.Nodes | .Service `kv` | net 2}}"
   wait: true
 
 # Continue data loading
@@ -181,7 +152,7 @@
 # Rebalance-in a node
 -
   template: rebalance_in
-  args: "{{.Nodes | net 2}}"
+  args: "{{.Nodes | .Service `kv` | net 2}}"
   wait: true
 
 # Continue data loading
@@ -200,7 +171,7 @@
 # Failover a node
 -
   template: failover_node
-  args: "{{.Nodes | net 3}}"
+  args: "{{.Nodes | .Service `kv` | net 3}}"
   wait: true
 -
   template: rebalance
@@ -222,7 +193,7 @@
 # Rebalance-in a node
 -
   template: rebalance_in
-  args: "{{.Nodes | net 3}}"
+  args: "{{.Nodes | .Service `kv` | net 3}}"
   wait: true
 
 # Continue data loading
@@ -241,7 +212,7 @@
 # Failover a node
 -
   template: failover_node
-  args: "{{.Nodes | net 2}}"
+  args: "{{.Nodes | .Service `kv` | net 2}}"
   wait: true
 
 # Continue data loading
@@ -260,7 +231,7 @@
 # Recover node
 -
   template: recover_node
-  args: "{{.Nodes | net 2}}, delta"
+  args: "{{.Nodes | .Service `kv` | net 2}}, delta"
   wait: true
 -
   template: rebalance
@@ -288,7 +259,7 @@
 # Hard Failover a node
 -
   template: hard_failover_node
-  args: "{{.Nodes | net 2}}"
+  args: "{{.Nodes | .Service `kv` | net 2}}"
   wait: true
 
 # Continue data loading
@@ -307,7 +278,7 @@
 # Recover node
 -
   template: recover_node
-  args: "{{.Nodes | net 2}}, full"
+  args: "{{.Nodes | .Service `kv` | net 2}}, full"
   wait: true
 -
   template: rebalance
@@ -342,7 +313,7 @@
 # Rebalance-out a node
 -
   template: rebalance_out
-  args: "{{.Nodes | net 2}}"
+  args: "{{.Nodes | .Service `kv` | net 2}}"
   wait: true
 
 # Continue data loading
@@ -368,7 +339,7 @@
 # Rebalance-in a node
 -
   template: rebalance_in
-  args: "{{.Nodes | net 2}}"
+  args: "{{.Nodes | .Service `kv` | net 2}}"
   wait: true
 
 # Continue data loading
@@ -418,7 +389,7 @@
 # Chaos: Rebalance out and kill memcached during rebalance, then retry
 -
   template: rebalance_out_wo_wait
-  args: "{{.Nodes | net 2}}"
+  args: "{{.Nodes | .Service `kv` | net 2}}"
   expect_error: true
 
 # Wait 1 minute before killing memcached (let rebalance start)
@@ -431,7 +402,8 @@
 # Kill memcached on a node during rebalance
 -
   template: kill_process
-  args: "{{.Nodes | net 3}}, memcached"
+  args: "{{.Nodes | .Service `kv` | net 3}}, memcached"
+  expect_error: true
 
 # Wait for rebalance to fail
 -
@@ -450,7 +422,7 @@
 # Retry rebalance out
 -
   template: rebalance_out
-  args: "{{.Nodes | net 2}}"
+  args: "{{.Nodes | .Service `kv` | net 2}}"
   wait: true
 
 # Continue data loading
@@ -463,7 +435,7 @@
 # Rebalance in the node to restore cluster
 -
   template: rebalance_in
-  args: "{{.Nodes | net 2}}"
+  args: "{{.Nodes | .Service `kv` | net 2}}"
   wait: true
 
 # Continue data loading
@@ -490,7 +462,8 @@
 # Kill memcached on a node randomly
 -
   template: kill_process
-  args: "{{.Nodes | net 3}}, memcached"
+  args: "{{.Nodes | .Service `kv` | net 3}}, memcached"
+  expect_error: true
 
 # Continue data loading
 -
@@ -528,7 +501,7 @@
 # Stop couchbase on a node during backup
 -
   image: sequoiatools/cbutil
-  command: "/cbinit.py {{.Nodes | net 3}} root couchbase stop"
+  command: "/cbinit.py {{.Nodes | .Service `kv` | net 3}} root couchbase stop"
   wait: true
 
 # Wait for backup to fail
@@ -541,7 +514,7 @@
 # Start couchbase on the node
 -
   image: sequoiatools/cbutil
-  command: "/cbinit.py {{.Nodes | net 3}} root couchbase start"
+  command: "/cbinit.py {{.Nodes | .Service `kv` | net 3}} root couchbase start"
   wait: true
 
 # Wait for node to come back up
@@ -580,7 +553,8 @@
 # Kill memcached on a node during backup
 -
   template: kill_process
-  args: "{{.Nodes | net 3}}, memcached"
+  args: "{{.Nodes | .Service `kv` | net 3}}, memcached"
+  expect_error: true
 
 # Wait for backup to fail and memcached to come back up
 -
@@ -618,7 +592,8 @@
 # Kill memcached on a node during backup
 -
   template: kill_process
-  args: "{{.Nodes | net 3}}, memcached"
+  args: "{{.Nodes | .Service `kv` | net 3}}, memcached"
+  expect_error: true
 
 # Wait for backup to fail and memcached to come back up
 -
@@ -643,11 +618,11 @@
 # Rebalance out and rebalance in a node before backup
 -
   template: rebalance_out
-  args: "{{.Nodes | net 2}}"
+  args: "{{.Nodes | .Service `kv` | net 2}}"
   wait: true
 -
   template: rebalance_in
-  args: "{{.Nodes | net 2}}"
+  args: "{{.Nodes | .Service `kv` | net 2}}"
   wait: true
 
 # Continue data loading
@@ -674,6 +649,7 @@
 -
   template: kill_process
   args: "{{.Nodes | .Service `n1ql` | net 0}}, cbbackupmgr"
+  expect_error: true
 
 # Wait for backup to fail
 -
@@ -710,16 +686,7 @@
     op: rm
     container: "magmaloader_bucket2_doc_ops"
     wait: true
--
-  client:
-    op: rm
-    container: "magmaloader_bucket3_doc_ops"
-    wait: true
--
-  client:
-    op: rm
-    container: "magmaloader_bucket4_doc_ops"
-    wait: true
+
 -
   client:
     op: rm
@@ -735,16 +702,7 @@
     op: rm
     container: "GideonContainer3"
     wait: true
--
-  client:
-    op: rm
-    container: "GideonContainer4"
-    wait: true
--
-  client:
-    op: rm
-    container: "GideonContainer5"
-    wait: true
+
 
 # Wait for some time to let the load stop before flush and restore
 -
@@ -761,12 +719,7 @@
 -
   command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 2}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
   wait: true
--
-  command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 3}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
-  wait: true
--
-  command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 4}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
-  wait: true
+
 -
   command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.Bucket}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
   wait: true
@@ -792,12 +745,7 @@
 -
   command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 2}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
   wait: true
--
-  command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 3}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
-  wait: true
--
-  command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 4}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
-  wait: true
+
 -
   command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.Bucket}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
   wait: true
@@ -827,12 +775,7 @@
 -
   command: "kv --ops {{.Scale 500}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}} --user {{.RestUsername}} --password {{.RestPassword}}"
   alias: GideonContainer3
--
-  command: "kv --ops {{.Scale 500}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}} --user {{.RestUsername}} --password {{.RestPassword}}"
-  alias: GideonContainer4
--
-  command: "kv --ops {{.Scale 500}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 4}} --user {{.RestUsername}} --password {{.RestPassword}}"
-  alias: GideonContainer5
+
 
 ############### data loading across all collections ################
 -
@@ -845,12 +788,7 @@
 -
   command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 2}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
   alias: magmaloader_bucket2_doc_ops
--
-  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 3}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
-  alias: magmaloader_bucket3_doc_ops
--
-  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 4}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
-  alias: magmaloader_bucket4_doc_ops
+
 
 # Wait for some time to let the load stabilize before taking backup
 -
@@ -862,7 +800,7 @@
 # Rebalance out a node
 -
   template: rebalance_out
-  args: "{{.Nodes | net 2}}"
+  args: "{{.Nodes | .Service `kv` | net 2}}"
   wait: true
 
 # Continue data loading
@@ -881,7 +819,7 @@
 # Rebalance-in a node
 -
   template: rebalance_in
-  args: "{{.Nodes | net 2}}"
+  args: "{{.Nodes | .Service `kv` | net 2}}"
   wait: true
 
 # Continue data loading
@@ -900,7 +838,7 @@
 # Failover a node
 -
   template: failover_node
-  args: "{{.Nodes | net 3}}"
+  args: "{{.Nodes | .Service `kv` | net 3}}"
   wait: true
 -
   template: rebalance
@@ -922,7 +860,7 @@
 # Rebalance-in a node
 -
   template: rebalance_in
-  args: "{{.Nodes | net 3}}"
+  args: "{{.Nodes | .Service `kv` | net 3}}"
   wait: true
 
 # Continue data loading
@@ -960,16 +898,7 @@
     op: rm
     container: "magmaloader_bucket2_doc_ops"
     wait: true
--
-  client:
-    op: rm
-    container: "magmaloader_bucket3_doc_ops"
-    wait: true
--
-  client:
-    op: rm
-    container: "magmaloader_bucket4_doc_ops"
-    wait: true
+
 -
   client:
     op: rm
@@ -985,16 +914,7 @@
     op: rm
     container: "GideonContainer3"
     wait: true
--
-  client:
-    op: rm
-    container: "GideonContainer4"
-    wait: true
--
-  client:
-    op: rm
-    container: "GideonContainer5"
-    wait: true
+
 
 # Wait for some time to let the load stop before flush and restore
 -
@@ -1011,12 +931,7 @@
 -
   command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 2}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
   wait: true
--
-  command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 3}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
-  wait: true
--
-  command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 4}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
-  wait: true
+
 -
   command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.Bucket}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
   wait: true
@@ -1035,12 +950,7 @@
 -
   command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 2}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
   wait: true
--
-  command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 3}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
-  wait: true
--
-  command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 4}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
-  wait: true
+
 -
   command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.Bucket}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
   wait: true
@@ -1055,7 +965,8 @@
 # Kill memcached on a node before restore
 -
   template: kill_process
-  args: "{{.Nodes | net 3}}, memcached"
+  args: "{{.Nodes | .Service `kv` | net 3}}, memcached"
+  expect_error: true
 
 # Wait for node to come back up
 -
@@ -1082,12 +993,7 @@
 -
   command: "kv --ops {{.Scale 500}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}} --user {{.RestUsername}} --password {{.RestPassword}}"
   alias: GideonContainer3
--
-  command: "kv --ops {{.Scale 500}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}} --user {{.RestUsername}} --password {{.RestPassword}}"
-  alias: GideonContainer4
--
-  command: "kv --ops {{.Scale 500}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 4}} --user {{.RestUsername}} --password {{.RestPassword}}"
-  alias: GideonContainer5
+
 
 ############### data loading across all collections ################
 -
@@ -1100,12 +1006,7 @@
 -
   command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 2}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
   alias: magmaloader_bucket2_doc_ops
--
-  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 3}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
-  alias: magmaloader_bucket3_doc_ops
--
-  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 4}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
-  alias: magmaloader_bucket4_doc_ops
+
 
 # Wait for some time to let the load stabilize before taking backup
 -
@@ -1117,7 +1018,8 @@
 # Kill memcached on a node after restore
 -
   template: kill_process
-  args: "{{.Nodes | net 3}}, memcached"
+  args: "{{.Nodes | .Service `kv` | net 3}}, memcached"
+  expect_error: true
 
 # Wait for node to come back up
 -
@@ -1136,7 +1038,7 @@
 # Rebalance out a node
 -
   template: rebalance_out
-  args: "{{.Nodes | net 2}}"
+  args: "{{.Nodes | .Service `kv` | net 2}}"
   wait: true
 
 # Continue data loading
@@ -1155,7 +1057,7 @@
 # Rebalance-in a node
 -
   template: rebalance_in
-  args: "{{.Nodes | net 2}}"
+  args: "{{.Nodes | .Service `kv` | net 2}}"
   wait: true
 
 # Continue data loading
@@ -1193,16 +1095,7 @@
     op: rm
     container: "magmaloader_bucket2_doc_ops"
     wait: true
--
-  client:
-    op: rm
-    container: "magmaloader_bucket3_doc_ops"
-    wait: true
--
-  client:
-    op: rm
-    container: "magmaloader_bucket4_doc_ops"
-    wait: true
+
 -
   client:
     op: rm
@@ -1218,16 +1111,7 @@
     op: rm
     container: "GideonContainer3"
     wait: true
--
-  client:
-    op: rm
-    container: "GideonContainer4"
-    wait: true
--
-  client:
-    op: rm
-    container: "GideonContainer5"
-    wait: true
+
 
 # Wait for some time to let the load stop before flush and restore
 -
@@ -1244,12 +1128,7 @@
 -
   command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 2}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
   wait: true
--
-  command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 3}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
-  wait: true
--
-  command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 4}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
-  wait: true
+
 -
   command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.Bucket}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
   wait: true
@@ -1277,6 +1156,7 @@
 -
   template: kill_process
   args: "{{.Nodes | .Service `n1ql` | net 0}}, cbbackupmgr"
+  expect_error: true
 
 # Wait for restore to fail
 -
@@ -1306,12 +1186,7 @@
 -
   command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 2}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
   wait: true
--
-  command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 3}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
-  wait: true
--
-  command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 4}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
-  wait: true
+
 -
   command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.Bucket}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
   wait: true
@@ -1339,6 +1214,7 @@
 -
   template: kill_process
   args: "{{.Nodes | .Service `n1ql` | net 0}}, cbbackupmgr"
+  expect_error: true
 
 # Wait for restore to fail
 -
@@ -1383,12 +1259,7 @@
 -
   command: "kv --ops {{.Scale 500}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}} --user {{.RestUsername}} --password {{.RestPassword}}"
   alias: GideonContainer3
--
-  command: "kv --ops {{.Scale 500}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}} --user {{.RestUsername}} --password {{.RestPassword}}"
-  alias: GideonContainer4
--
-  command: "kv --ops {{.Scale 500}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 4}} --user {{.RestUsername}} --password {{.RestPassword}}"
-  alias: GideonContainer5
+
 
 ############### data loading across all collections ################
 -
@@ -1401,12 +1272,7 @@
 -
   command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 2}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
   alias: magmaloader_bucket2_doc_ops
--
-  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 3}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
-  alias: magmaloader_bucket3_doc_ops
--
-  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 4}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
-  alias: magmaloader_bucket4_doc_ops
+
 
 # Wait for some time to let the load stabilize before taking backup
 -
@@ -1424,7 +1290,7 @@
 # Rebalance out a node
 -
   template: rebalance_out
-  args: "{{.Nodes | net 2}}"
+  args: "{{.Nodes | .Service `kv` | net 2}}"
   wait: true
 
 # Continue data loading
@@ -1443,7 +1309,7 @@
 # Rebalance-in a node
 -
   template: rebalance_in
-  args: "{{.Nodes | net 2}}"
+  args: "{{.Nodes | .Service `kv` | net 2}}"
   wait: true
 
 # Continue data loading
@@ -1462,7 +1328,7 @@
 # Failover a node
 -
   template: failover_node
-  args: "{{.Nodes | net 3}}"
+  args: "{{.Nodes | .Service `kv` | net 3}}"
   wait: true
 -
   template: rebalance
@@ -1490,7 +1356,7 @@
 # Rebalance-in a node
 -
   template: rebalance_in
-  args: "{{.Nodes | net 3}}"
+  args: "{{.Nodes | .Service `kv` | net 3}}"
   wait: true
 
 # Continue data loading
@@ -1509,7 +1375,7 @@
 # Failover a node
 -
   template: failover_node
-  args: "{{.Nodes | net 2}}"
+  args: "{{.Nodes | .Service `kv` | net 2}}"
   wait: true
 
 # Continue data loading
@@ -1528,7 +1394,7 @@
 # Recover node
 -
   template: recover_node
-  args: "{{.Nodes | net 2}}, delta"
+  args: "{{.Nodes | .Service `kv` | net 2}}, delta"
   wait: true
 -
   template: rebalance
@@ -1556,7 +1422,7 @@
 # Hard Failover a node
 -
   template: hard_failover_node
-  args: "{{.Nodes | net 2}}"
+  args: "{{.Nodes | .Service `kv` | net 2}}"
   wait: true
 
 # Continue data loading
@@ -1575,7 +1441,7 @@
 # Recover node
 -
   template: recover_node
-  args: "{{.Nodes | net 2}}, full"
+  args: "{{.Nodes | .Service `kv` | net 2}}, full"
   wait: true
 -
   template: rebalance
@@ -1616,7 +1482,7 @@
 # Rebalance-out a node
 -
   template: rebalance_out
-  args: "{{.Nodes | net 2}}"
+  args: "{{.Nodes | .Service `kv` | net 2}}"
   wait: true
 
 # Continue data loading
@@ -1686,16 +1552,7 @@
     op: rm
     container: "magmaloader_bucket2_doc_ops"
     wait: true
--
-  client:
-    op: rm
-    container: "magmaloader_bucket3_doc_ops"
-    wait: true
--
-  client:
-    op: rm
-    container: "magmaloader_bucket4_doc_ops"
-    wait: true
+
 -
   client:
     op: rm
@@ -1711,16 +1568,7 @@
     op: rm
     container: "GideonContainer3"
     wait: true
--
-  client:
-    op: rm
-    container: "GideonContainer4"
-    wait: true
--
-  client:
-    op: rm
-    container: "GideonContainer5"
-    wait: true
+
 
 # Wait for some time to let the load stop before flush and restore
 -
@@ -1737,12 +1585,7 @@
 -
   command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 2}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
   wait: true
--
-  command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 3}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
-  wait: true
--
-  command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 4}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
-  wait: true
+
 -
   command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.Bucket}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
   wait: true
@@ -1806,12 +1649,7 @@
 -
   command: "kv --ops {{.Scale 500}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}} --user {{.RestUsername}} --password {{.RestPassword}}"
   alias: GideonContainer3
--
-  command: "kv --ops {{.Scale 500}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}} --user {{.RestUsername}} --password {{.RestPassword}}"
-  alias: GideonContainer4
--
-  command: "kv --ops {{.Scale 500}} --create 35 --update 30 --delete 20 --expire 15 --ttl 1200 --hosts {{.Orchestrator}} --bucket {{.NthBucket 4}} --user {{.RestUsername}} --password {{.RestPassword}}"
-  alias: GideonContainer5
+
 
 ############### data loading across all collections ################
 -
@@ -1824,12 +1662,7 @@
 -
   command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 2}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
   alias: magmaloader_bucket2_doc_ops
--
-  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 3}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
-  alias: magmaloader_bucket3_doc_ops
--
-  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 4}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
-  alias: magmaloader_bucket4_doc_ops
+
 
 # Wait for some time to let the load stabilize before taking backup
 -
@@ -1847,7 +1680,7 @@
 # Rebalance out a node
 -
   template: rebalance_out
-  args: "{{.Nodes | net 2}}"
+  args: "{{.Nodes | .Service `kv` | net 2}}"
   wait: true
 
 # Continue data loading
@@ -1897,7 +1730,7 @@
 # Failover a node
 -
   template: failover_node
-  args: "{{.Nodes | net 3}}"
+  args: "{{.Nodes | .Service `kv` | net 3}}"
   wait: true
 -
   template: rebalance
@@ -1925,7 +1758,7 @@
 # Rebalance-in a node
 -
   template: rebalance_in
-  args: "{{.Nodes | net 3}}"
+  args: "{{.Nodes | .Service `kv` | net 3}}"
   wait: true
 
 # Continue data loading
@@ -1950,7 +1783,7 @@
 # Failover a node
 -
   template: failover_node
-  args: "{{.Nodes | net 2}}"
+  args: "{{.Nodes | .Service `kv` | net 2}}"
   wait: true
 
 # Continue data loading
@@ -1975,7 +1808,7 @@
 # Recover node
 -
   template: recover_node
-  args: "{{.Nodes | net 2}}, delta"
+  args: "{{.Nodes | .Service `kv` | net 2}}, delta"
   wait: true
 -
   template: rebalance
@@ -2003,7 +1836,7 @@
 # Hard Failover a node
 -
   template: hard_failover_node
-  args: "{{.Nodes | net 2}}"
+  args: "{{.Nodes | .Service `kv` | net 2}}"
   wait: true
 
 # Continue data loading
@@ -2028,7 +1861,7 @@
 # Recover node
 -
   template: recover_node
-  args: "{{.Nodes | net 2}}, full"
+  args: "{{.Nodes | .Service `kv` | net 2}}, full"
   wait: true
 -
   template: rebalance
@@ -2075,7 +1908,7 @@
 # Rebalance-out a node
 -
   template: rebalance_out
-  args: "{{.Nodes | net 2}}"
+  args: "{{.Nodes | .Service `kv` | net 2}}"
   wait: true
 
 # Continue data loading
@@ -2157,16 +1990,7 @@
     op: rm
     container: "magmaloader_bucket2_doc_ops"
     wait: true
--
-  client:
-    op: rm
-    container: "magmaloader_bucket3_doc_ops"
-    wait: true
--
-  client:
-    op: rm
-    container: "magmaloader_bucket4_doc_ops"
-    wait: true
+
 -
   client:
     op: rm
@@ -2182,16 +2006,7 @@
     op: rm
     container: "GideonContainer3"
     wait: true
--
-  client:
-    op: rm
-    container: "GideonContainer4"
-    wait: true
--
-  client:
-    op: rm
-    container: "GideonContainer5"
-    wait: true
+
 
 # Wait for some time to let the load stop before flush and restore
 -
@@ -2208,12 +2023,7 @@
 -
   command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 2}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
   wait: true
--
-  command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 3}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
-  wait: true
--
-  command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 4}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
-  wait: true
+
 -
   command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.Bucket}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
   wait: true

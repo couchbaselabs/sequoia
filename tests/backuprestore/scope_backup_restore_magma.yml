@@ -49,7 +49,7 @@ users:
 buckets:
   -
       name: default
-      ram: 20%
+      ram: 35%
       eviction: fullEviction
       replica: 1
       storage: magma
@@ -58,13 +58,7 @@ buckets:
       enablehistoryretentionbydefault: 1
   -
       name: bucket1
-      ram: 20%
-      eviction: fullEviction
-      replica: 2
-      storage: couchstore
-  -
-      name: bucket2
-      ram: 25%
+      ram: 30%
       eviction: fullEviction
       replica: 1
       storage: magma
@@ -73,17 +67,11 @@ buckets:
       enablehistoryretentionbydefault: 1
       vbuckets: 1024
   -
-      name: bucket3
-      ram: 20%
+      name: bucket2
+      ram: 35%
       eviction: fullEviction
       replica: 1
       storage: magma
-  -
-      name: bucket4
-      ram: 10%
-      eviction: nruEviction
-      type: ephemeral
-      replica: 1
 
 
 servers: # each server tag represents a cluster
