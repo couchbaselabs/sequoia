@@ -88,7 +88,7 @@
 # Configure backup repo
 -
   template: configure_backup_repo
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup"
   wait: true
 
 ############### data loading ################
@@ -127,7 +127,7 @@
 # Take first backup
 -
   template: backup_cluster
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup"
   wait: true
 
 # Rebalance out a node
@@ -146,7 +146,7 @@
 # Take an incremental backup
 -
   template: backup_cluster
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup"
   wait: true
 
 # Rebalance-in a node
@@ -165,7 +165,7 @@
 # Take an incremental backup
 -
   template: backup_cluster
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup"
   wait: true
 
 # Failover a node
@@ -187,7 +187,7 @@
 # Take an incremental backup
 -
   template: backup_cluster
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup"
   wait: true
 
 # Rebalance-in a node
@@ -206,7 +206,7 @@
 # Take an incremental backup
 -
   template: backup_cluster
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup"
   wait: true
 
 # Failover a node
@@ -225,7 +225,7 @@
 # Take an incremental backup
 -
   template: backup_cluster
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup"
   wait: true
 
 # Recover node
@@ -247,13 +247,13 @@
 # Take an incremental backup
 -
   template: backup_cluster
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup"
   wait: true
 
 # Merge all backups
 -
   image: sequoiatools/cbbackupmgr
-  command: "cbbackupmerge.py {{.Nodes | .Service `n1ql` | net 0}} {{.SSHUsername}} {{.SSHPassword}} /data/archive systemtestbackup"
+  command: "cbbackupmerge.py {{.Nodes | .Service `arbiter` | net 0}} {{.SSHUsername}} {{.SSHPassword}} /data/archive systemtestbackup"
   wait: true
 
 # Hard Failover a node
@@ -272,7 +272,7 @@
 # Take an incremental backup
 -
   template: backup_cluster
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup"
   wait: true
 
 # Recover node
@@ -294,7 +294,7 @@
 # Take an incremental backup
 -
   template: backup_cluster
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup"
   wait: true
 
 # Continue data loading
@@ -307,7 +307,7 @@
 # Take an incremental backup
 -
   template: backup_cluster
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup"
   wait: true
 
 # Rebalance-out a node
@@ -326,7 +326,7 @@
 # Take an incremental backup
 -
   template: backup_cluster
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup"
   wait: true
 
 # Continue data loading
@@ -352,7 +352,7 @@
 # Take an incremental backup
 -
   template: backup_cluster
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup"
   wait: true
 
 # Auto failover node
@@ -371,13 +371,13 @@
 # Take an incremental backup
 -
   template: backup_cluster
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup"
   wait: true
 
 # Merge all backups
 -
   image: sequoiatools/cbbackupmgr
-  command: "cbbackupmerge.py {{.Nodes | .Service `n1ql` | net 0}} {{.SSHUsername}} {{.SSHPassword}} /data/archive systemtestbackup"
+  command: "cbbackupmerge.py {{.Nodes | .Service `arbiter` | net 0}} {{.SSHUsername}} {{.SSHPassword}} /data/archive systemtestbackup"
   wait: true
 
 # Change auto failover settings before chaos
@@ -448,7 +448,7 @@
 # Take an incremental backup
 -
   template: backup_cluster
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup"
   wait: true
 
 # Continue data loading
@@ -475,7 +475,7 @@
 # Take an incremental backup
 -
   template: backup_cluster
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup"
   wait: true
 
 # Continue data loading
@@ -488,7 +488,7 @@
 # Chaos: Stop couchbase on one node during incremental backup
 -
   template: backup_cluster
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup"
   expect_error: true
 
 # Wait for backup to start
@@ -527,7 +527,7 @@
 # Resume the backup
 -
   template: resume_backup_cluster
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup"
   wait: true
 
 # Continue data loading
@@ -540,7 +540,7 @@
 # Chaos: Kill memcached during incremental backup and resume
 -
   template: backup_cluster
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup"
   expect_error: true
 
 # Wait for backup to start
@@ -566,7 +566,7 @@
 # Resume the backup
 -
   template: resume_backup_cluster
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup"
   wait: true
 
 # Continue data loading
@@ -579,7 +579,7 @@
 # Chaos: Kill memcached during incremental backup and purge
 -
   template: backup_cluster
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup"
   expect_error: true
 
 # Wait for backup to start
@@ -605,7 +605,7 @@
 # Purge the backup and restart
 -
   template: purge_backup_cluster
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup"
   wait: true
 
 # Continue data loading
@@ -635,7 +635,7 @@
 # Chaos: Kill cbbackupmgr process during backup and resume
 -
   template: backup_cluster
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup"
   expect_error: true
 
 # Wait for backup to start
@@ -648,7 +648,7 @@
 # Kill cbbackupmgr process on the backup node
 -
   template: kill_process
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, cbbackupmgr"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, cbbackupmgr"
   expect_error: true
 
 # Wait for backup to fail
@@ -661,13 +661,13 @@
 # Resume the backup
 -
   template: resume_backup_cluster
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup"
   wait: true
 
 # Merge all backups
 -
   image: sequoiatools/cbbackupmgr
-  command: "cbbackupmerge.py {{.Nodes | .Service `n1ql` | net 0}} {{.SSHUsername}} {{.SSHPassword}} /data/archive systemtestbackup"
+  command: "cbbackupmerge.py {{.Nodes | .Service `arbiter` | net 0}} {{.SSHUsername}} {{.SSHPassword}} /data/archive systemtestbackup"
   wait: true
 
 # Stop data loading
@@ -734,7 +734,7 @@
 # Restore to all buckets
 -
   template: restore_backup
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup"
   wait: true
 
 # Flush buckets again and try restoring again
@@ -760,7 +760,7 @@
 # Restore to all buckets
 -
   template: restore_backup
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup"
   wait: true
 
 
@@ -813,7 +813,7 @@
 # Take an incremental backup
 -
   template: backup_cluster
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup"
   wait: true
 
 # Rebalance-in a node
@@ -832,7 +832,7 @@
 # Take an incremental backup
 -
   template: backup_cluster
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup"
   wait: true
 
 # Failover a node
@@ -854,7 +854,7 @@
 # Take an incremental backup
 -
   template: backup_cluster
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup"
   wait: true
 
 # Rebalance-in a node
@@ -873,13 +873,13 @@
 # Take an incremental backup
 -
   template: backup_cluster
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup"
   wait: true
 
 # Merge all backups
 -
   image: sequoiatools/cbbackupmgr
-  command: "cbbackupmerge.py {{.Nodes | .Service `n1ql` | net 0}} {{.SSHUsername}} {{.SSHPassword}} /data/archive systemtestbackup"
+  command: "cbbackupmerge.py {{.Nodes | .Service `arbiter` | net 0}} {{.SSHUsername}} {{.SSHPassword}} /data/archive systemtestbackup"
   wait: true
 
 # Stop data loading
@@ -939,7 +939,7 @@
 # Restore to all buckets
 -
   template: restore_backup
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup"
   wait: true
 
 # Flush buckets again and try restoring again with chaos
@@ -978,7 +978,7 @@
 # Restore to all buckets
 -
   template: restore_backup
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup"
   wait: true
 
 
@@ -1051,7 +1051,7 @@
 # Take an incremental backup
 -
   template: backup_cluster
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup"
   wait: true
 
 # Rebalance-in a node
@@ -1070,13 +1070,13 @@
 # Take an incremental backup
 -
   template: backup_cluster
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup"
   wait: true
 
 # Merge all backups
 -
   image: sequoiatools/cbbackupmgr
-  command: "cbbackupmerge.py {{.Nodes | .Service `n1ql` | net 0}} {{.SSHUsername}} {{.SSHPassword}} /data/archive systemtestbackup"
+  command: "cbbackupmerge.py {{.Nodes | .Service `arbiter` | net 0}} {{.SSHUsername}} {{.SSHPassword}} /data/archive systemtestbackup"
   wait: true
 
 # Stop data loading
@@ -1143,7 +1143,7 @@
 # Chaos : Kill cbbackupmgr process during restore and resume
 -
   template: restore_backup
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup"
 
 # Wait for restore to start
 -
@@ -1155,7 +1155,7 @@
 # Kill cbbackupmgr process on the backup node
 -
   template: kill_process
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, cbbackupmgr"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, cbbackupmgr"
   expect_error: true
 
 # Wait for restore to fail
@@ -1168,7 +1168,7 @@
 # Resume the restore
 -
   template: resume_restore_backup
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup"
   wait: true
 
 # Wait after restore
@@ -1201,7 +1201,7 @@
 # Chaos : Kill cbbackupmgr process during restore and purge
 -
   template: restore_backup
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup"
 
 # Wait for restore to start
 -
@@ -1213,7 +1213,7 @@
 # Kill cbbackupmgr process on the backup node
 -
   template: kill_process
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, cbbackupmgr"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, cbbackupmgr"
   expect_error: true
 
 # Wait for restore to fail
@@ -1226,14 +1226,14 @@
 # Purge the restore
 -
   template: purge_restore_backup
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup"
   wait: true
 
 
 # Clean backup repo
 -
   template: clean_backup_repo
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup"
   wait: true
 
 -
@@ -1245,7 +1245,7 @@
 # Configure backup repo
 -
   template: configure_backup_repo
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup1"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup1"
   wait: true
 
 ############### data loading ################
@@ -1284,7 +1284,7 @@
 # Take first backup
 -
   template: backup_cluster
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup1"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup1"
   wait: true
 
 # Rebalance out a node
@@ -1303,7 +1303,7 @@
 # Take an incremental backup
 -
   template: backup_cluster
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup1"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup1"
   wait: true
 
 # Rebalance-in a node
@@ -1322,7 +1322,7 @@
 # Take an incremental backup
 -
   template: backup_cluster
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup1"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup1"
   wait: true
 
 # Failover a node
@@ -1344,13 +1344,13 @@
 # Configure backup repo
 -
   template: configure_backup_repo
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup2"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup2"
   wait: true
 
 # Take a full backup
 -
   template: backup_cluster
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup2"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup2"
   wait: true
 
 # Rebalance-in a node
@@ -1369,7 +1369,7 @@
 # Take an incremental backup
 -
   template: backup_cluster
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup2"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup2"
   wait: true
 
 # Failover a node
@@ -1388,7 +1388,7 @@
 # Take an incremental backup
 -
   template: backup_cluster
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup2"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup2"
   wait: true
 
 # Recover node
@@ -1410,13 +1410,13 @@
 # Configure backup repo
 -
   template: configure_backup_repo
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup3"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup3"
   wait: true
 
 # Take a full backup
 -
   template: backup_cluster
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup3"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup3"
   wait: true
 
 # Hard Failover a node
@@ -1435,7 +1435,7 @@
 # Take an incremental backup
 -
   template: backup_cluster
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup3"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup3"
   wait: true
 
 # Recover node
@@ -1457,7 +1457,7 @@
 # Take an incremental backup
 -
   template: backup_cluster
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup3"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup3"
   wait: true
 
 # Continue data loading
@@ -1470,13 +1470,13 @@
 # Configure backup repo
 -
   template: configure_backup_repo
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup4"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup4"
   wait: true
 
 # Take an incremental backup
 -
   template: backup_cluster
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup4"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup4"
   wait: true
 
 # Rebalance-out a node
@@ -1495,7 +1495,7 @@
 # Take an incremental backup
 -
   template: backup_cluster
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup4"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup4"
   wait: true
 
 # Continue data loading
@@ -1508,7 +1508,7 @@
 # Take an incremental backup
 -
   template: backup_cluster
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup4"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup4"
   wait: true
 
 # Auto failover node
@@ -1527,13 +1527,13 @@
 # Configure backup repo
 -
   template: configure_backup_repo
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup5"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup5"
   wait: true
 
 # Take full backup
 -
   template: backup_cluster
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup5"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup5"
   wait: true
 
 # Stop data loading
@@ -1600,29 +1600,29 @@
 # Restore to all buckets
 -
   template: restore_backup
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup5"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup5"
   wait: true
 
 # Clean backup repo
 -
   template: clean_backup_repo
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup1"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup1"
   wait: true
 -
   template: clean_backup_repo
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup2"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup2"
   wait: true
 -
   template: clean_backup_repo
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup3"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup3"
   wait: true
 -
   template: clean_backup_repo
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup4"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup4"
   wait: true
 -
   template: clean_backup_repo
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup5"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup5"
   wait: true
 
 -
@@ -1634,7 +1634,7 @@
 # Configure backup repo
 -
   template: configure_backup_repo
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup6"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup6"
   wait: true
 
 
@@ -1674,7 +1674,7 @@
 # Take first backup
 -
   template: backup_cluster
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup6"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup6"
   wait: true
 
 # Rebalance out a node
@@ -1693,13 +1693,13 @@
 # Configure backup repo
 -
   template: configure_backup_repo
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup7"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup7"
   wait: true
 
 # Take a full backup
 -
   template: backup_cluster
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup7"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup7"
   wait: true
 
 # Rebalance-in a node
@@ -1718,13 +1718,13 @@
 # Configure backup repo
 -
   template: configure_backup_repo
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup8"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup8"
   wait: true
 
 # Take a full backup
 -
   template: backup_cluster
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup8"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup8"
   wait: true
 
 # Failover a node
@@ -1746,13 +1746,13 @@
 # Configure backup repo
 -
   template: configure_backup_repo
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup9"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup9"
   wait: true
 
 # Take a full backup
 -
   template: backup_cluster
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup9"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup9"
   wait: true
 
 # Rebalance-in a node
@@ -1771,13 +1771,13 @@
 # Configure backup repo
 -
   template: configure_backup_repo
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup10"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup10"
   wait: true
 
 # Take a full backup
 -
   template: backup_cluster
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup10"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup10"
   wait: true
 
 # Failover a node
@@ -1796,13 +1796,13 @@
 # Configure backup repo
 -
   template: configure_backup_repo
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup11"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup11"
   wait: true
 
 # Take a full backup
 -
   template: backup_cluster
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup11"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup11"
   wait: true
 
 # Recover node
@@ -1824,13 +1824,13 @@
 # Configure new backup repo
 -
   template: configure_backup_repo
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup12"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup12"
   wait: true
 
 # Take a full backup
 -
   template: backup_cluster
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup12"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup12"
   wait: true
 
 # Hard Failover a node
@@ -1849,13 +1849,13 @@
 # Configure new backup repo
 -
   template: configure_backup_repo
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup13"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup13"
   wait: true
 
 # Take a full backup
 -
   template: backup_cluster
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup13"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup13"
   wait: true
 
 # Recover node
@@ -1877,13 +1877,13 @@
 # Configure new backup repo
 -
   template: configure_backup_repo
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup14"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup14"
   wait: true
 
 # Take a full backup
 -
   template: backup_cluster
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup14"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup14"
   wait: true
 
 # Continue data loading
@@ -1896,13 +1896,13 @@
 # Configure new backup repo
 -
   template: configure_backup_repo
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup15"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup15"
   wait: true
 
 # Take a full backup
 -
   template: backup_cluster
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup15"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup15"
   wait: true
 
 # Rebalance-out a node
@@ -1921,13 +1921,13 @@
 # Configure new backup repo
 -
   template: configure_backup_repo
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup16"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup16"
   wait: true
 
 # Take a full backup
 -
   template: backup_cluster
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup16"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup16"
   wait: true
 
 # Continue data loading
@@ -1940,13 +1940,13 @@
 # Configure new backup repo
 -
   template: configure_backup_repo
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup17"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup17"
   wait: true
 
 # Take a full backup
 -
   template: backup_cluster
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup17"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup17"
   wait: true
 
 # Auto failover node
@@ -1965,13 +1965,13 @@
 # Configure new backup repo
 -
   template: configure_backup_repo
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup18"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup18"
   wait: true
 
 # Take a full backup
 -
   template: backup_cluster
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup18"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup18"
   wait: true
 
 # Stop data loading
@@ -2038,61 +2038,61 @@
 # Restore to all buckets
 -
   template: restore_backup
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, {{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup18"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup18"
   wait: true
 
 # Cleanup all backup repos
 -
   template: clean_backup_repo
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup6"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup6"
   wait: true
 -
   template: clean_backup_repo
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup7"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup7"
   wait: true
 -
   template: clean_backup_repo
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup8"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup8"
   wait: true
 -
   template: clean_backup_repo
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup9"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup9"
   wait: true
 -
   template: clean_backup_repo
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup10"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup10"
   wait: true
 -
   template: clean_backup_repo
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup11"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup11"
   wait: true
 -
   template: clean_backup_repo
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup12"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup12"
   wait: true
 -
   template: clean_backup_repo
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup13"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup13"
   wait: true
 -
   template: clean_backup_repo
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup14"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup14"
   wait: true
 -
   template: clean_backup_repo
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup15"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup15"
   wait: true
 -
   template: clean_backup_repo
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup16"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup16"
   wait: true
 -
   template: clean_backup_repo
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup17"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup17"
   wait: true
 -
   template: clean_backup_repo
-  args: "{{.Nodes | .Service `n1ql` | net 0}}, /data/archive, systemtestbackup18"
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, /data/archive, systemtestbackup18"
   wait: true
 
 -

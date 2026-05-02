@@ -87,7 +87,7 @@ servers: # each server tag represents a cluster
       buckets: default, bucket1, bucket2, bucket3, bucket4
       services:
         data: 5
-        query: 1
+        arbiter: 1
       users: default,role1,role2,role3,role4,role5,role6,role7,role8
   -
       name: remote
