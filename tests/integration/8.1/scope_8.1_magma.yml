@@ -236,15 +236,13 @@ buckets:
   -
       name: bucket10
       ram: 5%
-      storage: magma
+      storage: couchstore
       eviction: fullEviction
-      historyretentionbytes: 2147483648
-      enableEncryptionAtRest: true
       dekLifetime: 100
       dekRotateEvery: 50
-      historyretentionseconds: 86400
-      enablehistoryretentionbydefault: 1
-  
+      bucketThrottleReserved: 5000
+      bucketThrottleHardLimit: 5000
+
   -
       name: bucket11
       ram: 4%
@@ -257,11 +255,10 @@ buckets:
   -
       name: bucket12
       ram: 4%
-      storage: magma
-      eviction: fullEviction
-      historyretentionbytes: 2147483648
-      historyretentionseconds: 86400
-      enablehistoryretentionbydefault: 1
+      type: ephemeral
+      eviction: nruEviction
+      bucketThrottleReserved: 2000
+      bucketThrottleHardLimit: 2000
 
   -
       name: remote

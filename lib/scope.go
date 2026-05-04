@@ -1360,6 +1360,12 @@ func (s *Scope) CreateBuckets() {
 						command = append(command, "--continuous-backup-location", bucket.ContinuousBackupLocation)
 					}
 				}
+				if bucket.BucketThrottleReserved > 0 {
+					command = append(command, "--throttle-reserved", strconv.FormatUint(bucket.BucketThrottleReserved, 10))
+				}
+				if bucket.BucketThrottleHardLimit > 0 {
+					command = append(command, "--throttle-hard-limit", strconv.FormatUint(bucket.BucketThrottleHardLimit, 10))
+				}
 
 				desc := "bucket create " + bucketName
 				task := ContainerTask{

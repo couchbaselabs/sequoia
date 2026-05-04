@@ -8,6 +8,7 @@ package sequoia
 import (
 	"bytes"
 	"fmt"
+	"math/rand"
 	"net"
 	"reflect"
 	"strconv"
@@ -80,6 +81,20 @@ func (t *TemplateResolver) Scale(val int) string {
 		scale++
 	}
 	return strconv.Itoa(val * scale)
+}
+
+func (t *TemplateResolver) RandomScale(args ...int) string {
+	min, max := 500, 1000
+	if len(args) >= 1 {
+		min = args[0]
+	}
+	if len(args) >= 2 {
+		max = args[1]
+	}
+	if min == max {
+		return strconv.Itoa(min)
+	}
+	return strconv.Itoa(min + rand.Intn(max-min+1))
 }
 
 // resolve nodes with specified service, ie..

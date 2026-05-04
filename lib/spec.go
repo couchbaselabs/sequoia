@@ -39,9 +39,11 @@ type BucketSpec struct {
 	ConflictResolution              string
 	Vbuckets                        string
 	BucketScopeSpec                 []BucketScopeSpec
-	EnableContinuousBackup          bool   `yaml:"enable_continuous_backup"`
-	ContinuousBackupInterval        string `yaml:"continuous_backup_interval"`
-	ContinuousBackupLocation        string `yaml:"continuous_backup_location"`
+	EnableContinuousBackup          bool    `yaml:"enable_continuous_backup"`
+	ContinuousBackupInterval        string  `yaml:"continuous_backup_interval"`
+	ContinuousBackupLocation        string  `yaml:"continuous_backup_location"`
+	BucketThrottleReserved          uint64  `yaml:"bucketThrottleReserved"`
+	BucketThrottleHardLimit         uint64  `yaml:"bucketThrottleHardLimit"`
 }
 
 type BucketScopeSpec struct {
