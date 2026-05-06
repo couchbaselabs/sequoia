@@ -69,3 +69,336 @@
       image: "vijayviji/sshpass"
       command: "sshpass -p {{.SSHPassword}}
                   ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0 /opt/couchbase/bin/cbbackupmgr remove -a $1 -r $2"
+
+###############################################################################
+# AWS S3 cbbackupmgr templates
+#
+# Credentials are read from the environment of the SSH host:
+#   $AWS_ACCESS_KEY_ID
+#   $AWS_SECRET_ACCESS_KEY
+#
+# Archive paths must be of the form s3://<bucket>/<prefix>
+###############################################################################
+
+-
+# Configure AWS S3 backup repo
+# $0 = SSH host running cbbackupmgr
+# $1 = archive path (e.g. s3://my-bucket/backups)
+# $2 = repo name
+# $3 = obj-staging-dir (e.g. /data/s3_staging)
+  name: configure_backup_repo_aws
+  actions:
+    -
+      image: "vijayviji/sshpass"
+      command: "sshpass -p {{.SSHPassword}}
+                  ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0
+                    source /etc/profile.d/s3_credentials.sh;
+                    /opt/couchbase/bin/cbbackupmgr config
+                      -a $1 -r $2
+                      --obj-staging-dir $3
+                      --obj-region us-east-1
+                      --obj-access-key-id $AWS_ACCESS_KEY_ID
+                      --obj-secret-access-key $AWS_SECRET_ACCESS_KEY"
+
+-
+# Backup to AWS S3
+# $0 = SSH host running cbbackupmgr
+# $1 = cluster to backup
+# $2 = archive path (s3://...)
+# $3 = repo name
+# $4 = obj-staging-dir
+  name: backup_cluster_aws
+  actions:
+    -
+      image: "vijayviji/sshpass"
+      command: "sshpass -p {{.SSHPassword}}
+                  ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0
+                    source /etc/profile.d/s3_credentials.sh;
+                    /opt/couchbase/bin/cbbackupmgr backup
+                      -c $1 -u {{.RestUsername}} -p {{.RestPassword}}
+                      -a $2 -r $3 -t 10
+                      --obj-staging-dir $4
+                      --obj-region us-east-1
+                      --obj-access-key-id $AWS_ACCESS_KEY_ID
+                      --obj-secret-access-key $AWS_SECRET_ACCESS_KEY"
+
+-
+# Resume an AWS S3 backup
+  name: resume_backup_cluster_aws
+  actions:
+    -
+      image: "vijayviji/sshpass"
+      command: "sshpass -p {{.SSHPassword}}
+                  ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0
+                    source /etc/profile.d/s3_credentials.sh;
+                    /opt/couchbase/bin/cbbackupmgr backup
+                      -c $1 -u {{.RestUsername}} -p {{.RestPassword}}
+                      -a $2 -r $3 -t 10 --resume
+                      --obj-staging-dir $4
+                      --obj-region us-east-1
+                      --obj-access-key-id $AWS_ACCESS_KEY_ID
+                      --obj-secret-access-key $AWS_SECRET_ACCESS_KEY"
+
+-
+# Purge an AWS S3 backup
+  name: purge_backup_cluster_aws
+  actions:
+    -
+      image: "vijayviji/sshpass"
+      command: "sshpass -p {{.SSHPassword}}
+                  ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0
+                    source /etc/profile.d/s3_credentials.sh;
+                    /opt/couchbase/bin/cbbackupmgr backup
+                      -c $1 -u {{.RestUsername}} -p {{.RestPassword}}
+                      -a $2 -r $3 -t 10 --purge
+                      --obj-staging-dir $4
+                      --obj-region us-east-1
+                      --obj-access-key-id $AWS_ACCESS_KEY_ID
+                      --obj-secret-access-key $AWS_SECRET_ACCESS_KEY"
+
+-
+# Restore from AWS S3
+# $0 = SSH host
+# $1 = destination cluster
+# $2 = archive path (s3://...)
+# $3 = repo name
+# $4 = obj-staging-dir
+  name: restore_backup_aws
+  actions:
+    -
+      image: "vijayviji/sshpass"
+      command: "sshpass -p {{.SSHPassword}}
+                  ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0
+                    source /etc/profile.d/s3_credentials.sh;
+                    /opt/couchbase/bin/cbbackupmgr restore
+                      -c $1 -u {{.RestUsername}} -p {{.RestPassword}}
+                      -a $2 -r $3 -t 10
+                      --obj-staging-dir $4
+                      --obj-region us-east-1
+                      --obj-access-key-id $AWS_ACCESS_KEY_ID
+                      --obj-secret-access-key $AWS_SECRET_ACCESS_KEY"
+
+-
+# Resume restore from AWS S3
+  name: resume_restore_backup_aws
+  actions:
+    -
+      image: "vijayviji/sshpass"
+      command: "sshpass -p {{.SSHPassword}}
+                  ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0
+                    source /etc/profile.d/s3_credentials.sh;
+                    /opt/couchbase/bin/cbbackupmgr restore
+                      -c $1 -u {{.RestUsername}} -p {{.RestPassword}}
+                      -a $2 -r $3 -t 10 --resume
+                      --obj-staging-dir $4
+                      --obj-region us-east-1
+                      --obj-access-key-id $AWS_ACCESS_KEY_ID
+                      --obj-secret-access-key $AWS_SECRET_ACCESS_KEY"
+
+-
+# Purge restore from AWS S3
+  name: purge_restore_backup_aws
+  actions:
+    -
+      image: "vijayviji/sshpass"
+      command: "sshpass -p {{.SSHPassword}}
+                  ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0
+                    source /etc/profile.d/s3_credentials.sh;
+                    /opt/couchbase/bin/cbbackupmgr restore
+                      -c $1 -u {{.RestUsername}} -p {{.RestPassword}}
+                      -a $2 -r $3 -t 10 --purge
+                      --obj-staging-dir $4
+                      --obj-region us-east-1
+                      --obj-access-key-id $AWS_ACCESS_KEY_ID
+                      --obj-secret-access-key $AWS_SECRET_ACCESS_KEY"
+
+-
+# Remove an AWS S3 backup repo
+# $0 = SSH host
+# $1 = archive (s3://...)
+# $2 = repo name
+# $3 = obj-staging-dir
+  name: clean_backup_repo_aws
+  actions:
+    -
+      image: "vijayviji/sshpass"
+      command: "sshpass -p {{.SSHPassword}}
+                  ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0
+                    source /etc/profile.d/s3_credentials.sh;
+                    /opt/couchbase/bin/cbbackupmgr remove
+                      -a $1 -r $2
+                      --obj-staging-dir $3
+                      --obj-region us-east-1
+                      --obj-access-key-id $AWS_ACCESS_KEY_ID
+                      --obj-secret-access-key $AWS_SECRET_ACCESS_KEY"
+
+###############################################################################
+# Azure Blob Storage cbbackupmgr templates
+#
+# Credentials are read from the environment of the SSH host:
+#   $AZURE_STORAGE_ACCOUNT    (passed as --obj-access-key-id)
+#   $AZURE_STORAGE_KEY        (passed as --obj-secret-access-key)
+#   $AZURE_STORAGE_ENDPOINT   (passed as --obj-endpoint)
+#
+# Archive paths must be of the form az://<container>/<prefix>
+###############################################################################
+
+-
+# Configure Azure Blob backup repo
+# $0 = SSH host
+# $1 = archive (az://container/prefix)
+# $2 = repo name
+# $3 = obj-staging-dir
+  name: configure_backup_repo_azure
+  actions:
+    -
+      image: "vijayviji/sshpass"
+      command: "sshpass -p {{.SSHPassword}}
+                  ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0
+                    source /etc/profile.d/azure_credentials.sh;
+                    /opt/couchbase/bin/cbbackupmgr config
+                      -a $1 -r $2
+                      --obj-staging-dir $3
+                      --obj-region westus
+                      --obj-endpoint $AZURE_STORAGE_ENDPOINT
+                      --obj-access-key-id $AZURE_STORAGE_ACCOUNT
+                      --obj-secret-access-key $AZURE_STORAGE_KEY"
+
+-
+# Backup to Azure Blob
+# $0 = SSH host
+# $1 = cluster
+# $2 = archive (az://...)
+# $3 = repo name
+# $4 = obj-staging-dir
+  name: backup_cluster_azure
+  actions:
+    -
+      image: "vijayviji/sshpass"
+      command: "sshpass -p {{.SSHPassword}}
+                  ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0
+                    source /etc/profile.d/azure_credentials.sh;
+                    /opt/couchbase/bin/cbbackupmgr backup
+                      -c $1 -u {{.RestUsername}} -p {{.RestPassword}}
+                      -a $2 -r $3 -t 10
+                      --obj-staging-dir $4
+                      --obj-region westus
+                      --obj-endpoint $AZURE_STORAGE_ENDPOINT
+                      --obj-access-key-id $AZURE_STORAGE_ACCOUNT
+                      --obj-secret-access-key $AZURE_STORAGE_KEY"
+
+-
+# Resume an Azure Blob backup
+  name: resume_backup_cluster_azure
+  actions:
+    -
+      image: "vijayviji/sshpass"
+      command: "sshpass -p {{.SSHPassword}}
+                  ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0
+                    source /etc/profile.d/azure_credentials.sh;
+                    /opt/couchbase/bin/cbbackupmgr backup
+                      -c $1 -u {{.RestUsername}} -p {{.RestPassword}}
+                      -a $2 -r $3 -t 10 --resume
+                      --obj-staging-dir $4
+                      --obj-region westus
+                      --obj-endpoint $AZURE_STORAGE_ENDPOINT
+                      --obj-access-key-id $AZURE_STORAGE_ACCOUNT
+                      --obj-secret-access-key $AZURE_STORAGE_KEY"
+
+-
+# Purge an Azure Blob backup
+  name: purge_backup_cluster_azure
+  actions:
+    -
+      image: "vijayviji/sshpass"
+      command: "sshpass -p {{.SSHPassword}}
+                  ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0
+                    source /etc/profile.d/azure_credentials.sh;
+                    /opt/couchbase/bin/cbbackupmgr backup
+                      -c $1 -u {{.RestUsername}} -p {{.RestPassword}}
+                      -a $2 -r $3 -t 10 --purge
+                      --obj-staging-dir $4
+                      --obj-region westus
+                      --obj-endpoint $AZURE_STORAGE_ENDPOINT
+                      --obj-access-key-id $AZURE_STORAGE_ACCOUNT
+                      --obj-secret-access-key $AZURE_STORAGE_KEY"
+
+-
+# Restore from Azure Blob
+# $0 = SSH host
+# $1 = destination cluster
+# $2 = archive (az://...)
+# $3 = repo name
+# $4 = obj-staging-dir
+  name: restore_backup_azure
+  actions:
+    -
+      image: "vijayviji/sshpass"
+      command: "sshpass -p {{.SSHPassword}}
+                  ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0
+                    source /etc/profile.d/azure_credentials.sh;
+                    /opt/couchbase/bin/cbbackupmgr restore
+                      -c $1 -u {{.RestUsername}} -p {{.RestPassword}}
+                      -a $2 -r $3 -t 10
+                      --obj-staging-dir $4
+                      --obj-region westus
+                      --obj-endpoint $AZURE_STORAGE_ENDPOINT
+                      --obj-access-key-id $AZURE_STORAGE_ACCOUNT
+                      --obj-secret-access-key $AZURE_STORAGE_KEY"
+
+-
+# Resume restore from Azure Blob
+  name: resume_restore_backup_azure
+  actions:
+    -
+      image: "vijayviji/sshpass"
+      command: "sshpass -p {{.SSHPassword}}
+                  ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0
+                    source /etc/profile.d/azure_credentials.sh;
+                    /opt/couchbase/bin/cbbackupmgr restore
+                      -c $1 -u {{.RestUsername}} -p {{.RestPassword}}
+                      -a $2 -r $3 -t 10 --resume
+                      --obj-staging-dir $4
+                      --obj-region westus
+                      --obj-endpoint $AZURE_STORAGE_ENDPOINT
+                      --obj-access-key-id $AZURE_STORAGE_ACCOUNT
+                      --obj-secret-access-key $AZURE_STORAGE_KEY"
+
+-
+# Purge restore from Azure Blob
+  name: purge_restore_backup_azure
+  actions:
+    -
+      image: "vijayviji/sshpass"
+      command: "sshpass -p {{.SSHPassword}}
+                  ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0
+                    source /etc/profile.d/azure_credentials.sh;
+                    /opt/couchbase/bin/cbbackupmgr restore
+                      -c $1 -u {{.RestUsername}} -p {{.RestPassword}}
+                      -a $2 -r $3 -t 10 --purge
+                      --obj-staging-dir $4
+                      --obj-region westus
+                      --obj-endpoint $AZURE_STORAGE_ENDPOINT
+                      --obj-access-key-id $AZURE_STORAGE_ACCOUNT
+                      --obj-secret-access-key $AZURE_STORAGE_KEY"
+
+-
+# Remove an Azure Blob backup repo
+# $0 = SSH host
+# $1 = archive (az://...)
+# $2 = repo name
+# $3 = obj-staging-dir
+  name: clean_backup_repo_azure
+  actions:
+    -
+      image: "vijayviji/sshpass"
+      command: "sshpass -p {{.SSHPassword}}
+                  ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0
+                    source /etc/profile.d/azure_credentials.sh;
+                    /opt/couchbase/bin/cbbackupmgr remove
+                      -a $1 -r $2
+                      --obj-staging-dir $3
+                      --obj-region westus
+                      --obj-endpoint $AZURE_STORAGE_ENDPOINT
+                      --obj-access-key-id $AZURE_STORAGE_ACCOUNT
+                      --obj-secret-access-key $AZURE_STORAGE_KEY"
