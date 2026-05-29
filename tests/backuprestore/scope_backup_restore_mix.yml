@@ -80,7 +80,7 @@ servers: # each server tag represents a cluster
       init_nodes: 6
       data_path: "/data/dta"
       index_path: "/data/index"
-      buckets: default, bucket1, bucket2, bucket3, bucket4
+      buckets: default, bucket1, bucket2
       services:
         data: 5
         arbiter: 1

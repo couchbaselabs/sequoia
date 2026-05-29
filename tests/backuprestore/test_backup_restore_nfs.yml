@@ -1144,6 +1144,7 @@
 -
   template: restore_backup
   args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /mnt/nfs_data/test_system_backup, systemtestbackup"
+  expect_error: true
 
 # Wait for restore to start
 -
@@ -1202,6 +1203,7 @@
 -
   template: restore_backup
   args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /mnt/nfs_data/test_system_backup, systemtestbackup"
+  expect_error: true
 
 # Wait for restore to start
 -
