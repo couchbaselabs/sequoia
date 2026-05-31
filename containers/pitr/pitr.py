@@ -67,7 +67,7 @@ def get_timestamps_by_mode(timestamps, n, mode):
 
 def run_pitr(ssh_host, ssh_user, ssh_password, cluster_ip, rest_user, rest_password,
              archive_path, repo_name, cont_backup_location, timestamp, threads=8, tmp_dir="/data/tmp",
-             resume=False, purge=False):
+             resume=False, purge=False, storage_type="nfs", obj_staging_dir=None):
     """Run PITR restore command on remote host via SSH using paramiko."""
     cmd = (
         f"/opt/couchbase/bin/cbcontbk restore "
@@ -80,6 +80,26 @@ def run_pitr(ssh_host, ssh_user, ssh_password, cluster_ip, rest_user, rest_passw
         cmd += " --resume"
     if purge:
         cmd += " --purge"
+
+    if storage_type == "aws":
+        cmd += (
+            f" --obj-staging-dir {obj_staging_dir}"
+            f" --obj-region us-east-1"
+            f" --obj-access-key-id $AWS_ACCESS_KEY_ID"
+            f" --obj-secret-access-key $AWS_SECRET_ACCESS_KEY"
+        )
+        cmd = f"source /etc/profile.d/s3_credentials.sh; {cmd}"
+    elif storage_type == "azure":
+        cmd += (
+            f" --obj-staging-dir {obj_staging_dir}"
+            f" --obj-region westus"
+            f" --obj-endpoint $AZURE_STORAGE_ENDPOINT"
+            f" --obj-access-key-id $AZURE_STORAGE_ACCOUNT"
+            f" --obj-secret-access-key $AZURE_STORAGE_KEY"
+        )
+        cmd = f"source /etc/profile.d/azure_credentials.sh; {cmd}"
+    elif storage_type == "gcp":
+        cmd += f" --obj-staging-dir {obj_staging_dir}"
 
     print(f"Running PITR restore to timestamp: {timestamp}\n cmd: {cmd}\n")
 
@@ -129,9 +149,15 @@ def main():
     parser.add_argument('--tmp-dir', default='/data/tmp', help='Temporary directory (-d)')
     parser.add_argument('--resume', action='store_true', help='Resume a previous restore operation')
     parser.add_argument('--purge', action='store_true', help='Purge a previous failed restore operation')
-
+    parser.add_argument('--storage-type', choices=['nfs', 'aws', 'azure', 'gcp'],
+                        default='nfs', help='Storage type for backup archive (default: nfs)')
+    parser.add_argument('--obj-staging-dir', help='Object staging directory (required for aws, azure, gcp)')
 
     args = parser.parse_args()
+
+    if args.storage_type in ['aws', 'azure', 'gcp'] and not args.obj_staging_dir:
+        print(f"Error: --obj-staging-dir is required when storage-type is {args.storage_type}", file=sys.stderr)
+        sys.exit(1)
 
     if args.num_timestamps <= 0:
         print("Error: num_timestamps must be a positive integer", file=sys.stderr)
@@ -155,7 +181,7 @@ def main():
             args.cluster_ip, args.rest_user, args.rest_password,
             args.archive, args.repo, args.cont_backup_location,
             ts, args.threads, args.tmp_dir,
-            args.resume, args.purge
+            args.resume, args.purge, args.storage_type, args.obj_staging_dir
         ):
             print(f"Error: PITR failed for timestamp {ts}. Exiting.", file=sys.stderr)
             sys.exit(1)
