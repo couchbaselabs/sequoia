@@ -2655,6 +2655,18 @@
 -
   section_start: incremental_backup_pitr
 
+# Enable continuous backup again after restore
+-
+  image: sequoiatools/couchbase-cli
+  command:  "bucket-edit -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 1}} -u {{.RestUsername}} -p {{.RestPassword}} --continuous-backup-enabled 1"
+  wait: true
+-
+  command: "bucket-edit -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 2}} -u {{.RestUsername}} -p {{.RestPassword}} --continuous-backup-enabled 1"
+  wait: true
+-
+  command: "bucket-edit -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.Bucket}} -u {{.RestUsername}} -p {{.RestPassword}} --continuous-backup-enabled 1"
+  wait: true
+
 ############### data loading ################
 -
   image: sequoiatools/gideon_latest
