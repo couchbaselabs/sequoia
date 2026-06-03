@@ -219,6 +219,19 @@
   command: "--connection_string {{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 11}} --start 1 --end 100000 --batch_size 10000 --file_path /sift_base.fvecs --load_in_chunks false"
   wait: true
 
+##### Data loading for bucket12 (sparse vector bucket) ################
+- image: sequoiatools/magmaloader
+  command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 12}} --start 0 --end 100000 --doc_template Hotel --all_coll true"
+  requires:  "{{eq true .DoOnce }}"
+  wait: true
+
+##### Upsert sparse embeddings for bucket12 ################
+- image: sequoiatools/vectorloader
+  command: "--connstr couchbase://{{.Orchestrator}} --username Administrator --password password --bucket {{.NthBucket 12}} --scope _default --collection _default --num-docs 100000"
+  volumes: "/data/sparseSIFT/:/app/embeddings"
+  requires:  "{{eq true .DoOnce }}"
+  wait: true
+
 ######### Create composite indexes as well as secondary indexes on scalar fields ###################
 - image: sequoiatools/indexmanager
   command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 10}}  -a create_n_indexes_on_buckets --timeout 30 --num_of_indexes_per_bucket 6  --create_vector_indexes true --num_dimensions 128 --skip_default_collection false --num_vectors 100000 --distance_algo L2 --defer_build true --set_max_replicas 1"
@@ -231,6 +244,19 @@
   command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 11}}  -a create_n_indexes_on_buckets --timeout 30 --num_of_indexes_per_bucket 4  --create_bhive_indexes true --num_dimensions 128 --skip_default_collection false --num_vectors 100000 --distance_algo L2 --defer_build true --set_max_replicas 1"
   wait: true
 - command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 11}} -i {{.Scale 1}} -a create_n_indexes_on_buckets -v --num_of_indexes_per_bucket 13 --skip_default_collection false"
+  wait: true
+
+######### Create RaBitQ BHIVE indexes on bucket11 ###################
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 11}} -a create_n_indexes_on_buckets --timeout 30 --num_of_indexes_per_bucket 2 --create_bhive_indexes true --num_dimensions 128 --skip_default_collection false --num_vectors 100000 --distance_algo DOT --defer_build true --set_max_replicas 1 --use_description IVF,RaBitQ"
+  wait: true
+
+######### Create sparse vector indexes on bucket12 ###################
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 12}} -a create_n_indexes_on_buckets --timeout 30 --num_of_indexes_per_bucket 4 --create_sparse_vector_indexes true --skip_default_collection false --num_vectors 100000 --set_max_replicas 1"
+  wait: true
+
+######### Create sparse BHIVE indexes on bucket12 ###################
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 12}} -a create_n_indexes_on_buckets --timeout 30 --num_of_indexes_per_bucket 2 --create_sparse_bhive_indexes true --skip_default_collection false --num_vectors 100000 --set_max_replicas 1"
   wait: true
 
 
@@ -341,11 +367,48 @@
   command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 11}} -a build_deferred_index -m 5"
   wait: true
 
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 12}} -a build_deferred_index -m 5"
+  wait: true
+
 # Wait till all indexes are completely built
 -
    image: sequoiatools/wait_for_idx_build_complete
    command: "{{.ActiveIndexNode 0}} {{.RestUsername}} {{.RestPassword}}"
    wait: true
+
+############### Plan Stability Setup ###############
+# Prepare dense/scalar N1QL statements on bucket10
+- image: sequoiatools/query_manager:dev
+  command: "--connection_string {{.Nodes | .Service `n1ql` | net 0}} --username {{.RestUsername}} --password {{.RestPassword}} --bucket_list {{.NthBucket 10}} --action prepare_statements --statement_types scalar,vector_dense --distance_algo L2 --use_tls false"
+  requires: "{{eq true .DoOnce }}"
+  wait: true
+
+# Prepare sparse N1QL statements on bucket12
+- image: sequoiatools/query_manager:dev
+  command: "--connection_string {{.Nodes | .Service `n1ql` | net 0}} --username {{.RestUsername}} --password {{.RestPassword}} --bucket_list {{.NthBucket 12}} --action prepare_statements --statement_types vector_sparse,bhive_sparse --distance_algo EUCLIDEAN_SQUARED --use_tls false"
+  requires: "{{eq true .DoOnce }}"
+  wait: true
+
+# Set plan stability to prepared_only before running prepared queries
+- image: sequoiatools/query_manager:dev
+  command: "--connection_string {{.Nodes | .Service `n1ql` | net 0}} --username {{.RestUsername}} --password {{.RestPassword}} --action set_plan_stability --plan_stability_mode prepared_only"
+  wait: true
+
+# Execute dense/scalar prepared statements - baseline validation on bucket10
+- image: sequoiatools/query_manager:dev
+  command: "--connection_string {{.Nodes | .Service `n1ql` | net 0}} --username {{.RestUsername}} --password {{.RestPassword}} --bucket_list {{.NthBucket 10}} --action execute_prepared --prepared_duration 30 --prepared_interval 1 --validate_prepared true --statement_types scalar,vector_dense --use_tls false -qf /sift_query.fvecs"
+  wait: true
+
+# Execute sparse prepared statements - baseline validation on bucket12
+- image: sequoiatools/query_manager:dev
+  command: "--connection_string {{.Nodes | .Service `n1ql` | net 0}} --username {{.RestUsername}} --password {{.RestPassword}} --bucket_list {{.NthBucket 12}} --action execute_prepared --prepared_duration 30 --prepared_interval 1 --validate_prepared true --statement_types vector_sparse,bhive_sparse --use_tls false -qf /queries.dev.csr"
+  wait: true
+
+# Verify QUERY_METADATA has records before switching to ad_hoc
+- image: sequoiatools/query_manager:dev
+  command: "--connection_string {{.Nodes | .Service `n1ql` | net 0}} --username {{.RestUsername}} --password {{.RestPassword}} --action verify_query_metadata --non_zero_check true"
+  wait: true
 
 # Create FTS indexes on collections
 - image: sequoiatools/ftsindexmanager
@@ -418,6 +481,41 @@
   command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 72000 --refresh_duration 900 --timeout 600 --num_concurrent_queries 5 --use_sdk true --query_type n1ql --template hotel,hotel_vectors --bucket_list {{.NthBucket 11}} --distance_algo L2 --skip_default false --use_tls false --run_bhive_queries true"
   alias: query_workload_2
 
+##### RaBitQ query workload on bucket11 #####
+- image: sequoiatools/query_manager:dev
+  command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 72000 --refresh_duration 900 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list {{.NthBucket 11}} --distance_algo DOT --skip_default false --use_tls false --run_bhive_queries true"
+  alias: query_workload_rabitq
+
+##### Sparse query workloads on bucket12 #####
+- image: sequoiatools/query_manager:dev
+  command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 72000 --refresh_duration 120 --timeout 300 --num_concurrent_queries 5 --use_sdk true --query_type n1ql --template hotel_sparse_vectors --bucket_list {{.NthBucket 12}} -qf /queries.dev.csr -gf /base_1M.dev.gt --use_tls false --skip_default false"
+  alias: query_workload_sparse
+
+- image: sequoiatools/query_manager:dev
+  command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 72000 --refresh_duration 120 --timeout 300 --num_concurrent_queries 2 --use_sdk true --query_type n1ql --template hotel_sparse_vectors --bucket_list {{.NthBucket 12}} -qf /queries.dev.csr -gf /base_1M.dev.gt --use_tls false --skip_default false --run_bhive_queries true"
+  alias: query_workload_sparse_bhive
+
+##### Short-duration query workloads with scan report #####
+# Scalar workload with scan report (bucket10)
+- image: sequoiatools/query_manager:dev
+  command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 3600 --refresh_duration 3600 --timeout 600 --num_concurrent_queries 5 --use_sdk true --query_type n1ql --template hotel --bucket_list {{.NthBucket 10}} --skip_default false --use_tls false"
+  alias: query_workload_scalar_scanreport
+
+# Dense vector workload with scan report (bucket10)
+- image: sequoiatools/query_manager:dev
+  command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 3600 --refresh_duration 3600 --timeout 600 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list {{.NthBucket 10}} --distance_algo L2 --skip_default false --use_tls false"
+  alias: query_workload_dense_scanreport
+
+# Sparse workload with scan report (bucket12)
+- image: sequoiatools/query_manager:dev
+  command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 3600 --refresh_duration 3600 --timeout 300 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template hotel_sparse_vectors --bucket_list {{.NthBucket 12}} -qf /queries.dev.csr -gf /base_1M.dev.gt --use_tls false --skip_default false"
+  alias: query_workload_sparse_scanreport
+
+# RaBitQ workload with scan report (bucket11)
+- image: sequoiatools/query_manager:dev
+  command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 3600 --refresh_duration 3600 --timeout 600 --num_concurrent_queries 2 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list {{.NthBucket 11}} --distance_algo DOT --skip_default false --use_tls false --run_bhive_queries true"
+  alias: query_workload_rabitq_scanreport
+
 # query FTS indexes
 - image: sequoiatools/ftsindexmanager
   command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}} --print_interval 600 -a run_queries -t 0 -nq 1"
@@ -441,6 +539,16 @@
    entrypoint: sleep
    command: "600"
    wait: true
+
+############### Turn off plan stability (after ~2 hours of test runtime) ###############
+- image: sequoiatools/query_manager:dev
+  command: "--connection_string {{.Nodes | .Service `n1ql` | net 0}} --username {{.RestUsername}} --password {{.RestPassword}} --action set_plan_stability --plan_stability_mode off"
+  wait: true
+
+# Verify QUERY_METADATA table is cleared after turning off plan stability
+- image: sequoiatools/query_manager:dev
+  command: "--connection_string {{.Nodes | .Service `n1ql` | net 0}} --username {{.RestUsername}} --password {{.RestPassword}} --action verify_query_metadata --non_zero_check false"
+  wait: true
 
 # run queries and then connect to bucket
 - test: tests/analytics/cheshirecat/test_analytics_integration_scale3.yml
@@ -740,6 +848,34 @@
     op: rm
     container: txn
 -
+  client:
+    op: rm
+    container: query_workload_rabitq
+-
+  client:
+    op: rm
+    container: query_workload_sparse
+-
+  client:
+    op: rm
+    container: query_workload_sparse_bhive
+-
+  client:
+    op: rm
+    container: query_workload_scalar_scanreport
+-
+  client:
+    op: rm
+    container: query_workload_dense_scanreport
+-
+  client:
+    op: rm
+    container: query_workload_sparse_scanreport
+-
+  client:
+    op: rm
+    container: query_workload_rabitq_scanreport
+-
    image: sequoiatools/cmd
    entrypoint: sleep
    command: "1200"
@@ -775,6 +911,9 @@
 - command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 7}} -a item_count_check --sample_size {{.Scale 10}}"
   wait: true
 
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 12}} -a item_count_check --sample_size {{.Scale 10}}"
+  wait: true
+
 # Drop GSI indexes
 - image: sequoiatools/indexmanager
   command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}} -a drop_all_indexes"
@@ -793,6 +932,15 @@
   wait: true
 
 - command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 9}} -a drop_all_indexes"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 10}} -a drop_all_indexes"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 11}} -a drop_all_indexes"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 12}} -a drop_all_indexes"
   wait: true
 
 ################ Check for item count #####################################
