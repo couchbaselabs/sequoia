@@ -16,8 +16,13 @@ COPY sift_query.fvecs /
 COPY siftsmall_groundtruth.ivecs /
 COPY siftsmall_query.fvecs /
 COPY gist_query.fvecs /
-COPY gist_groundtruth.ivecs /
+COPY base_1M.dev.gt /
+COPY base_small.dev.gt /
+COPY base_full.dev.gt /
+COPY queries.dev.csr /
+COPY n1ql_udf.js /
 COPY query_manager.py /
+
 ENV TZ=America/Los_Angeles
 
 # Install tzdata and set timezone

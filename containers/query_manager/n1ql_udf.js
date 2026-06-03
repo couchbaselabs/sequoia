@@ -1,24 +1,15 @@
 function random_index_on_bucket(bkt) {
-    var iter = N1QL("select name,keyspace_id,scope_id from system:all_indexes where `bucket_id` = $bkt and `using`='gsi'", { bkt: bkt });
+    var iter =  select name,keyspace_id,scope_id from system:all_indexes where `bucket_id` = $bkt and `using`='gsi';
     let indexes = [];
     for (const row of iter) {
         indexes.push(row);
-    }
-    if (indexes.length === 0) {
-        return null;
     }
     random_index = indexes[Math.floor(Math.random() * indexes.length)];
     return random_index
 }
 
 function run_n1ql_query(bucket_name) {
-    // Get a random index from bucket
     var index = random_index_on_bucket(bucket_name);
-    if (!index) {
-        return null;
-    }
-
-    // Get index name and keyspace
     var idx_name = index["name"];
     var idx_template = idx_name.split("_")[0];
     var scope_name = index["scope_id"];
@@ -26,12 +17,7 @@ function run_n1ql_query(bucket_name) {
     
     full_keyspace = "`" + bucket_name + "`.`" + scope_name + "`.`" + collection_name + "`"
     
-    var template = query_template(idx_template, full_keyspace);
-    if (!template) {
-        return null;
-    }
-
-    var query = N1QL(template, {});
+    var query = N1QL(query_template(idx_template, full_keyspace), {});
     let iter = query[Symbol.iterator]();
     var result = iter.next();
     query.close();
@@ -52,9 +38,6 @@ function query_template (index, keyspace) {
         "idx9": "SELECT * FROM keyspacenameplaceholder AS d WHERE ANY r IN d.reviews SATISFIES r.author LIKE 'M%' and r.ratings.Rooms > 3 END AND free_parking = True",
         "idx10": "SELECT * FROM keyspacenameplaceholder AS d WHERE ANY r IN d.reviews SATISFIES ANY n:v IN r.ratings SATISFIES n = 'Overall' AND v = 2 END END",
         "idx11": "SELECT * FROM keyspacenameplaceholder AS d WHERE ANY r IN d.reviews SATISFIES r.ratings.Rooms = 3 and r.ratings.Cleanliness > 1 END AND free_parking = True"
-    }
-    if (!query_template[index]) {
-        return null;
     }
     return query_template[index].replace("keyspacenameplaceholder", keyspace);
 }

@@ -1,12 +1,10 @@
 import json
 import string
-import sys
 import threading
 from datetime import datetime
 from couchbase.cluster import Cluster, ClusterOptions, QueryOptions
 import couchbase.exceptions
 from couchbase_core.cluster import PasswordAuthenticator
-from couchbase_core.bucketmanager import BucketManager
 from couchbase.management.collections import *
 from couchbase.management.admin import *
 import random
@@ -15,7 +13,6 @@ import logging
 import requests
 import time
 import math
-import httplib2
 import paramiko
 from couchbase.management.collections import CollectionSpec
 import dns.resolver
@@ -100,28 +97,34 @@ HOTEL_DS_INDEX_TEMPLATES = [
     {"indexname": "idxvector1",
      "is_vector": True,
      "validate_item_count_check": True,
+     "vector_field": "vectors",
      "statement": "CREATE INDEX `idxvector1_idxprefix` ON keyspacenameplaceholder(`free_breakfast`,vectors VECTOR, `free_parking`,`country`,`city`) "},
     {"indexname": "idxvector2",
      "is_vector": True,
      "validate_item_count_check": True,
+     "vector_field": "vectors",
      "statement": "CREATE INDEX `idxvector2_idxprefix` ON keyspacenameplaceholder(`price`,`city`,`name`, vectors VECTOR)"},
     {"indexname": "idxvector3",
      "validate_item_count_check": True,
      "is_vector": True,
+     "vector_field": "vectors",
      "statement": "CREATE INDEX `idxvector3_idxprefix` ON keyspacenameplaceholder(`name` INCLUDE MISSING DESC,`phone`,`type`, vectors VECTOR)"},
     {"indexname": "idxvector4",
      "is_vector": True,
      "validate_item_count_check": True,
+     "vector_field": "vectors",
      "statement": "CREATE INDEX `idxvector4_idxprefix` ON keyspacenameplaceholder(country,vectors VECTOR)"},
     {"indexname": "idxvector5",
      "is_vector": True,
      "vector_leading": True,
      "validate_item_count_check": True,
+     "vector_field": "vectors",
      "statement": "CREATE INDEX `idxvector5_idxprefix` ON keyspacenameplaceholder(vectors VECTOR)"},
     {"indexname": "idxvector6",
      "is_vector": True,
      "vector_leading": True,
      "validate_item_count_check": True,
+     "vector_field": "vectors",
      "statement": "CREATE INDEX `idxvector6_idxprefix` ON keyspacenameplaceholder(vectors VECTOR, city )"},
     #  {"indexname": "idxvector7",
     #   "is_vector": True,
@@ -133,16 +136,81 @@ HOTEL_DS_INDEX_TEMPLATES = [
      "validate_item_count_check": True,
      "is_vector": True,
      "vector_leading": True,
+     "vector_field": "vectors",
      "statement": "CREATE VECTOR INDEX `idxbhive1_idxprefix` ON keyspacenameplaceholder(vectors VECTOR) INCLUDE (price, avg_rating, free_breakfast)"},
     {"indexname": "bhiveidxvector2",
      "validate_item_count_check": True,
      "is_vector": True,
      "vector_leading": True,
+     "vector_field": "vectors",
      "statement": "CREATE VECTOR INDEX `idxbhive2_idxprefix` ON keyspacenameplaceholder(vectors VECTOR) INCLUDE (city, country)"},
      # {"indexname": "bhiveidxvector3",
     #  "is_vector": True,
     #  "validate_item_count_check": True,
     #  "statement": "CREATE VECTOR INDEX `idxbhive3_idxprefix` ON keyspacenameplaceholder(vectors VECTOR) where city=\"Arnettamouth\""}
+
+    # Sparse Vector indexes (using embedding field)
+    {"indexname": "idxvector1_sparse",
+     "is_vector": True,
+     "is_sparse": True,
+     "validate_item_count_check": True,
+     "vector_field": "embedding",
+     "statement": "CREATE INDEX `idxvector1_sparseidxprefix` ON keyspacenameplaceholder(`free_breakfast`,embedding SPARSE VECTOR, `free_parking`,`country`,`city`) "},
+    {"indexname": "idxvector2_sparse",
+     "is_vector": True,
+     "is_sparse": True,
+     "validate_item_count_check": True,
+     "vector_field": "embedding",
+     "statement": "CREATE INDEX `idxvector2_sparseidxprefix` ON keyspacenameplaceholder(`price`,`city`,`name`, embedding SPARSE VECTOR)"},
+    {"indexname": "idxvector3_sparse",
+     "validate_item_count_check": True,
+     "is_vector": True,
+     "is_sparse": True,
+     "vector_field": "embedding",
+     "statement": "CREATE INDEX `idxvector3_sparseidxprefix` ON keyspacenameplaceholder(`name` INCLUDE MISSING DESC,`phone`,`type`, embedding SPARSE VECTOR)"},
+    {"indexname": "idxvector4_sparse",
+     "is_vector": True,
+     "is_sparse": True,
+     "validate_item_count_check": True,
+     "vector_field": "embedding",
+     "statement": "CREATE INDEX `idxvector4_sparseidxprefix` ON keyspacenameplaceholder(country,embedding SPARSE VECTOR)"},
+    {"indexname": "idxvector5_sparse",
+     "is_vector": True,
+     "is_sparse": True,
+     "vector_leading": True,
+     "validate_item_count_check": True,
+     "vector_field": "embedding",
+     "statement": "CREATE INDEX `idxvector5_sparseidxprefix` ON keyspacenameplaceholder(embedding SPARSE VECTOR)"},
+    {"indexname": "idxvector6_sparse",
+     "is_vector": True,
+     "is_sparse": True,
+     "vector_leading": True,
+     "validate_item_count_check": True,
+     "vector_field": "embedding",
+     "statement": "CREATE INDEX `idxvector6_sparseidxprefix` ON keyspacenameplaceholder(embedding SPARSE VECTOR, city )"},
+
+    # Sparse BHIVE indexes (using embedding field)
+    {"indexname": "bhiveidxvector1_sparse",
+     "validate_item_count_check": True,
+     "is_vector": True,
+     "is_sparse": True,
+     "vector_leading": True,
+     "vector_field": "embedding",
+     "statement": "CREATE VECTOR INDEX `idxbhive1_sparseidxprefix` ON keyspacenameplaceholder(embedding SPARSE VECTOR) INCLUDE (price, avg_rating, free_breakfast)"},
+    {"indexname": "bhiveidxvector2_sparse",
+     "validate_item_count_check": True,
+     "is_vector": True,
+     "is_sparse": True,
+     "vector_leading": True,
+     "vector_field": "embedding",
+     "statement": "CREATE VECTOR INDEX `idxbhive2_sparseidxprefix` ON keyspacenameplaceholder(embedding SPARSE VECTOR) INCLUDE (city, country)"},
+    {"indexname": "bhiveidxvector3_sparse",
+     "validate_item_count_check": True,
+     "is_vector": True,
+     "is_sparse": True,
+     "vector_leading": True,
+     "vector_field": "embedding",
+     "statement": "CREATE VECTOR INDEX `idxbhive3_sparseidxprefix` ON keyspacenameplaceholder(embedding SPARSE VECTOR)"},
 
 ]
 
@@ -185,7 +253,7 @@ SHOES_INDEX_TEMPLATES = [
 ]
 
 DISTANCE_SUPPORTED_FUNCTIONS = ["L2", "L2_SQUARED", "DOT", "COSINE", "EUCLIDEAN", "EUCLIDEAN_SQUARED"]
-DESCRIPTION_LIST = ["IVF,PQ8x8", "IVF,SQ8", "IVF,PQ128x8", "IVF,PQ64x8", "IVF,PQ32x8", "IVF,PQ32x4FS", "IVF,SQfp16"]
+DESCRIPTION_LIST = ["IVF,PQ8x8", "IVF,SQ8", "IVF,PQ128x8", "IVF,PQ64x8", "IVF,PQ32x8", "IVF,SQfp16"]
 SCAN_NPROBE_MIN = 5
 SCAN_NPROBE_MAX = 20
 
@@ -221,12 +289,13 @@ class IndexManager:
                                      "create_n_indexes_on_buckets", "validate_s3_cleanup", "copy_aws_keys",
                                      "cleanup_s3", "poll_total_requests_during_rebalance",
                                      "wait_until_rebalance_cleanup_done", "print_stats",
-                                     "wait_until_mutations_processed", "random_index_lifecycle"],
+                                     "wait_until_mutations_processed", "random_index_lifecycle", "poll_index_status",
+                                     "capture_index_names", "validate_index_names"],
                             help="Choose an action to be performed. Valid actions : create_index | build_deferred_index | drop_all_indexes | create_index_loop | "
                                  "drop_index_loop | alter_indexes | enable_cbo | delete_statistics | replica_count_check "
                                  "| item_count_check | random_recovery | create_udf | drop_udf | create_n1ql_udf | post_topology_change_validations"
                                  "| validate_tenant_affinity | set_fast_rebalance_config | create_n_indexes_on_buckets "
-                                 "| copy_aws_keys | cleanup_s3 | validate_s3_cleanup | poll_total_requests_during_rebalance | wait_until_rebalance_cleanup_done | print_stats | wait_until_mutations_processed",
+                                 "| copy_aws_keys | cleanup_s3 | validate_s3_cleanup | poll_total_requests_during_rebalance | wait_until_rebalance_cleanup_done | print_stats | wait_until_mutations_processed | poll_index_status",
                             default="create_index")
         parser.add_argument("-m", "--build_max_collections", type=int, default=0,
                             help="Build Indexes on max number of collections")
@@ -272,6 +341,12 @@ class IndexManager:
         parser.add_argument("--skip_default_collection", default="true")
         parser.add_argument("-vec", "--create_vector_indexes", help="create_vector_indexes")
         parser.add_argument("-bhi", "--create_bhive_indexes", help="create_bhive_indexes")
+        parser.add_argument("-svec", "--create_sparse_vector_indexes", help="create_sparse_vector_indexes")
+        parser.add_argument("-sbhi", "--create_sparse_bhive_indexes", help="create_sparse_bhive_indexes")
+        parser.add_argument("--randomise-trainlist-wait", help="Randomly set train_list_wait to true/false for vector indexes",
+                            action='store_true', default=False)
+        parser.add_argument("--randomise-trainlistval", help="Randomly set train_list to a positive integer for vector indexes",
+                            action='store_true', default=False)
         parser.add_argument("-da", "--distance_algo", help="distance algorithm", default=None)
         parser.add_argument("-num_dimensions", "--num_dimensions", type=int, default=128, help="Num of dimensions")
         parser.add_argument("--num_vectors", type=int, default=1000000,
@@ -294,6 +369,8 @@ class IndexManager:
                           choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
                           default="INFO",
                           help="Set the logging level")
+        parser.add_argument("--snapshot_file", default="/tmp/index_snapshot.json",
+                          help="File path to store/read index snapshot for validation (default: /tmp/index_snapshot.json)")
         args = parser.parse_args()
         self.log = logging.getLogger("indexmanager")
         self.log.setLevel(getattr(logging, args.log_level))
@@ -333,6 +410,7 @@ class IndexManager:
         self.distance_algo = args.distance_algo
         self.defer_build = args.defer_build == 'true'
         self.all_docs_indexed = args.all_docs_indexed == 'true'
+        self.snapshot_file = args.snapshot_file
         if args.use_description != 'false':
             self.use_description = args.use_description
         else:
@@ -360,6 +438,10 @@ class IndexManager:
         self.use_https = False
         self.create_vector_indexes = args.create_vector_indexes == 'true'
         self.create_bhive_indexes = args.create_bhive_indexes == 'true'
+        self.create_sparse_vector_indexes = args.create_sparse_vector_indexes == 'true'
+        self.create_sparse_bhive_indexes = args.create_sparse_bhive_indexes == 'true'
+        self.randomise_trainlist_wait = args.randomise_trainlist_wait
+        self.randomise_trainlistval = args.randomise_trainlistval
         self.num_dimensions = args.num_dimensions
         self.use_tls = args.tls == 'true' or args.tls is True
         self.capella_run = args.capella == 'true' or args.capella is True
@@ -409,14 +491,21 @@ class IndexManager:
             raise ValueError(f"Dataset {self.dataset} is not supported")
         for template in template_list:
             # Include non-vector indexes by default
-            is_scalar = not (self.create_bhive_indexes or self.create_vector_indexes)
+            is_scalar = not (self.create_bhive_indexes or self.create_vector_indexes or
+                           self.create_sparse_bhive_indexes or self.create_sparse_vector_indexes)
             if is_scalar and not template['is_vector']:
                 self.idx_def_templates.append(template)
-            # Include vector indexes if flag is set
-            elif self.create_vector_indexes and template['is_vector'] and not template['indexname'].startswith('bhive'):
+            # Include vector indexes if flag is set (non-sparse, non-bhive)
+            elif self.create_vector_indexes and template['is_vector'] and not template.get('is_sparse', False) and not template['indexname'].startswith('bhive'):
                 self.idx_def_templates.append(template)
-            # Include BHIVE indexes if flag is set  
-            elif self.create_bhive_indexes and template['is_vector'] and template['indexname'].startswith('bhive'):
+            # Include BHIVE indexes if flag is set (non-sparse)
+            elif self.create_bhive_indexes and template['is_vector'] and not template.get('is_sparse', False) and template['indexname'].startswith('bhive'):
+                self.idx_def_templates.append(template)
+            # Include sparse vector indexes if flag is set
+            elif self.create_sparse_vector_indexes and template['is_vector'] and template.get('is_sparse', False) and not template['indexname'].startswith('bhive'):
+                self.idx_def_templates.append(template)
+            # Include sparse BHIVE indexes if flag is set
+            elif self.create_sparse_bhive_indexes and template['is_vector'] and template.get('is_sparse', False) and template['indexname'].startswith('bhive'):
                 self.idx_def_templates.append(template)
         self.log.info(f"Idx definition {self.idx_def_templates}")
         self.log.info(f"Capella flag is set to {self.capella_run}. Use tls flag is set to {self.use_tls}")
@@ -587,6 +676,8 @@ class IndexManager:
         reference_index_map = NestedDict()
         keyspaceused = []
         create_queries_with_node_clause = []
+        # Track if we've created at least one index with max replicas
+        created_max_replica_index = False
         while total_idx_created < max_num_idx:
             for keyspace_name in keyspace_name_list:
                 bucket, scope, collection = keyspace_name.split('.')
@@ -634,7 +725,13 @@ class IndexManager:
                         ## TODO How do we set replica counts on capella? Is it always 1?
                         reference_index_map[keyspace_name][idx_name]['replica_count'] = 2
                     elif self.install_mode == "ee" and self.max_num_replica > 0:
-                        num_replica = random.randint(1, self.max_num_replica)
+                        # Ensure at least one index gets max replicas
+                        if not created_max_replica_index:
+                            num_replica = self.max_num_replica
+                            created_max_replica_index = True
+                            self.log.info(f"Creating index with max replicas ({num_replica}) to ensure coverage")
+                        else:
+                            num_replica = random.randint(1, self.max_num_replica)
                         with_clause_list.append("\'num_replica\':%s" % num_replica)
                         idx_instances *= num_replica + 1
                         reference_index_map[keyspace_name][idx_name]['replica_count'] = num_replica + 1
@@ -783,6 +880,8 @@ class IndexManager:
             total_idx_created = 0
             self.log.info(f"Starting to create indexes. Will create a total of {num_of_indexes_per_bucket} indexes on these collections {keyspace_name_list}")
             keyspace_list = []
+            # Track if we've created at least one index with max replicas
+            created_max_replica_index = False
             
             while total_idx_created < num_of_indexes_per_bucket:
                 create_index_statements = []
@@ -832,34 +931,47 @@ class IndexManager:
                                 num_partition = random.randint(2, self.max_num_partitions)
                                 with_clause_list.append("\'num_partition\':%s" % num_partition)
                     if self.install_mode == "ee" and self.max_num_replica > 0:
-                        num_replica = random.randint(1, self.max_num_replica)
+                        # Ensure at least one index gets max replicas
+                        if not created_max_replica_index:
+                            num_replica = self.max_num_replica
+                            created_max_replica_index = True
+                            self.log.info(f"Creating index with max replicas ({num_replica}) to ensure coverage")
+                        else:
+                            num_replica = random.randint(1, self.max_num_replica)
                         with_clause_list.append("\'num_replica\':%s" % num_replica)
                     if is_defer_idx:
                         with_clause_list.append("\'defer_build\':true")
-                    is_vector = self.create_vector_indexes or self.create_bhive_indexes
+                    is_vector = self.create_vector_indexes or self.create_bhive_indexes or \
+                               self.create_sparse_vector_indexes or self.create_sparse_bhive_indexes
                     if is_vector and "is_vector" in idx_template and \
                             idx_template['is_vector']:
                         self.log.info("Creating vector index definitions")
-                        if self.use_description:
-                            description = self.use_description
-                        else:
-                            description = random.choice(DESCRIPTION_LIST)
-                        if self.distance_algo:
-                            similarity = self.distance_algo
-                        else:
-                            similarity = random.choice(DISTANCE_SUPPORTED_FUNCTIONS)
-                        self.num_dimensions = int(self.num_dimensions)
+                        # Check if this is a sparse vector index
+                        is_sparse = idx_template.get('is_sparse', False)
                         use_custom_nprobes = bool(random.getrandbits(1))
                         # Set persist_full_vector to true 25% of the time
                         use_custom_persist_full_vector = random.random() < 0.25
-                        # commented until a decision is made on the custom trainlist number
-                        # use_custom_trainlist = bool(random.getrandbits(1))
                         use_custom_trainlist = False
-                        with_clause_list.append(f"\"dimension\":{self.num_dimensions}, "
-                                                f"\"description\": \"{description}\","
-                                                f"\"similarity\":\"{similarity}\"")
-                        # Only set persist_full_vector for BHIVE indexes
-                        if self.create_bhive_indexes and use_custom_persist_full_vector:
+                        if is_sparse:
+                            # Sparse indexes always use DOT similarity, description is IVF or IVF1024
+                            sparse_description = random.choice(["IVF", "IVF1024"])
+                            with_clause_list.append(f"\"description\": \"{sparse_description}\","
+                                                    f"\"similarity\":\"DOT\"")
+                        else:
+                            if self.use_description:
+                                description = self.use_description
+                            else:
+                                description = random.choice(DESCRIPTION_LIST)
+                            if self.distance_algo:
+                                similarity = self.distance_algo
+                            else:
+                                similarity = random.choice(DISTANCE_SUPPORTED_FUNCTIONS)
+                            self.num_dimensions = int(self.num_dimensions)
+                            with_clause_list.append(f"\"dimension\":{self.num_dimensions}, "
+                                                    f"\"description\": \"{description}\","
+                                                    f"\"similarity\":\"{similarity}\"")
+                        # Only set persist_full_vector for BHIVE indexes (including sparse)
+                        if (self.create_bhive_indexes or self.create_sparse_bhive_indexes) and use_custom_persist_full_vector:
                             with_clause_list.append(f"\"persist_full_vector\":\"true\"")
                         if use_custom_nprobes:
                             custom_nprobe = random.randint(SCAN_NPROBE_MIN, SCAN_NPROBE_MAX)
@@ -869,6 +981,13 @@ class IndexManager:
                             # default is 5 times the num of centroids
                             custom_trainlist = random.randint(sqrt_val * 8, sqrt_val * 10)
                             with_clause_list.append(f"\"train_list\":{custom_trainlist}")
+                        if self.randomise_trainlistval:
+                            sqrt_val = math.floor(math.sqrt(self.num_vectors))
+                            train_list_value = random.randint(sqrt_val * 8, sqrt_val * 10)
+                            with_clause_list.append(f"\"train_list\":{train_list_value}")
+                        if self.randomise_trainlist_wait:
+                            train_list_wait_value = random.choice(["true", "false"])
+                            with_clause_list.append(f"\"train_list_wait\":{train_list_wait_value}")
                     if (is_partitioned_idx and not self.disable_partitioned_indexes) or (
                             self.max_num_replica > 0) or is_defer_idx:
                         idx_statement = idx_statement + " with {"
@@ -1204,37 +1323,52 @@ class IndexManager:
                     with_clause_list.append("\'num_replica\':%s" % num_replica)
                     if is_defer_idx:
                         with_clause_list.append("\'defer_build\':true")
-                    if "is_vector" in idx_template and idx_template['is_vector'] and self.create_vector_indexes:
+                    if "is_vector" in idx_template and idx_template['is_vector'] and self.create_vector_indexes and not idx_template.get('is_sparse', False):
                         create_vector_indexes = True
                     else:
                         create_vector_indexes = False
-                    if "is_bhive" in idx_template and idx_template['is_bhive'] and self.create_bhive_indexes:
+                    if "is_bhive" in idx_template and idx_template['is_bhive'] and self.create_bhive_indexes and not idx_template.get('is_sparse', False):
                         create_bhive_indexes = True
                     else:
                         create_bhive_indexes = False
-                    is_vector = create_vector_indexes or create_bhive_indexes
+                    # Handle sparse vector/bhive indexes
+                    if idx_template.get('is_sparse', False) and self.create_sparse_vector_indexes and not idx_template['indexname'].startswith('bhive'):
+                        create_sparse_vector_indexes = True
+                    else:
+                        create_sparse_vector_indexes = False
+                    if idx_template.get('is_sparse', False) and self.create_sparse_bhive_indexes and idx_template['indexname'].startswith('bhive'):
+                        create_sparse_bhive_indexes = True
+                    else:
+                        create_sparse_bhive_indexes = False
+                    is_vector = create_vector_indexes or create_bhive_indexes or create_sparse_vector_indexes or create_sparse_bhive_indexes
                     if is_vector and "is_vector" in idx_template and \
                             idx_template['is_vector']:
-                        if self.use_description:
-                            description = self.use_description
-                        else:
-                            description = random.choice(DESCRIPTION_LIST)
-                        if self.distance_algo:
-                            similarity = self.distance_algo
-                        else:
-                            similarity = random.choice(DISTANCE_SUPPORTED_FUNCTIONS)
-                        self.num_dimensions = int(self.num_dimensions)
+                        # Check if this is a sparse vector index
+                        is_sparse = idx_template.get('is_sparse', False)
                         use_custom_nprobes = bool(random.getrandbits(1))
                         # Set persist_full_vector to true 25% of the time
                         use_custom_persist_full_vector = random.random() < 0.25
-                        # commented until a decision is made on the custom trainlist number
-                        # use_custom_trainlist = bool(random.getrandbits(1))
                         use_custom_trainlist = False
-                        with_clause_list.append(f"\"dimension\":{self.num_dimensions}, "
-                                                f"\"description\": \"{description}\","
-                                                f"\"similarity\":\"{similarity}\"")
-                        # Only set persist_full_vector for BHIVE indexes
-                        if create_bhive_indexes and use_custom_persist_full_vector:
+                        if is_sparse:
+                            # Sparse indexes always use DOT similarity, description is IVF or IVF1024
+                            sparse_description = random.choice(["IVF", "IVF1024"])
+                            with_clause_list.append(f"\"description\": \"{sparse_description}\","
+                                                    f"\"similarity\":\"DOT\"")
+                        else:
+                            if self.use_description:
+                                description = self.use_description
+                            else:
+                                description = random.choice(DESCRIPTION_LIST)
+                            if self.distance_algo:
+                                similarity = self.distance_algo
+                            else:
+                                similarity = random.choice(DISTANCE_SUPPORTED_FUNCTIONS)
+                            self.num_dimensions = int(self.num_dimensions)
+                            with_clause_list.append(f"\"dimension\":{self.num_dimensions}, "
+                                                    f"\"description\": \"{description}\","
+                                                    f"\"similarity\":\"{similarity}\"")
+                        # Only set persist_full_vector for BHIVE indexes (including sparse)
+                        if (create_bhive_indexes or create_sparse_bhive_indexes) and use_custom_persist_full_vector:
                             with_clause_list.append(f"\"persist_full_vector\":\"false\"")
                         if use_custom_nprobes:
                             custom_nprobe = random.randint(SCAN_NPROBE_MIN, SCAN_NPROBE_MAX)
@@ -1244,6 +1378,13 @@ class IndexManager:
                             # default is 5 times the num of centroids
                             custom_trainlist = random.randint(sqrt_val * 8, sqrt_val * 10)
                             with_clause_list.append(f"\"train_list\":{custom_trainlist}")
+                        if self.randomise_trainlistval:
+                            sqrt_val = math.floor(math.sqrt(self.num_vectors))
+                            train_list_value = random.randint(sqrt_val * 8, sqrt_val * 10)
+                            with_clause_list.append(f"\"train_list\":{train_list_value}")
+                        if self.randomise_trainlist_wait:
+                            train_list_wait_value = random.choice(["true", "false"])
+                            with_clause_list.append(f"\"train_list_wait\":{train_list_wait_value}")
                     if (is_partitioned_idx and not self.disable_partitioned_indexes) or (
                             self.max_num_replica > 0) or is_defer_idx:
                         idx_statement = idx_statement + " with {"
@@ -1571,7 +1712,11 @@ class IndexManager:
                 out = ssh_stdout.read()
                 err = ssh_stderr.read()
                 self.log.error(
-                    "Unable to kill indexer process on {0}. Error: {1}".format(index_node_for_recovery, str(err)))
+                    'Unable to kill indexer process on %s. stdout=%s stderr=%s',
+                    index_node_for_recovery,
+                    out,
+                    err,
+                )
             except Exception as e:
                 self.log.error(str(e))
             finally:
@@ -1701,7 +1846,11 @@ class IndexManager:
                                    not item['validate_item_count_check']]
         leading_vector_index_list = [item['indexname'] for item in index_definitions if
                                    "vector_leading" in item and item['vector_leading']]
+        # Build mapping of index name -> vector_field for proper item count validation
+        vector_field_map = {item['indexname']: item.get('vector_field', 'vectors') for item in index_definitions if
+                          "vector_leading" in item and item['vector_leading']}
         self.log.info(f"Leading vector index list {leading_vector_index_list}")
+        self.log.info(f"Vector field map {vector_field_map}")
         # Get Index Map for indexes in the bucket
         if self.bucket_name:
             bucket_list = [self.bucket_name]
@@ -1753,7 +1902,8 @@ class IndexManager:
                 kv_item_count = -1
                 self.log.info(f"Idx prefix is {idx_prefix}")
                 if idx_prefix in leading_vector_index_list:
-                    kv_item_count_query = "select raw count(*) from {0} where vectors is not null".format(keyspace_name_for_query)
+                    vector_field = vector_field_map.get(idx_prefix, 'vectors')
+                    kv_item_count_query = "select raw count(*) from {0} where {1} is not null".format(keyspace_name_for_query, vector_field)
                 else:
                     kv_item_count_query = "select raw count(*) from {0}".format(keyspace_name_for_query)
                 self.log.info(f"Idx prefix is {idx_prefix}")
@@ -2781,12 +2931,16 @@ class IndexManager:
             else:
                 full_index_name = f"{index['bucket']}:{index['scope']}:{index['collection']}:{index['name']}"
                 
-            # Check index definition to categorize
-            definition = index.get('definition', '').lower()
+            # Use indexType field to determine index type
+            index_type = index.get('indexType', '')
+            is_vector_index = index.get('isVectorIndex', False)
             
-            if "create vector index" in definition:
+            # BHIVE: indexType = "Hyperscale Vector Index"
+            # Composite: indexType = "plasma" AND isVectorIndex = true
+            # Scalar: otherwise
+            if index_type == "Hyperscale Vector Index":
                 bhive_index_list.append(full_index_name)
-            elif "vector" in definition in definition and "similarity" in definition and "description" in definition:
+            elif index_type == "plasma" and is_vector_index:
                 vector_index_list.append(full_index_name)
             else:
                 scalar_index_list.append(full_index_name)
@@ -2842,25 +2996,211 @@ class IndexManager:
         return replicas_list
 
     def post_topology_change_validations(self, sample_size=5):
-        errors_item_check = self.item_count_check(sample_size=sample_size, raise_exception=False)
+        # errors_item_check = self.item_count_check(sample_size=sample_size, raise_exception=False)
         errors_replica_check = self.check_item_count_across_replicas(sample_size=sample_size)
         errors_backstore_mainstore = self.backstore_mainstore_check()
         errors_shard_seggregation = self.validate_shard_seggregation()
         validations_failed = False
-        if errors_item_check:
-            self.log.error(f"Item count check failed. Errors {errors_item_check}")
-            validations_failed = True
+        # commented out since the count query gets timed out on a big bucket. Need to optimize the count query before enabling this check.
+        #  if errors_item_check:
+        #      self.log.error(f"Item count check failed. Errors {errors_item_check}")
+        #     validations_failed = True
         if errors_replica_check:
             self.log.error(f"Replica item count check failed. Errors {errors_replica_check}")
             validations_failed = True
         if errors_backstore_mainstore:
-            self.log.error(f"Backstore mainstore count check failed. Errors {errors_item_check}")
+            self.log.error(f"Backstore mainstore count check failed. Errors {errors_backstore_mainstore}")
             validations_failed = True
         if errors_shard_seggregation:
             self.log.error(f"Shard seggregation check failed. Errors {errors_shard_seggregation}")
             validations_failed = True
         if validations_failed:
             raise Exception("Post topology validations failed")
+
+    def poll_index_status(self):
+        """
+        Poll getIndexStatus endpoint and output:
+        1. Indexes in error state (status not Ready/Created/Deferred)
+        2. Indexes with train_list_wait=true
+        """
+        index_metadata = self.get_indexer_metadata()
+        if not index_metadata or 'status' not in index_metadata:
+            self.log.error("Failed to get index metadata")
+            return
+        
+        error_indexes = []
+        train_list_wait_indexes = []
+        
+        valid_states = ['Ready', 'Created', 'Deferred']
+        
+        for index in index_metadata['status']:
+            full_index_name = f"{index['bucket']}:{index['scope']}:{index['collection']}:{index['name']}"
+            
+            # Check for error state
+            status = index.get('status', '')
+            if status not in valid_states:
+                error_indexes.append({
+                    'name': full_index_name,
+                    'status': status,
+                    'progress': index.get('progress', 0),
+                    'completion': index.get('completion', 0)
+                })
+            
+            # Check for train_list_wait in 'with' dict or definition
+            with_dict = index.get('with', {})
+            definition = index.get('definition', '')
+            
+            # Check in with dict
+            if with_dict.get('trainListWait') == True or with_dict.get('train_list_wait') == True:
+                train_list_wait_indexes.append({
+                    'name': full_index_name,
+                    'train_list_wait': True
+                })
+            # Check in definition string
+            elif 'train_list_wait' in definition and 'true' in definition.lower().split('train_list_wait')[1][:20]:
+                train_list_wait_indexes.append({
+                    'name': full_index_name,
+                    'train_list_wait': True
+                })
+        
+        # Output results
+        self.log.info("=" * 80)
+        self.log.info("INDEX STATUS POLL RESULTS")
+        self.log.info("=" * 80)
+        
+        self.log.info(f"\nIndexes in ERROR state: {len(error_indexes)}")
+        if error_indexes:
+            for idx in error_indexes:
+                self.log.info(f"  - {idx['name']}: status={idx['status']}, progress={idx['progress']}%, completion={idx['completion']}%")
+        else:
+            self.log.info("  None")
+        
+        self.log.info(f"\nIndexes with train_list_wait=true: {len(train_list_wait_indexes)}")
+        if train_list_wait_indexes:
+            for idx in train_list_wait_indexes:
+                self.log.info(f"  - {idx['name']}")
+        else:
+            self.log.info("  None")
+        
+        self.log.info("=" * 80)
+        
+        return error_indexes, train_list_wait_indexes
+
+    def capture_index_names(self, snapshot_file):
+        """
+        Capture all index instance IDs, names, and host information from the cluster and save to a file.
+        This should be called before rebalance to record the baseline.
+        Host information is captured for debugging purposes but not used for validation.
+        """
+        index_metadata = self.get_indexer_metadata()
+        if not index_metadata or 'status' not in index_metadata:
+            raise Exception("Failed to get index metadata for snapshot")
+
+        index_instances = {}
+        for index in index_metadata['status']:
+            if index['scope'] == '_system':
+                continue
+            inst_id = index['instId']
+            hosts = index.get('hosts', [])
+            index_instances[inst_id] = {
+                'instId': inst_id,
+                'name': index['name'],
+                'hosts': hosts
+            }
+        
+        snapshot = {
+            'timestamp': str(datetime.now()),
+            'total_instances': len(index_instances),
+            'indexes': list(index_instances.values())
+        }
+        
+        with open(snapshot_file, 'w') as f:
+            json.dump(snapshot, f, indent=2)
+        
+        self.log.info(f"Captured {len(index_instances)} index instances to {snapshot_file}")
+        return snapshot
+
+    def validate_index_names(self, snapshot_file):
+        """
+        Validate that no index instances were lost by comparing current state against snapshot.
+        This should be called after rebalance to ensure no index loss.
+        """
+        # Load the snapshot
+        try:
+            with open(snapshot_file, 'r') as f:
+                snapshot = json.load(f)
+        except FileNotFoundError:
+            raise Exception(f"Snapshot file {snapshot_file} not found. Run capture_index_names first.")
+        
+        # Get current index state
+        index_metadata = self.get_indexer_metadata()
+        if not index_metadata or 'status' not in index_metadata:
+            raise Exception("Failed to get current index metadata for validation")
+        
+        # Extract current index instances by instId.
+        current_instances = {}
+        for index in index_metadata['status']:
+            if index['scope'] == '_system':
+                continue
+            current_instances[index['instId']] = {
+                'instId': index['instId'],
+                'name': index['name'],
+                'hosts': index.get('hosts', [])
+            }
+        
+        # Build lookup maps
+        snapshot_by_inst = {}
+        for idx in snapshot['indexes']:
+            snapshot_inst_id = idx.get('instId') or idx.get('defnId')
+            if snapshot_inst_id is not None:
+                snapshot_by_inst[snapshot_inst_id] = idx
+        current_by_inst = current_instances
+        missing_inst_ids = set(snapshot_by_inst.keys()) - set(current_by_inst.keys())
+        new_inst_ids = set(current_by_inst.keys()) - set(snapshot_by_inst.keys())
+        
+        self.log.info("=" * 80)
+        self.log.info("INDEX VALIDATION RESULTS")
+        self.log.info("=" * 80)
+        self.log.info(f"Snapshot: {snapshot['total_instances']} index instances")
+        self.log.info(f"Current: {len(current_instances)} index instances")
+        
+        validation_failed = False
+        
+        if missing_inst_ids:
+            self.log.error(f"MISSING INDEX INSTANCES ({len(missing_inst_ids)}):")
+            for inst_id in missing_inst_ids:
+                snap_entry = snapshot_by_inst.get(inst_id)
+                if snap_entry:
+                    index_name = snap_entry.get('name') or snap_entry.get('index_name') or snap_entry.get('full_name')
+                    hosts = snap_entry.get('hosts', [])
+                    if hosts:
+                        self.log.error(f"  - {index_name} [instId={inst_id}] (was on nodes: {', '.join(hosts)})")
+                    else:
+                        self.log.error(f"  - {index_name} [instId={inst_id}]")
+                else:
+                    self.log.error(f"  - instId={inst_id}")
+            validation_failed = True
+        else:
+            self.log.info("No missing index instances detected.")
+        
+        if new_inst_ids:
+            self.log.info(f"New index instances since snapshot ({len(new_inst_ids)}):")
+            for inst_id in new_inst_ids:
+                curr_entry = current_by_inst.get(inst_id)
+                if curr_entry:
+                    self.log.info(f"  + {curr_entry['name']} [instId={inst_id}]")
+                else:
+                    self.log.info(f"  + instId={inst_id}")
+        
+        self.log.info("=" * 80)
+        
+        if validation_failed:
+            error_msg = []
+            if missing_inst_ids:
+                error_msg.append(f"{len(missing_inst_ids)} index instances missing: {sorted(missing_inst_ids)}")
+            raise Exception(f"Index validation failed: {'; '.join(error_msg)}")
+        
+        return True
 
 
 class NestedDict(dict):
@@ -2949,9 +3289,16 @@ if __name__ == '__main__':
         indexMgr.wait_until_mutations_processed()
     elif indexMgr.action == 'random_index_lifecycle':
         indexMgr.random_index_lifecycle_operations()
+    elif indexMgr.action == 'poll_index_status':
+        indexMgr.poll_index_status()
+    elif indexMgr.action == 'capture_index_names':
+        indexMgr.capture_index_names(indexMgr.snapshot_file)
+    elif indexMgr.action == 'validate_index_names':
+        indexMgr.validate_index_names(indexMgr.snapshot_file)
     else:
         print("Invalid choice for action. Choose from the following - "
               "create_index | build_deferred_index | drop_all_indexes | create_index_loop | alter_indexes | "
               "enable_cbo | drop_index_loop | item_count_check | random_recovery | post_topology_change_validations"
               "| create_udf | drop_udf | create_n1ql_udf | validate_tenant_affinity | set_fast_rebalance_config | "
-              "validate_s3_cleanup | cleanup_s3 | replica_count_check | wait_until_mutations_processed | random_index_lifecycle")
+              "validate_s3_cleanup | cleanup_s3 | replica_count_check | wait_until_mutations_processed | random_index_lifecycle"
+              "| capture_index_names | validate_index_names")

@@ -10,14 +10,12 @@ import struct
 import requests
 import numpy as np
 from beautifultable import BeautifulTable
-from os.path import splitext
 from deepdiff import DeepDiff
-from datetime import datetime, timedelta
-import pytz
+from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
 from couchbase.auth import PasswordAuthenticator
 from couchbase.cluster import Cluster
-from couchbase.options import (ClusterOptions, ClusterTimeoutOptions,
+from couchbase.options import (ClusterOptions,
                                QueryOptions, AnalyticsOptions)
 from couchbase.exceptions import CouchbaseException
 from couchbase.cluster import QueryScanConsistency
@@ -29,7 +27,7 @@ class QueryManager:
                  query_file, groundtruth_file, validate_vector_query_results, distance_algo, bucket_list, use_tls,
                  capella="false", skip_default="false", num_groundtruth_vectors=100, num_query_vectors=10000,
                  base64_encoding="false", xattrs="false", sample_size=20, bhive_queries=False, print_frequency=30,
-                 log_level="INFO", smoke_test_run="false"):
+                 log_level="INFO", smoke_test_run="false", enable_scan_report="false"):
         self.connection_string = connection_string
         self.username = username
         self.password = password
@@ -54,6 +52,7 @@ class QueryManager:
         self.xattrs = xattrs == "true"
         self.sample_size = sample_size
         self.bhive_queries = bhive_queries == "true"
+        self.enable_scan_report = enable_scan_report == "true"
         self.smoke_test_run = smoke_test_run == "true"
         self.query_error_obj = dict()
         self.print_frequency = print_frequency
@@ -73,6 +72,9 @@ class QueryManager:
         fh.setFormatter(formatter)
         self.log.addHandler(fh)
         self.log.info("Query manager started")
+        # store index stats validation failures collected during queries
+        self.index_stats_validation_failures = {}
+        self._index_stats_lock = threading.Lock()
 
     def get_recall_dict(self):
         return self.recall_dict
@@ -167,11 +169,18 @@ class QueryManager:
                 pass
 
     def read_file(self, file_path, end):
-        if "ivecs" in file_path:
-            vectors = self.read_ivecs(file_path, end)
-        elif "bvecs" in file_path:
-            vectors = self.read_bvecs(file_path, end)
-        return vectors
+        ext = os.path.splitext(file_path)[1].lower()
+        if ext == '.ivecs':
+            return self.read_ivecs(file_path, end)
+        elif ext == '.bvecs':
+            return self.read_bvecs(file_path, end)
+        elif ext == '.fvecs':
+            return self.read_fvecs_file(file_path, 0, end)
+        elif ext == '.csr':
+            return self.read_csr_file(file_path, end)
+        elif ext == '.gt':
+            return self.read_gt_file(file_path, end)
+        raise ValueError(f'Unsupported file format: {file_path}')
 
     def read_fvecs_file(self, file_path, start, end):
         with open(file_path, 'rb+') as f:
@@ -202,17 +211,30 @@ class QueryManager:
 
     def read_ground_truth_file(self, groundtruth_file_path=None):
         if groundtruth_file_path:
+            if ".gt" in groundtruth_file_path:
+                return self.read_gt_file(groundtruth_file_path, 10000)
             return self.read_file(groundtruth_file_path, 10000)
+        if ".gt" in self.groundtruth_file:
+            return self.read_gt_file(self.groundtruth_file, self.num_groundtruth_vectors)
         return self.read_file(self.groundtruth_file, self.num_groundtruth_vectors)
 
     def read_query_file(self):
-        if "small" in self.query_file:
-            return self.read_fvecs_file(self.query_file, 0, 100)
-        elif "gist" in self.query_file:
-            return self.read_fvecs_file(self.query_file, 0, 1000)
-        elif "sift_query" in self.query_file:
-            return self.read_fvecs_file(self.query_file, 0, 10000)
-        return self.read_file(self.query_file, self.num_query_vectors)
+        if hasattr(self, '_query_vectors_cache'):
+            return self._query_vectors_cache
+
+        if 'small' in self.query_file:
+            vectors = self.read_fvecs_file(self.query_file, 0, 100)
+        elif 'gist' in self.query_file:
+            vectors = self.read_fvecs_file(self.query_file, 0, 1000)
+        elif 'sift_query' in self.query_file:
+            vectors = self.read_fvecs_file(self.query_file, 0, 10000)
+        elif '.csr' in self.query_file:
+            vectors = self.read_csr_file(self.query_file, self.num_query_vectors)
+        else:
+            vectors = self.read_file(self.query_file, self.num_query_vectors)
+
+        self._query_vectors_cache = vectors
+        return vectors
 
     def read_ivecs_old(self, fp):
         a = np.fromfile(self.groundtruth_file, dtype='int32')
@@ -241,6 +263,86 @@ class QueryManager:
             vector = f.read(dim * 4)
             components = struct.unpack('<' + 'i' * dim, vector)
             gtVectors.append(components)
+        return gtVectors
+
+    def read_csr_file(self, filename, num_vectors):
+        """
+        Read sparse vectors from custom CSR binary format.
+        Format:
+            Header: 3 x uint64 (rows, cols, non_zeros)
+            indptr: (rows+1) x uint64 (row offsets)
+            indices: non_zeros x uint32 (column indices)
+            data: non_zeros x float32 (values)
+        Returns dict mapping row index -> [[indices], [values]]
+        """
+        vectors = {}
+        with open(filename, 'rb') as f:
+            # Read header
+            header = struct.unpack('QQQ', f.read(24))
+            num_rows, num_cols, num_non_zeros = header
+            self.log.debug(f"CSR file: {num_rows} rows, {num_cols} cols, {num_non_zeros} non-zeros")
+            header_bytes = f.read(24)
+            if len(header_bytes) != 24:
+                raise ValueError(f'CSR header truncated: expected 24 bytes, got {len(header_bytes)}')
+            num_rows, num_cols, num_non_zeros = struct.unpack('QQQ', header_bytes)
+            # Read indptr (row offsets)
+            indptr_size = (num_rows + 1) * 8
+            indptr = struct.unpack(f'{num_rows + 1}Q', f.read(indptr_size))
+            
+            # Store offsets for indices and data sections
+            indices_offset = f.tell()
+            data_offset = indices_offset + num_non_zeros * 4
+            
+            # Limit to num_vectors
+            rows_to_read = min(num_vectors, num_rows)
+            
+            for row_idx in range(rows_to_read):
+                start = indptr[row_idx]
+                end = indptr[row_idx + 1]
+                nnz = end - start
+                
+                # Seek and read indices
+                f.seek(indices_offset + start * 4)
+                indices = struct.unpack(f'{nnz}I', f.read(nnz * 4))
+                
+                # Seek and read values
+                f.seek(data_offset + start * 4)
+                values = struct.unpack(f'{nnz}f', f.read(nnz * 4))
+                
+                vectors[row_idx] = [list(indices), list(values)]
+        
+        return vectors
+
+    def read_gt_file(self, filename, num_vectors):
+        """
+        Read groundtruth from .gt binary format.
+        Format:
+            first two int32: num_queries, top_k
+            remaining data: flattened int32 ids of shape (num_queries, top_k)
+        Returns list of tuples/lists containing top_k ids for each query
+        """
+        gtVectors = []
+        with open(filename, 'rb') as f:
+            # Read header
+            header = struct.unpack('<ii', f.read(8))
+            num_queries, top_k = header
+            self.log.debug(f"GT file: {num_queries} queries, top_k={top_k}")
+            
+            # Limit to num_vectors
+            queries_to_read = min(num_vectors, num_queries)
+            header_bytes = f.read(8)
+            if len(header_bytes) != 8:
+                raise ValueError(f'GT header truncated: expected 8 bytes, got {len(header_bytes)}')
+            num_queries, top_k = struct.unpack('<ii', header_bytes)
+            # Read all groundtruth ids
+            total_ids = queries_to_read * top_k
+            all_ids = struct.unpack(f'<{total_ids}i', f.read(total_ids * 4))
+            
+            # Reshape into list of top_k ids per query
+            for i in range(queries_to_read):
+                start = i * top_k
+                gtVectors.append(all_ids[start:start + top_k])
+        
         return gtVectors
 
     def compute_recall(self, groundtruth_vectors, result, index):
@@ -366,6 +468,516 @@ class QueryManager:
             self.log.error(f"Error disabling AWR/AUS settings: {str(e)}")
             raise
 
+    def set_plan_stability(self, mode="prepared_only"):
+        """Configure plan stability mode for the cluster
+        
+        Args:
+            mode: Plan stability mode - "prepared_only", "ad_hoc", "ad_hoc_read_only", or "off"
+        """
+        valid_modes = ["prepared_only", "ad_hoc", "ad_hoc_read_only", "off"]
+        if mode not in valid_modes:
+            raise ValueError(f"Invalid plan stability mode: {mode}. Must be one of {valid_modes}")
+        
+        query = f'UPDATE system:settings SET plan_stability.mode = "{mode}"'
+        self.log.info(f"Running plan stability query: {query}")
+        status, results, response = self._execute_query_rest(query)
+        if not status:
+            raise Exception(f"Failed to set plan stability: {response}")
+        
+        # Verify plan stability settings
+        verify_query = "SELECT plan_stability FROM system:settings"
+        self.log.info(f"Verifying plan stability settings")
+        status, results, response = self._execute_query_rest(verify_query)
+        self.log.info(f"Current plan stability settings: {results}")
+
+    def verify_query_metadata(self, non_zero_check=False):
+        """Verify QUERY_METADATA._system._query collection record count.
+        
+        Args:
+            non_zero_check: If True, raises exception if count is zero.
+                           If False, raises exception if count is non-zero.
+        """
+        query = "SELECT COUNT(*) as count FROM QUERY_METADATA._system._query"
+        self.log.info(f"Checking QUERY_METADATA._system._query collection (non_zero_check={non_zero_check})")
+        status, results, response = self._execute_query_rest(query)
+        
+        if not status:
+            # Check if bucket/collection doesn't exist
+            # Error format: "Keyspace not found in CB datastore: default:QUERY_METADATA ... No bucket named QUERY_METADATA"
+            error_str = str(response).lower()
+            if "keyspace not found" in error_str or "no bucket named" in error_str:
+                self.log.info("QUERY_METADATA bucket does not exist, skipping check")
+                return
+            raise Exception(f"Failed to query QUERY_METADATA._system._query: {response}")
+        
+        count = 0
+        if results and len(results) > 0:
+            count = results[0].get('count', 0)
+        
+        self.log.info(f"QUERY_METADATA._system._query record count: {count}")
+        
+        if non_zero_check:
+            if count == 0:
+                raise Exception("QUERY_METADATA._system._query collection is empty but expected non-zero records.")
+            self.log.info(f"QUERY_METADATA._system._query collection has {count} records as expected")
+        else:
+            if count != 0:
+                raise Exception(f"QUERY_METADATA._system._query collection is not empty. Found {count} records.")
+            self.log.info("QUERY_METADATA._system._query collection is empty as expected")
+
+    def _execute_query_rest(self, statement):
+        """
+        Execute a N1QL query using REST API instead of SDK.
+        This is needed for PREPARE/EXECUTE statements which SDK doesn't support directly.
+        """
+        port = 18093 if self.use_tls else 8093
+        scheme = "https" if self.use_tls else "http"
+        url = f"{scheme}://{self.connection_string}:{port}/query/service"
+        
+        auth = (self.username, self.password)
+        payload = {"statement": statement}
+        
+        try:
+            response = requests.post(url=url, data=payload, auth=auth, timeout=120, verify=False)
+            result = response.json()
+            
+            if response.status_code == 200 and result.get("status") == "success":
+                return True, result.get("results", []), result
+            else:
+                errors = result.get("errors", [])
+                self.log.error(f"Query failed: {errors}")
+                return False, [], result
+                
+        except requests.exceptions.RequestException as e:
+            self.log.error(f"REST request failed: {str(e)}")
+            return False, [], None
+
+    def prepare_statements(self, bucket_name, statement_types, distance_algo="EUCLIDEAN_SQUARED", num_dimensions=128):
+        """
+        Create prepared statements for different query types:
+        - scalar: Regular GSI scalar queries
+        - vector_dense: Dense vector search queries (composite index)
+        - vector_sparse: Sparse vector search queries
+        - bhive_dense: Dense BHIVE vector queries
+        - bhive_sparse: Sparse BHIVE vector queries
+        """
+        self.log.info(f"Creating prepared statements for types: {statement_types}")
+        bucket_name = bucket_name.split(",")[0].strip()
+        keyspace = f"`{bucket_name}`.`_default`.`_default`"
+        
+        self.prepared_statements = {}
+
+        prepared_templates = {
+            "scalar": {
+                "name": "p_scalar_hotel",
+                "statement": f"SELECT META().id, city FROM {keyspace} WHERE city LIKE $city_prefix LIMIT $limit_val"
+            },
+            "vector_dense": {
+                "name": "p_vector_dense",
+                "statement": f"SELECT META().id, APPROX_VECTOR_DISTANCE(vectors, $qvec, '{distance_algo}', $nprobe) AS score FROM {keyspace} ORDER BY APPROX_VECTOR_DISTANCE(vectors, $qvec, '{distance_algo}', $nprobe) LIMIT 10"
+            },
+            "vector_sparse": {
+                "name": "p_vector_sparse",
+                "statement": f"SELECT META().id, SPARSE_VECTOR_DISTANCE(embedding, $qvec_sparse, $nprobe) AS score FROM {keyspace} ORDER BY SPARSE_VECTOR_DISTANCE(embedding, $qvec_sparse, $nprobe) LIMIT 10"
+            },
+            "bhive_dense": {
+                "name": "p_bhive_dense",
+                "statement": f"SELECT META().id, APPROX_VECTOR_DISTANCE(vectors, $qvec, '{distance_algo}', $nprobe) AS score FROM {keyspace}  ORDER BY APPROX_VECTOR_DISTANCE(vectors, $qvec, '{distance_algo}', $nprobe) LIMIT 10"
+            },
+            "bhive_sparse": {
+                "name": "p_bhive_sparse",
+                "statement": f"SELECT META().id, SPARSE_VECTOR_DISTANCE(embedding, $qvec_sparse, $nprobe) AS score FROM {keyspace} ORDER BY SPARSE_VECTOR_DISTANCE(embedding, $qvec_sparse, $nprobe) LIMIT 10"
+            }
+        }
+
+        for stmt_type in statement_types:
+            stmt_type = stmt_type.strip()
+            if stmt_type not in prepared_templates:
+                self.log.warning(f"Unknown statement type: {stmt_type}, skipping")
+                continue
+
+            template = prepared_templates[stmt_type]
+            prepare_stmt = f"PREPARE {template['name']} AS {template['statement']}"
+
+            self.log.info(f"Preparing statement: {prepare_stmt}")
+            try:
+                status, results, response = self._execute_query_rest(prepare_stmt)
+                if status:
+                    self.prepared_statements[stmt_type] = template['name']
+                    self.log.info(f"Successfully prepared {stmt_type}: {template['name']}")
+                else:
+                    self.log.error(f"Failed to prepare {stmt_type}")
+            except Exception as e:
+                self.log.error(f"Error preparing {stmt_type}: {str(e)}")
+
+        self.log.info(f"Prepared statements created: {list(self.prepared_statements.keys())}")
+
+    def execute_prepared(self, statement_types, iterations=100, duration=0, interval=1, 
+                         validate=False, num_dimensions=128):
+        """
+        Execute prepared statements either for a fixed number of iterations
+        or for a specified duration. Uses REST API for EXECUTE statements.
+        """
+        self.log.info(f"Executing prepared statements. Duration: {duration}s, "
+                      f"Iterations: {iterations}, Interval: {interval}s")
+
+        # If no prepared statements in memory, try to use the default names
+        if not hasattr(self, 'prepared_statements') or not self.prepared_statements:
+            self.prepared_statements = {}
+            for stmt_type in statement_types:
+                stmt_type = stmt_type.strip()
+                default_names = {
+                    "scalar": "p_scalar_hotel",
+                    "vector_dense": "p_vector_dense", 
+                    "vector_sparse": "p_vector_sparse",
+                    "bhive_dense": "p_bhive_dense",
+                    "bhive_sparse": "p_bhive_sparse"
+                }
+                if stmt_type in default_names:
+                    self.prepared_statements[stmt_type] = default_names[stmt_type]
+
+        # Read actual query vectors if available
+        query_vectors = None
+        try:
+            query_vectors = self.read_query_file()
+        except:
+            pass
+
+        execution_count = 0
+        error_count = 0
+        start_time = time.time()
+
+        def should_continue():
+            if duration > 0:
+                return (time.time() - start_time) < duration
+            return execution_count < iterations
+
+        while should_continue():
+            for stmt_type in statement_types:
+                stmt_type = stmt_type.strip()
+                if stmt_type not in self.prepared_statements:
+                    self.log.debug(f"Skipping {stmt_type} - not prepared or not in requested types")
+                    continue
+
+                prepared_name = self.prepared_statements[stmt_type]
+                
+                # Build parameters based on statement type
+                if stmt_type == "scalar":
+                    params = {"city_prefix": "San%", "limit_val": 10}
+                elif stmt_type in ["vector_dense", "bhive_dense"]:
+                    if isinstance(query_vectors, list) and len(query_vectors) > 0:
+                        idx = random.randint(0, len(query_vectors) - 1)
+                        qvec = query_vectors[idx]
+                    else:
+                        qvec = [0.1] * num_dimensions
+                    params = {"qvec": qvec, "nprobe": random.randint(50, 100)}
+                elif stmt_type in ["vector_sparse", "bhive_sparse"]:
+                    if query_vectors and isinstance(query_vectors, dict):
+                        idx = random.choice(list(query_vectors.keys()))
+                        sparse_data = query_vectors[idx]
+                        params = {"qvec_sparse": sparse_data,
+                                  "nprobe": random.randint(50, 100)}
+                    else:
+                        params = {"qvec_sparse": [[1, 5, 10], [0.5, 0.3, 0.2]],
+                                  "nprobe": 50}
+                else:
+                    params = {}
+
+                execute_stmt = f"EXECUTE {prepared_name}"
+                if params:
+                    params_json = json.dumps(params)
+                    execute_stmt = f"EXECUTE {prepared_name} USING {params_json}"
+
+                self.log.debug(f"Executing: {execute_stmt[:200]}...")
+                try:
+                    status, results, response = self._execute_query_rest(execute_stmt)
+                    if status:
+                        execution_count += 1
+                        self.log.debug(f"Executed {prepared_name}, got {len(results)} results")
+                        self.log.debug(f"Results for {prepared_name}: {results}")
+                        if validate:
+                            self.log.info(f"Executed {prepared_name}, got {len(results)} results")
+                    else:
+                        error_count += 1
+                        self.log.warning(f"Execute {prepared_name} returned no status")
+                except Exception as e:
+                    error_count += 1
+                    self.log.error(f"Error executing {prepared_name}: {str(e)}")
+
+            if interval > 0:
+                time.sleep(interval)
+
+        elapsed = time.time() - start_time
+        self.log.info(f"Prepared statement execution completed. "
+                      f"Total executions: {execution_count}, Errors: {error_count}, "
+                      f"Elapsed time: {elapsed:.2f}s")
+
+    def drop_prepared_statements(self):
+        """
+        Drop all prepared statements created by this session. Uses REST API.
+        """
+        self.log.info("Dropping all prepared statements")
+
+        prepared_names = [
+            "p_scalar_hotel",
+            "p_vector_dense",
+            "p_vector_sparse",
+            "p_bhive_dense",
+            "p_bhive_sparse"
+        ]
+
+        for name in prepared_names:
+            drop_stmt = f'DELETE FROM system:prepareds WHERE name = "{name}"'
+            self.log.info(f"Dropping prepared statement: {name}")
+            try:
+                status, results, response = self._execute_query_rest(drop_stmt)
+                self.log.info(f"Dropped {name}: {status}")
+            except Exception as e:
+                self.log.debug(f"Error dropping {name} (may not exist): {str(e)}")
+
+        if hasattr(self, 'prepared_statements'):
+            self.prepared_statements = {}
+        self.log.info("Prepared statements dropped")
+
+    def create_udf(self, bucket_name, num_udf_per_scope=10):
+        """
+        Create N number of UDFs on all scopes of a given bucket.
+        Creates both SQL++ inline UDFs and JavaScript-backed UDFs.
+        """
+        self.log.info(f"Creating UDFs on bucket {bucket_name}, {num_udf_per_scope} per scope")
+        
+        # Get all scopes for the bucket
+        get_scopes_query = f"SELECT raw name FROM system:scopes WHERE `bucket` = '{bucket_name}'"
+        status, results, response = self._execute_query_rest(get_scopes_query)
+        
+        self.log.info(f"Scopes query status: {status}, results: {results}")
+        
+        if not status:
+            self.log.error(f"Failed to get scopes for bucket {bucket_name}: {response}")
+            # Fall back to _default scope
+            results = ["_default"]
+        
+        if not results:
+            results = ["_default"]
+        
+        # Include _default scope, exclude system scopes like _system
+        scope_names = [f"`{bucket_name}`.`{scope}`" for scope in results if scope != '_system']
+        self.log.info(f"Found scopes: {scope_names}")
+        
+        # Create JS library functions first
+        self.log.info("Creating JavaScript library functions")
+        port = 18093 if self.use_tls else 8093
+        scheme = "https" if self.use_tls else "http"
+        
+        js_functions = [
+            ("add", "function add(a, b) { return a + b; }"),
+            ("sub", "function sub(a, b) { return a - b; }"),
+            ("mul", "function mul(a, b) { return a * b; }"),
+            ("div", "function div(a, b) { return a / b; }")
+        ]
+        
+        for func_name, func_code in js_functions:
+            url = f"{scheme}://{self.connection_string}:{port}/functions/v1/libraries/math/functions/{func_name}"
+            try:
+                response = requests.post(
+                    url=url,
+                    json={"name": func_name, "code": func_code},
+                    auth=(self.username, self.password),
+                    timeout=120,
+                    verify=False
+                )
+                self.log.debug(f"Created JS function {func_name}: {response.status_code}")
+            except Exception as e:
+                self.log.debug(f"JS function {func_name} may already exist: {str(e)}")
+        
+        # UDF templates - mix of SQL++ inline and JavaScript-backed
+        udf_templates = [
+            "CREATE FUNCTION default:{keyspace}.fun1_{suffix}(arg1, arg2){{arg1 + arg2}}",
+            "CREATE FUNCTION default:{keyspace}.fun2_{suffix}(a, b) LANGUAGE javascript AS \"add\" AT \"math\"",
+            "CREATE FUNCTION default:{keyspace}.fun3_{suffix}(arg1, arg2){{arg1 - arg2}}",
+            "CREATE FUNCTION default:{keyspace}.fun4_{suffix}(a, b) LANGUAGE javascript AS \"sub\" AT \"math\"",
+            "CREATE FUNCTION default:{keyspace}.fun5_{suffix}(arg1, arg2){{arg1 * arg2}}",
+            "CREATE FUNCTION default:{keyspace}.fun6_{suffix}(a, b) LANGUAGE javascript AS \"mul\" AT \"math\"",
+            "CREATE FUNCTION default:{keyspace}.fun7_{suffix}(arg1, arg2){{arg1 / arg2}}",
+            "CREATE FUNCTION default:{keyspace}.fun8_{suffix}(a, b) LANGUAGE javascript AS \"div\" AT \"math\""
+        ]
+        
+        import string as string_module
+        
+        for scope in scope_names:
+            for i in range(num_udf_per_scope):
+                template = random.choice(udf_templates)
+                suffix = ''.join(random.choices(string_module.ascii_uppercase + string_module.digits, k=6))
+                udf_stmt = template.format(keyspace=scope, suffix=suffix)
+                
+                status, results, _ = self._execute_query_rest(udf_stmt)
+                self.log.info(f"{udf_stmt} : {status}")
+                time.sleep(0.25)
+        
+        self.log.info("UDF creation completed")
+
+    def create_n1ql_udf(self, lib_name, lib_code=None, lib_filename=None):
+        """
+        Create a N1QL UDF library and function.
+        If lib_code is not provided, creates a default library.
+        """
+        self.log.info(f"Creating N1QL UDF library: {lib_name}")
+        
+        port = 18093 if self.use_tls else 8093
+        scheme = "https" if self.use_tls else "http"
+        
+        # Load library code from file if requested
+        if lib_code is None and lib_filename:
+            candidate_paths = [
+                lib_filename,
+                os.path.join(os.path.dirname(os.path.realpath(__file__)), lib_filename),
+                os.path.join("/", lib_filename),
+            ]
+            for candidate in candidate_paths:
+                if os.path.exists(candidate):
+                    with open(candidate, "r") as fh:
+                        lib_code = fh.read()
+                    self.log.info(f"Loaded N1QL UDF library from {candidate}")
+                    break
+
+        # Default library code if not provided
+        if lib_code is None:
+            lib_code = '''
+function run_n1ql_query(bucketname) {
+    var query = "SELECT COUNT(*) as cnt FROM `" + bucketname + "`._default._default";
+    var result = N1QL(query);
+    return result;
+}
+'''
+        
+        # Create the library
+        url = f"{scheme}://{self.connection_string}:{port}/evaluator/v1/libraries/{lib_name}"
+        try:
+            response = requests.post(
+                url=url,
+                data=lib_code,
+                headers={'Content-Type': 'application/json'},
+                auth=(self.username, self.password),
+                timeout=120,
+                verify=False
+            )
+            if response.status_code == 200:
+                self.log.info(f"Created JS library {lib_name}")
+            else:
+                self.log.error(f"Failed to create library: {response.status_code} - {response.text}")
+                return
+        except Exception as e:
+            self.log.error(f"Error creating library: {str(e)}")
+            return
+        
+        # Create the N1QL function
+        create_func_stmt = f"CREATE OR REPLACE FUNCTION run_n1ql_query(bucketname) LANGUAGE JAVASCRIPT AS 'run_n1ql_query' AT '{lib_name}'"
+        status, results, _ = self._execute_query_rest(create_func_stmt)
+        self.log.info(f"Create function result: {status}")
+
+    def drop_udf(self, bucket_name):
+        """
+        Drop all UDFs for a given bucket.
+        """
+        self.log.info(f"Dropping all UDFs for bucket {bucket_name}")
+        
+        # Get all functions for the bucket
+        get_functions_query = f"""
+            SELECT raw 'DROP FUNCTION default:`' || identity.`bucket` || '`.`' || identity.`scope` || '`.`' || identity.name || '`'
+            FROM system:functions
+            WHERE identity.`bucket` = '{bucket_name}'
+        """
+        
+        status, results, _ = self._execute_query_rest(get_functions_query)
+        
+        if status and results:
+            for drop_stmt in results:
+                drop_status, _, _ = self._execute_query_rest(drop_stmt)
+                self.log.info(f"{drop_stmt} : {drop_status}")
+                time.sleep(0.25)
+        
+        self.log.info("Drop UDFs completed")
+
+    def get_udf_names(self, bucket_name, scope_name="_default"):
+        """
+        Get all UDF function names for a given bucket and scope.
+        Returns a list of function names.
+        """
+        get_functions_query = f"""
+            SELECT raw name
+            FROM system:functions
+            WHERE identity.`bucket` = '{bucket_name}' AND identity.`scope` = '{scope_name}'
+        """
+        
+        status, results, _ = self._execute_query_rest(get_functions_query)
+        
+        if status and results:
+            # Filter to get function names that match our pattern (fun1_xxx, fun2_xxx, etc.)
+            udf_names = [r for r in results if r and r.startswith('fun')]
+            self.log.info(f"Found UDFs: {udf_names}")
+            return udf_names
+        
+        return []
+
+    def run_udf_queries(self, bucket_name, scope_name="_default", num_queries=20):
+        """
+        Run queries that exercise UDFs.
+        1. Gets UDF names from system:functions
+        2. Loads UDF query templates
+        3. Replaces placeholders and executes queries
+        """
+        self.log.info(f"Running UDF queries for {bucket_name}.{scope_name}")
+        
+        # Get UDF names
+        udf_names = self.get_udf_names(bucket_name, scope_name)
+        
+        if not udf_names:
+            self.log.warning(f"No UDFs found for {bucket_name}.{scope_name}, cannot run UDF queries")
+            return
+        
+        # Load UDF query templates
+        queries_file = os.path.join(os.path.dirname(__file__), 'queries.json')
+        with open(queries_file, 'r') as f:
+            all_queries = json.load(f)
+        
+        udf_templates = all_queries.get('hotel_udf', [])
+        if not udf_templates:
+            self.log.error("No hotel_udf templates found in queries.json")
+            return
+        
+        # Build keyspace
+        keyspace = f"`{bucket_name}`.`{scope_name}`.`_default`"
+        
+        # Execute queries with random UDF selection
+        execution_count = 0
+        error_count = 0
+        
+        for i in range(num_queries):
+            template = random.choice(udf_templates)
+            udf_name = random.choice(udf_names)
+            
+            # Build full UDF reference
+            full_udf_ref = f"default:`{bucket_name}`.`{scope_name}`.{udf_name}"
+            
+            # Replace placeholders
+            query = template.replace('keyspacenameplaceholder', keyspace)
+            query = query.replace('UDF_PLACEHOLDER', full_udf_ref)
+            
+            # Execute
+            self.log.debug(f"Executing UDF query: {query[:200]}...")
+            status, results, _ = self._execute_query_rest(query)
+            
+            if status:
+                execution_count += 1
+                self.log.debug(f"UDF query succeeded, got {len(results)} results")
+            else:
+                error_count += 1
+                self.log.warning(f"UDF query failed")
+            
+            time.sleep(0.5)
+        
+        self.log.info(f"UDF query execution completed. Success: {execution_count}, Errors: {error_count}")
+
     def run_n1ql_query(self, query, iterate_over_results=False, query_node=None, groundtruth_vectors=None,
                        validate_vector_query_results=False, groundtruth_file=None):
         query_vectors = self.read_query_file()
@@ -409,44 +1021,184 @@ class QueryManager:
             if not self.cluster:
                 self.create_cluster_object()
             consistency_type = random.getrandbits(1)
+            profile_enabled = self.enable_scan_report and (random.random() < 0.2)
+            qo_kwargs = {"timeout": self.timeout}
+            if profile_enabled:
+                qo_kwargs["profile"] = "timings"
+                # Log at INFO so it's visible even at higher log levels and easy to correlate
+                self.log.debug("Profile timings requested for query: %s", query if len(query) < 200 else query[:200])
+                include_scanreport_detailed = bool(random.getrandbits(1))
+                if include_scanreport_detailed:
+                    self.log.debug(f"Including scanreport_wait=100000 for query {query}")
+                    qo_kwargs["scanreport_wait"] = "100000"
             if consistency_type:
-                query_opts = QueryOptions(timeout=self.timeout, scan_consistency=QueryScanConsistency.REQUEST_PLUS)
-            else:
-                query_opts = QueryOptions(timeout=self.timeout)
+                qo_kwargs["scan_consistency"] = QueryScanConsistency.REQUEST_PLUS
+            self.log.debug(f"Query options for this query: {qo_kwargs}")
+            query_opts = QueryOptions(**qo_kwargs)
             result_obj = None
-            try:
-                self.log.debug(f"running query - {query} via SDK")
-                result_obj = self.cluster.query(query, query_opts)
-            except CouchbaseException as ex:
-                if isinstance(ex.context, QueryErrorContext):
-                    request_time = None
-                    if result_obj:
-                        execution_time = result_obj.metadata().metrics().execution_time()
-                        if execution_time:
-                            request_time = execution_time
-                    if hasattr(ex.context, 'execution_time'):
-                        request_time = ex.context.execution_time or result_obj.request_time
-                    item_dict = {ex.context.client_context_id: {
-                        "statement": ex.context.statement,
-                        "first_error_message": ex.context.first_error_message,
-                        "request_time": request_time
-                    }}
-                    self.query_error_obj.update(item_dict)
-            except:
-                print("Unexpected error:", sys.exc_info()[0])
             result = []
-            if iterate_over_results:
-                result = [row for row in result_obj.rows()]
-                if vector_query:
-                    if limit_val and len(result) != limit_val:
-                        self.log.debug(f"Query {query} has fetched incorrect number of results "
-                                       f"though a limit was specified. Limit specified {limit_val}. "
-                                       f"Result length {len(result)}")
-                        item_dict = {result_obj.metadata().request_id(): {"statement": query,
-                                                                      "first_error_message": f"Query {query} has fetched incorrect number of results "
-                                                                                             f"though a limit was specified. Limit specified {limit_val}. "
-                                                                                             f"Result length {len(result)}"}}
-                        self.query_error_obj.update(item_dict)
+            try:
+                self.log.debug(f"running query - {query} via SDK with parameters {qo_kwargs}")
+                result_obj = self.cluster.query(query, query_opts)
+                # Materialize rows immediately so we can safely inspect metadata and log results.
+                materialized_rows = []
+                try:
+                    # rows() may raise if the result is an error; guard it
+                    if iterate_over_results or self.enable_scan_report:
+                        materialized_rows = [r for r in result_obj.rows()]
+                except Exception as e:
+                    self.log.info(f"Could not materialize rows from result_obj - Exception: {type(e).__name__}: {str(e)}")
+
+                # Try to read metadata() after materializing rows
+                if self.enable_scan_report:
+                    meta = None
+                    try:
+                        meta = result_obj.metadata()
+                        self.log.info(f"Meta object obtained: {type(meta).__name__}")
+                        self.log.debug(f"Meta object details: {meta}")
+                        valid = self.validate_index_stats(meta)
+                        if not valid:
+                            self.log.info(f"Index stats validation failed for query")
+                            # derive a request id / key from metadata if possible
+                            req_id_key = None
+                            try:
+                                if isinstance(meta, dict):
+                                    req_id_key = meta.get('request_id')
+                                else:
+                                    try:
+                                        req_id_key = meta.request_id() if callable(getattr(meta, 'request_id', None)) else getattr(meta, 'request_id', None)
+                                    except Exception:
+                                        req_id_key = None
+                            except Exception:
+                                req_id_key = None
+                            if not req_id_key:
+                                req_id_key = str(time.time())
+                            entry = {req_id_key: {"statement": query, "errors": "Metadata validation failed for index stats. Response is {}.".format(meta)}}
+                            try:
+                                with self._index_stats_lock:
+                                    self.index_stats_validation_failures.update(entry)
+                            except Exception:
+                                # best-effort: log and continue
+                                self.log.exception("Failed to record index stats validation failure")
+                    except Exception:
+                        meta = None
+                    except Exception:
+                        self.log.debug("Could not fetch request_id/metrics from result object")
+
+                # Use the materialized rows for the iterate_over_results path to avoid re-consuming the iterator
+                if iterate_over_results:
+                    result = materialized_rows
+                    if vector_query:
+                        if limit_val and len(result) != limit_val:
+                            self.log.debug(f"Query {query} has fetched incorrect number of results "
+                                           f"though a limit was specified. Limit specified {limit_val}. "
+                                           f"Result length {len(result)}")
+                            # derive request id from metadata
+                            req_id_key = None
+                            request_time = None
+                            try:
+                                # meta is the result metadata object
+                                if meta is not None:
+                                    # Try to get request_id
+                                    if hasattr(meta, 'request_id'):
+                                        try:
+                                            req_id_key = meta.request_id() if callable(getattr(meta, 'request_id', None)) else getattr(meta, 'request_id', None)
+                                        except Exception:
+                                            pass
+                                    # Try client_context_id as fallback
+                                    if not req_id_key:
+                                        for attr in ("client_context_id", "clientContextID"):
+                                            if hasattr(meta, attr):
+                                                try:
+                                                    v = getattr(meta, attr)
+                                                    if callable(v):
+                                                        v = v()
+                                                    if v:
+                                                        req_id_key = v
+                                                        break
+                                                except Exception:
+                                                    continue
+                                    # Try to get request_time
+                                    if hasattr(meta, 'request_time'):
+                                        try:
+                                            request_time = meta.request_time() if callable(getattr(meta, 'request_time', None)) else getattr(meta, 'request_time', None)
+                                        except Exception:
+                                            pass
+                            except Exception:
+                                pass
+                            if not req_id_key:
+                                req_id_key = f"unknown-{int(time.time())}"
+                            item_dict = {req_id_key: {"statement": query,
+                                                      "first_error_message": f"Incorrect result count. Limit: {limit_val}, Got: {len(result)}",
+                                                      "request_time": request_time}}
+                            self.query_error_obj.update(item_dict)
+                else:
+                    # not iterating results: keep result empty
+                    result = []
+            except CouchbaseException as ex:
+                # Extract error context from the CouchbaseException
+                item_key = None
+                request_time = None
+                first_error_message = None
+                
+                try:
+                    # Try to get context from the exception
+                    if hasattr(ex, 'context') and ex.context is not None:
+                        ctx = ex.context
+                        # Try to get request_id from context
+                        if hasattr(ctx, 'request_id'):
+                            item_key = ctx.request_id
+                        # Fallback to client_context_id
+                        if not item_key and hasattr(ctx, 'client_context_id'):
+                            item_key = ctx.client_context_id
+                        # Try to get request_time
+                        if hasattr(ctx, 'request_time'):
+                            request_time = ctx.request_time
+                        # Try to get error message
+                        if hasattr(ctx, 'first_error_message'):
+                            first_error_message = ctx.first_error_message
+                        elif hasattr(ctx, 'errors') and ctx.errors:
+                            first_error_message = str(ctx.errors[0]) if isinstance(ctx.errors, list) else str(ctx.errors)
+                    
+                    # Fallback: try result_obj.metadata() if available
+                    if not item_key and result_obj:
+                        try:
+                            meta = result_obj.metadata()
+                            if meta:
+                                if hasattr(meta, 'request_id'):
+                                    item_key = meta.request_id() if callable(getattr(meta, 'request_id', None)) else getattr(meta, 'request_id', None)
+                                if not item_key:
+                                    for attr in ("client_context_id", "clientContextID", "clientContextId"):
+                                        if hasattr(meta, attr):
+                                            v = getattr(meta, attr)
+                                            if callable(v):
+                                                v = v()
+                                            if v:
+                                                item_key = v
+                                                break
+                        except Exception:
+                            pass
+                    
+                    # Last resort fallback
+                    if not item_key:
+                        item_key = f"unknown-{time.time()}"
+                    
+                    if not first_error_message:
+                        first_error_message = str(ex)
+                        
+                except Exception:
+                    self.log.exception("Failed to extract error metadata from exception")
+                    item_key = f"unknown-{time.time()}"
+                    first_error_message = str(ex)
+                
+                item_dict = {item_key: {
+                    "statement": query,
+                    "first_error_message": first_error_message,
+                    "request_time": request_time
+                }}
+                self.query_error_obj.update(item_dict)
+            except Exception:
+                self.log.exception("Unexpected error during query execution/logging")
             if validate_vector_query_results:
                 self.compute_recall(groundtruth_vectors, result, index)
             return result
@@ -464,6 +1216,53 @@ class QueryManager:
                     return response.json()['results']
             except:
                 pass
+
+    def validate_index_stats(self, metadata: dict) -> bool:
+        self.log.debug("validate_index_stats called")
+        if metadata is None:
+            self.log.debug("validate_index_stats: metadata is None")
+            return False
+        try:
+            children = metadata["profile"]["executionTimings"]["~child"]["~children"]
+        except KeyError as ke:
+            self.log.info(f"validate_index_stats: Missing expected key in metadata structure: {ke}")
+            self.log.debug(f"Metadata structure: {metadata}")
+            return False
+        except Exception as e:
+            self.log.info(f"validate_index_stats: Error accessing metadata structure: {type(e).__name__}: {e}")
+            return False
+        # find the operator that contains #indexStats
+        index_stats = None
+        for child in children:
+            if "#indexStats" in child:
+                index_stats = child["#indexStats"]
+                break
+        if not index_stats:
+            self.log.info("validate_index_stats: No #indexStats found in execution plan")
+            return False
+        # validate defn
+        if not isinstance(index_stats.get("defn"), list):
+            self.log.info(f"validate_index_stats: defn is not a list, got {type(index_stats.get('defn'))}")
+            return False
+        # validate num_scans
+        num_scans = index_stats.get("num_scans")
+        if not isinstance(num_scans, int) or num_scans <= 0:
+            self.log.info(f"validate_index_stats: num_scans is invalid, got {num_scans} (type: {type(num_scans)})")
+            return False
+        # validate srvr_avg_ns
+        avg_ns = index_stats.get("srvr_avg_ns", {})
+        for key in ["scan", "total", "wait"]:
+            if key not in avg_ns or avg_ns[key] < 0:
+                self.log.info(f"validate_index_stats: srvr_avg_ns[{key}] is missing or negative: {avg_ns.get(key)}")
+                return False
+        # validate srvr_total_counts
+        total_counts = index_stats.get("srvr_total_counts", {})
+        for key in ["bytesRead", "rowsReturn", "rowsScan"]:
+            if key not in total_counts or total_counts[key] < 0:
+                self.log.info(f"validate_index_stats: srvr_total_counts[{key}] is missing or negative: {total_counts.get(key)}")
+                return False
+        self.log.info("validate_index_stats: Validation passed")
+        return True
 
     def get_services_map(self):
         """
@@ -607,38 +1406,22 @@ class QueryManager:
             self.log.info("========================Queries that have ended in errors==============================================================")
             table = BeautifulTable()
             table.column_headers = ["Request ID", "Statement", "Error", "Request Time"]
-            # Set reasonable widths for all columns
-            table.column_widths = [40, 60, 60, 40]
-            # Configure word wrapping
-            table.maxwidth = 200
-            table.wrap_on_max_width = True
+            # Disable word wrapping - each cell shows content on single line
+            table.wrap_on_max_width = False
             
             for item in query_error_resp_dict.keys():
                 request_time = query_error_resp_dict[item].get("requestTime", "NA")
                 statement = query_error_resp_dict[item]["statement"]
-                # Truncate statement if longer than 50 characters
-                # if len(statement) > 50:
-                #     statement = statement[:47] + "..."
+                error_message = query_error_resp_dict[item].get("first_error_message", "N/A")
                 table.append_row([item,
                                 statement,
-                                query_error_resp_dict[item]["first_error_message"],
+                                error_message,
                                 request_time])
             self.log.info("\n" + str(table))
             self.query_error_obj = {}
 
     def run_query_workload(self, num_concurrent_queries=5, refresh_duration=1800):
         self.log.info("Running query workload")
-        # Start periodic error printing in a separate thread
-        error_thread = threading.Thread(target=self.periodic_print_errors, 
-                                      args=(self.print_frequency,))  # Print every 30 minutes
-        error_thread.daemon = True
-        error_thread.start()
-        # Start periodic recall stats printing if needed
-        # if self.validate_vector_query_results:
-        #     stats_thread = threading.Thread(target=self.periodic_print_recall_stats, 
-        #                                   args=(self.print_frequency,))
-        #     stats_thread.daemon = True
-        #     stats_thread.start()
         query_tasks = []
         time_now = time.time()
         time_last_refresh = time.time()
@@ -703,6 +1486,9 @@ class QueryManager:
 
     def get_query_errors_dict(self):
         return self.query_error_obj
+
+    def get_index_stats_validation_failures(self):
+        return self.index_stats_validation_failures
 
     def periodic_print_recall_stats(self, frequency=30):
         time_now = time.time()
@@ -822,13 +1608,6 @@ class QueryManager:
         if errors:
             raise Exception(f"Mismatch in query results between primary and gsi {errors}")
 
-    def periodic_print_errors(self, frequency=30):
-        """Prints error stats every n minutes"""
-        time_now = time.time()
-        while time.time() - time_now < self.duration:
-            self.print_query_errors()
-            time.sleep(frequency * 60)  # Convert minutes to seconds
-
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -879,6 +1658,32 @@ if __name__ == '__main__':
                         default="INFO")
     parser.add_argument("-st", "--smoke_test_run", help="True or False. Is it a smoke test run?", 
                         default="false")
+    parser.add_argument("-sr", "--enable_scan_report", help="True or False. Is it a scan report?", 
+                        default="false")
+    parser.add_argument("--statement_types", default="scalar,vector_dense,vector_sparse,bhive_dense,bhive_sparse",
+                        help="Comma-separated list of prepared statement types")
+    parser.add_argument("--prepared_iterations", type=int, default=100,
+                        help="Number of iterations to execute prepared statements")
+    parser.add_argument("--prepared_duration", type=int, default=0,
+                        help="Duration in seconds to run prepared statement execution (0 for iteration-based)")
+    parser.add_argument("--prepared_interval", type=int, default=1,
+                        help="Interval in seconds between prepared statement executions")
+    parser.add_argument("--validate_prepared", default="false",
+                        help="Validate prepared statement results")
+    parser.add_argument("--num_dimensions", type=int, default=128,
+                        help="Number of dimensions for vector queries")
+    parser.add_argument("--num_udf_per_scope", type=int, default=10,
+                        help="Number of UDFs to create per scope")
+    parser.add_argument("--lib_name", default="n1qludf",
+                        help="Name for the N1QL JS UDF library")
+    parser.add_argument("--lib_filename", default=None,
+                        help="Filename for the N1QL JS UDF library")
+    parser.add_argument("--num_udf_queries", type=int, default=20,
+                        help="Number of UDF queries to execute")
+    parser.add_argument("--plan_stability_mode", default="prepared_only",
+                        help="Plan stability mode: prepared_only, ad_hoc, ad_hoc_read_only, or off")
+    parser.add_argument("--non_zero_check", default="false",
+                        help="For verify_query_metadata: if true, expect non-zero records; if false, expect zero")
     args = parser.parse_args()
     query_manager = QueryManager(args.connection_string, args.username, args.password, int(args.timeout),
                                  int(args.duration), args.template, args.use_sdk, args.query_type, args.query_file,
@@ -886,7 +1691,7 @@ if __name__ == '__main__':
                                  args.bucket_list, args.use_tls, args.capella, args.skip_default,
                                  args.num_groundtruth_vectors, args.num_query_vectors, args.base64,
                                  args.xattrs, args.sample_size, args.run_bhive_queries, args.print_frequency,
-                                 args.log_level)
+                                 args.log_level, args.smoke_test_run, args.enable_scan_report)
     args.validate_vector_query_results = True if args.validate_vector_query_results == "true" else False
     try:
         if args.action == "run_query_workload":
@@ -894,8 +1699,8 @@ if __name__ == '__main__':
             if args.validate_vector_query_results and args.run_vector_queries:
                 query_manager.print_recall_stats()
                 smoke_run = args.smoke_test_run == "true"
-                if not smoke_run:
-                    raise Exception("Raising dummy exception to print the recall stats in the console log")
+                # if not smoke_run:
+                #     raise Exception("Raising dummy exception to print the recall stats in the console log")
         elif args.action == "run_scans_validation":
             query_manager.run_scans_validation()
         elif args.action == "data_validation":
@@ -910,39 +1715,71 @@ if __name__ == '__main__':
             query_manager.set_awr_aus()
         elif args.action == "disable_awr_aus":
             query_manager.disable_awr_aus()
+        elif args.action == "set_plan_stability":
+            query_manager.set_plan_stability(args.plan_stability_mode)
+        elif args.action == "verify_query_metadata":
+            query_manager.verify_query_metadata(non_zero_check=(args.non_zero_check == "true"))
+        elif args.action == "prepare_statements":
+            statement_types = args.statement_types.split(",")
+            query_manager.prepare_statements(
+                bucket_name=args.bucket_list,
+                statement_types=statement_types,
+                distance_algo=args.distance_algo,
+                num_dimensions=args.num_dimensions
+            )
+        elif args.action == "execute_prepared":
+            statement_types = args.statement_types.split(",")
+            query_manager.execute_prepared(
+                statement_types=statement_types,
+                iterations=args.prepared_iterations,
+                duration=args.prepared_duration,
+                interval=args.prepared_interval,
+                validate=(args.validate_prepared == "true"),
+                num_dimensions=args.num_dimensions
+            )
+        elif args.action == "drop_prepared_statements":
+            query_manager.drop_prepared_statements()
+        elif args.action == "create_udf":
+            query_manager.create_udf(
+                bucket_name=args.bucket_list,
+                num_udf_per_scope=args.num_udf_per_scope
+            )
+        elif args.action == "create_n1ql_udf":
+            query_manager.create_n1ql_udf(lib_name=args.lib_name, lib_filename=args.lib_filename)
+        elif args.action == "drop_udf":
+            query_manager.drop_udf(bucket_name=args.bucket_list)
+        elif args.action == "run_udf_queries":
+            query_manager.run_udf_queries(
+                bucket_name=args.bucket_list,
+                num_queries=args.num_udf_queries
+            )
         else:
             raise Exception("Actions allowed - run_query_workload | poll_for_failed_queries "
                             "| cancel_random_queries | run_scans_validation | data_validation "
-                            "| fetch_active_requests | set_awr_aus | disable_awr_aus")
+                            "| fetch_active_requests | set_awr_aus | disable_awr_aus | set_plan_stability "
+                            "| verify_query_metadata | prepare_statements | execute_prepared "
+                            "| drop_prepared_statements | create_udf | create_n1ql_udf | drop_udf | run_udf_queries")
     except KeyboardInterrupt:
         if args.validate_vector_query_results and args.run_vector_queries:
             query_manager.print_recall_stats()
         raise
     finally:
         query_error_resp_dict = query_manager.get_query_errors_dict()
+        index_stats_failures = query_manager.get_index_stats_validation_failures()
         if query_error_resp_dict:
             print(
                 "========================Queries that have ended in errors==============================================================")
             try:
                 table = BeautifulTable()
                 table.column_headers = ["Request ID", "Statement", "Error", "Request Time"]
-                # Set reasonable widths for all columns
-                table.column_widths = [40, 60, 60, 20]
-                # Configure word wrapping
-                table.maxwidth = 180
-                table.wrap_on_max_width = True
+                # Disable word wrapping - each cell shows content on single line
+                table.wrap_on_max_width = False
                 
                 for item in query_error_resp_dict.keys():
                     try:
                         request_time = str(query_error_resp_dict[item].get("requestTime", "NA"))
                         statement = str(query_error_resp_dict[item].get("statement", ""))
                         error_message = str(query_error_resp_dict[item].get("first_error_message", ""))
-                        
-                        # Truncate statement if longer than 50 characters
-                        if len(statement) > 50:
-                            statement = statement[:47] + "..."
-                        if len(error_message) > 50:
-                            error_message = error_message[:47] + "..."
                             
                         table.append_row([str(item),
                                         statement,
@@ -961,3 +1798,15 @@ if __name__ == '__main__':
             except Exception as e:
                 print(f"Error creating error table: {str(e)}")
                 print("Raw error data:", query_error_resp_dict)
+        # If any index-stats validation failures were recorded, log them (INFO/ERROR) for visibility
+        if index_stats_failures:
+            try:
+                query_manager.log.info("\n========================Index stats validation failures==============================================================")
+                for k, v in index_stats_failures.items():
+                    msg = f"RequestId: {k} Statement: {v.get('statement')} Errors: {v.get('errors')}"
+                    # log as ERROR so it shows up even at higher log levels; INFO line above gives context
+                    query_manager.log.error(msg)
+            except Exception as e:
+                # Fallback to printing if logging somehow fails
+                print(f"Error logging index-stats failures: {e}")
+                print(f"Index stats failures: {index_stats_failures}")
