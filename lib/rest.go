@@ -1,11 +1,12 @@
 package sequoia
 
 import (
+	"encoding/json"
 	"fmt"
-	"time"
+	cmap "github.com/streamrail/concurrent-map"
 	"strconv"
 	"strings"
-	cmap "github.com/streamrail/concurrent-map"
+	"time"
 )
 
 type RestClient struct {
@@ -31,21 +32,21 @@ type NodeSelf struct {
 }
 
 type PoolNodes struct {
-    	Name  string
-    	Nodes []PoolNode
-    	FtsMemoryQuota    int
-    	IndexMemoryQuota  int
-    	MemoryQuota       int
+	Name             string
+	Nodes            []PoolNode
+	FtsMemoryQuota   int
+	IndexMemoryQuota int
+	MemoryQuota      int
 }
 
 type PoolNode struct {
-    	MemoryTotal       int
-    	MemoryFree        int
-    	McdMemoryReserved int
-    	Services          []string
-    	Version           string
-    	Hostname          string
-    	ClusterMembership string
+	MemoryTotal       int
+	MemoryFree        int
+	McdMemoryReserved int
+	Services          []string
+	Version           string
+	Hostname          string
+	ClusterMembership string
 }
 
 type NodeStatuses map[string]NodeStatus
@@ -68,6 +69,15 @@ type ClusterInfo struct {
 
 type CollectionId struct {
 	Uid string
+}
+
+type EncryptionKey struct {
+	ID       string
+	Name     string
+	Type     string
+	Usage    []string
+	Data     map[string]interface{}
+	RawValue map[string]interface{}
 }
 
 func NewRestClient(clusters []ServerSpec, provider Provider, cm *ContainerManager) RestClient {
@@ -93,6 +103,9 @@ func (r *RestClient) resetCache() {
 func (r *RestClient) WatchForTopologyChanges() {
 	r.IsWatching = true
 	r.resetCache()
+	defer func() {
+		r.IsWatching = false
+	}()
 
 	for {
 
@@ -107,8 +120,6 @@ func (r *RestClient) WatchForTopologyChanges() {
 			}
 		}
 	}
-
-	r.IsWatching = false
 }
 
 func (r *RestClient) GetServerVersion() string {
@@ -138,7 +149,6 @@ func (r *RestClient) GetMemReserved(host string) int {
 
 	return q
 }
-
 
 func (r *RestClient) GetIndexQuota(host string) int {
 	n := r.getHostNodeSelf(host)
@@ -193,31 +203,30 @@ func (r *RestClient) GetAuth(host string) string {
 }
 
 func (r *RestClient) GetHostNodeSelf(host string) NodeSelf {
-    	if val, ok := r.cacheGet("self", host); ok {
+	if val, ok := r.cacheGet("self", host); ok {
 		return val.(NodeSelf)
 	}
 	return r.getHostNodeSelf(host)
 }
 
 func (r *RestClient) getHostNodeSelf(host string) NodeSelf {
-    	url := r.Provider.GetRestUrl(host)
-    	auth := r.GetAuth(host)
-    	n := r.GetNodeSelf(auth, url)
-    	r.cacheSet("self", host, n)
-    	return n
+	url := r.Provider.GetRestUrl(host)
+	auth := r.GetAuth(host)
+	n := r.GetNodeSelf(auth, url)
+	r.cacheSet("self", host, n)
+	return n
 }
 
 func (r *RestClient) getPoolNode(host string) PoolNode {
-    	if val, ok := r.cacheGet("pool/node/", host); ok {
+	if val, ok := r.cacheGet("pool/node/", host); ok {
 		return val.(PoolNode)
 	}
-    	url := r.Provider.GetRestUrl(host)
-    	auth := r.GetAuth(host)
-    	n := r.GetPoolNode(auth, url, host)
-    	r.cacheSet("pool/node/", host, n)
-    	return n
+	url := r.Provider.GetRestUrl(host)
+	auth := r.GetAuth(host)
+	n := r.GetPoolNode(auth, url, host)
+	r.cacheSet("pool/node/", host, n)
+	return n
 }
-
 
 func (r *RestClient) GetHostNodeStatuses(host string) NodeStatuses {
 
@@ -251,7 +260,7 @@ func (r *RestClient) GetPoolNode(auth, url, host string) PoolNode {
 	index_str := strings.Split(host, ".")[0]
 	index := strings.Split(index_str, "-")[1]
 	index_int, _ := strconv.Atoi(index)
-	node = cluster.Nodes[index_int - 1]
+	node = cluster.Nodes[index_int-1]
 	return node
 }
 
@@ -280,8 +289,8 @@ func (r *RestClient) GetClusterInfo() ClusterInfo {
 }
 
 func (r *RestClient) IsNodeActive(host string) bool {
-    	cluster := r.GetClusterInfo()
-    	for i := 0; i < len(cluster.Nodes); i++ {
+	cluster := r.GetClusterInfo()
+	for i := 0; i < len(cluster.Nodes); i++ {
 		ip := host + ":8091"
 		if cluster.Nodes[i].Hostname == ip && cluster.Nodes[i].ClusterMembership == "active" {
 			return true
@@ -290,7 +299,6 @@ func (r *RestClient) IsNodeActive(host string) bool {
 	return false
 }
 
-//
 func (r *RestClient) JsonRequest(auth, restUrl string, v interface{}) {
 	// run curl container to make rest request
 	cmd := []string{"-u", auth, "-s", restUrl, "-k"}
@@ -315,7 +323,6 @@ func (r *RestClient) JsonRequest(auth, restUrl string, v interface{}) {
 	}
 }
 
-//
 func (r *RestClient) JsonPostRequest(auth, restUrl, data string, v interface{}) {
 	// run curl container to make rest request
 	cmd := []string{"-u", auth, "-s", restUrl, "-d", data}
@@ -339,6 +346,193 @@ func (r *RestClient) JsonPostRequest(auth, restUrl, data string, v interface{}) 
 		err := r.Cm.RemoveContainer(id)
 		logerr(err)
 	}
+}
+
+func (r *RestClient) GetEncryptionKeys(host string) ([]EncryptionKey, error) {
+	url := fmt.Sprintf("%s/settings/encryptionKeys", r.Provider.GetRestUrl(host))
+	auth := r.GetAuth(host)
+	cmd := []string{"-u", auth, "-s", "-k",
+		"-w", "\nHTTP_STATUS:%{http_code}\n",
+		url,
+	}
+	id, svcId := r.Cm.RunRestContainer(cmd)
+	resp := r.Cm.GetLogs(id, "all")
+
+	var decoded interface{}
+	trimmed := extractJSONPayload(resp)
+	if err := json.Unmarshal([]byte(trimmed), &decoded); err != nil {
+		cleanupRestContainer(r.Cm, id, svcId)
+		return nil, err
+	}
+
+	keys := flattenEncryptionKeys(decoded)
+	cleanupRestContainer(r.Cm, id, svcId)
+	return keys, nil
+}
+
+func (r *RestClient) CreateEncryptionKey(host string, payload []byte) error {
+	url := fmt.Sprintf("%s/settings/encryptionKeys", r.Provider.GetRestUrl(host))
+	auth := r.GetAuth(host)
+	cmd := []string{"-u", auth, "-s", "-k",
+		"-w", "\nHTTP_STATUS:%{http_code}\n",
+		"-X", "POST",
+		"-H", "Content-Type: application/json",
+		url, "-d", string(payload),
+	}
+	fmt.Printf("[CreateEncryptionKey] POST %s \n", url)
+	id, svcId := r.Cm.RunRestContainer(cmd)
+	resp := r.Cm.GetLogs(id, "all")
+	fmt.Printf("[CreateEncryptionKey] response: %s\n", strings.TrimSpace(resp))
+	cleanupRestContainer(r.Cm, id, svcId)
+	if !strings.Contains(resp, "HTTP_STATUS:200") {
+		return fmt.Errorf("CreateEncryptionKey: non-200 response: %s", strings.TrimSpace(resp))
+	}
+	return nil
+}
+
+func (r *RestClient) PutEncryptionKey(host, keyID string, payload []byte) error {
+	url := fmt.Sprintf("%s/settings/encryptionKeys/%s", r.Provider.GetRestUrl(host), keyID)
+	auth := r.GetAuth(host)
+	cmd := []string{"-u", auth, "-s", "-k",
+		"-w", "\nHTTP_STATUS:%{http_code}\n",
+		"-X", "PUT",
+		"-H", "Content-Type: application/json",
+		url, "-d", string(payload),
+	}
+	fmt.Printf("[PutEncryptionKey] PUT %s payload=%s\n", url, string(payload))
+	id, svcId := r.Cm.RunRestContainer(cmd)
+	resp := r.Cm.GetLogs(id, "all")
+	fmt.Printf("[PutEncryptionKey] response: %s\n", strings.TrimSpace(resp))
+	cleanupRestContainer(r.Cm, id, svcId)
+	if !strings.Contains(resp, "HTTP_STATUS:200") {
+		return fmt.Errorf("PutEncryptionKey: non-200 response: %s", strings.TrimSpace(resp))
+	}
+	return nil
+}
+
+func (r *RestClient) ConfigureOtherEncryptionAtRest(host string, payload []byte) error {
+	url := fmt.Sprintf("%s/settings/security/encryptionAtRest/other", r.Provider.GetRestUrl(host))
+	auth := r.GetAuth(host)
+	cmd := []string{"-u", auth, "-s", "-k",
+		"-w", "\nHTTP_STATUS:%{http_code}\n",
+		"-X", "POST",
+		"-H", "Content-Type: application/json",
+		url, "-d", string(payload),
+	}
+	fmt.Printf("[ConfigureOtherEncryptionAtRest] POST %s payload=%s\n", url, string(payload))
+	id, svcId := r.Cm.RunRestContainer(cmd)
+	resp := r.Cm.GetLogs(id, "all")
+	fmt.Printf("[ConfigureOtherEncryptionAtRest] response: %s\n", strings.TrimSpace(resp))
+	cleanupRestContainer(r.Cm, id, svcId)
+	if !strings.Contains(resp, "HTTP_STATUS:200") {
+		return fmt.Errorf("ConfigureOtherEncryptionAtRest: non-200 response: %s", strings.TrimSpace(resp))
+	}
+	return nil
+}
+
+func cleanupRestContainer(cm *ContainerManager, id, svcId string) {
+	if cm.ProviderType == "swarm" {
+		err := cm.RemoveService(svcId)
+		logerr(err)
+	} else {
+		err := cm.RemoveContainer(id)
+		logerr(err)
+	}
+}
+
+func extractJSONPayload(resp string) string {
+	start := strings.Index(resp, "{")
+	arrayStart := strings.Index(resp, "[")
+	if start == -1 || (arrayStart != -1 && arrayStart < start) {
+		start = arrayStart
+	}
+	if start == -1 {
+		return resp
+	}
+	end := strings.LastIndexAny(resp, "}]")
+	if end == -1 || end < start {
+		return resp[start:]
+	}
+	return resp[start : end+1]
+}
+
+func flattenEncryptionKeys(decoded interface{}) []EncryptionKey {
+	keys := []EncryptionKey{}
+	switch v := decoded.(type) {
+	case []interface{}:
+		for _, item := range v {
+			if key, ok := encryptionKeyFromMap(item); ok {
+				keys = append(keys, key)
+			}
+			if m, ok := item.(map[string]interface{}); ok {
+				if dataMap, ok := m["data"].(map[string]interface{}); ok {
+					if arr, ok := dataMap["keys"].([]interface{}); ok {
+						for _, nested := range arr {
+							if key, ok := encryptionKeyFromMap(nested); ok {
+								keys = append(keys, key)
+							}
+						}
+					}
+				}
+			}
+		}
+	case map[string]interface{}:
+		for _, candidate := range []interface{}{v["keys"], v["data"], v["results"], v["encryptionKeys"]} {
+			if arr, ok := candidate.([]interface{}); ok {
+				for _, item := range arr {
+					if key, ok := encryptionKeyFromMap(item); ok {
+						keys = append(keys, key)
+					}
+				}
+			} else if m, ok := candidate.(map[string]interface{}); ok {
+				if arr, ok := m["keys"].([]interface{}); ok {
+					for _, item := range arr {
+						if key, ok := encryptionKeyFromMap(item); ok {
+							keys = append(keys, key)
+						}
+					}
+				}
+			}
+		}
+	}
+	return keys
+}
+
+func encryptionKeyFromMap(item interface{}) (EncryptionKey, bool) {
+	m, ok := item.(map[string]interface{})
+	if !ok {
+		return EncryptionKey{}, false
+	}
+	key := EncryptionKey{
+		RawValue: m,
+	}
+	for _, field := range []string{"id", "secretId", "keyId"} {
+		if v, ok := m[field]; ok && key.ID == "" {
+			key.ID = fmt.Sprintf("%v", v)
+		}
+	}
+	if v, ok := m["name"]; ok {
+		key.Name = fmt.Sprintf("%v", v)
+	}
+	if v, ok := m["type"]; ok {
+		key.Type = fmt.Sprintf("%v", v)
+	}
+	if v, ok := m["usage"]; ok {
+		switch usages := v.(type) {
+		case []interface{}:
+			for _, usage := range usages {
+				key.Usage = append(key.Usage, fmt.Sprintf("%v", usage))
+			}
+		case []string:
+			key.Usage = append(key.Usage, usages...)
+		}
+	}
+	if v, ok := m["data"]; ok {
+		if dataMap, ok := v.(map[string]interface{}); ok {
+			key.Data = dataMap
+		}
+	}
+	return key, true
 }
 
 func (r *RestClient) cacheGet(ctx, key string) (interface{}, bool) {

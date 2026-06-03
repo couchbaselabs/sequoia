@@ -84,6 +84,12 @@ type ServerSpec struct {
 	DekRotateEvery                  string `yaml:"dekRotateEvery"`
 	DekLifetime                     string `yaml:"dekLifetime"`
 	EnableEncryptionAtRest          bool   `yaml:"enable_encryption_at_rest"`
+	EnableConfigEncryptionAtRest    bool   `yaml:"enable_config_encryption_at_rest"`
+	EnableAuditEncryptionAtRest     bool   `yaml:"enable_audit_encryption_at_rest"`
+	EnableLogEncryptionAtRest       bool   `yaml:"enable_log_encryption_at_rest"`
+	EnableOtherEncryptionAtRest     bool   `yaml:"enable_other_encryption_at_rest"`
+	EnableDiagEvalOnNonLocalHosts   bool   `yaml:"enable_diag_eval_on_non_local_hosts"`
+	BypassEncryptionRestrictions    bool   `yaml:"bypass_encryption_restrictions"`
 	EnableClientCertificateHandling bool   `yaml:"enable_client_certificate_handling"`
 	Buckets                         string
 	BucketSpecs                     []BucketSpec

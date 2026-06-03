@@ -138,7 +138,11 @@ func (s *Scope) SetupServer() {
 		s.InitNodes()
 		s.InitCluster()
 		s.AddUsers()
+		s.EnableDiagEvalOnNonLocalHosts()
+		s.BypassEncryptionRestrictions()
 		s.CreateEncryptionKeys()
+		s.EnableEncryptionKey()
+		s.EnableOtherEncryptionAtRest()
 		s.EnableLogAndConfigEncryption()
 		s.EnableClientCertAuth(
 			"hybrid",
@@ -149,7 +153,8 @@ func (s *Scope) SetupServer() {
 		)
 		s.AddNodes()
 		s.RebalanceClusters()
-		s.ApplyInternalSettings()
+		/* this setting is no longer needed. Uncomment if it causes problems*/
+		//s.ApplyInternalSettings()
 		s.CreateBuckets()
 	}
 	s.getClusteInfo()
@@ -637,41 +642,66 @@ func (s *Scope) AddUsers() {
 }
 
 func (s *Scope) CreateEncryptionKeys() {
-	var image = s.GetCliImage()
 	operation := func(name string, server *ServerSpec) {
-		autoRotateStartTime := time.Now().UTC().Add(1 * time.Hour).Format(time.RFC3339)
 		orchestrator := server.Names[0]
-		ip := s.Provider.GetHostAddress(orchestrator)
-		command := []string{"setting-encryption",
-			"-c", ip,
-			"-u", server.RestUsername,
-			"-p", server.RestPassword,
-			"--key-type", "auto-generated",
-			"--auto-rotate-every", "1",
-			"--name", "universal_key",
-			"--auto-rotate-start-on", autoRotateStartTime,
-			"--encrypt-with-master-password",
-			"--config-usage",
-			"--log-usage",
-			"--all-bucket-usage",
-			"--add-key",
+		if !encryptionEnabledOnServer(server) {
+			fmt.Printf("[CreateEncryptionKeys] %s: skipped (no encryption usage configured)\n", name)
+			return
 		}
 
-		desc := "create encryption key " + name
-		command = cliCommandValidator(s.Version, command)
-
-		task := ContainerTask{
-			Describe: desc,
-			Image:    image,
-			Command:  command,
-			Async:    false,
+		// Build the usage list from the server spec. Mirrors the CLI flag
+		// translation that encryptionUsageFlags used to do, but in the REST
+		// API's vocabulary.
+		usage := []string{}
+		if server.EnableOtherEncryptionAtRest {
+			usage = append(usage, "KEK-encryption", "other-encryption")
 		}
-		fmt.Printf("Creating encryption key: %s\n", name)
-		fmt.Printf("Command: %v\n", command)
-		fmt.Printf("Task Description: %s\n", desc)
-		fmt.Printf("Auto-Rotate Start Time: %s\n", autoRotateStartTime)
+		if server.EnableConfigEncryptionAtRest {
+			usage = append(usage, "config-encryption")
+		}
+		if server.EnableAuditEncryptionAtRest {
+			usage = append(usage, "audit-encryption")
+		}
+		if server.EnableLogEncryptionAtRest {
+			usage = append(usage, "log-encryption")
+		}
+		for _, bucket := range server.BucketSpecs {
+			if bucket.EnableEncryptionAtRest {
+				usage = append(usage, "bucket-encryption")
+				break
+			}
+		}
+		usage = uniqueStrings(usage)
 
-		s.Cm.Run(&task)
+		// Mirror the UI's create-key payload when auto-rotation is enabled:
+		// autoRotation=true requires rotationIntervalInDays and a
+		// nextRotationTime in the ".000Z" millisecond RFC3339 form ns_server
+		// accepts.
+		nextRotation := time.Now().UTC().Add(1 * time.Hour).Format("2006-01-02T15:04:05.000Z")
+		payload := map[string]interface{}{
+			"name":  "universal_key",
+			"type":  "cb-server-managed-aes-key-256",
+			"usage": usage,
+			"data": map[string]interface{}{
+				"autoRotation":           true,
+				"encryptWith":            "nodeSecretManager",
+				"rotationIntervalInDays": 1,
+				"nextRotationTime":       nextRotation,
+				"canBeCached":            true,
+			},
+		}
+		payloadBytes, err := json.Marshal(payload)
+		if err != nil {
+			fmt.Printf("[CreateEncryptionKeys] %s: marshal error: %v\n", name, err)
+			return
+		}
+
+		fmt.Printf("[CreateEncryptionKeys] %s: creating universal_key with usage=%v\n", name, usage)
+		if err := s.Rest.CreateEncryptionKey(orchestrator, payloadBytes); err != nil {
+			fmt.Printf("[CreateEncryptionKeys] ERROR %s: %v\n", name, err)
+		} else {
+			fmt.Printf("[CreateEncryptionKeys] %s: success\n", name)
+		}
 	}
 
 	s.Spec.ApplyToServers(operation, 0, 1)
@@ -807,29 +837,30 @@ func (s *Scope) EnableClientCertAuth(state, pathVal, prefix, delimiter, outputDi
 	return nil
 }
 
-func (s *Scope) EnableLogAndConfigEncryption() {
+func (s *Scope) enableEncryptionAtRest(target, descTarget string, shouldEnable func(*ServerSpec) bool) {
 	var image = s.GetCliImage()
 	operation := func(name string, server *ServerSpec) {
+		if shouldEnable != nil && !shouldEnable(server) {
+			return
+		}
+
 		orchestrator := server.Names[0]
 		ip := s.Provider.GetHostAddress(orchestrator)
 
-		// Enable config encryption
 		command := []string{"setting-encryption",
 			"-c", ip,
 			"-u", server.RestUsername,
 			"-p", server.RestPassword,
-			"--target", "config",
+			"--target", target,
 			"--type", "key",
 			"--key", "0",
 		}
 		if server.DekRotateEvery != "" {
 			command = append(command, "--dek-rotate-every", server.DekRotateEvery)
 		}
-		if server.DekRotateEvery != "" {
-			command = append(command, "--dek-rotate-every", server.DekRotateEvery)
-		}
 		command = append(command, "--set")
-		desc := "enable config encryption " + name
+
+		desc := "enable " + descTarget + " encryption " + name
 		command = cliCommandValidator(s.Version, command)
 
 		task := ContainerTask{
@@ -838,44 +869,267 @@ func (s *Scope) EnableLogAndConfigEncryption() {
 			Command:  command,
 			Async:    false,
 		}
-		fmt.Printf("Enabling config encryption: %s\n", name)
+		fmt.Printf("Enabling %s encryption: %s\n", descTarget, name)
 		fmt.Printf("Command: %v\n", command)
 		fmt.Printf("Task Description: %s\n", desc)
 
 		s.Cm.Run(&task)
-
-		// Enable log encryption
-		command = []string{"setting-encryption",
-			"-c", ip,
-			"-u", server.RestUsername,
-			"-p", server.RestPassword,
-			"--target", "log",
-			"--type", "key",
-			"--key", "0",
-		}
-
-		if server.DekRotateEvery != "" {
-			command = append(command, "--dek-rotate-every", server.DekRotateEvery)
-		}
-		command = append(command, "--set")
-
-		desc = "enable log encryption " + name
-		command = cliCommandValidator(s.Version, command)
-		// temp disabling log encryption until workaround for eagle eye is coded
-		//         task = ContainerTask{
-		//             Describe: desc,
-		//             Image:    image,
-		//             Command:  command,
-		//             Async:    false,
-		//         }
-		//         fmt.Printf("Enabling log encryption: %s\n", name)
-		//         fmt.Printf("Command: %v\n", command)
-		//         fmt.Printf("Task Description: %s\n", desc)
-		//
-		//         s.Cm.Run(&task)
 	}
 
 	s.Spec.ApplyToServers(operation, 0, 1)
+}
+
+func (s *Scope) EnableConfigEncryptionAtRest() {
+	s.enableEncryptionAtRest("config", "config", func(server *ServerSpec) bool {
+		return server.EnableConfigEncryptionAtRest
+	})
+}
+
+func (s *Scope) EnableAuditEncryptionAtRest() {
+	s.enableEncryptionAtRest("audit", "audit", func(server *ServerSpec) bool {
+		return server.EnableAuditEncryptionAtRest
+	})
+}
+
+func (s *Scope) EnableLogEncryptionAtRest() {
+	s.enableEncryptionAtRest("log", "log", func(server *ServerSpec) bool {
+		return server.EnableLogEncryptionAtRest
+	})
+}
+
+func (s *Scope) EnableLogAndConfigEncryption() {
+	s.EnableConfigEncryptionAtRest()
+	s.EnableAuditEncryptionAtRest()
+	s.EnableLogEncryptionAtRest()
+}
+
+// selectEncryptionKey fetches the encryption keys on the orchestrator and
+// returns the universal_key (or the first key if no universal_key is present).
+func (s *Scope) selectEncryptionKey(name string, server *ServerSpec) (EncryptionKey, bool) {
+	orchestrator := server.Names[0]
+	keys, err := s.Rest.GetEncryptionKeys(orchestrator)
+	if err != nil {
+		fmt.Printf("Error fetching encryption keys for %s: %v\n", name, err)
+		return EncryptionKey{}, false
+	}
+	if len(keys) == 0 {
+		fmt.Printf("No encryption keys found for %s\n", name)
+		return EncryptionKey{}, false
+	}
+
+	selected := keys[0]
+	for _, key := range keys {
+		if key.Name == "universal_key" {
+			selected = key
+			break
+		}
+	}
+	if selected.ID == "" {
+		fmt.Printf("No usable encryption key id found for %s\n", name)
+		return EncryptionKey{}, false
+	}
+	return selected, true
+}
+
+// EnableEncryptionKey fetches the universal_key id and PUTs it back with the
+// usages configured on the server so the key becomes usable for the requested
+// encryption targets (config/audit/log/bucket/other).
+func (s *Scope) EnableEncryptionKey() {
+	operation := func(name string, server *ServerSpec) {
+		if !cliVersionAtLeast(s.Version, 8.1) {
+			fmt.Printf("Skipping encryption key enable for %s: cli version %s does not support it\n", name, s.Version)
+			return
+		}
+		if !encryptionEnabledOnServer(server) {
+			return
+		}
+
+		selected, ok := s.selectEncryptionKey(name, server)
+		if !ok {
+			return
+		}
+
+		usage := append([]string{}, selected.Usage...)
+		if server.EnableOtherEncryptionAtRest {
+			usage = append(usage, "KEK-encryption", "other-encryption")
+		}
+		if server.EnableConfigEncryptionAtRest {
+			usage = append(usage, "config-encryption")
+		}
+		if server.EnableAuditEncryptionAtRest {
+			usage = append(usage, "audit-encryption")
+		}
+		if server.EnableLogEncryptionAtRest {
+			usage = append(usage, "log-encryption")
+		}
+		for _, bucket := range server.BucketSpecs {
+			if bucket.EnableEncryptionAtRest {
+				usage = append(usage, "bucket-encryption")
+				break
+			}
+		}
+
+		// The GET response includes ns_server-managed read-only fields under
+		// `data` (notably `keys` — the actual key material — plus things
+		// like creation/rotation history). Echoing those back triggers
+		// `{"errors":{"data":{"keys":"read only"}}}`. Only forward the
+		// caller-writable subset that ns_server's PUT validator accepts.
+		writableDataKeys := []string{
+			"autoRotation",
+			"encryptWith",
+			"rotationIntervalInDays",
+			"nextRotationTime",
+			"canBeCached",
+		}
+		data := map[string]interface{}{}
+		for _, k := range writableDataKeys {
+			if v, ok := selected.Data[k]; ok {
+				data[k] = v
+			}
+		}
+		// Fill in defaults if any required writable fields were missing.
+		if _, ok := data["autoRotation"]; !ok {
+			data["autoRotation"] = true
+		}
+		if _, ok := data["encryptWith"]; !ok {
+			data["encryptWith"] = "nodeSecretManager"
+		}
+		if _, ok := data["rotationIntervalInDays"]; !ok {
+			data["rotationIntervalInDays"] = 1
+		}
+		if _, ok := data["nextRotationTime"]; !ok {
+			data["nextRotationTime"] = time.Now().UTC().Add(1 * time.Hour).Format(time.RFC3339Nano)
+		}
+		if _, ok := data["canBeCached"]; !ok {
+			data["canBeCached"] = true
+		}
+
+		payload := map[string]interface{}{
+			"name":  selected.Name,
+			"type":  selected.Type,
+			"usage": uniqueStrings(usage),
+			"data":  data,
+		}
+		if payload["type"] == "" {
+			payload["type"] = "cb-server-managed-aes-key-256"
+		}
+		payloadBytes, err := json.Marshal(payload)
+		if err != nil {
+			fmt.Printf("Error creating encryption key usage payload for %s: %v\n", name, err)
+			return
+		}
+
+		orchestrator := server.Names[0]
+		fmt.Printf("[EnableEncryptionKey] %s: PUT key %s (id=%s) usage=%v\n",
+			name, selected.Name, selected.ID, payload["usage"])
+		if err := s.Rest.PutEncryptionKey(orchestrator, selected.ID, payloadBytes); err != nil {
+			fmt.Printf("[EnableEncryptionKey] ERROR %s: %v\n", name, err)
+		} else {
+			fmt.Printf("[EnableEncryptionKey] %s: success\n", name)
+		}
+	}
+
+	s.Spec.ApplyToServers(operation, 0, 1)
+}
+
+func (s *Scope) EnableOtherEncryptionAtRest() {
+	operation := func(name string, server *ServerSpec) {
+		if !server.EnableOtherEncryptionAtRest {
+			fmt.Printf("[EnableOtherEncryptionAtRest] %s: skipped (server.EnableOtherEncryptionAtRest=false)\n", name)
+			return
+		}
+		if !cliVersionAtLeast(s.Version, 8.1) {
+			fmt.Printf("[EnableOtherEncryptionAtRest] %s: skipped (cli version %s < 8.1)\n", name, s.Version)
+			return
+		}
+
+		selected, ok := s.selectEncryptionKey(name, server)
+		if !ok {
+			fmt.Printf("[EnableOtherEncryptionAtRest] %s: skipped (no encryption key found)\n", name)
+			return
+		}
+
+		// ns_server's /settings/security/encryptionAtRest/other endpoint
+		// requires encryptionKeyId to be an integer; EncryptionKey.ID is
+		// captured as a string from the GET response, so coerce it back
+		// to a number when it is numeric (which it always is for
+		// server-managed keys today).
+		var keyIDVal interface{} = selected.ID
+		if n, err := strconv.Atoi(selected.ID); err == nil {
+			keyIDVal = n
+		}
+
+		otherPayload := map[string]interface{}{
+			"encryptionMethod":    "encryptionKey",
+			"encryptionKeyId":     keyIDVal,
+			"dekLifetime":         31536000,
+			"dekRotationInterval": 2592000,
+		}
+		if server.DekLifetime != "" {
+			otherPayload["dekLifetime"] = server.DekLifetime
+		}
+		if server.DekRotateEvery != "" {
+			otherPayload["dekRotationInterval"] = server.DekRotateEvery
+		}
+		otherPayloadBytes, err := json.Marshal(otherPayload)
+		if err != nil {
+			fmt.Printf("[EnableOtherEncryptionAtRest] %s: marshal error: %v\n", name, err)
+			return
+		}
+
+		orchestrator := server.Names[0]
+		fmt.Printf("[EnableOtherEncryptionAtRest] %s: enabling with key id=%v\n", name, keyIDVal)
+		if err := s.Rest.ConfigureOtherEncryptionAtRest(orchestrator, otherPayloadBytes); err != nil {
+			fmt.Printf("[EnableOtherEncryptionAtRest] ERROR %s: %v\n", name, err)
+		} else {
+			fmt.Printf("[EnableOtherEncryptionAtRest] %s: success\n", name)
+		}
+	}
+
+	s.Spec.ApplyToServers(operation, 0, 1)
+}
+
+func encryptionEnabledOnServer(server *ServerSpec) bool {
+	if server.EnableOtherEncryptionAtRest ||
+		server.EnableConfigEncryptionAtRest ||
+		server.EnableAuditEncryptionAtRest ||
+		server.EnableLogEncryptionAtRest {
+		return true
+	}
+	for _, bucket := range server.BucketSpecs {
+		if bucket.EnableEncryptionAtRest {
+			return true
+		}
+	}
+	return false
+}
+
+func cliVersionAtLeast(version string, min float64) bool {
+	if version == "" {
+		return false
+	}
+
+	v, err := strconv.ParseFloat(version, 64)
+	if err != nil {
+		return false
+	}
+	return v >= min
+}
+
+func uniqueStrings(values []string) []string {
+	seen := map[string]struct{}{}
+	result := make([]string, 0, len(values))
+	for _, value := range values {
+		if value == "" {
+			continue
+		}
+		if _, ok := seen[value]; ok {
+			continue
+		}
+		seen[value] = struct{}{}
+		result = append(result, value)
+	}
+	return result
 }
 
 func (s *Scope) RebalanceClusters() {
@@ -941,6 +1195,85 @@ func (s *Scope) ApplyInternalSettings() {
 	// apply only to orchestrator
 	s.Spec.ApplyToServers(operation, 0, 1)
 
+}
+
+func (s *Scope) EnableDiagEvalOnNonLocalHosts() {
+	operation := func(name string, server *ServerSpec) {
+		if !server.EnableDiagEvalOnNonLocalHosts {
+			return
+		}
+
+		s.execDiagEvalInNode(server, "ns_config:set(allow_nonlocal_eval, true).",
+			"Enable diag/eval on non-local hosts")
+	}
+
+	s.Spec.ApplyToServers(operation, 0, 1)
+}
+
+func (s *Scope) BypassEncryptionRestrictions() {
+	var image = "appropriate/curl"
+
+	operation := func(name string, server *ServerSpec) {
+		if !server.BypassEncryptionRestrictions {
+			return
+		}
+
+		orchestrator := server.Names[0]
+		ip := s.Provider.GetHostAddress(orchestrator)
+		ip = strings.Split(ip, ":")[0]
+		diagEvalUrl := fmt.Sprintf("http://%s:%s/diag/eval", ip, server.RestPort)
+		command := []string{"-s", "-X", "POST",
+			"-u", server.RestUsername + ":" + server.RestPassword,
+			diagEvalUrl,
+			"-d", "ns_config:set(test_bypass_encr_cfg_restrictions, true).",
+		}
+		desc := "Bypass encryption restrictions"
+		task := ContainerTask{
+			Describe: desc,
+			Image:    image,
+			Command:  command,
+			Async:    false,
+		}
+		if s.Provider.GetType() == "docker" {
+			task.LinksTo = orchestrator
+		}
+		s.Cm.Run(&task)
+	}
+
+	s.Spec.ApplyToServers(operation, 0, 1)
+}
+
+func (s *Scope) execDiagEvalInNode(server *ServerSpec, expr, desc string) {
+	orchestrator := server.Names[0]
+	containerID, ok := s.nodeContainerID(orchestrator)
+	if !ok || containerID == "" {
+		fmt.Printf("Skipping %s for %s: container ID unavailable\n", desc, orchestrator)
+		return
+	}
+
+	diagEvalUrl := fmt.Sprintf("http://127.0.0.1:%s/diag/eval", server.RestPort)
+	command := []string{"curl", "-s", "-X", "POST",
+		"-u", server.RestUsername + ":" + server.RestPassword,
+		diagEvalUrl,
+		"-d", expr,
+	}
+	fmt.Printf("%s via exec on %s\n", desc, orchestrator)
+	if err := s.Cm.ExecContainer(containerID, command, false); err != nil {
+		fmt.Printf("Error running %s on %s: %v\n", desc, orchestrator, err)
+	}
+}
+
+func (s *Scope) nodeContainerID(name string) (string, bool) {
+	switch provider := s.Provider.(type) {
+	case *DockerProvider:
+		id, ok := provider.ActiveContainers[name]
+		return id, ok
+	case *SwarmProvider:
+		id, ok := provider.ActiveContainers[name]
+		return id, ok
+	default:
+		return "", false
+	}
 }
 
 func (s *Scope) CreateBuckets() {
@@ -1137,17 +1470,13 @@ func cliCommandValidator(version string, command []string) []string {
 	result := []string{}
 	vMajor, _ := strconv.ParseFloat(version, 64)
 
-	for i, arg := range command {
-		if i == 0 {
-			// action
-			result = append(result, command[0])
-			continue
-		}
-		// must be an arg
+	result = append(result, command[0])
+
+	for i := 1; i < len(command); i++ {
+		arg := command[i]
 		if strings.Index(arg, "-") != 0 {
 			continue
 		}
-
 		// >5.0 builds
 		if vMajor >= 5.0 {
 			// remove -u/-p from cluster_init
@@ -1188,8 +1517,9 @@ func cliCommandValidator(version string, command []string) []string {
 		// copy arg
 		result = append(result, arg)
 		// check if arg has value
-		if i+1 < len(command) {
+		if i+1 < len(command) && strings.Index(command[i+1], "-") != 0 {
 			result = append(result, command[i+1])
+			i++
 		}
 	}
 
