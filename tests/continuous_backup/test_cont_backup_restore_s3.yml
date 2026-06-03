@@ -1,7 +1,7 @@
 -
   include: tests/templates/kv.yml, tests/templates/backuprestore.yml, tests/templates/rebalance.yml, tests/templates/multinode_failure.yml, tests/templates/collections.yml
 
-- 
+-
   section_start: setup_cloud_backup
 
 # Disable autofailover
@@ -1381,13 +1381,13 @@
 ############### data loading across all collections ################
 -
   image: sequoiatools/magmaloader
-  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.Bucket}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.Bucket}} --start 25000000 --end {{.Scale 30000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
   alias: magmaloader_bucket_doc_ops
 -
-  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 1}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 1}} --start 25000000 --end {{.Scale 30000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
   alias: magmaloader_bucket1_doc_ops
 -
-  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 2}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 2}} --start 25000000 --end {{.Scale 30000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
   alias: magmaloader_bucket2_doc_ops
 
 # Wait for some time for continuous backup
@@ -1962,13 +1962,13 @@
 ############### data loading across all collections ################
 -
   image: sequoiatools/magmaloader
-  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.Bucket}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.Bucket}} --start 30000000 --end {{.Scale 35000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
   alias: magmaloader_bucket_doc_ops
 -
-  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 1}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 1}} --start 30000000 --end {{.Scale 35000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
   alias: magmaloader_bucket1_doc_ops
 -
-  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 2}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 2}} --start 30000000 --end {{.Scale 35000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
   alias: magmaloader_bucket2_doc_ops
 
 # Wait for some time for continuous backup
@@ -2757,13 +2757,13 @@
 ############### data loading across all collections ################
 -
   image: sequoiatools/magmaloader
-  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.Bucket}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.Bucket}} --start 35000000 --end {{.Scale 60000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
   alias: magmaloader_bucket_doc_ops
 -
-  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 1}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 1}} --start 35000000 --end {{.Scale 60000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
   alias: magmaloader_bucket1_doc_ops
 -
-  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 2}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 2}} --start 35000000 --end {{.Scale 60000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
   alias: magmaloader_bucket2_doc_ops
 
 
@@ -2776,8 +2776,8 @@
 
 # Take incremental backup
 -
-  template: backup_cluster
-  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /mnt/nfs_data/test_system_backup, systemtestbackup"
+  template: backup_cluster_aws
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, s3://backup-restore-system-test/backups, systemtestbackup, /data/s3"
   wait: true
 
 # Continue data loading
@@ -2814,8 +2814,8 @@
 
 # Take an incremental backup
 -
-  template: backup_cluster
-  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /mnt/nfs_data/test_system_backup, systemtestbackup"
+  template: backup_cluster_aws
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, s3://backup-restore-system-test/backups, systemtestbackup, /data/s3"
   wait: true
 
 # Continue data loading
@@ -2852,8 +2852,8 @@
 
 # Take an incremental backup
 -
-  template: backup_cluster
-  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /mnt/nfs_data/test_system_backup, systemtestbackup"
+  template: backup_cluster_aws
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, s3://backup-restore-system-test/backups, systemtestbackup, /data/s3"
   wait: true
 
 # Continue data loading
@@ -2893,8 +2893,8 @@
 
 # Take an incremental backup
 -
-  template: backup_cluster
-  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /mnt/nfs_data/test_system_backup, systemtestbackup"
+  template: backup_cluster_aws
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, s3://backup-restore-system-test/backups, systemtestbackup, /data/s3"
   wait: true
 
 # Continue data loading
@@ -2931,8 +2931,8 @@
 
 # Take an incremental backup
 -
-  template: backup_cluster
-  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /mnt/nfs_data/test_system_backup, systemtestbackup"
+  template: backup_cluster_aws
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, s3://backup-restore-system-test/backups, systemtestbackup, /data/s3"
   wait: true
 
 # Continue data loading
@@ -2969,8 +2969,8 @@
 
 # Take an incremental backup
 -
-  template: backup_cluster
-  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /mnt/nfs_data/test_system_backup, systemtestbackup"
+  template: backup_cluster_aws
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, s3://backup-restore-system-test/backups, systemtestbackup, /data/s3"
   wait: true
 
 # Continue data loading
@@ -3010,8 +3010,8 @@
 
 # Take an incremental backup
 -
-  template: backup_cluster
-  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /mnt/nfs_data/test_system_backup, systemtestbackup"
+  template: backup_cluster_aws
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, s3://backup-restore-system-test/backups, systemtestbackup, /data/s3"
   wait: true
 
 # Continue data loading
@@ -3048,8 +3048,8 @@
 
 # Take an incremental backup
 -
-  template: backup_cluster
-  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /mnt/nfs_data/test_system_backup, systemtestbackup"
+  template: backup_cluster_aws
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, s3://backup-restore-system-test/backups, systemtestbackup, /data/s3"
   wait: true
 
 # Continue data loading
@@ -3089,8 +3089,8 @@
 
 # Take an incremental backup
 -
-  template: backup_cluster
-  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /mnt/nfs_data/test_system_backup, systemtestbackup"
+  template: backup_cluster_aws
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, s3://backup-restore-system-test/backups, systemtestbackup, /data/s3"
   wait: true
 
 # Continue data loading
@@ -3108,8 +3108,8 @@
 
 # Take an incremental backup
 -
-  template: backup_cluster
-  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /mnt/nfs_data/test_system_backup, systemtestbackup"
+  template: backup_cluster_aws
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, s3://backup-restore-system-test/backups, systemtestbackup, /data/s3"
   wait: true
 
 # Continue data loading
@@ -3146,8 +3146,8 @@
 
 # Take an incremental backup
 -
-  template: backup_cluster
-  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /mnt/nfs_data/test_system_backup, systemtestbackup"
+  template: backup_cluster_aws
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, s3://backup-restore-system-test/backups, systemtestbackup, /data/s3"
   wait: true
 
 # Continue data loading
@@ -3184,8 +3184,8 @@
 
 # Take an incremental backup
 -
-  template: backup_cluster
-  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /mnt/nfs_data/test_system_backup, systemtestbackup"
+  template: backup_cluster_aws
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, s3://backup-restore-system-test/backups, systemtestbackup, /data/s3"
   wait: true
 
 # Continue data loading
@@ -3222,8 +3222,8 @@
 
 # Take an incremental backup
 -
-  template: backup_cluster
-  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /mnt/nfs_data/test_system_backup, systemtestbackup"
+  template: backup_cluster_aws
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, s3://backup-restore-system-test/backups, systemtestbackup, /data/s3"
   wait: true
 
 # Continue data loading
@@ -3318,8 +3318,8 @@
 
 # Take an incremental backup
 -
-  template: backup_cluster
-  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /mnt/nfs_data/test_system_backup, systemtestbackup"
+  template: backup_cluster_aws
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, s3://backup-restore-system-test/backups, systemtestbackup, /data/s3"
   wait: true
 
 # Continue data loading
@@ -3357,8 +3357,8 @@
 
 # Take an incremental backup
 -
-  template: backup_cluster
-  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /mnt/nfs_data/test_system_backup, systemtestbackup"
+  template: backup_cluster_aws
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, s3://backup-restore-system-test/backups, systemtestbackup, /data/s3"
   wait: true
 
 # Continue data loading
@@ -3376,8 +3376,8 @@
 
 # Chaos: Stop couchbase on one node during incremental backup
 -
-  template: backup_cluster
-  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /mnt/nfs_data/test_system_backup, systemtestbackup"
+  template: backup_cluster_aws
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, s3://backup-restore-system-test/backups, systemtestbackup, /data/s3"
   expect_error: true
 
 # Wait for backup to start
@@ -3415,8 +3415,8 @@
 
 # Resume the backup
 -
-  template: resume_backup_cluster
-  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /mnt/nfs_data/test_system_backup, systemtestbackup"
+  template: resume_backup_cluster_aws
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, s3://backup-restore-system-test/backups, systemtestbackup, /data/s3"
   wait: true
 
 # Continue data loading
@@ -3434,8 +3434,8 @@
 
 # Chaos: Kill memcached during incremental backup and resume
 -
-  template: backup_cluster
-  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /mnt/nfs_data/test_system_backup, systemtestbackup"
+  template: backup_cluster_aws
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, s3://backup-restore-system-test/backups, systemtestbackup, /data/s3"
   expect_error: true
 
 # Wait for backup to start
@@ -3460,8 +3460,8 @@
 
 # Resume the backup
 -
-  template: resume_backup_cluster
-  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /mnt/nfs_data/test_system_backup, systemtestbackup"
+  template: resume_backup_cluster_aws
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, s3://backup-restore-system-test/backups, systemtestbackup, /data/s3"
   wait: true
 
 # Continue data loading
@@ -3479,8 +3479,8 @@
 
 # Chaos: Kill memcached during incremental backup and purge
 -
-  template: backup_cluster
-  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /mnt/nfs_data/test_system_backup, systemtestbackup"
+  template: backup_cluster_aws
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, s3://backup-restore-system-test/backups, systemtestbackup, /data/s3"
   expect_error: true
 
 # Wait for backup to start
@@ -3505,8 +3505,8 @@
 
 # Purge the backup and restart
 -
-  template: purge_backup_cluster
-  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /mnt/nfs_data/test_system_backup, systemtestbackup"
+  template: purge_backup_cluster_aws
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, s3://backup-restore-system-test/backups, systemtestbackup, /data/s3"
   wait: true
 
 # Continue data loading
@@ -3547,8 +3547,8 @@
 
 # Chaos: Kill cbbackupmgr process during backup and resume
 -
-  template: backup_cluster
-  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /mnt/nfs_data/test_system_backup, systemtestbackup"
+  template: backup_cluster_aws
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, s3://backup-restore-system-test/backups, systemtestbackup, /data/s3"
   expect_error: true
 
 # Wait for backup to start
@@ -3573,8 +3573,8 @@
 
 # Resume the backup
 -
-  template: resume_backup_cluster
-  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /mnt/nfs_data/test_system_backup, systemtestbackup"
+  template: resume_backup_cluster_aws
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, s3://backup-restore-system-test/backups, systemtestbackup, /data/s3"
   wait: true
 
 # Continue data loading
@@ -4049,13 +4049,13 @@
 ############### data loading across all collections ################
 -
   image: sequoiatools/magmaloader
-  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.Bucket}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.Bucket}} --start 60000000 --end {{.Scale 65000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
   alias: magmaloader_bucket_doc_ops
 -
-  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 1}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 1}} --start 60000000 --end {{.Scale 65000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
   alias: magmaloader_bucket1_doc_ops
 -
-  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 2}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 2}} --start 60000000 --end {{.Scale 65000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
   alias: magmaloader_bucket2_doc_ops
 
 # Wait for some time for continuous backup
@@ -4630,13 +4630,13 @@
 ############### data loading across all collections ################
 -
   image: sequoiatools/magmaloader
-  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.Bucket}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.Bucket}} --start 65000000 --end {{.Scale 70000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
   alias: magmaloader_bucket_doc_ops
 -
-  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 1}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 1}} --start 65000000 --end {{.Scale 70000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
   alias: magmaloader_bucket1_doc_ops
 -
-  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 2}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 2}} --start 65000000 --end {{.Scale 70000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
   alias: magmaloader_bucket2_doc_ops
 
 # Wait for some time for continuous backup
@@ -5396,6 +5396,6 @@
 
 # Clean backup repo
 -
-  template: clean_backup_repo
-  args: "{{.Nodes | .Service `arbiter` | net 0}}, /mnt/nfs_data/test_system_backup, systemtestbackup"
+  template: clean_backup_repo_aws
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, s3://backup-restore-system-test/backups, systemtestbackup, /data/s3"
   wait: true

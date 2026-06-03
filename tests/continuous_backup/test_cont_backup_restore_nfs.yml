@@ -1307,13 +1307,13 @@
 ############### data loading across all collections ################
 -
   image: sequoiatools/magmaloader
-  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.Bucket}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.Bucket}} --start 25000000 --end {{.Scale 30000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
   alias: magmaloader_bucket_doc_ops
 -
-  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 1}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 1}} --start 25000000 --end {{.Scale 30000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
   alias: magmaloader_bucket1_doc_ops
 -
-  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 2}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 2}} --start 25000000 --end {{.Scale 30000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
   alias: magmaloader_bucket2_doc_ops
 
 # Wait for some time for continuous backup
@@ -1888,13 +1888,13 @@
 ############### data loading across all collections ################
 -
   image: sequoiatools/magmaloader
-  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.Bucket}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.Bucket}} --start 30000000 --end {{.Scale 35000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
   alias: magmaloader_bucket_doc_ops
 -
-  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 1}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 1}} --start 30000000 --end {{.Scale 35000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
   alias: magmaloader_bucket1_doc_ops
 -
-  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 2}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 2}} --start 30000000 --end {{.Scale 35000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
   alias: magmaloader_bucket2_doc_ops
 
 # Wait for some time for continuous backup
@@ -2683,13 +2683,13 @@
 ############### data loading across all collections ################
 -
   image: sequoiatools/magmaloader
-  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.Bucket}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.Bucket}} --start 35000000 --end {{.Scale 60000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
   alias: magmaloader_bucket_doc_ops
 -
-  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 1}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 1}} --start 35000000 --end {{.Scale 60000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
   alias: magmaloader_bucket1_doc_ops
 -
-  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 2}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 2}} --start 35000000 --end {{.Scale 60000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
   alias: magmaloader_bucket2_doc_ops
 
 
@@ -3975,13 +3975,13 @@
 ############### data loading across all collections ################
 -
   image: sequoiatools/magmaloader
-  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.Bucket}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.Bucket}} --start 60000000 --end {{.Scale 65000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
   alias: magmaloader_bucket_doc_ops
 -
-  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 1}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 1}} --start 60000000 --end {{.Scale 65000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
   alias: magmaloader_bucket1_doc_ops
 -
-  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 2}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 2}} --start 60000000 --end {{.Scale 65000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
   alias: magmaloader_bucket2_doc_ops
 
 # Wait for some time for continuous backup
@@ -4556,13 +4556,13 @@
 ############### data loading across all collections ################
 -
   image: sequoiatools/magmaloader
-  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.Bucket}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.Bucket}} --start 65000000 --end {{.Scale 70000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
   alias: magmaloader_bucket_doc_ops
 -
-  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 1}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 1}} --start 65000000 --end {{.Scale 70000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
   alias: magmaloader_bucket1_doc_ops
 -
-  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 2}} --start 100000 --end {{.Scale 25000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 2}} --start 65000000 --end {{.Scale 70000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
   alias: magmaloader_bucket2_doc_ops
 
 # Wait for some time for continuous backup

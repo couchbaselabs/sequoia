@@ -11,6 +11,7 @@ buckets:
       enable_continuous_backup: true
       continuous_backup_interval: 60
       continuous_backup_location: /mnt/nfs_data/test_system_continuous_backup
+      continuous_backup_retention_period: 72
   -
       name: bucket1
       ram: 30%
@@ -23,6 +24,7 @@ buckets:
       enable_continuous_backup: true
       continuous_backup_interval: 15
       continuous_backup_location: /mnt/nfs_data/test_system_continuous_backup
+      continuous_backup_retention_period: 72
   -
       name: bucket2
       ram: 35%
@@ -34,6 +36,7 @@ buckets:
       enable_continuous_backup: true
       continuous_backup_interval: 2
       continuous_backup_location: /mnt/nfs_data/test_system_continuous_backup
+      continuous_backup_retention_period: 72
 
 
 servers: # each server tag represents a cluster

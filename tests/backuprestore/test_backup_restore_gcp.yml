@@ -574,7 +574,7 @@
 -
   image: sequoiatools/cmd
   entrypoint: sleep
-  command: "600"
+  command: "900"
   wait: true
 
 # Chaos: Stop couchbase on one node during incremental backup
@@ -587,7 +587,7 @@
 -
   image: sequoiatools/cmd
   entrypoint: sleep
-  command: "60"
+  command: "30"
   wait: true
 
 # Stop couchbase on a node during backup
@@ -622,6 +622,51 @@
   command: "120"
   wait: true
 
+# Stop couchbase on a node during backup (in case first stop did not fail the backup)
+-
+  image: sequoiatools/cbutil
+  command: "/cbinit.py {{.Nodes | .Service `kv` | net 3}} root couchbase stop"
+  wait: true
+-
+  command: "/cbinit.py {{.Nodes | .Service `kv` | net 2}} root couchbase stop"
+  wait: true
+
+# Wait for backup to fail
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "60"
+  wait: true
+
+# Start couchbase on the node
+-
+  image: sequoiatools/cbutil
+  command: "/cbinit.py {{.Nodes | .Service `kv` | net 3}} root couchbase start"
+  wait: true
+-
+  command: "/cbinit.py {{.Nodes | .Service `kv` | net 2}} root couchbase start"
+  wait: true
+
+# Wait for node to come back up
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "120"
+  wait: true
+
+# Kill cbbackupmgr process on the backup node (in case backup did not fail with couchbase stop start)
+-
+  template: kill_process
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, cbbackupmgr"
+  expect_error: true
+
+# Wait for backup to fail
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "60"
+  wait: true
+
 # Resume the backup
 -
   template: resume_backup_cluster_gcp
@@ -632,7 +677,7 @@
 -
   image: sequoiatools/cmd
   entrypoint: sleep
-  command: "600"
+  command: "900"
   wait: true
 
 # Chaos: Kill memcached during incremental backup and resume
@@ -645,7 +690,7 @@
 -
   image: sequoiatools/cmd
   entrypoint: sleep
-  command: "60"
+  command: "30"
   wait: true
 
 # Kill memcached on a node during backup
@@ -662,6 +707,35 @@
   image: sequoiatools/cmd
   entrypoint: sleep
   command: "120"
+  wait: true
+
+# Kill memcached on a node during backup (in case first kill did not fail backup)
+-
+  template: kill_process
+  args: "{{.Nodes | .Service `kv` | net 3}}, memcached"
+  expect_error: true
+-
+  args: "{{.Nodes | .Service `kv` | net 2}}, memcached"
+  expect_error: true
+
+# Wait for backup to fail and memcached to come back up
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "120"
+  wait: true
+
+# Kill cbbackupmgr process on the backup node (in case backup did not fail with memcached kill)
+-
+  template: kill_process
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, cbbackupmgr"
+  expect_error: true
+
+# Wait for backup to fail
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "60"
   wait: true
 
 # Resume the backup
@@ -674,7 +748,7 @@
 -
   image: sequoiatools/cmd
   entrypoint: sleep
-  command: "600"
+  command: "900"
   wait: true
 
 # Chaos: Kill memcached during incremental backup and purge
@@ -687,7 +761,7 @@
 -
   image: sequoiatools/cmd
   entrypoint: sleep
-  command: "60"
+  command: "30"
   wait: true
 
 # Kill memcached on a node during backup
@@ -704,6 +778,35 @@
   image: sequoiatools/cmd
   entrypoint: sleep
   command: "120"
+  wait: true
+
+# Kill memcached on a node during backup (in case first kill did not fail backup)
+-
+  template: kill_process
+  args: "{{.Nodes | .Service `kv` | net 3}}, memcached"
+  expect_error: true
+-
+  args: "{{.Nodes | .Service `kv` | net 2}}, memcached"
+  expect_error: true
+
+# Wait for backup to fail and memcached to come back up
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "120"
+  wait: true
+
+# Kill cbbackupmgr process on the backup node (in case backup did not fail with memcached kill)
+-
+  template: kill_process
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, cbbackupmgr"
+  expect_error: true
+
+# Wait for backup to fail
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "60"
   wait: true
 
 # Purge the backup and restart
