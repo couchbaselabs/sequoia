@@ -25,7 +25,7 @@
 
 # Add S3 Credentials
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}}
               ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Orchestrator}}
                 'source /etc/profile.d/s3_credentials.sh; curl localhost:8091/settings/credentials/systemtest-s3-id -u {{.RestUsername}}:{{.RestPassword}} --json '\"'\"'{\"type\": \"aws\", \"fields\": {\"region\": \"us-east-1\", \"accessKeyId\": \"'\"'\"'$AWS_ACCESS_KEY_ID'\"'\"'\", \"secretAccessKey\": \"'\"'\"'$AWS_SECRET_ACCESS_KEY'\"'\"'\"}}'\"'\"''"
@@ -33,7 +33,7 @@
 
 # Grant backup service access to S3 credentials
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}}
               ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Orchestrator}}
                 'curl -X PUT -u {{.RestUsername}}:{{.RestPassword}} http://localhost:8091/settings/rbac/services/backup/roles -d \"roles=credential_consumer[systemtest-s3-id]\"'"
@@ -41,19 +41,19 @@
 
 # Update bucket configurations to enable continuous backup
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}}
               ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Orchestrator}}
                 'curl -X POST localhost:8091/pools/default/buckets/{{.Bucket}} -u {{.RestUsername}}:{{.RestPassword}} -d name={{.Bucket}} -d continuousBackupEnabled=true -d continuous_backup_cloud_storage_cred_id=systemtest-s3-id -d continuousBackupLocation=s3://cont-bkp-system-test/systemtest/ -d continuousBackupInterval=60'"
   wait: true
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}}
               ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Orchestrator}}
                 'curl -X POST localhost:8091/pools/default/buckets/{{.NthBucket 1}} -u {{.RestUsername}}:{{.RestPassword}} -d name={{.NthBucket 1}} -d continuousBackupEnabled=true -d continuous_backup_cloud_storage_cred_id=systemtest-s3-id -d continuousBackupLocation=s3://cont-bkp-system-test/systemtest/ -d continuousBackupInterval=15'"
   wait: true
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}}
               ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Orchestrator}}
                 'curl -X POST localhost:8091/pools/default/buckets/{{.NthBucket 2}} -u {{.RestUsername}}:{{.RestPassword}} -d name={{.NthBucket 2}} -d continuousBackupEnabled=true -d continuous_backup_cloud_storage_cred_id=systemtest-s3-id -d continuousBackupLocation=s3://cont-bkp-system-test/systemtest/ -d continuousBackupInterval=2'"
@@ -163,7 +163,7 @@
 
 # Configure /tmp/timestamps.txt to record timestamps of operations
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'rm -f /tmp/timestamps.txt && touch /tmp/timestamps.txt'"
   wait: true
 
@@ -215,7 +215,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -227,7 +227,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -240,7 +240,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -252,7 +252,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -265,7 +265,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -280,7 +280,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -293,7 +293,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -305,7 +305,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -318,7 +318,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -330,7 +330,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -343,7 +343,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -358,7 +358,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -371,7 +371,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -383,7 +383,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -396,7 +396,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -411,7 +411,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -424,7 +424,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -441,7 +441,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -454,7 +454,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -466,7 +466,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -479,7 +479,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -517,7 +517,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -536,7 +536,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -549,7 +549,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -561,7 +561,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -574,7 +574,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -587,7 +587,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -600,7 +600,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -613,7 +613,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -639,7 +639,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -652,7 +652,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -671,7 +671,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -684,7 +684,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -703,7 +703,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -716,7 +716,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -752,7 +752,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -765,7 +765,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -801,7 +801,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -814,7 +814,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -851,7 +851,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -864,7 +864,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -905,7 +905,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -918,7 +918,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -1399,7 +1399,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -1411,7 +1411,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -1424,7 +1424,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -1436,7 +1436,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -1449,7 +1449,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -1464,7 +1464,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -1477,7 +1477,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -1489,7 +1489,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -1502,7 +1502,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -1980,7 +1980,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -1992,7 +1992,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -2005,7 +2005,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -2017,7 +2017,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -2030,7 +2030,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -2045,7 +2045,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -2058,7 +2058,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -2070,7 +2070,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -2083,7 +2083,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -2789,7 +2789,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -2808,7 +2808,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -2827,7 +2827,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -2846,7 +2846,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -2865,7 +2865,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -2887,7 +2887,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -2906,7 +2906,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -2925,7 +2925,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -2944,7 +2944,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -2963,7 +2963,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -2982,7 +2982,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -3004,7 +3004,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -3023,7 +3023,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -3042,7 +3042,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -3061,7 +3061,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -3083,7 +3083,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -3102,7 +3102,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -3121,7 +3121,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -3140,7 +3140,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -3159,7 +3159,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -3178,7 +3178,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -3197,7 +3197,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -3216,7 +3216,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -3235,7 +3235,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -3293,7 +3293,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -3312,7 +3312,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -3331,7 +3331,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -3351,7 +3351,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -3370,7 +3370,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -3428,7 +3428,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -3473,7 +3473,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -3518,7 +3518,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -3541,7 +3541,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -3586,7 +3586,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -4067,7 +4067,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -4079,7 +4079,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -4092,7 +4092,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -4104,7 +4104,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -4117,7 +4117,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -4132,7 +4132,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -4145,7 +4145,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -4157,7 +4157,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -4170,7 +4170,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -4648,7 +4648,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -4660,7 +4660,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -4673,7 +4673,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -4685,7 +4685,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -4698,7 +4698,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -4713,7 +4713,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -4726,7 +4726,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -4738,7 +4738,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 
@@ -4751,7 +4751,7 @@
 
 # Record timestamp
 -
-  image: vijayviji/sshpass
+  image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `arbiter` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /tmp/timestamps.txt'"
   wait: true
 

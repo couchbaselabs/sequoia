@@ -3,7 +3,7 @@
   name: configure_backup_repo
   actions:
     -
-      image: "vijayviji/sshpass"
+      image: "sequoiatools/cmd"
       command: "sshpass -p {{.SSHPassword}}
                   ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0 mkdir -p $1 ;chmod -R 777 $1; /opt/couchbase/bin/cbbackupmgr config -a $1 -r $2"
 
@@ -13,7 +13,7 @@
   name: backup_cluster
   actions:
     -
-      image: "vijayviji/sshpass"
+      image: "sequoiatools/cmd"
       command: "sshpass -p {{.SSHPassword}}
                   ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0 /opt/couchbase/bin/cbbackupmgr backup -c $1 -u {{.RestUsername}} -p {{.RestPassword}} -a $2 -r $3 -t 10"
 -
@@ -22,7 +22,7 @@
   name: resume_backup_cluster
   actions:
     -
-      image: "vijayviji/sshpass"
+      image: "sequoiatools/cmd"
       command: "sshpass -p {{.SSHPassword}}
                   ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0 /opt/couchbase/bin/cbbackupmgr backup -c $1 -u {{.RestUsername}} -p {{.RestPassword}} -a $2 -r $3 -t 10 --resume"
 -
@@ -31,7 +31,7 @@
   name: purge_backup_cluster
   actions:
     -
-      image: "vijayviji/sshpass"
+      image: "sequoiatools/cmd"
       command: "sshpass -p {{.SSHPassword}}
                   ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0 /opt/couchbase/bin/cbbackupmgr backup -c $1 -u {{.RestUsername}} -p {{.RestPassword}} -a $2 -r $3 -t 10 --purge"
 -
@@ -40,7 +40,7 @@
   name: restore_backup
   actions:
     -
-      image: "vijayviji/sshpass"
+      image: "sequoiatools/cmd"
       command: "sshpass -p {{.SSHPassword}}
                     ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0 /opt/couchbase/bin/cbbackupmgr restore -c $1 -u  {{.RestUsername}} -p  {{.RestPassword}} -a $2 -r $3 -t 10"
 -
@@ -49,7 +49,7 @@
   name: resume_restore_backup
   actions:
     -
-      image: "vijayviji/sshpass"
+      image: "sequoiatools/cmd"
       command: "sshpass -p {{.SSHPassword}}
                     ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0 /opt/couchbase/bin/cbbackupmgr restore -c $1 -u  {{.RestUsername}} -p  {{.RestPassword}} -a $2 -r $3 -t 10 --resume"
 -
@@ -58,7 +58,7 @@
   name: purge_restore_backup
   actions:
     -
-      image: "vijayviji/sshpass"
+      image: "sequoiatools/cmd"
       command: "sshpass -p {{.SSHPassword}}
                     ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0 /opt/couchbase/bin/cbbackupmgr restore -c $1 -u  {{.RestUsername}} -p  {{.RestPassword}} -a $2 -r $3 -t 10 --purge"
 -
@@ -66,7 +66,7 @@
   name: clean_backup_repo
   actions:
     -
-      image: "vijayviji/sshpass"
+      image: "sequoiatools/cmd"
       command: "sshpass -p {{.SSHPassword}}
                   ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0 /opt/couchbase/bin/cbbackupmgr remove -a $1 -r $2"
 
@@ -89,7 +89,7 @@
   name: configure_backup_repo_aws
   actions:
     -
-      image: "vijayviji/sshpass"
+      image: "sequoiatools/cmd"
       command: "sshpass -p {{.SSHPassword}}
                   ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0
                     source /etc/profile.d/s3_credentials.sh;
@@ -110,7 +110,7 @@
   name: backup_cluster_aws
   actions:
     -
-      image: "vijayviji/sshpass"
+      image: "sequoiatools/cmd"
       command: "sshpass -p {{.SSHPassword}}
                   ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0
                     source /etc/profile.d/s3_credentials.sh;
@@ -127,7 +127,7 @@
   name: resume_backup_cluster_aws
   actions:
     -
-      image: "vijayviji/sshpass"
+      image: "sequoiatools/cmd"
       command: "sshpass -p {{.SSHPassword}}
                   ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0
                     source /etc/profile.d/s3_credentials.sh;
@@ -144,7 +144,7 @@
   name: purge_backup_cluster_aws
   actions:
     -
-      image: "vijayviji/sshpass"
+      image: "sequoiatools/cmd"
       command: "sshpass -p {{.SSHPassword}}
                   ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0
                     source /etc/profile.d/s3_credentials.sh;
@@ -166,7 +166,7 @@
   name: restore_backup_aws
   actions:
     -
-      image: "vijayviji/sshpass"
+      image: "sequoiatools/cmd"
       command: "sshpass -p {{.SSHPassword}}
                   ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0
                     source /etc/profile.d/s3_credentials.sh;
@@ -183,7 +183,7 @@
   name: resume_restore_backup_aws
   actions:
     -
-      image: "vijayviji/sshpass"
+      image: "sequoiatools/cmd"
       command: "sshpass -p {{.SSHPassword}}
                   ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0
                     source /etc/profile.d/s3_credentials.sh;
@@ -200,7 +200,7 @@
   name: purge_restore_backup_aws
   actions:
     -
-      image: "vijayviji/sshpass"
+      image: "sequoiatools/cmd"
       command: "sshpass -p {{.SSHPassword}}
                   ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0
                     source /etc/profile.d/s3_credentials.sh;
@@ -221,7 +221,7 @@
   name: clean_backup_repo_aws
   actions:
     -
-      image: "vijayviji/sshpass"
+      image: "sequoiatools/cmd"
       command: "sshpass -p {{.SSHPassword}}
                   ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0
                     source /etc/profile.d/s3_credentials.sh;
@@ -252,7 +252,7 @@
   name: configure_backup_repo_azure
   actions:
     -
-      image: "vijayviji/sshpass"
+      image: "sequoiatools/cmd"
       command: "sshpass -p {{.SSHPassword}}
                   ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0
                     source /etc/profile.d/azure_credentials.sh;
@@ -274,7 +274,7 @@
   name: backup_cluster_azure
   actions:
     -
-      image: "vijayviji/sshpass"
+      image: "sequoiatools/cmd"
       command: "sshpass -p {{.SSHPassword}}
                   ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0
                     source /etc/profile.d/azure_credentials.sh;
@@ -292,7 +292,7 @@
   name: resume_backup_cluster_azure
   actions:
     -
-      image: "vijayviji/sshpass"
+      image: "sequoiatools/cmd"
       command: "sshpass -p {{.SSHPassword}}
                   ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0
                     source /etc/profile.d/azure_credentials.sh;
@@ -310,7 +310,7 @@
   name: purge_backup_cluster_azure
   actions:
     -
-      image: "vijayviji/sshpass"
+      image: "sequoiatools/cmd"
       command: "sshpass -p {{.SSHPassword}}
                   ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0
                     source /etc/profile.d/azure_credentials.sh;
@@ -333,7 +333,7 @@
   name: restore_backup_azure
   actions:
     -
-      image: "vijayviji/sshpass"
+      image: "sequoiatools/cmd"
       command: "sshpass -p {{.SSHPassword}}
                   ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0
                     source /etc/profile.d/azure_credentials.sh;
@@ -351,7 +351,7 @@
   name: resume_restore_backup_azure
   actions:
     -
-      image: "vijayviji/sshpass"
+      image: "sequoiatools/cmd"
       command: "sshpass -p {{.SSHPassword}}
                   ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0
                     source /etc/profile.d/azure_credentials.sh;
@@ -369,7 +369,7 @@
   name: purge_restore_backup_azure
   actions:
     -
-      image: "vijayviji/sshpass"
+      image: "sequoiatools/cmd"
       command: "sshpass -p {{.SSHPassword}}
                   ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0
                     source /etc/profile.d/azure_credentials.sh;
@@ -391,7 +391,7 @@
   name: clean_backup_repo_azure
   actions:
     -
-      image: "vijayviji/sshpass"
+      image: "sequoiatools/cmd"
       command: "sshpass -p {{.SSHPassword}}
                   ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0
                     source /etc/profile.d/azure_credentials.sh;
