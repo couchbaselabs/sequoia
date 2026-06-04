@@ -30,6 +30,12 @@ type BucketSpec struct {
 	EncryptionKeyID                 *uint8 `default:"0"`
 	DekRotateEvery                  string `yaml:"dekRotateEvery"`
 	DekLifetime                     string `yaml:"dekLifetime"`
+	// Sub-day-precision overrides. couchbase-cli --dek-rotate-every / --dek-lifetime
+	// only accept integer days; the bucket REST endpoint accepts integer seconds
+	// for the same settings. When these are set, OverrideBucketDekTimingSeconds()
+	// runs after CreateBuckets() and POSTs them to /pools/default/buckets/<name>.
+	DekRotateEverySeconds           string `yaml:"dekRotateEverySeconds"`
+	DekLifetimeSeconds              string `yaml:"dekLifetimeSeconds"`
 	EnableEncryptionAtRest          bool   `yaml:"enableEncryptionAtRest"`
 	EnableClientCertificateHandling bool   `yaml:"enable_client_certificate_handling"`
 	HistoryRetentionBytes           string

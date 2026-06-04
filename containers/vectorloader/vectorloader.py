@@ -429,12 +429,27 @@ class VectorLoader:
         
         connstr = self.args.connstr
         if self.args.tls:
-            # Enable TLS
-            options.security = {'trust_store_path': None, 'certpath': None}
-            if not connstr.startswith('couchbases://'):
-                connstr = connstr.replace('couchbase://', 'couchbases://')
-                if not connstr.startswith('couchbases://'):
-                    connstr = f'couchbases://{connstr}'
+            # Normalize to a couchbases:// connection string and disable cert
+            # verification for self-signed / sandbox / Capella clusters. This
+            # matches the pattern used by containers/docindexer/docindexer.py.
+            host = connstr
+            for prefix in ('couchbases://', 'couchbase://'):
+                if host.startswith(prefix):
+                    host = host[len(prefix):]
+                    break
+            base, _sep, params = host.partition('?')
+            if 'tls_verify' in params:
+                query = params
+            elif params:
+                query = f'{params}&tls_verify=none'
+            else:
+                query = 'tls_verify=none'
+            connstr = f'couchbases://{base}?{query}'
+            # WAN profile relaxes timeouts for remote/Capella bootstrap.
+            try:
+                options.apply_profile('wan_development')
+            except Exception as e:
+                log.warning(f"Could not apply wan_development profile: {e}")
             log.info(f"TLS connection string: {connstr}")
         
         try:
@@ -482,10 +497,14 @@ class VectorLoader:
             if self.args.num_docs:
                 process_count = min(process_count, self.args.num_docs)
             
-            log.info(f"Generating {process_count} keys with prefix '{self.args.key_prefix}'")
+            # Keys are 0-indexed to match the loaders (e.g. magmaloader with
+            # create_s 0 produces doc00000000000000000, doc00000000000000001 ...).
+            # Honor start_offset so generated key index == embedding row index.
+            start = self.args.start_offset or 0
+            log.info(f"Generating {process_count} keys with prefix '{self.args.key_prefix}' starting at index {start}")
             keys = []
-            for i in range(1, process_count + 1):
-                # Format: doc00000000000000001 (17 digit number with leading zeros)
+            for i in range(start, start + process_count):
+                # Format: doc00000000000000000 (17 digit number with leading zeros)
                 key = f"{self.args.key_prefix}{str(i).zfill(17)}"
                 keys.append(key)
             log.info(f"Generated {len(keys)} keys")

@@ -169,7 +169,11 @@ func (r *RestClient) ClusterIsRebalancing(host string) bool {
 }
 
 func (r *RestClient) NodeHasService(service, host string) bool {
-	n := r.GetHostNodeSelf(host)
+	// always fetch live: this decides node-by-service template selectors
+	// (.ActiveIndexNode, .ActiveDataNode, .NthDataNode, etc.) and a cached
+	// answer can outlive a server-add/rebalance that changed the node's
+	// real services, causing those selectors to return the wrong node.
+	n := r.getHostNodeSelf(host)
 	for _, s := range n.Services {
 		if s == service {
 			return true
@@ -574,6 +578,32 @@ func (r *RestClient) createCollections(bucketName, scopeName, collectionName str
 	//fmt.Printf("URL: %s", reqUrl)
 	var s CollectionId
 	data := "name=" + collectionName
+	r.JsonPostRequest(auth, reqUrl, data, &s)
+}
+
+// setBucketDekTimingSeconds POSTs DEK rotation interval and/or lifetime in
+// integer seconds to /pools/default/buckets/<name>. This is the sub-day-precision
+// path that couchbase-cli --dek-rotate-every / --dek-lifetime cannot express
+// (those flags accept integer days only). Pass "" for any field that should be
+// left untouched; if both are empty this is a no-op.
+func (r *RestClient) setBucketDekTimingSeconds(bucketName, rotateEverySeconds, lifetimeSeconds string) {
+	host := r.GetOrchestrator()
+	url := r.Provider.GetRestUrl(host)
+	auth := r.GetAuth(host)
+	reqUrl := fmt.Sprintf("%s/pools/default/buckets/%s", url, bucketName)
+
+	var parts []string
+	if rotateEverySeconds != "" {
+		parts = append(parts, "encryptionAtRestDekRotationInterval="+rotateEverySeconds)
+	}
+	if lifetimeSeconds != "" {
+		parts = append(parts, "encryptionAtRestDekLifetime="+lifetimeSeconds)
+	}
+	if len(parts) == 0 {
+		return
+	}
+	data := strings.Join(parts, "&")
+	var s []string
 	r.JsonPostRequest(auth, reqUrl, data, &s)
 }
 

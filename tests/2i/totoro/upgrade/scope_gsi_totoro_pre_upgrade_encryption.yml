@@ -20,12 +20,19 @@ users:
     password: password
     roles: admin
     auth_domain: local
+  - name: upgrade
+    password: password
+    roles: admin
+    auth_domain: local
 
 buckets:
   - name: bucket1
     ram: 9%
     eviction: fullEviction
     storage: magma
+    enableEncryptionAtRest: true
+    dekLifetime: 30
+    dekRotateEvery: 7
   - name: bucket2
     ram: 10%
     eviction: fullEviction
@@ -36,29 +43,47 @@ buckets:
     ram: 4%
     eviction: fullEviction
     storage: magma
+    enableEncryptionAtRest: true
+    dekLifetime: 30
+    dekRotateEvery: 7
   - name: bucket5
-    ram: 5%
+    ram: 4%
     eviction: fullEviction
   - name: bucket6
     ram: 24%
     eviction: fullEviction
     storage: magma
+    enableEncryptionAtRest: true
+    dekLifetime: 30
+    dekRotateEvery: 7
   - name: bucket7
     ram: 5%
     eviction: fullEviction
+    enableEncryptionAtRest: true
+    dekLifetime: 30
+    dekRotateEvery: 7
   - name: bucket8
     ram: 5%
     eviction: fullEviction
+    enableEncryptionAtRest: true
+    dekLifetime: 30
+    dekRotateEvery: 7
   - name: bucket9
     ram: 24%
     eviction: fullEviction
     storage: magma
+    enableEncryptionAtRest: true
+    dekLifetime: 30
+    dekRotateEvery: 7
   - name: bucket10
-    ram: 1%
+    ram: 3%
     eviction: fullEviction
   - name: bucket11
-    ram: 5%
+    ram: 1%
     eviction: fullEviction
+    enableEncryptionAtRest: true
+    dekLifetime: 30
+    dekRotateEvery: 7
   - name: bucket12
     ram: 4%
     eviction: fullEviction
@@ -71,6 +96,7 @@ servers: # each server tag represents a cluster
     ram: 80%
     index_ram: 80%
     index_storage: default
+    enable_diag_eval_on_non_local_hosts: true
     services:
       index: 5
       index_start: 7
@@ -81,5 +107,5 @@ servers: # each server tag represents a cluster
     data_path: "/data"
     index_path: "/data"
     init_nodes: 11
-    buckets: bucket1, bucket2, bucket3, bucket4, bucket5, bucket6, bucket7, bucket8, bucket9, bucket10, bucket11, bucket12
+    buckets: bucket1, bucket2, bucket3, bucket4, bucket5, bucket6, bucket7, bucket8, bucket9, bucket10, bucket11, bucket12, upgrade
     users: bucket1, bucket2, bucket3, bucket4, bucket5

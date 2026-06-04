@@ -159,6 +159,7 @@ func (s *Scope) SetupServer() {
 		/* this setting is no longer needed. Uncomment if it causes problems*/
 		//s.ApplyInternalSettings()
 		s.CreateBuckets()
+		s.OverrideBucketDekTimingSeconds()
 	}
 	s.getClusteInfo()
 	s.InitRestContainer()
@@ -1248,22 +1249,116 @@ func (s *Scope) BypassEncryptionRestrictions() {
 
 func (s *Scope) execDiagEvalInNode(server *ServerSpec, expr, desc string) {
 	orchestrator := server.Names[0]
-	containerID, ok := s.nodeContainerID(orchestrator)
-	if !ok || containerID == "" {
-		fmt.Printf("Skipping %s for %s: container ID unavailable\n", desc, orchestrator)
+	diagEvalUrl := fmt.Sprintf("http://127.0.0.1:%s/diag/eval", server.RestPort)
+
+	if containerID, ok := s.nodeContainerID(orchestrator); ok && containerID != "" {
+		command := []string{"curl", "-s", "-X", "POST",
+			"-u", server.RestUsername + ":" + server.RestPassword,
+			diagEvalUrl,
+			"-d", expr,
+		}
+		fmt.Printf("%s via exec on %s\n", desc, orchestrator)
+		if err := s.Cm.ExecContainer(containerID, command, false); err != nil {
+			fmt.Printf("Error running %s on %s: %v\n", desc, orchestrator, err)
+		}
 		return
 	}
 
-	diagEvalUrl := fmt.Sprintf("http://127.0.0.1:%s/diag/eval", server.RestPort)
-	command := []string{"curl", "-s", "-X", "POST",
-		"-u", server.RestUsername + ":" + server.RestPassword,
-		diagEvalUrl,
-		"-d", expr,
+	// FileProvider (and any other provider without a managed container): the
+	// /diag/eval endpoint is localhost-only by Couchbase policy ("API is
+	// accessible from localhost only"), so a remote curl is always rejected.
+	// SSH into the orchestrator and run curl against 127.0.0.1 from the node
+	// itself. The downstream BypassEncryptionRestrictions call can run via
+	// appropriate/curl remotely because allow_nonlocal_eval is set after this.
+	providerType := s.Provider.GetType()
+	fmt.Printf("[diag/eval] %s: no managed container for orchestrator %q (provider=%s); falling back to SSH\n",
+		desc, orchestrator, providerType)
+
+	ip := s.Provider.GetHostAddress(orchestrator)
+	ip = strings.Split(ip, ":")[0]
+	if ip == "" {
+		fmt.Printf("[diag/eval] Skipping %s for %s: no host address resolved (provider=%s)\n",
+			desc, orchestrator, providerType)
+		return
 	}
-	fmt.Printf("%s via exec on %s\n", desc, orchestrator)
-	if err := s.Cm.ExecContainer(containerID, command, false); err != nil {
-		fmt.Printf("Error running %s on %s: %v\n", desc, orchestrator, err)
+
+	// SetYamlSpecDefaults is never invoked from SpecFromYaml/ConfigureSpec, so
+	// YAML-loaded scopes leave SSHUsername/SSHPassword empty. The INI path
+	// defaults these to root/couchbase (spec.go:659-668); mirror that here so
+	// sshpass doesn't get an empty -p arg (which makes it consume the next
+	// flag as the password and fail with "invalid option").
+	//
+	// Precedence: server spec (YAML) > env vars (matches sequoia-provision
+	// Jenkins flow: SSH_USERNAME / SSH_PASSWORD with ANSIBLE_SSH_PASSWORD as
+	// an alias) > hardcoded root/couchbase fallback.
+	sshUser := server.SSHUsername
+	sshUserSource := "server spec"
+	if sshUser == "" {
+		if v := os.Getenv("SSH_USERNAME"); v != "" {
+			sshUser = v
+			sshUserSource = "SSH_USERNAME env"
+		} else {
+			sshUser = "root"
+			sshUserSource = "hardcoded default"
+		}
+		fmt.Printf("[diag/eval] %s: ssh_username empty on server spec, using %q from %s\n",
+			desc, sshUser, sshUserSource)
 	}
+	sshPwd := server.SSHPassword
+	sshPwdSource := "server spec"
+	if sshPwd == "" {
+		if v := os.Getenv("SSH_PASSWORD"); v != "" {
+			sshPwd = v
+			sshPwdSource = "SSH_PASSWORD env"
+		} else if v := os.Getenv("ANSIBLE_SSH_PASSWORD"); v != "" {
+			sshPwd = v
+			sshPwdSource = "ANSIBLE_SSH_PASSWORD env"
+		} else {
+			sshPwd = "couchbase"
+			sshPwdSource = "hardcoded default"
+		}
+		fmt.Printf("[diag/eval] %s: ssh_password empty on server spec, using value from %s\n",
+			desc, sshPwdSource)
+	}
+
+	curlCmd := fmt.Sprintf(
+		`curl -s -X POST -u %s:%s %s -d "%s"`,
+		server.RestUsername, server.RestPassword, diagEvalUrl, expr,
+	)
+	sshCmd := fmt.Sprintf(
+		`sshpass -p %s ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s '%s'`,
+		sshPwd, sshUser, ip, curlCmd,
+	)
+
+	// Redacted version for logs — never print SSHPassword or RestPassword.
+	redactedCurl := fmt.Sprintf(
+		`curl -s -X POST -u %s:*** %s -d "%s"`,
+		server.RestUsername, diagEvalUrl, expr,
+	)
+	redactedSSH := fmt.Sprintf(
+		`sshpass -p *** ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s '%s'`,
+		sshUser, ip, redactedCurl,
+	)
+	fmt.Printf("[diag/eval] %s via ssh: orchestrator=%s ip=%s ssh_user=%s rest_port=%s\n",
+		desc, orchestrator, ip, sshUser, server.RestPort)
+	fmt.Printf("[diag/eval] %s expr: %s\n", desc, expr)
+	fmt.Printf("[diag/eval] %s cmd: %s\n", desc, redactedSSH)
+
+	task := ContainerTask{
+		Describe: desc,
+		Image:    "sequoiatools/cmd",
+		Command:  []string{"sh", "-c", sshCmd},
+		Async:    false,
+	}
+	containerID, errCh := s.Cm.Run(&task)
+	fmt.Printf("[diag/eval] %s ssh task dispatched: container=%s\n", desc, containerID)
+	if errCh != nil {
+		if err := <-errCh; err != nil {
+			fmt.Printf("[diag/eval] Error running %s on %s via ssh: %v\n", desc, orchestrator, err)
+			return
+		}
+	}
+	fmt.Printf("[diag/eval] %s completed on %s via ssh\n", desc, orchestrator)
 }
 
 func (s *Scope) nodeContainerID(name string) (string, bool) {
@@ -1392,6 +1487,47 @@ func (s *Scope) CreateBuckets() {
 
 	// apply only to orchestrator
 	s.Spec.ApplyToServers(operation, 0, 1)
+}
+
+// OverrideBucketDekTimingSeconds applies sub-day-precision DEK timing to any
+// bucket whose spec sets DekRotateEverySeconds or DekLifetimeSeconds. The
+// CLI path in CreateBuckets() can only set --dek-rotate-every / --dek-lifetime
+// in integer days; this REST call (POST /pools/default/buckets/<name>) accepts
+// integer seconds for the same settings, so we run it right after the bucket
+// is created to dial the values down to sub-day precision. Buckets that don't
+// set either field are skipped — full backwards compatibility.
+//
+// The function exits early if no bucket in the spec has encryption-at-rest
+// enabled. This protects older scopes that predate the encryption-at-rest
+// feature: they will never reach the REST call even if the function is
+// invoked unconditionally from SetupServer.
+func (s *Scope) OverrideBucketDekTimingSeconds() {
+	encryptionInUse := false
+	for _, bucket := range s.Spec.Buckets {
+		if bucket.EnableEncryptionAtRest {
+			encryptionInUse = true
+			break
+		}
+	}
+	if !encryptionInUse {
+		fmt.Printf("[dek-seconds] skipped: no bucket has enableEncryptionAtRest=true\n")
+		return
+	}
+
+	for _, bucket := range s.Spec.Buckets {
+		if !bucket.EnableEncryptionAtRest {
+			continue
+		}
+		if bucket.DekRotateEverySeconds == "" && bucket.DekLifetimeSeconds == "" {
+			continue
+		}
+		for _, bucketName := range bucket.Names {
+			fmt.Printf("[dek-seconds] %s: rotateEvery=%s lifetime=%s (seconds)\n",
+				bucketName, bucket.DekRotateEverySeconds, bucket.DekLifetimeSeconds)
+			s.Rest.setBucketDekTimingSeconds(bucketName,
+				bucket.DekRotateEverySeconds, bucket.DekLifetimeSeconds)
+		}
+	}
 }
 
 func (s *Scope) CreateScope() {

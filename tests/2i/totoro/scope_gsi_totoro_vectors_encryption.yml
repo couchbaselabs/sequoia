@@ -22,82 +22,101 @@ users:
     auth_domain: local
 
 buckets:
+  # dekRotateEverySeconds / dekLifetimeSeconds POST directly to
+  # /pools/default/buckets/<name> via OverrideBucketDekTimingSeconds(), which
+  # runs after CreateBuckets(). couchbase-cli only takes integer days, so we
+  # express sub-day timing in integer seconds here instead.
+  # rotateEvery varies per bucket across 1/2/4/5/8h; lifetime = rotateEvery * N
+  # (N in [6, 24]). Several short total lifetimes so DEK expiration is
+  # observable inside a normal test run.
   - name: bucket1
     ram: 9%
     eviction: fullEviction
     storage: magma
     enableEncryptionAtRest: true
-    dekLifetime: 30
-    dekRotateEvery: 7
+    # rotate every 1h, lifetime 6h (rotate x6) — fastest expiration
+    dekRotateEverySeconds: 3600
+    dekLifetimeSeconds: 21600
   - name: bucket2
     ram: 10%
     eviction: fullEviction
     enableEncryptionAtRest: true
-    dekLifetime: 30
-    dekRotateEvery: 7
+    # rotate every 1h, lifetime 10h (rotate x10)
+    dekRotateEverySeconds: 3600
+    dekLifetimeSeconds: 36000
   - name: bucket3
     ram: 3%
     eviction: fullEviction
     enableEncryptionAtRest: true
-    dekLifetime: 30
-    dekRotateEvery: 7
+    # rotate every 2h, lifetime 12h (rotate x6)
+    dekRotateEverySeconds: 7200
+    dekLifetimeSeconds: 43200
   - name: bucket4
     ram: 4%
     eviction: fullEviction
     storage: magma
     enableEncryptionAtRest: true
-    dekLifetime: 30
-    dekRotateEvery: 7
+    # rotate every 2h, lifetime 18h (rotate x9)
+    dekRotateEverySeconds: 7200
+    dekLifetimeSeconds: 64800
   - name: bucket5
     ram: 4%
     eviction: fullEviction
     enableEncryptionAtRest: true
-    dekLifetime: 30
-    dekRotateEvery: 7
+    # rotate every 4h, lifetime 24h (rotate x6)
+    dekRotateEverySeconds: 14400
+    dekLifetimeSeconds: 86400
   - name: bucket6
     ram: 24%
     eviction: fullEviction
     storage: magma
     enableEncryptionAtRest: true
-    dekLifetime: 30
-    dekRotateEvery: 7
+    # rotate every 4h, lifetime 48h (rotate x12)
+    dekRotateEverySeconds: 14400
+    dekLifetimeSeconds: 172800
   - name: bucket7
     ram: 5%
     eviction: fullEviction
     enableEncryptionAtRest: true
-    dekLifetime: 30
-    dekRotateEvery: 7
+    # rotate every 5h, lifetime 30h (rotate x6)
+    dekRotateEverySeconds: 18000
+    dekLifetimeSeconds: 108000
   - name: bucket8
     ram: 5%
     eviction: fullEviction
     enableEncryptionAtRest: true
-    dekLifetime: 30
-    dekRotateEvery: 7
+    # rotate every 5h, lifetime 40h (rotate x8)
+    dekRotateEverySeconds: 18000
+    dekLifetimeSeconds: 144000
   - name: bucket9
     ram: 24%
     eviction: fullEviction
     storage: magma
     enableEncryptionAtRest: true
-    dekLifetime: 30
-    dekRotateEvery: 7
+    # rotate every 8h, lifetime 48h (rotate x6)
+    dekRotateEverySeconds: 28800
+    dekLifetimeSeconds: 172800
   - name: bucket10
     ram: 3%
     eviction: fullEviction
     enableEncryptionAtRest: true
-    dekLifetime: 30
-    dekRotateEvery: 7
+    # rotate every 8h, lifetime 72h (rotate x9)
+    dekRotateEverySeconds: 28800
+    dekLifetimeSeconds: 259200
   - name: bucket11
     ram: 1%
     eviction: fullEviction
     enableEncryptionAtRest: true
-    dekLifetime: 30
-    dekRotateEvery: 7
+    # rotate every 1h, lifetime 24h (rotate x24)
+    dekRotateEverySeconds: 3600
+    dekLifetimeSeconds: 86400
   - name: bucket12
     ram: 4%
     eviction: fullEviction
     enableEncryptionAtRest: true
-    dekLifetime: 30
-    dekRotateEvery: 7
+    # rotate every 8h, lifetime 96h (rotate x12) — longest
+    dekRotateEverySeconds: 28800
+    dekLifetimeSeconds: 345600
 
 
 

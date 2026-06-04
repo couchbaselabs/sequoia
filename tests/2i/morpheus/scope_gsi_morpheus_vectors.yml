@@ -26,42 +26,75 @@ buckets:
     ram: 9%
     eviction: fullEviction
     storage: magma
+    enableEncryptionAtRest: true
+    dekLifetime: 30
+    dekRotateEvery: 7
   - name: bucket2
     ram: 10%
     eviction: fullEviction
+    enableEncryptionAtRest: true
+    dekLifetime: 30
+    dekRotateEvery: 7
   - name: bucket3
     ram: 3%
     eviction: fullEviction
+    enableEncryptionAtRest: true
+    dekLifetime: 30
+    dekRotateEvery: 7
   - name: bucket4
     ram: 4%
     eviction: fullEviction
     storage: magma
+    enableEncryptionAtRest: true
+    dekLifetime: 30
+    dekRotateEvery: 7
   - name: bucket5
     ram: 4%
     eviction: fullEviction
+    enableEncryptionAtRest: true
+    dekLifetime: 30
+    dekRotateEvery: 7
   - name: bucket6
     ram: 24%
     eviction: fullEviction
     storage: magma
+    enableEncryptionAtRest: true
+    dekLifetime: 30
+    dekRotateEvery: 7
   - name: bucket7
     ram: 5%
     eviction: fullEviction
+    enableEncryptionAtRest: true
+    dekLifetime: 30
+    dekRotateEvery: 7
   - name: bucket8
     ram: 5%
     eviction: fullEviction
+    enableEncryptionAtRest: true
+    dekLifetime: 30
+    dekRotateEvery: 7
 
   - name: bucket9
     ram: 24%
     eviction: fullEviction
     storage: magma
+    enableEncryptionAtRest: true
+    dekLifetime: 30
+    dekRotateEvery: 7
 
   - name: bucket10
     ram: 3%
     eviction: fullEviction
-  
+    enableEncryptionAtRest: true
+    dekLifetime: 30
+    dekRotateEvery: 7
+
   - name: bucket11
     ram: 1%
     eviction: fullEviction
+    enableEncryptionAtRest: true
+    dekLifetime: 30
+    dekRotateEvery: 7
 
 
 

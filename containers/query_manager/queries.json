@@ -46,6 +46,18 @@
     "SELECT meta().id, city, country from keyspacenameplaceholder where country=\"Guadeloupe\" ORDER BY SPARSE_VECTOR_DISTANCE(embedding, qvec, nprobe)",
     "SELECT meta().id,SPARSE_VECTOR_DISTANCE(embedding, qvec, nprobe) from keyspacenameplaceholder  where country like \"B%\" AND price>100 ORDER BY SPARSE_VECTOR_DISTANCE(embedding, qvec, nprobe) limit LIMIT_N_VAL;"
   ],
+  "msmarco_sparse_vectors": [
+    "SELECT meta().id,category from keyspacenameplaceholder  where category=\"Shoes\" ORDER BY SPARSE_VECTOR_DISTANCE(sparse, qvec, nprobe) limit LIMIT_N_VAL;",
+    "SELECT meta().id,country from keyspacenameplaceholder  where country=\"USA\" AND brand=\"Nike\" ORDER BY SPARSE_VECTOR_DISTANCE(sparse, qvec, nprobe) limit LIMIT_N_VAL;",
+    "SELECT meta().id,brand,color from keyspacenameplaceholder  where brand=\"Nike\" AND color=\"Green\" ORDER BY SPARSE_VECTOR_DISTANCE(sparse, qvec, nprobe) limit LIMIT_N_VAL;",
+    "SELECT meta().id,size from keyspacenameplaceholder  where size is not null ORDER BY SPARSE_VECTOR_DISTANCE(sparse, qvec, nprobe) limit LIMIT_N_VAL;",
+    "SELECT meta().id,type from keyspacenameplaceholder  where type is not null ORDER BY SPARSE_VECTOR_DISTANCE(sparse, qvec, nprobe) limit LIMIT_N_VAL;",
+    "SELECT meta().id from keyspacenameplaceholder ORDER BY SPARSE_VECTOR_DISTANCE(sparse, qvec, nprobe) limit LIMIT_N_VAL;",
+    "SELECT meta().id,category,country from keyspacenameplaceholder  where category=\"Jeans\" ORDER BY SPARSE_VECTOR_DISTANCE(sparse, qvec, nprobe) limit LIMIT_N_VAL;",
+    "SELECT meta().id,review from keyspacenameplaceholder  where review >= 1.0 ORDER BY SPARSE_VECTOR_DISTANCE(sparse, qvec, nprobe) limit LIMIT_N_VAL;",
+    "SELECT meta().id,country from keyspacenameplaceholder where country=\"USA\" ORDER BY SPARSE_VECTOR_DISTANCE(sparse, qvec, nprobe)",
+    "SELECT meta().id,SPARSE_VECTOR_DISTANCE(sparse, qvec, nprobe) from keyspacenameplaceholder  where brand=\"Nike\" ORDER BY SPARSE_VECTOR_DISTANCE(sparse, qvec, nprobe) limit LIMIT_N_VAL;"
+  ],
   "shoes_50M": [
     "SELECT id from keyspacenameplaceholder where category=\"Shoes\" AND country=\"USA\" AND brand=\"Nike\" AND color=\"Green\" AND size=5 ORDER BY APPROX_VECTOR_DISTANCE(embedding, qvec, \"DIST_ALGO\", nprobe) limit 100; idx_1M.ivecs",
     "SELECT id from keyspacenameplaceholder where category=\"Shoes\" AND country=\"USA\" AND brand=\"Nike\" AND color=\"Green\" ORDER BY APPROX_VECTOR_DISTANCE(embedding, qvec, \"DIST_ALGO\", nprobe) limit 100; idx_2M.ivecs",

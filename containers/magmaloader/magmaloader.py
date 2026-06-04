@@ -47,6 +47,9 @@ class MagmaLoader:
         self.expiry_percentage = 0
         self.expiry_duration = 0
         self.sift_path = None
+        self.vec_file_path = None
+        self.sift_file_path = None
+        self.msmarco_mode = False
         self.log = logging.getLogger("magmaloader")
 
     def run(self):
@@ -93,6 +96,10 @@ class MagmaLoader:
         parser.add_argument("--mutations_timeout", dest="mutations_timeout", help="mutations timeout period in seconds",
                             default=3600)
         parser.add_argument("--num_workers", dest="num_workers", help="True if dataload needs to be skipped on default collection", default=10)
+        parser.add_argument("--key_prefix", dest="key_prefix", help="Key prefix for loaded documents", default="doc")
+        parser.add_argument("--vec_file_path", dest="vec_file_path", help="Path to sparse vector file for MSMARCO loader (e.g. /data/sparse/collection.vecs)", default=None)
+        parser.add_argument("--sift_file_path", dest="sift_file_path", help="Path to SIFT dense vector file for MSMARCO loader (e.g. /data/bigann/bigann_base.bvecs)", default=None)
+        parser.add_argument("--msmarco_mode", dest="msmarco_mode", help="Set to true to use MSMARCO loader (requires --vec_file_path)", default="false")
         args = parser.parse_args()
         self.host = args.host
         self.username = args.username
@@ -118,6 +125,9 @@ class MagmaLoader:
         self.expiry_mode = args.expiry_mode.lower() == 'true'
         self.mutations_timeout = int(args.mutations_timeout)
         self.sift_path = args.sift_path
+        self.vec_file_path = args.vec_file_path
+        self.sift_file_path = args.sift_file_path
+        self.msmarco_mode = True if args.msmarco_mode.lower() == 'true' else False
         if args.rr is None:
             self.rr = None
         else:
@@ -125,6 +135,7 @@ class MagmaLoader:
             self.bucket_list = args.bucket_list.split(",")
         self.doc_template = args.doc_template
         self.workers = int(args.num_workers)
+        self.key_prefix = args.key_prefix
         self.all_coll = True if args.all_coll.lower() == 'true' else False
         self.skip_default = True if args.skip_default.lower() == 'true' else False
         self.ops_rate = 40000 if not args.ops_rate else int(args.ops_rate)
@@ -136,7 +147,9 @@ class MagmaLoader:
             parser.print_help()
             exit(1)
         if self.rr is None:
-            if self.sift_path:
+            if self.msmarco_mode and self.vec_file_path:
+                self.load_msmarco_data(bucket_name=self.bucket_name, mutations_mode=self.mutations_mode)
+            elif self.sift_path:
                 self.load_sift_data(bucket_name=self.bucket_name, mutations_mode=self.mutations_mode)
             else:
                 start_time = time.time()
@@ -380,7 +393,68 @@ class MagmaLoader:
                 out = proc.communicate()
                 if proc.returncode != 0:
                     raise Exception("Exception in magma loader to {}".format(out))
-    
+
+    def load_msmarco_data(self, random_key_prefix=False, bucket_name="default", mutations_mode=False):
+        """
+        Load MSMARCO documents with sparse and/or dense (SIFT) embeddings via
+        the MSMARCOLoader Java class. Uses two different classpaths:
+          - Insert: ../DocLoader-1.0-jar-with-dependencies.jar
+          - Mutate: ../classes:lib/*
+
+        When both --vec_file_path and --sift_file_path are provided, uses
+        MSMARCOSiftEmbeddingProduct valueType; when only --vec_file_path is
+        provided, emits sparse-only commands (no valueType, no siftFilePath).
+        """
+        self.bucket_name = bucket_name
+        if random_key_prefix:
+            self.key_prefix = ''.join(random.choices(ascii_letters + digits, k=10))
+        if self.all_coll:
+            scope_coll_map = self.get_all_collections(self.bucket_name)
+        else:
+            if not self.scope or not self.collection:
+                raise ValueError("Scope and collection must be provided when not using all_coll mode")
+            scope_coll_map = {self.scope: [self.collection]}
+
+        has_dense = self.sift_file_path is not None
+
+        for scope in scope_coll_map:
+            if scope == '_system':
+                continue
+            coll_list = scope_coll_map[scope]
+            for coll in coll_list:
+                if coll == '_default' and self.skip_default:
+                    continue
+
+                if not mutations_mode:
+                    classpath = "../classes:lib/*"
+                    ops_flag = f"-cr 100 -create_s {self.start} -create_e {self.end}"
+                else:
+                    classpath = "../classes:lib/*"
+                    ops_flag = f"-up 100 -update_s {self.start} -update_e {self.end} -mutate {self.mutate}"
+
+                # SharedClusterManager enables the TLS SDK environment only when
+                # the memcached port is 11207; use it so --tls true reaches Capella.
+                kv_port = "11207" if self.tls else "11210"
+                command = f"java -cp {classpath} MSMARCOLoader " \
+                    f"-n {self.host} " \
+                    f"-user '{self.username}' -pwd '{self.password}' " \
+                    f"-b {self.bucket_name} -p {kv_port} " \
+                    f"-scope {scope} -collection {coll} " \
+                    f"{ops_flag} " \
+                    f"-w {self.workers} -ops {self.ops_rate} " \
+                    f"-keyPrefix {self.key_prefix} " \
+                    f"-vecFilePath {self.vec_file_path} "
+
+                if has_dense:
+                    command += f"-valueType MSMARCOSiftEmbeddingProduct " \
+                        f"-siftFilePath {self.sift_file_path}"
+
+                self.log.info("Will run this {}".format(command))
+                proc = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True)
+                out = proc.communicate()
+                if proc.returncode != 0:
+                    raise Exception("Exception in MSMARCO loader: {}".format(out))
+
     def get_mutations_range(self):
         """
         Calculate mutation ranges for create, update, and delete operations based on percentages.

@@ -215,6 +215,28 @@ HOTEL_DS_INDEX_TEMPLATES = [
 ]
 
 SHOES_INDEX_TEMPLATES = [
+    # Scalar indexes
+    {"indexname": "scalar_shoes_idx1",
+     "is_vector": False,
+     "validate_item_count_check": True,
+     "statement": "CREATE INDEX scalarshoes1_idxprefix ON keyspacenameplaceholder(`category`,`country`,`brand`) "},
+    {"indexname": "scalar_shoes_idx2",
+     "is_vector": False,
+     "validate_item_count_check": True,
+     "statement": "CREATE INDEX scalarshoes2_idxprefix ON keyspacenameplaceholder(`brand`,`color`,`size`) "},
+    {"indexname": "scalar_shoes_idx3",
+     "is_vector": False,
+     "validate_item_count_check": True,
+     "statement": "CREATE INDEX scalarshoes3_idxprefix ON keyspacenameplaceholder(`type`,`review`) "},
+    {"indexname": "scalar_shoes_idx4",
+     "is_vector": False,
+     "validate_item_count_check": True,
+     "statement": "CREATE INDEX scalarshoes4_idxprefix ON keyspacenameplaceholder(`country` INCLUDE MISSING DESC,`brand`) "},
+    {"indexname": "scalar_shoes_idx5",
+     "is_vector": False,
+     "validate_item_count_check": True,
+     "statement": "CREATE INDEX scalarshoes5_idxprefix ON keyspacenameplaceholder(`size`,`category`,`type`) "},
+
     # vector indexes
     {"indexname": "composite_shoes_idx",
      "is_vector": True,
@@ -249,7 +271,57 @@ SHOES_INDEX_TEMPLATES = [
      "is_vector": True,
      "vector_leading": True,
      "validate_item_count_check": True,
-     "statement": "CREATE VECTOR INDEX idxbhive4_shoes_idxprefix ON keyspacenameplaceholder(`embedding` VECTOR) INCLUDE (`size`)"}
+     "statement": "CREATE VECTOR INDEX idxbhive4_shoes_idxprefix ON keyspacenameplaceholder(`embedding` VECTOR) INCLUDE (`size`)"},
+
+    # Sparse Vector indexes (using sparse field)
+    {"indexname": "sparse_shoes_idx1",
+     "is_vector": True,
+     "is_sparse": True,
+     "validate_item_count_check": True,
+     "vector_field": "sparse",
+     "statement": "CREATE INDEX sparseshoes1_idxprefix ON keyspacenameplaceholder(`category`,`country`, `sparse` SPARSE VECTOR) "},
+    {"indexname": "sparse_shoes_idx2",
+     "is_vector": True,
+     "is_sparse": True,
+     "validate_item_count_check": True,
+     "vector_field": "sparse",
+     "statement": "CREATE INDEX sparseshoes2_idxprefix ON keyspacenameplaceholder( `brand`, `color`, `sparse` SPARSE VECTOR) "},
+    {"indexname": "sparse_shoes_idx3",
+     "is_vector": True,
+     "is_sparse": True,
+     "validate_item_count_check": True,
+     "vector_field": "sparse",
+     "statement": "CREATE INDEX sparseshoes3_idxprefix ON keyspacenameplaceholder(`size`, `sparse` SPARSE VECTOR) "},
+
+    # Sparse BHIVE indexes (using sparse field)
+    {"indexname": "bhive_sparse_shoes_idx1",
+     "is_vector": True,
+     "is_sparse": True,
+     "vector_leading": True,
+     "validate_item_count_check": True,
+     "vector_field": "sparse",
+     "statement": "CREATE VECTOR INDEX idxbhivesparse1_shoes_idxprefix ON keyspacenameplaceholder(`sparse` SPARSE VECTOR) INCLUDE (`category`)"},
+    {"indexname": "bhive_sparse_shoes_idx2",
+     "is_vector": True,
+     "is_sparse": True,
+     "vector_leading": True,
+     "validate_item_count_check": True,
+     "vector_field": "sparse",
+     "statement": "CREATE VECTOR INDEX idxbhivesparse2_shoes_idxprefix ON keyspacenameplaceholder(`sparse` SPARSE VECTOR) INCLUDE (`country`)"},
+    {"indexname": "bhive_sparse_shoes_idx3",
+     "is_vector": True,
+     "is_sparse": True,
+     "vector_leading": True,
+     "validate_item_count_check": True,
+     "vector_field": "sparse",
+     "statement": "CREATE VECTOR INDEX idxbhivesparse3_shoes_idxprefix ON keyspacenameplaceholder(`sparse` SPARSE VECTOR) INCLUDE (`brand`, `color`)"},
+    {"indexname": "bhive_sparse_shoes_idx4",
+     "is_vector": True,
+     "is_sparse": True,
+     "vector_leading": True,
+     "validate_item_count_check": True,
+     "vector_field": "sparse",
+     "statement": "CREATE VECTOR INDEX idxbhivesparse4_shoes_idxprefix ON keyspacenameplaceholder(`sparse` SPARSE VECTOR) INCLUDE (`size`)"}
 ]
 
 DISTANCE_SUPPORTED_FUNCTIONS = ["L2", "L2_SQUARED", "DOT", "COSINE", "EUCLIDEAN", "EUCLIDEAN_SQUARED"]
@@ -952,13 +1024,26 @@ class IndexManager:
                         # Set persist_full_vector to true 25% of the time
                         use_custom_persist_full_vector = random.random() < 0.25
                         use_custom_trainlist = False
+                        # For BHIVE indexes, the indexer stamps nlist onto every partition
+                        # unchanged (not divided by partition count), so a manually supplied
+                        # nlist (--use_description) is only applied when this instance is
+                        # actually partitioned - otherwise the automatic itemsCount-based
+                        # nlist already targets ~1000 vectors/centroid on its own. Non-BHIVE
+                        # templates aren't affected by that partition-density issue, so honor
+                        # --use_description unconditionally for them, as before.
+                        is_bhive_template = idx_template['indexname'].startswith('bhive')
+                        use_manual_description = self.use_description and (
+                            is_partitioned_idx if is_bhive_template else True)
                         if is_sparse:
-                            # Sparse indexes always use DOT similarity, description is IVF or IVF1024
-                            sparse_description = random.choice(["IVF", "IVF1024"])
+                            # Sparse indexes always use DOT similarity.
+                            if use_manual_description:
+                                sparse_description = self.use_description
+                            else:
+                                sparse_description = random.choice(["IVF", "IVF1024"])
                             with_clause_list.append(f"\"description\": \"{sparse_description}\","
                                                     f"\"similarity\":\"DOT\"")
                         else:
-                            if self.use_description:
+                            if use_manual_description:
                                 description = self.use_description
                             else:
                                 description = random.choice(DESCRIPTION_LIST)
@@ -1294,7 +1379,7 @@ class IndexManager:
                         if "coll_" in coll.name:
                             keyspaces.append("`" + bucket_name + "`.`" + scope.name + "`.`" + coll.name + "`")
             for keyspace in keyspaces:
-                for idx_template in HOTEL_DS_INDEX_TEMPLATES:
+                for idx_template in self.idx_def_templates:
                     idx_statement = idx_template['statement']
                 # create partitioned indexes for all array indexes on Capella clusters.
                 # For the rest, it's randomised
@@ -1317,7 +1402,7 @@ class IndexManager:
                         with_clause_list.append("\'num_partition\':8")
                     else:
                         if is_partitioned_idx:
-                            num_partition = random.randint(2, 64)
+                            num_partition = random.randint(2, self.max_num_partitions)
                             with_clause_list.append("\'num_partition\':%s" % num_partition)
                     num_replica = random.randint(1, self.max_num_replica)
                     with_clause_list.append("\'num_replica\':%s" % num_replica)
@@ -1349,13 +1434,26 @@ class IndexManager:
                         # Set persist_full_vector to true 25% of the time
                         use_custom_persist_full_vector = random.random() < 0.25
                         use_custom_trainlist = False
+                        # For BHIVE indexes, the indexer stamps nlist onto every partition
+                        # unchanged (not divided by partition count), so a manually supplied
+                        # nlist (--use_description) is only applied when this instance is
+                        # actually partitioned - otherwise the automatic itemsCount-based
+                        # nlist already targets ~1000 vectors/centroid on its own. Non-BHIVE
+                        # templates aren't affected by that partition-density issue, so honor
+                        # --use_description unconditionally for them, as before.
+                        is_bhive_template = idx_template['indexname'].startswith('bhive')
+                        use_manual_description = self.use_description and (
+                            is_partitioned_idx if is_bhive_template else True)
                         if is_sparse:
-                            # Sparse indexes always use DOT similarity, description is IVF or IVF1024
-                            sparse_description = random.choice(["IVF", "IVF1024"])
+                            # Sparse indexes always use DOT similarity.
+                            if use_manual_description:
+                                sparse_description = self.use_description
+                            else:
+                                sparse_description = random.choice(["IVF", "IVF1024"])
                             with_clause_list.append(f"\"description\": \"{sparse_description}\","
                                                     f"\"similarity\":\"DOT\"")
                         else:
-                            if self.use_description:
+                            if use_manual_description:
                                 description = self.use_description
                             else:
                                 description = random.choice(DESCRIPTION_LIST)
@@ -2529,6 +2627,21 @@ class IndexManager:
         except requests.exceptions.RequestException as err:
             self.log.error("Error getting response from /getIndexStatus : {0}".format(str(err)))
 
+    def get_indexer_metadata_with_retry(self, max_retries=5, retry_delay=120):
+        """
+        Retry wrapper around get_indexer_metadata for callers that need a resilient
+        snapshot of /getIndexStatus (e.g. capture_index_names, validate_index_names).
+        """
+        for attempt in range(1, max_retries + 1):
+            index_metadata = self.get_indexer_metadata()
+            if index_metadata and 'status' in index_metadata:
+                return index_metadata
+            self.log.error(f"getIndexStatus call failed (attempt {attempt}/{max_retries}).")
+            if attempt < max_retries:
+                self.log.info(f"Retrying in {retry_delay} seconds...")
+                time.sleep(retry_delay)
+        return None
+
     def create_n1ql_udf(self):
         try:
             # Create JS Library
@@ -2741,7 +2854,12 @@ class IndexManager:
 
     def wait_until_rebalance_cleanup_done(self, timeout=7200):
         nodes_list = self.get_indexer_nodes()
-        time_end, all_nodes_cleaned_up = time.time() + timeout, False
+        start_time = time.time()
+        # If cleanup has been stuck for more than 30 minutes, trigger a breakpad
+        # crash dump on each index node (once) to aid debugging.
+        stuck_threshold = 1800
+        breakpad_triggered = False
+        time_end, all_nodes_cleaned_up = start_time + timeout, False
         while time.time() < time_end and not all_nodes_cleaned_up:
             nodes_cleaned_up = []
             for node in nodes_list:
@@ -2757,9 +2875,29 @@ class IndexManager:
                 time.sleep(10)
             if len(nodes_cleaned_up) == len(nodes_list):
                 all_nodes_cleaned_up = True
+            if not all_nodes_cleaned_up and not breakpad_triggered \
+                    and time.time() - start_time > stuck_threshold:
+                self.trigger_bhive_breakpad(nodes_list)
+                breakpad_triggered = True
             time.sleep(30)
         if not all_nodes_cleaned_up:
             raise Exception("Rebalance cleanup not done after timeout")
+
+    def trigger_bhive_breakpad(self, nodes_list):
+        payload = json.dumps({"Cmd": "triggerBreakPad",
+                              "Args": ["/opt/couchbase/var/lib/couchbase/crash"]})
+        for node in nodes_list:
+            endpoint = f"{self.scheme}://{node}:{self.node_port_index}/bhiveDiag"
+            request_ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            self.log.info(f"Rebalance cleanup stuck for over 30 mins. Triggering breakpad "
+                          f"on {endpoint} at {request_ts}")
+            try:
+                response = requests.get(endpoint, auth=(self.username, self.password),
+                                        data=payload, verify=False, timeout=300)
+                self.log.info(f"triggerBreakPad request sent to {node} at {request_ts} - "
+                              f"status_code={response.status_code}, response={response.text}")
+            except Exception as e:
+                self.log.info(f"Error triggering breakpad on {node} at {request_ts}: {e}")
 
     def poll_total_requests_during_rebalance(self):
         nodes_list = self.get_indexer_nodes()
@@ -3092,7 +3230,7 @@ class IndexManager:
         This should be called before rebalance to record the baseline.
         Host information is captured for debugging purposes but not used for validation.
         """
-        index_metadata = self.get_indexer_metadata()
+        index_metadata = self.get_indexer_metadata_with_retry()
         if not index_metadata or 'status' not in index_metadata:
             raise Exception("Failed to get index metadata for snapshot")
 
@@ -3105,6 +3243,11 @@ class IndexManager:
             index_instances[inst_id] = {
                 'instId': inst_id,
                 'name': index['name'],
+                'indexName': index['indexName'],
+                'bucket': index['bucket'],
+                'scope': index['scope'],
+                'collection': index['collection'],
+                'numReplica': index.get('numReplica', 0),
                 'hosts': hosts
             }
         
@@ -3133,10 +3276,10 @@ class IndexManager:
             raise Exception(f"Snapshot file {snapshot_file} not found. Run capture_index_names first.")
         
         # Get current index state
-        index_metadata = self.get_indexer_metadata()
+        index_metadata = self.get_indexer_metadata_with_retry()
         if not index_metadata or 'status' not in index_metadata:
             raise Exception("Failed to get current index metadata for validation")
-        
+
         # Extract current index instances by instId.
         current_instances = {}
         for index in index_metadata['status']:
@@ -3145,9 +3288,14 @@ class IndexManager:
             current_instances[index['instId']] = {
                 'instId': index['instId'],
                 'name': index['name'],
+                'indexName': index.get('indexName', index['name']),
+                'bucket': index.get('bucket', 'unknown'),
+                'scope': index.get('scope', 'unknown'),
+                'collection': index.get('collection', 'unknown'),
+                'numReplica': index.get('numReplica', 0),
                 'hosts': index.get('hosts', [])
             }
-        
+
         # Build lookup maps
         snapshot_by_inst = {}
         for idx in snapshot['indexes']:
@@ -3157,49 +3305,104 @@ class IndexManager:
         current_by_inst = current_instances
         missing_inst_ids = set(snapshot_by_inst.keys()) - set(current_by_inst.keys())
         new_inst_ids = set(current_by_inst.keys()) - set(snapshot_by_inst.keys())
-        
+
+        def identity_of(entry):
+            return (entry.get('bucket', 'unknown'), entry.get('scope', 'unknown'),
+                    entry.get('collection', 'unknown'), entry.get('indexName') or entry.get('name'))
+
+        def keyspace_of(entry):
+            return f"{entry.get('bucket', 'unknown')}.{entry.get('scope', 'unknown')}.{entry.get('collection', 'unknown')}"
+
+        # Group snapshot and current instIds by index identity (bucket.scope.collection.indexName)
+        snapshot_ids_by_identity = defaultdict(set)
+        for inst_id, entry in snapshot_by_inst.items():
+            snapshot_ids_by_identity[identity_of(entry)].add(inst_id)
+        current_ids_by_identity = defaultdict(set)
+        for inst_id, entry in current_by_inst.items():
+            current_ids_by_identity[identity_of(entry)].add(inst_id)
+
+        # Current number of indexer nodes may have changed (e.g. rebalance-out) since the snapshot
+        # was captured, which limits how many replica instances of an index can exist right now.
+        current_index_node_count = len(self.find_nodes_with_service(self.get_services_map(), "index"))
+
         self.log.info("=" * 80)
         self.log.info("INDEX VALIDATION RESULTS")
         self.log.info("=" * 80)
         self.log.info(f"Snapshot: {snapshot['total_instances']} index instances")
         self.log.info(f"Current: {len(current_instances)} index instances")
-        
+        self.log.info(f"Current indexer node count: {current_index_node_count}")
+
         validation_failed = False
-        
-        if missing_inst_ids:
-            self.log.error(f"MISSING INDEX INSTANCES ({len(missing_inst_ids)}):")
-            for inst_id in missing_inst_ids:
+        real_missing_inst_ids = []
+
+        for identity in snapshot_ids_by_identity:
+            missing_for_identity = snapshot_ids_by_identity[identity] - current_ids_by_identity.get(identity, set())
+            if not missing_for_identity:
+                continue
+
+            new_for_identity = current_ids_by_identity.get(identity, set()) - snapshot_ids_by_identity[identity]
+
+            # Case 1: the index still has as many (or more) instances as before, just under new
+            # instIds (e.g. an internal rebuild reassigned instance IDs). Not a bug.
+            if len(current_ids_by_identity.get(identity, set())) >= len(snapshot_ids_by_identity[identity]):
+                self.log.info(
+                    f"  ~ {keyspace_of(snapshot_by_inst[next(iter(missing_for_identity))])}."
+                    f"{identity[3]} : {len(missing_for_identity)} instance(s) reassigned new instId(s) "
+                    f"{sorted(new_for_identity)} (not a bug)")
+                continue
+
+            # Case 2: fewer indexer nodes now than can host the originally-created replica count.
+            max_possible_instances = min(len(snapshot_ids_by_identity[identity]), current_index_node_count)
+            if len(current_ids_by_identity.get(identity, set())) >= max_possible_instances:
+                self.log.info(
+                    f"  ~ {keyspace_of(snapshot_by_inst[next(iter(missing_for_identity))])}."
+                    f"{identity[3]} : {len(missing_for_identity)} replica instance(s) missing, but only "
+                    f"{current_index_node_count} indexer node(s) available now (not a bug)")
+                continue
+
+            # Otherwise, unexplained loss - real failure.
+            real_missing_inst_ids.extend(sorted(missing_for_identity))
+
+        if real_missing_inst_ids:
+            self.log.error(f"MISSING INDEX INSTANCES ({len(real_missing_inst_ids)}):")
+            for inst_id in real_missing_inst_ids:
                 snap_entry = snapshot_by_inst.get(inst_id)
                 if snap_entry:
                     index_name = snap_entry.get('name') or snap_entry.get('index_name') or snap_entry.get('full_name')
+                    keyspace = keyspace_of(snap_entry)
                     hosts = snap_entry.get('hosts', [])
                     if hosts:
-                        self.log.error(f"  - {index_name} [instId={inst_id}] (was on nodes: {', '.join(hosts)})")
+                        self.log.error(f"  - {keyspace}.{index_name} [instId={inst_id}] (was on nodes: {', '.join(hosts)})")
                     else:
-                        self.log.error(f"  - {index_name} [instId={inst_id}]")
+                        self.log.error(f"  - {keyspace}.{index_name} [instId={inst_id}]")
                 else:
                     self.log.error(f"  - instId={inst_id}")
             validation_failed = True
         else:
             self.log.info("No missing index instances detected.")
-        
+
         if new_inst_ids:
             self.log.info(f"New index instances since snapshot ({len(new_inst_ids)}):")
             for inst_id in new_inst_ids:
                 curr_entry = current_by_inst.get(inst_id)
                 if curr_entry:
-                    self.log.info(f"  + {curr_entry['name']} [instId={inst_id}]")
+                    self.log.info(f"  + {keyspace_of(curr_entry)}.{curr_entry['name']} [instId={inst_id}]")
                 else:
                     self.log.info(f"  + instId={inst_id}")
-        
+
         self.log.info("=" * 80)
-        
+
         if validation_failed:
-            error_msg = []
-            if missing_inst_ids:
-                error_msg.append(f"{len(missing_inst_ids)} index instances missing: {sorted(missing_inst_ids)}")
-            raise Exception(f"Index validation failed: {'; '.join(error_msg)}")
-        
+            missing_summary = []
+            for inst_id in real_missing_inst_ids:
+                snap_entry = snapshot_by_inst.get(inst_id)
+                if snap_entry:
+                    missing_summary.append(f"{keyspace_of(snap_entry)}.{snap_entry.get('name')} [instId={inst_id}]")
+                else:
+                    missing_summary.append(f"instId={inst_id}")
+            raise Exception(
+                f"Index validation failed: {len(real_missing_inst_ids)} index instances missing: {missing_summary}")
+
         return True
 
 
