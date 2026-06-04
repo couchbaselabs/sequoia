@@ -1,4 +1,4 @@
-- include: tests/templates/rebalance.yml, tests/templates/multinode_failure.yml, tests/templates/stats.yml, tests/templates/kv.yml
+- include: tests/templates/rebalance.yml, tests/templates/multinode_failure.yml, tests/templates/stats.yml, tests/templates/kv.yml, tests/templates/xdcr.yml
 
 ###### update Tombstone Purge Interval ######
 -
@@ -78,18 +78,32 @@
 - command: "-i {{.Orchestrator}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -n {{.Scale 500}} -pc 100
   -dt Person -ac True"
   wait: true
+# Initial load runs async (no wait) and the pillowfight loads repeat forever
+# (-c -1); they're aliased so the baseline differ block can stop them and let
+# replication drain to an exact per-collection count before validating.
+# NOTE: the gideon seed is intentionally create-only (no --delete). Deletes here
+# would leave tombstones on the source that the uni-directional target never
+# materialized, and xdcrDiffer counts tombstones -> a guaranteed source>target
+# skew at the baseline differ. Delete coverage is exercised later by the
+# continuous-CRUD section (validated by the xdcrmanager item-count checks).
 - image: sequoiatools/gideon:3.0.0a4
-  command: "kv --ops {{.Scale 500}} --create 50 --get 10 --delete 40  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --durability majority"
+  command: "kv --ops {{.Scale 500}} --create 90 --get 10 --delete 0  --hosts {{.Orchestrator}} --bucket {{.Bucket}} --durability majority"
+  alias: load_bucket0
 - image: sequoiatools/gideon:3.0.0a4
-  command: "kv --ops {{.Scale 500}} --create 50 --get 10 --delete 40  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}} --durability majority"
+  command: "kv --ops {{.Scale 500}} --create 90 --get 10 --delete 0  --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}} --durability majority"
+  alias: load_bucket1
 - template: pillowfight_durability
   args: "{{.Orchestrator}}, {{.NthBucket 2}}, -M 128 -I {{.Scale 10000}} -B {{.Scale 500}} -t 1  --rate-limit {{.Scale 3000}}, {{.AuthPassword}} --durability majority -c -1 --json"
+  alias: load_bucket2
 - template: pillowfight_durability
   args: "{{.Orchestrator}}, {{.NthBucket 3}}, -M 128 -I {{.Scale 10000}} -B {{.Scale 500}} -t 1  --rate-limit {{.Scale 2000}}, {{.AuthPassword}} --durability majority -c -1 --json"
+  alias: load_bucket3
 - template: pillowfight_durability
   args: "{{.Orchestrator}}, {{.NthBucket 4}}, -M 128 -I {{.Scale 10000}} -B {{.Scale 500}} -t 1  --rate-limit {{.Scale 2000}}, {{.AuthPassword}} --durability majority -c -1 --json"
+  alias: load_bucket4
 - template: pillowfight_durability
   args: "{{.Orchestrator}}, bucket5_magma, -M 128 -I {{.Scale 10000}} -B {{.Scale 500}} -t 1  --rate-limit {{.Scale 2000}}, {{.AuthPassword}} --durability majority -c -1 --json"
+  alias: load_bucket5
 
 # Enable cross-cluster versioning for few buckets ######
 - image: sequoiatools/couchbase-cli:8.1
@@ -199,6 +213,72 @@
         --xdcr-cluster-name remote
         --xdcr-from-bucket bucket5_couchstore
         --xdcr-to-bucket bucket5_magma"
+  wait: true
+
+#============ baseline collection-level validation (xdcrDiffer strict no-diff) ============
+# Per-collection key-by-key check right after replications + initial load, before any
+# cluster ops / chaos. The differ is a point-in-time check, so it is only meaningful
+# against a quiesced system: stop the still-running initial-load generators, drain the
+# in-flight mutations across XDCR, THEN diff. The initial seed is create-only (no
+# deletes -> no tombstones), so once the load is stopped and replication drains the
+# per-collection counts are exactly identical on source and target; any reported diff
+# is a real imbalance, not in-flight drift or tombstone skew.
+# Args: source host, source bucket, target bucket, remote-cluster ref name.
+
+# 1) stop the initial-load generators (gideon finite loads may already be gone -> rm is
+#    force + error-ignored, so this is safe; pillowfight -c -1 loops are killed here)
+-
+  client:
+    op: rm
+    container: load_bucket0
+-
+  client:
+    op: rm
+    container: load_bucket1
+-
+  client:
+    op: rm
+    container: load_bucket2
+-
+  client:
+    op: rm
+    container: load_bucket3
+-
+  client:
+    op: rm
+    container: load_bucket4
+-
+  client:
+    op: rm
+    container: load_bucket5
+
+# 2) drain: let the last in-flight mutations finish replicating to the targets
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# 3) per-collection strict no-diff on each genuine replication pair
+- template: differ-replication
+  args: "{{.Orchestrator}},{{.Bucket}},{{.Bucket}},remote"
+  wait: true
+- template: differ-replication
+  args: "{{.Orchestrator}},{{.NthBucket 1}},{{.NthBucket 1}},remote"
+  wait: true
+- template: differ-replication
+  args: "{{.Orchestrator}},{{.NthBucket 2}},{{.NthBucket 2}},remote"
+  wait: true
+- template: differ-replication
+  args: "{{.Orchestrator}},{{.NthBucket 3}},{{.NthBucket 3}},remote"
+  wait: true
+# NOTE: bucket4 (C2 -> C1) is intentionally omitted from the baseline. The initial load
+# only populated C1.bucket4, so at baseline the differ source (C2.bucket4) is empty while
+# the target (C1.bucket4) still holds un-replicated initial data -> a guaranteed (false)
+# MissingFromSource that no amount of draining fixes. It is exercised by the later
+# xdcrmanager item-count checks once the continuous CRUD has loaded C2.bucket4.
+- template: differ-replication
+  args: "{{.Orchestrator}},bucket5_magma,bucket5_couchstore,remote"
   wait: true
 
 #============ Cluster Ops ============
@@ -594,6 +674,32 @@
   command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}}
             -a validate -rn {{.Nodes | .Cluster 1 | net 0}} -ro {{.RestPort}} -ru {{.RestUsername}}
             -rp {{.RestPassword}} -b bucket5_magma -rb bucket5_couchstore"
+  wait: true
+
+#============ end-state collection-level validation (xdcrDiffer strict no-diff) ============
+# Final per-collection key-by-key gate after the full chaos gauntlet (rebalances,
+# swap, failover+recover, goxdcr/memcached kills, pause/resume, delete-recreate of
+# scopes/collections). Supplements the bucket-level xdcrmanager item-count checks
+# above with a strict no-diff per replication, run before the flush so it sees the
+# post-chaos data. The differ's own --retries drains any last in-flight mutations.
+# Only buckets still 1:1 implicitly mapped are checked:
+#   - bucket2 is EXCLUDED: it ends in migration mode + advanced filter
+#     (filterExpression=EXISTS(country)), so source != target BY DESIGN.
+#   - bucket4 is EXCLUDED: it replicates C2 -> C1 only while C1.bucket4 also holds
+#     its own un-replicated local writes, so the differ source (C2) is a subset of
+#     the target (C1) -> guaranteed false MissingFromSource. Covered by the
+#     xdcrmanager item-count check instead.
+- template: differ-replication
+  args: "{{.Orchestrator}},{{.Bucket}},{{.Bucket}},remote"
+  wait: true
+- template: differ-replication
+  args: "{{.Orchestrator}},{{.NthBucket 1}},{{.NthBucket 1}},remote"
+  wait: true
+- template: differ-replication
+  args: "{{.Orchestrator}},{{.NthBucket 3}},{{.NthBucket 3}},remote"
+  wait: true
+- template: differ-replication
+  args: "{{.Orchestrator}},bucket5_magma,bucket5_couchstore,remote"
   wait: true
 
 #=========== Flush all buckets ==============

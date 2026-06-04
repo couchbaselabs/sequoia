@@ -1,0 +1,112 @@
+-
+  name: build-10k-collections
+  actions:
+    -
+      image: sequoiatools/collections:1.0
+      command: "-i $0:{{.RestPort}} -b bucket0 -o create_multi_scope_collection
+                -s scope- -c coll --scope_count=40 --collection_count=4000"
+      wait: true
+    -
+      image: sequoiatools/collections:1.0
+      command: "-i $0:{{.RestPort}} -b bucket1 -o create_multi_scope_collection
+                -s scope- -c coll --scope_count=30 --collection_count=3000"
+      wait: true
+    -
+      image: sequoiatools/collections:1.0
+      command: "-i $0:{{.RestPort}} -b bucket2 -o create_multi_scope_collection
+                -s scope- -c coll --scope_count=30 --collection_count=3000"
+      wait: true
+
+# Load data into a single bucket on one cluster.
+# $0 = cluster host   $1 = bucket   $2 = doc type (Hotel/Person/Employee)
+-
+  name: load-bucket
+  actions:
+    -
+      image: sequoiatools/catapult
+      command: "-i $0 -u {{.RestUsername}} -p {{.RestPassword}} -b $1
+                -n {{.Scale 500}} -pc 100 -dt $2 -ac True"
+      wait: true
+
+# Create a non-secure remote-cluster reference.
+# $0 = source host   $1 = remote ref name   $2 = remote host
+-
+  name: xdcr-link
+  actions:
+    -
+      image: sequoiatools/couchbase-cli:8.1
+      command: "xdcr-setup -c $0:{{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}}
+                --create --xdcr-cluster-name $1
+                --xdcr-hostname $2
+                --xdcr-username {{.RestUsername}} --xdcr-password {{.RestPassword}}"
+      wait: true
+
+# Create a replication over an existing remote-cluster reference.
+# $0 = source host   $1 = remote ref name   $2 = bucket
+-
+  name: xdcr-replicate-bucket
+  actions:
+    -
+      image: sequoiatools/couchbase-cli:8.1
+      command: "xdcr-replicate -c $0:{{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}}
+                --create --xdcr-cluster-name $1
+                --xdcr-from-bucket $2 --xdcr-to-bucket $2"
+      wait: true
+
+# Bucket-level item-count validation between two clusters.
+# $0 = source host   $1 = target host   $2 = bucket
+-
+  name: validate-bucket
+  actions:
+    -
+      image: sequoiatools/xdcrmanager
+      command: "-n $0 -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}}
+                -a validate -rn $1 -ro {{.RestPort}} -ru {{.RestUsername}}
+                -rp {{.RestPassword}} -b $2 -rb $2"
+      wait: true
+
+# xdcrDiffer run between two clusters for one bucket, via the shipped runDiffer.sh.
+# xdcrDiffer DCP-dumps the whole bucket and compares key-by-key within each collection
+# (implicit name mapping), so --strict-no-diff turns this into a per-collection
+# item-count + content gate that catches imbalances the aggregate bucket-level count
+# check (validate-bucket) misses. The target cluster is resolved through the source
+# cluster's remote-cluster reference ($3), so only the source host is needed.
+# $0 = source host   $1 = target host (unused; target resolved via $3)   $2 = bucket   $3 = remote ref name
+-
+  name: differ-smoke
+  actions:
+    -
+      image: sequoiatools/xdcrdiffer:8.1
+      command: "--source-host $0 --source-port {{.RestPort}}
+                --source-username {{.RestUsername}} --source-password {{.RestPassword}}
+                --source-bucket $2 --target-bucket $2
+                --remote-cluster-name $3 --strict-no-diff --timeout 1200"
+      wait: true
+
+# Collection-level strict no-diff between a replication's source and target bucket.
+# Supplements the bucket-level xdcrmanager item-count check (validate-bucket) with a
+# per-collection key-by-key comparison via xdcrDiffer. Source/target bucket are passed
+# separately so cross-name replications (e.g. bucket5_magma -> bucket5_couchstore) work.
+# Target cluster is resolved through the source cluster's remote-cluster reference ($3).
+# $0 = source host   $1 = source bucket   $2 = target bucket   $3 = remote ref name
+-
+  name: differ-replication
+  actions:
+    -
+      image: sequoiatools/xdcrdiffer:8.1
+      command: "--source-host $0 --source-port {{.RestPort}}
+                --source-username {{.RestUsername}} --source-password {{.RestPassword}}
+                --source-bucket $1 --target-bucket $2
+                --remote-cluster-name $3 --strict-no-diff --timeout 1200"
+      wait: true
+
+# Sleep helper.
+# $0 = seconds
+-
+  name: dwell
+  actions:
+    -
+      image: sequoiatools/cmd
+      entrypoint: sleep
+      command: "$0"
+      wait: true
