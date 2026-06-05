@@ -70,6 +70,7 @@ servers: # each server tag represents a cluster
       enable_config_encryption_at_rest: true
       enable_audit_encryption_at_rest: true
       enable_other_encryption_at_rest: true
+      enable_log_encryption_at_rest: true
       enable_client_certificate_handling: true
       services:
         index: 6

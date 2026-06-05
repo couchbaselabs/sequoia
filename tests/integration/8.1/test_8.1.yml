@@ -567,7 +567,7 @@
 - command: "kv --ops {{.Scale 150}} --create 15 --get 80 --delete 5  --expire 100 --ttl 660 --hosts {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.Bucket}} --sizes 128"
   duration: 7200
 
-# Change the topology (performs rebalance in/out/swap eventing nodes)
+# Change the topology (performs rebalance in/out/swap eventing nodes when log encryption is enabled)
 - test: tests/eventing/CC/test_eventing_rebalance_integration.yml
   section: topology_change
 
@@ -577,6 +577,11 @@
    entrypoint: sleep
    command: "600"
    wait: true
+
+###### Disable log encryption - test eventing encryption state-change ######
+- image: sequoiatools/couchbase-cli:8.0
+  command: "setting-encryption -c {{.Orchestrator}}:{{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --target log --type disabled --set"
+  wait: true
 
 # Change the topology (performs rebalance in/out/swap analytics nodes)
 - test: tests/analytics/cheshirecat/test_analytics_integration_scale3.yml
@@ -648,6 +653,11 @@
 # resume eventing handlers
 - test: tests/eventing/CC/test_eventing_rebalance_integration.yml
   section: resume
+
+###### Re-enable log encryption to test eventing encryption state-change ######
+- image: sequoiatools/couchbase-cli:8.0
+  command: "setting-encryption -c {{.Orchestrator}}:{{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --target log --type key --key 0 --set"
+  wait: true
 
 # quick update batch
 - template: pillowfight_htp
