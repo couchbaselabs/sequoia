@@ -41,34 +41,34 @@
   command:  "bucket-create -c {{$.Nodes | $.Cluster 1 | net 0}}:{{$.RestPort}} -u  {{.RestUsername}} -p  {{.RestPassword}} --bucket=bucket5_couchstore --bucket-ramsize 2281 --bucket-type couchbase --bucket-replica 1 --enable-flush 1 --wait --bucket-eviction-policy fullEviction --storage-backend couchstore --conflict-resolution timestamp"
   wait: true
 
-#=========== create 20 scopes and 200 collections across 3 buckets as scope_1,scope_2 ... =============
+#=========== create collections across 6 buckets per cluster, 10K total per cluster (2000x4 + 1000x2) =============
 - image: sequoiatools/collections:1.0
   command: "-i {{.Orchestrator}}:{{$.RestPort}} -b {{.Bucket}} -o create_multi_scope_collection
-            -s scope- -c coll --scope_count=10 --collection_count=200"
+            -s scope- -c coll --scope_count=10 --collection_count=2000"
 - command: "-i {{.Orchestrator}}:{{$.RestPort}} -b {{.NthBucket 1}} -o create_multi_scope_collection
-            -s scope- -c coll --scope_count=10 --collection_count=200"
+            -s scope- -c coll --scope_count=10 --collection_count=2000"
 - command: "-i {{.Orchestrator}}:{{$.RestPort}} -b {{.NthBucket 2}} -o create_multi_scope_collection
-            -s scope- -c coll --scope_count=10 --collection_count=200"
+            -s scope- -c coll --scope_count=10 --collection_count=2000"
 - command: "-i {{.Orchestrator}}:{{$.RestPort}} -b {{.NthBucket 3}} -o create_multi_scope_collection
-            -s scope- -c coll --scope_count=10 --collection_count=200"
+            -s scope- -c coll --scope_count=10 --collection_count=2000"
 - command: "-i {{.Orchestrator}}:{{$.RestPort}} -b {{.NthBucket 4}} -o create_multi_scope_collection
-            -s scope- -c coll --scope_count=10 --collection_count=200"
+            -s scope- -c coll --scope_count=10 --collection_count=1000"
 - command: "-i {{.Orchestrator}}:{{$.RestPort}} -b bucket5_magma -o create_multi_scope_collection
-              -s scope- -c coll --scope_count=10 --collection_count=200"
+              -s scope- -c coll --scope_count=10 --collection_count=1000"
 
 - image: sequoiatools/collections:1.0
   command: "-i {{$.Nodes | $.Cluster 1 | net 0}}:{{$.RestPort}} -b {{.Bucket}} -o create_multi_scope_collection
-            -s scope- -c coll --scope_count=5 --collection_count=200"
+            -s scope- -c coll --scope_count=5 --collection_count=2000"
 - command: "-i {{$.Nodes | $.Cluster 1 | net 0}}:{{$.RestPort}} -b {{.NthBucket 1}} -o create_multi_scope_collection
-            -s scope- -c coll --scope_count=5 --collection_count=200"
+            -s scope- -c coll --scope_count=5 --collection_count=2000"
 - command: "-i {{$.Nodes | $.Cluster 1 | net 0}}:{{$.RestPort}} -b {{.NthBucket 2}} -o create_multi_scope_collection
-            -s scope- -c coll --scope_count=5 --collection_count=200"
+            -s scope- -c coll --scope_count=5 --collection_count=2000"
 - command: "-i {{$.Nodes | $.Cluster 1 | net 0}}:{{$.RestPort}} -b {{.NthBucket 3}} -o create_multi_scope_collection
-            -s scope- -c coll --scope_count=5 --collection_count=200"
+            -s scope- -c coll --scope_count=5 --collection_count=2000"
 - command: "-i {{$.Nodes | $.Cluster 1 | net 0}}:{{$.RestPort}} -b {{.NthBucket 4}} -o create_multi_scope_collection
-            -s scope- -c coll --scope_count=5 --collection_count=200"
+            -s scope- -c coll --scope_count=5 --collection_count=1000"
 - command: "-i {{$.Nodes | $.Cluster 1 | net 0}}:{{$.RestPort}} -b bucket5_couchstore -o create_multi_scope_collection
-            -s scope- -c coll --scope_count=5 --collection_count=200"
+            -s scope- -c coll --scope_count=5 --collection_count=1000"
 
 #============ Initial data load on local ============
 - image: sequoiatools/catapult
