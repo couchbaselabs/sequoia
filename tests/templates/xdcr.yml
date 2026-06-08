@@ -100,6 +100,32 @@
                 --remote-cluster-name $3 --strict-no-diff --timeout 1200"
       wait: true
 
+# Apply a global-default XDCR setting (POST /settings/replications). curl -f fails the
+# action on an HTTP 4xx, so out-of-range values fail the run.
+# $0 = source host   $1 = setting name   $2 = setting value
+-
+  name: xdcr-global-setting
+  actions:
+    -
+      image: appropriate/curl
+      command: "-fsS -u {{.RestUsername}}:{{.RestPassword}}
+                -X POST http://$0:{{.RestPort}}/settings/replications
+                -d $1=$2"
+      wait: true
+
+# Apply an XDCR setting to one replication (POST /settings/replications/<uuid>/src/dest).
+# Requires an earlier action to have captured GET /pools/default/remoteClusters as alias `ReplId`.
+# $0 = source host   $1 = src bucket   $2 = dest bucket   $3 = setting name   $4 = value
+-
+  name: xdcr-repl-setting
+  actions:
+    -
+      image: appropriate/curl
+      command: "-fsS -u {{.RestUsername}}:{{.RestPassword}} -X POST
+                http://$0:{{.RestPort}}/settings/replications/{{(index (.AllLogs `ReplId` | json) 0).uuid}}%2F$1%2F$2
+                -d $3=$4"
+      wait: true
+
 # Sleep helper.
 # $0 = seconds
 -

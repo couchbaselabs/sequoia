@@ -121,6 +121,25 @@
 - command: "bucket-edit -c {{.Nodes | .Cluster 1 | net 0}}:{{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket {{.Nodes | .Cluster 1 | bucket 4}} --enable-cross-cluster-versioning --force"
   wait: true
 
+#============ global XDCR memory-footprint throttles, both clusters (MB-68340) ============
+# Set before replications are created so every replication inherits them.
+- template: xdcr-global-setting
+  args: "{{.Orchestrator}}, dcpFlowControlThrottle, 50"
+  requires:  "{{eq true .DoOnce }}"
+  wait: true
+- template: xdcr-global-setting
+  args: "{{.Orchestrator}}, componentEventsChanLength, 5000"
+  requires:  "{{eq true .DoOnce }}"
+  wait: true
+- template: xdcr-global-setting
+  args: "{{.Nodes | .Cluster 1 | net 0}}, dcpFlowControlThrottle, 50"
+  requires:  "{{eq true .DoOnce }}"
+  wait: true
+- template: xdcr-global-setting
+  args: "{{.Nodes | .Cluster 1 | net 0}}, componentEventsChanLength, 5000"
+  requires:  "{{eq true .DoOnce }}"
+  wait: true
+
 #============ get remote cluster pem  ============
 - image:  appropriate/curl
   command: "-o /tmp/remote_cluster.pem -u {{.Nodes | .Cluster 1 | .Attr `rest_username`}}:{{.Nodes | .Cluster 1 | .Attr `rest_password`}} http://{{.Nodes | .Cluster 1 | net 0}}:{{$.RestPort}}/pools/default/certificate"
@@ -326,6 +345,20 @@
               -n {{.Scale 700}} -pc 40 -pu 40 -pd 60 -dt Employee -de 600
               -ac True -sd True -lf True -li 1000"
 
+#============ tighten global throttles mid-replication, under load (MB-68340) ============
+- template: xdcr-global-setting
+  args: "{{.Orchestrator}}, dcpFlowControlThrottle, 25"
+  wait: true
+- template: xdcr-global-setting
+  args: "{{.Orchestrator}}, componentEventsChanLength, 2500"
+  wait: true
+- template: xdcr-global-setting
+  args: "{{.Nodes | .Cluster 1 | net 0}}, dcpFlowControlThrottle, 25"
+  wait: true
+- template: xdcr-global-setting
+  args: "{{.Nodes | .Cluster 1 | net 0}}, componentEventsChanLength, 2500"
+  wait: true
+
 #============  Swap Rebalance ################
 -
   image: sequoiatools/cmd
@@ -392,6 +425,15 @@
   wait: true
 - command: "-u {{.RestUsername}}:{{.RestPassword}} http://{{.Nodes | .Cluster 1 | net 0}}:{{.RestPort}}/pools/default/remoteClusters"
   alias: RemoteReplId
+  wait: true
+
+#============ per-replication override on bucket1, tighter than the global (MB-68340) ============
+# Per-replication settings take precedence over the global default for that replication only.
+- template: xdcr-repl-setting
+  args: "{{.Orchestrator}}, {{.NthBucket 1}}, {{.NthBucket 1}}, dcpFlowControlThrottle, 15"
+  wait: true
+- template: xdcr-repl-setting
+  args: "{{.Orchestrator}}, {{.NthBucket 1}}, {{.NthBucket 1}}, componentEventsChanLength, 1500"
   wait: true
 
 # delete scope_0 to scope_4 in bucket0 to bucket2 on C1 and C2
