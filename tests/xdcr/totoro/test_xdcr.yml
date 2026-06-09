@@ -436,6 +436,13 @@
   args: "{{.Orchestrator}}, {{.NthBucket 1}}, {{.NthBucket 1}}, componentEventsChanLength, 1500"
   wait: true
 
+#============ forward-local-only on bucket1 (local mutations) ============
+# forwardLocalOnly makes this C1.bucket1 -> C2.bucket1 replication
+# forward only mutations that originated on the local cluster.
+- template: xdcr-forward-local-only
+  args: "{{.Orchestrator}}, {{.NthBucket 1}}, {{.NthBucket 1}}, true"
+  wait: true
+
 # delete scope_0 to scope_4 in bucket0 to bucket2 on C1 and C2
 - foreach: "{{range $i, $offset := mkrange 0 2}}"
   image: sequoiatools/collections:1.0

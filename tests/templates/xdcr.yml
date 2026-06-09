@@ -126,6 +126,24 @@
                 -d $3=$4"
       wait: true
 
+# Toggle forwardLocalOnly on one replication (POST /settings/replications/<uuid>/src/dest).
+# When true, the replication forwards only mutations that originated on the local cluster
+# (judged from each document's HLV); mutations replicated in from another cluster/SGW are
+# skipped. Live per-replication update, no restreaming. The source/target buckets must have
+# cross-cluster versioning (ECCV) enabled so an HLV is stamped. Requires an earlier action to
+# have captured GET /pools/default/remoteClusters as alias `ReplId`. curl -f fails on a 4xx,
+# so a build that does not support the setting fails the run.
+# $0 = source host   $1 = src bucket   $2 = dest bucket   $3 = true|false
+-
+  name: xdcr-forward-local-only
+  actions:
+    -
+      image: appropriate/curl
+      command: "-fsS -u {{.RestUsername}}:{{.RestPassword}} -X POST
+                http://$0:{{.RestPort}}/settings/replications/{{(index (.AllLogs `ReplId` | json) 0).uuid}}%2F$1%2F$2
+                -d forwardLocalOnly=$3"
+      wait: true
+
 # Sleep helper.
 # $0 = seconds
 -
