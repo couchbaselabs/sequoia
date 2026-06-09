@@ -650,6 +650,12 @@
 - command: "-u {{.RestUsername}}:{{.RestPassword}} -X POST http://{{.Orchestrator}}:{{.RestPort}}/settings/replications/{{(index (.AllLogs `ReplId` | json) 0).uuid }}/default/{{.Bucket}} -d filterExpiration=true -d filterBypassExpiry=true -d filterDeletion=false -d filterExpression=result<>SUCCESS -d filterSkipRestream=1"
   wait: true
 
+# enable forwardLocalOnly on the {{.Bucket}} -> remote.bucket0 replication. 
+- template: xdcr-forward-local-only
+  args: "{{.Orchestrator}}, {{.Bucket}}, {{.Nodes | .Cluster 1 | bucket 0}}, true"
+  requires:  "{{eq true .DoOnce }}"
+  wait: true
+
 # pause eventing handlers
 - test: tests/eventing/CC/test_eventing_rebalance_integration.yml
   section: pause
