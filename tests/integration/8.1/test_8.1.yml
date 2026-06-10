@@ -1,6 +1,6 @@
 ---
 -
- include: tests/templates/rebalance.yml, tests/templates/vegeta.yml, tests/templates/kv.yml, tests/templates/fts.yml, tests/templates/n1ql.yml, tests/templates/multinode_failure.yml, tests/templates/collections.yml
+ include: tests/templates/rebalance.yml, tests/templates/vegeta.yml, tests/templates/kv.yml, tests/templates/fts.yml, tests/templates/n1ql.yml, tests/templates/multinode_failure.yml, tests/templates/collections.yml, tests/templates/xdcr.yml
 
 ###### update Tombstone Purge Interval ######
 -
@@ -128,6 +128,25 @@
    entrypoint: sleep
    command: "60"
    wait: true
+
+#============ global XDCR memory-footprint throttles, both clusters (MB-68340) ============
+# Set before replications are created so every replication inherits them.
+- template: xdcr-global-setting
+  args: "{{.Orchestrator}}, dcpFlowControlThrottle, 50"
+  requires:  "{{eq true .DoOnce }}"
+  wait: true
+- template: xdcr-global-setting
+  args: "{{.Orchestrator}}, componentEventsChanLength, 5000"
+  requires:  "{{eq true .DoOnce }}"
+  wait: true
+- template: xdcr-global-setting
+  args: "{{.Nodes | .Cluster 1 | net 0}}, dcpFlowControlThrottle, 50"
+  requires:  "{{eq true .DoOnce }}"
+  wait: true
+- template: xdcr-global-setting
+  args: "{{.Nodes | .Cluster 1 | net 0}}, componentEventsChanLength, 5000"
+  requires:  "{{eq true .DoOnce }}"
+  wait: true
 
 # start xdcr replications
 - image: sequoiatools/couchbase-cli:8.0
