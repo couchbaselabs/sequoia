@@ -402,3 +402,149 @@
                       --obj-endpoint $AZURE_STORAGE_ENDPOINT
                       --obj-access-key-id $AZURE_STORAGE_ACCOUNT
                       --obj-secret-access-key $AZURE_STORAGE_KEY"
+
+###############################################################################
+# GCP Cloud Storage cbbackupmgr templates
+#
+# Credentials are read from the environment of the SSH host:
+#   $GOOGLE_APPLICATION_CREDENTIALS  (path to service account key file,
+#                                     passed as --obj-auth-file)
+#
+# Archive paths must be of the form gs://<bucket>/<prefix>
+###############################################################################
+
+-
+# Configure GCP Cloud Storage backup repo
+# $0 = SSH host
+# $1 = archive (gs://bucket/prefix)
+# $2 = repo name
+# $3 = obj-staging-dir
+  name: configure_backup_repo_gcp
+  actions:
+    -
+      image: "sequoiatools/cmd"
+      command: "sshpass -p {{.SSHPassword}}
+                  ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0
+                    source /etc/profile.d/gcp_credentials.sh;
+                    /opt/couchbase/bin/cbbackupmgr config
+                      -a $1 -r $2
+                      --obj-staging-dir $3
+                      --obj-auth-file $GOOGLE_APPLICATION_CREDENTIALS"
+
+-
+# Backup to GCP Cloud Storage
+# $0 = SSH host
+# $1 = cluster
+# $2 = archive (gs://...)
+# $3 = repo name
+# $4 = obj-staging-dir
+  name: backup_cluster_gcp
+  actions:
+    -
+      image: "sequoiatools/cmd"
+      command: "sshpass -p {{.SSHPassword}}
+                  ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0
+                    source /etc/profile.d/gcp_credentials.sh;
+                    /opt/couchbase/bin/cbbackupmgr backup
+                      -c $1 -u {{.RestUsername}} -p {{.RestPassword}}
+                      -a $2 -r $3 -t 10
+                      --obj-staging-dir $4
+                      --obj-auth-file $GOOGLE_APPLICATION_CREDENTIALS"
+
+-
+# Resume a GCP Cloud Storage backup
+  name: resume_backup_cluster_gcp
+  actions:
+    -
+      image: "sequoiatools/cmd"
+      command: "sshpass -p {{.SSHPassword}}
+                  ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0
+                    source /etc/profile.d/gcp_credentials.sh;
+                    /opt/couchbase/bin/cbbackupmgr backup
+                      -c $1 -u {{.RestUsername}} -p {{.RestPassword}}
+                      -a $2 -r $3 -t 10 --resume
+                      --obj-staging-dir $4
+                      --obj-auth-file $GOOGLE_APPLICATION_CREDENTIALS"
+
+-
+# Purge a GCP Cloud Storage backup
+  name: purge_backup_cluster_gcp
+  actions:
+    -
+      image: "sequoiatools/cmd"
+      command: "sshpass -p {{.SSHPassword}}
+                  ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0
+                    source /etc/profile.d/gcp_credentials.sh;
+                    /opt/couchbase/bin/cbbackupmgr backup
+                      -c $1 -u {{.RestUsername}} -p {{.RestPassword}}
+                      -a $2 -r $3 -t 10 --purge
+                      --obj-staging-dir $4
+                      --obj-auth-file $GOOGLE_APPLICATION_CREDENTIALS"
+
+-
+# Restore from GCP Cloud Storage
+# $0 = SSH host
+# $1 = destination cluster
+# $2 = archive (gs://...)
+# $3 = repo name
+# $4 = obj-staging-dir
+  name: restore_backup_gcp
+  actions:
+    -
+      image: "sequoiatools/cmd"
+      command: "sshpass -p {{.SSHPassword}}
+                  ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0
+                    source /etc/profile.d/gcp_credentials.sh;
+                    /opt/couchbase/bin/cbbackupmgr restore
+                      -c $1 -u {{.RestUsername}} -p {{.RestPassword}}
+                      -a $2 -r $3 -t 10
+                      --obj-staging-dir $4
+                      --obj-auth-file $GOOGLE_APPLICATION_CREDENTIALS"
+
+-
+# Resume restore from GCP Cloud Storage
+  name: resume_restore_backup_gcp
+  actions:
+    -
+      image: "sequoiatools/cmd"
+      command: "sshpass -p {{.SSHPassword}}
+                  ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0
+                    source /etc/profile.d/gcp_credentials.sh;
+                    /opt/couchbase/bin/cbbackupmgr restore
+                      -c $1 -u {{.RestUsername}} -p {{.RestPassword}}
+                      -a $2 -r $3 -t 10 --resume
+                      --obj-staging-dir $4
+                      --obj-auth-file $GOOGLE_APPLICATION_CREDENTIALS"
+
+-
+# Purge restore from GCP Cloud Storage
+  name: purge_restore_backup_gcp
+  actions:
+    -
+      image: "sequoiatools/cmd"
+      command: "sshpass -p {{.SSHPassword}}
+                  ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0
+                    source /etc/profile.d/gcp_credentials.sh;
+                    /opt/couchbase/bin/cbbackupmgr restore
+                      -c $1 -u {{.RestUsername}} -p {{.RestPassword}}
+                      -a $2 -r $3 -t 10 --purge
+                      --obj-staging-dir $4
+                      --obj-auth-file $GOOGLE_APPLICATION_CREDENTIALS"
+
+-
+# Remove a GCP Cloud Storage backup repo
+# $0 = SSH host
+# $1 = archive (gs://...)
+# $2 = repo name
+# $3 = obj-staging-dir
+  name: clean_backup_repo_gcp
+  actions:
+    -
+      image: "sequoiatools/cmd"
+      command: "sshpass -p {{.SSHPassword}}
+                  ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@$0
+                    source /etc/profile.d/gcp_credentials.sh;
+                    /opt/couchbase/bin/cbbackupmgr remove
+                      -a $1 -r $2
+                      --obj-staging-dir $3
+                      --obj-auth-file $GOOGLE_APPLICATION_CREDENTIALS"
