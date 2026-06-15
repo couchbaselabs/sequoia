@@ -300,6 +300,57 @@
   args: "{{.Orchestrator}},bucket5_magma,bucket5_couchstore,remote"
   wait: true
 
+#============ Collection backfill: source-only collections, created on target later ============
+# Backfill scenario: a source collection holds data whose TARGET counterpart does not exist
+# yet. Under implicit mapping the C1.bucket0 -> C2.bucket0 replication cannot map those docs,
+# so they sit pending (broken mapping) and the main pipeline carries nothing for them. When
+# the SAME scope+collections are later created on the TARGET (C2), XDCR raises a backfill
+# request and spins up a SEPARATE backfill pipeline that streams the ALREADY-written source
+# data into the new target collections (the main pipeline keeps carrying only new mutations).
+# Inserted here while the system is quiesced and the baseline differ has just proven bucket0
+# clean, so any post-backfill diff is attributable to the backfill itself.
+
+# 1) create a brand-new scope (backfill-0) + collections on the SOURCE (C1) bucket0 ONLY
+- image: sequoiatools/collections:1.0
+  command: "-i {{.Orchestrator}}:{{$.RestPort}} -b {{.Bucket}} -o create_multi_scope_collection
+            -s backfill- -c coll --scope_count=1 --collection_count=5"
+  wait: true
+
+# 2) populate those source collections directly (--collection targets; --populate-only is
+#    create-only -> no deletes -> no tombstones -> the per-collection differ stays exact)
+- template: pillowfight_durability
+  args: "{{.Orchestrator}}, {{.Bucket}}, -I {{.Scale 5000}} -B {{.Scale 100}} -t 1 --json --populate-only
+         --collection backfill-0.coll0 --collection backfill-0.coll1 --collection backfill-0.coll2
+         --collection backfill-0.coll3 --collection backfill-0.coll4, {{.AuthPassword}}"
+  wait: true
+
+# 3) let the main pipeline run; backfill-0.* stays pending (no target collections exist yet)
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "120"
+  wait: true
+
+# 4) create the SAME scope+collections on the TARGET (C2) -> resolves the mapping and fires
+#    the backfill pipeline for the pre-existing source data
+- image: sequoiatools/collections:1.0
+  command: "-i {{.Nodes | .Cluster 1 | net 0}}:{{$.RestPort}} -b {{.Bucket}} -o create_multi_scope_collection
+            -s backfill- -c coll --scope_count=1 --collection_count=5"
+  wait: true
+
+# 5) let the backfill pipeline stream the source data into the new target collections
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+# 6) per-collection strict no-diff over bucket0 confirms backfill filled backfill-0.coll0..4
+#    (the differ's own --timeout/--retries drains any last in-flight backfill mutations)
+- template: differ-replication
+  args: "{{.Orchestrator}},{{.Bucket}},{{.Bucket}},remote"
+  wait: true
+
 #============ Cluster Ops ============
 # Rebalance-in node
 -
