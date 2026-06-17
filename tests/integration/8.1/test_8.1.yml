@@ -82,13 +82,15 @@
 - args: "{{.Orchestrator}}, {{.NthBucket 9}}, {{.Scale 1}}, {{.Scale 700}}, uniform"
   requires:  "{{eq true .DoOnce }}"
 
-###### Create scopes and collections in remote cluster  ######
+###### Create scopes and collections in remote cluster (target ~10K aggregate, mirrors source) ######
 - template: create-multi-scopes-collections
-  args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 4}}, {{.Scale 2}}, {{.Scale 10}}, uniform"
+  args: "{{.Nodes | .Cluster 1 | net 0}}, {{.Nodes | .Cluster 1 | bucket 0}}, {{.Scale 3000}}, {{.Scale 9000}}, uniform"
   requires:  "{{eq true .DoOnce }}"
-- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 8}}, {{.Scale 2}}, {{.Scale 10}}, uniform"
+- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.Nodes | .Cluster 1 | bucket 1}}, {{.Scale 2}}, {{.Scale 10}}, uniform"
   requires:  "{{eq true .DoOnce }}"
-- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.NthBucket 9}}, {{.Scale 2}}, {{.Scale 10}}, uniform"
+- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.Nodes | .Cluster 1 | bucket 2}}, {{.Scale 10}}, {{.Scale 500}}, uniform"
+  requires:  "{{eq true .DoOnce }}"
+- args: "{{.Nodes | .Cluster 1 | net 0}}, {{.Nodes | .Cluster 1 | bucket 3}}, {{.Scale 1}}, {{.Scale 700}}, uniform"
   requires:  "{{eq true .DoOnce }}"
 
 # Sleep for some time to allow collections manifest to sync
@@ -929,6 +931,17 @@
 - command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}}
             -a validate -rn {{.Nodes | .Cluster 1 | net 0}} -ro {{.RestPort}} -ru {{.RestUsername}}
             -rp {{.RestPassword}} -b {{.NthBucket 9}} -rb {{.Nodes | .Cluster 1 | bucket 3}}"
+  wait: true
+
+#============ XDCR collection-level strict no-diff (xdcrDiffer) ============
+- template: differ-replication
+  args: "{{.Orchestrator}}, {{.NthBucket 4}}, {{.Nodes | .Cluster 1 | bucket 1}}, remote"
+  wait: true
+- template: differ-replication
+  args: "{{.Orchestrator}}, {{.NthBucket 8}}, {{.Nodes | .Cluster 1 | bucket 2}}, remote"
+  wait: true
+- template: differ-replication
+  args: "{{.Orchestrator}}, {{.NthBucket 9}}, {{.Nodes | .Cluster 1 | bucket 3}}, remote"
   wait: true
 
 
