@@ -86,6 +86,30 @@ golangci-lint run
 - `local/` - Local override files (`scope_local.yml`, `test_local.yml`) for dev use
 - `build.sh` - Container build script
 
+## Container Image Conventions
+
+### Updating the couchbase-cli image
+
+Each release has its own Dockerfile under `containers/couchbase-cli/<release_ver>/Dockerfile`.
+To update the CLI to a newer build or release:
+
+1. Edit `containers/couchbase-cli/<release_ver>/Dockerfile` with the new package version.
+2. Build and push:
+   ```bash
+   docker build -t sequoiatools/couchbase-cli:<release_ver> containers/couchbase-cli/<release_ver>
+   docker push sequoiatools/couchbase-cli:<release_ver>
+   ```
+
+### CLI image version must match the server version under test
+
+Always use the CLI image that matches the Couchbase Server release being tested. Do **not** carry forward an older release image.
+
+| Correct | Wrong |
+|---------|-------|
+| `sequoiatools/couchbase-cli:8.1` in an 8.1 test YAML | `sequoiatools/couchbase-cli:8.0` in an 8.1 test YAML |
+
+When reviewing or writing test YAMLs, check every `image: sequoiatools/couchbase-cli:<ver>` line and ensure the version matches the `-version` flag passed at runtime (e.g. `8.1.0` → `couchbase-cli:8.1`).
+
 ## Architecture
 
 ### Execution Flow
