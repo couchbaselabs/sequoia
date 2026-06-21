@@ -1359,6 +1359,10 @@ func (s *Scope) CreateBuckets() {
 					if bucket.ContinuousBackupLocation != "" {
 						command = append(command, "--continuous-backup-location", bucket.ContinuousBackupLocation)
 					}
+					if bucket.ContinuousBackupRetentionPeriod != 0 {
+						command = append(command, "--continuous-backup-retention-period",
+							strconv.FormatUint(uint64(bucket.ContinuousBackupRetentionPeriod), 10))
+					}
 				}
 				if bucket.BucketThrottleReserved > 0 {
 					command = append(command, "--throttle-reserved", strconv.FormatUint(bucket.BucketThrottleReserved, 10))
