@@ -135,6 +135,11 @@ buckets:
       historyretentionseconds: 3600
       enablehistoryretentionbydefault: 1
       rank : 3
+      enable_continuous_backup: true
+      continuous_backup_interval: 15
+      continuous_backup_location: /mnt/nfs_data/test_longevity_continuous_backup
+      continuous_backup_retention_period: 200
+
   -
       name: NEW_ORDER
       ram: 5%

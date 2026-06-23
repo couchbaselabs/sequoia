@@ -13,6 +13,37 @@
   args: "{{.ActiveIndexNode 0}}, 'indexer.settings.enable_shard_affinity':true"
   requires:  "{{eq true .DoOnce }}"
 
+# Configure backup repo
+-
+  template: configure_backup_repo
+  args: "{{.Nodes | .Service `backup` | net 0}}, /mnt/nfs_data/test_longevity_backup, systemtestbackup"
+  wait: true
+
+# Configure /mnt/nfs_data/timestamps.txt to record timestamps of operations
+-
+  image: sequoiatools/cmd
+  command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `backup` | net 0}} 'rm -f /mnt/nfs_data/timestamps.txt && touch /mnt/nfs_data/timestamps.txt'"
+  wait: true
+
+# Take first backup
+-
+  template: backup_cluster
+  args: "{{.Nodes | .Service `backup` | net 0}}, {{.Nodes | .Service `backup` | net 0}}, /mnt/nfs_data/test_longevity_backup, systemtestbackup"
+  wait: true
+
+# Wait for some time for continuous backup
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# Record timestamp
+-
+  image: sequoiatools/cmd
+  command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `backup` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /mnt/nfs_data/timestamps.txt'"
+  wait: true
+
 ###### enable n2n encryption & ipv4only ######
 -
   template: disable_autofailover
@@ -36,6 +67,12 @@
   template: enable_autofailover
   args: "120,1"
   requires:  "{{eq true .DoOnce }}"
+
+# Record timestamp
+-
+  image: sequoiatools/cmd
+  command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `backup` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /mnt/nfs_data/timestamps.txt'"
+  wait: true
 
 # KV File-Based Rebalance: disabled on loop 0 (exercises DCP fallback), enabled on all subsequent loops
 -
@@ -66,6 +103,12 @@
  command: "setting-cluster -c {{.Orchestrator}}:8091 -u {{.RestUsername}} -p {{.RestPassword}} --write-unit-size {{.Scale 10000}}"
  wait: true
 
+# Record timestamp
+-
+  image: sequoiatools/cmd
+  command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `backup` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /mnt/nfs_data/timestamps.txt'"
+  wait: true
+
 
 ############### Enable Plasma Bloom Filter ################
 - template: set_gsi_config
@@ -87,6 +130,13 @@
 - template: set_fts_manager_options
   args: "{{.Nodes | .Service `fts` | net 0}}, 'bleveMaxClauseCount':'2500'"
 
+# Record timestamp
+-
+  image: sequoiatools/cmd
+  command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `backup` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /mnt/nfs_data/timestamps.txt'"
+  wait: true
+
+
 ##### create a backup plan which backups up every 12 hours and merges every 2 days at 12:00noon to filesystem repo
 -
   image:  appropriate/curl
@@ -94,6 +144,12 @@
   wait: true
 -
   command: "-u {{.RestUsername}}:{{.RestPassword}} -X POST http://{{.Orchestrator}}:8091/_p/backup/api/v1/cluster/self/repository/active/my_repo -H Content-Type:application/json -d '{\"plan\": \"my_plan\", \"archive\": \"/data/archive\", \"bucket_name\":\"bucket5\"}'"
+  wait: true
+
+# Record timestamp
+-
+  image: sequoiatools/cmd
+  command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `backup` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /mnt/nfs_data/timestamps.txt'"
   wait: true
 
 ### create (scale * 10) scopes and (scale * 80) collections in local cluster across 6 buckets as scope_1,scope_2 ... ######
@@ -121,6 +177,12 @@
   requires:  "{{eq true .DoOnce }}"
 - args: "{{.Nodes | .Cluster 1 | net 0}}, {{.Nodes | .Cluster 1 | bucket 3}}, {{.Scale 1}}, {{.Scale 700}}, uniform"
   requires:  "{{eq true .DoOnce }}"
+
+# Record timestamp
+-
+  image: sequoiatools/cmd
+  command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `backup` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /mnt/nfs_data/timestamps.txt'"
+  wait: true
 
 # Sleep for some time to allow collections manifest to sync
 -
@@ -153,6 +215,13 @@
 - command: "bucket-edit -c {{.Nodes | .Cluster 1 | net 0}}:{{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket {{.Nodes | .Cluster 1 | bucket 3}} --enable-cross-cluster-versioning --force"
   wait: true
 
+# Record timestamp
+-
+  image: sequoiatools/cmd
+  command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `backup` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /mnt/nfs_data/timestamps.txt'"
+  wait: true
+
+
 # Sleep to ensure conflict logging collections are properly created
 -
    image: sequoiatools/cmd
@@ -177,6 +246,12 @@
 - template: xdcr-global-setting
   args: "{{.Nodes | .Cluster 1 | net 0}}, componentEventsChanLength, 5000"
   requires:  "{{eq true .DoOnce }}"
+  wait: true
+
+# Record timestamp
+-
+  image: sequoiatools/cmd
+  command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `backup` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /mnt/nfs_data/timestamps.txt'"
   wait: true
 
 # start xdcr replications
@@ -228,6 +303,12 @@
         --force"
   wait: true
 
+# Record timestamp
+-
+  image: sequoiatools/cmd
+  command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `backup` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /mnt/nfs_data/timestamps.txt'"
+  wait: true
+
 ############### Initial data loading to collections - no doc expiry, only creates ################
 - image: sequoiatools/catapult
   command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 4}} -n {{.Scale 2000}} -pc 100 -dt Hotel -ds 1000 -ac True"
@@ -248,6 +329,12 @@
 - command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.NthBucket 9}} -n {{.Scale 35}} -pc 100 -dt Hotel -ds 1000 -ac True"
   requires:  "{{eq true .DoOnce }}"
   alias: catapult_bucket9_doc_ops1
+
+# Record timestamp
+-
+  image: sequoiatools/cmd
+  command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `backup` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /mnt/nfs_data/timestamps.txt'"
+  wait: true
 
 ##### Data loading for gsi composite indexes creation ################
 - image: sequoiatools/magmaloader
@@ -273,6 +360,12 @@
 - image: sequoiatools/magmaloader
   command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 12}} --start 0 --end 100000 --doc_template Hotel --all_coll true"
   requires:  "{{eq true .DoOnce }}"
+  wait: true
+
+# Record timestamp
+-
+  image: sequoiatools/cmd
+  command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `backup` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /mnt/nfs_data/timestamps.txt'"
   wait: true
 
 ##### Upsert sparse embeddings for bucket12 ################
@@ -309,12 +402,23 @@
 - command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 12}} -a create_n_indexes_on_buckets --timeout 30 --num_of_indexes_per_bucket 2 --create_sparse_bhive_indexes true --skip_default_collection false --num_vectors 100000 --set_max_replicas 1"
   wait: true
 
+# Record timestamp
+-
+  image: sequoiatools/cmd
+  command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `backup` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /mnt/nfs_data/timestamps.txt'"
+  wait: true
 
 # Start transactions workload on default bucket
 -
   image: sequoiatools/transactions
   command: "{{.Orchestrator}} {{.Bucket}} 1000"
   alias: txn
+
+# Record timestamp
+-
+  image: sequoiatools/cmd
+  command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `backup` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /mnt/nfs_data/timestamps.txt'"
+  wait: true
 
 # Start Collections CRUD on bucket 4 & bucket5
 -
@@ -324,6 +428,12 @@
 -
   command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 9}} -o crud_mode --crud_interval=120 --max_scopes=5 --max_collections=700"
   alias: collection_crud2
+
+# Record timestamp
+-
+  image: sequoiatools/cmd
+  command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `backup` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /mnt/nfs_data/timestamps.txt'"
+  wait: true
 
 # continous kv loading
 - template: pillowfight_durability
@@ -346,6 +456,12 @@
   args: "{{.Orchestrator}}, {{.NthBucket 8}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1 --json"
 - template: pillowfight_durability
   args: "{{.Orchestrator}}, {{.NthBucket 9}}, -M 512 -I {{.Scale 2000}} -B {{.Scale 200}} -t 1  --rate-limit {{.Scale 1000}}, {{.AuthPassword}} --durability majority -c -1 --json"
+
+# Record timestamp
+-
+  image: sequoiatools/cmd
+  command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `backup` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /mnt/nfs_data/timestamps.txt'"
+  wait: true
 
 # Sleep for some time to allow some docs to be loaded to the collections
 -
@@ -396,6 +512,12 @@
   wait: true
 
 - command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 7}} -i {{.Scale 1}} -a create_index"
+  wait: true
+
+# Record timestamp
+-
+  image: sequoiatools/cmd
+  command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `backup` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /mnt/nfs_data/timestamps.txt'"
   wait: true
 
 ###############  build all deferred indexes ################
@@ -460,6 +582,12 @@
   command: "--connection_string {{.Nodes | .Service `n1ql` | net 0}} --username {{.RestUsername}} --password {{.RestPassword}} --action verify_query_metadata --non_zero_check true"
   wait: true
 
+# Record timestamp
+-
+  image: sequoiatools/cmd
+  command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `backup` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /mnt/nfs_data/timestamps.txt'"
+  wait: true
+
 # Create FTS indexes on collections
 - image: sequoiatools/ftsindexmanager
   command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}} -m 1:1:2 -s {{.Scale 1}} -a create_index_from_map"
@@ -503,6 +631,12 @@
 - image: sequoiatools/gideon_latest
   command: "kv --ops {{.Scale 150}} --create 20 --delete 20 --get 82 --sizes 64 96  --expire 100 --ttl 3600  --hosts {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.Bucket}} --scope event_0 --collection coll0"
 - command: "kv --ops {{.Scale 150}} --create 20 --delete 20 --get 82 --sizes 64 96  --expire 100 --ttl 3600  --hosts {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 1}} --scope event_0 --collection coll0"
+
+# Record timestamp
+-
+  image: sequoiatools/cmd
+  command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `backup` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /mnt/nfs_data/timestamps.txt'"
+  wait: true
 
 ################# incremental data loading to collections ################
 - image: sequoiatools/catapult
@@ -571,6 +705,12 @@
   command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}} --print_interval 600 -a run_queries -t 0 -nq 1"
 - command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 5}} --print_interval 600 -a run_flex_queries -t 0 -nq 1"
 
+# Record timestamp
+-
+  image: sequoiatools/cmd
+  command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `backup` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /mnt/nfs_data/timestamps.txt'"
+  wait: true
+
 # Sleep for some time to allow some queries to be run against the collections
 -
    image: sequoiatools/cmd
@@ -627,6 +767,12 @@
    entrypoint: sleep
    command: "600"
    wait: true
+
+# Record timestamp
+-
+  image: sequoiatools/cmd
+  command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `backup` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /mnt/nfs_data/timestamps.txt'"
+  wait: true
 
 ###### Disable log encryption - test eventing encryption state-change ######
 - image: sequoiatools/couchbase-cli:8.0
@@ -709,6 +855,12 @@
 # resume eventing handlers
 - test: tests/eventing/CC/test_eventing_rebalance_integration.yml
   section: resume
+
+# Record timestamp
+-
+  image: sequoiatools/cmd
+  command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `backup` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /mnt/nfs_data/timestamps.txt'"
+  wait: true
 
 ###### Re-enable log encryption to test eventing encryption state-change ######
 - image: sequoiatools/couchbase-cli:8.0

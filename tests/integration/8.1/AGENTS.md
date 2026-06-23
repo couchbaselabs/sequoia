@@ -66,12 +66,12 @@ Additional settings: `enable_encryption_at_rest: true`, `enable_client_certifica
 
 All 6 nodes are data-only. REST credentials match the local cluster (`Administrator`/`password`).
 
-### Local Buckets (12 total)
+### Local Buckets (13 total)
 
 | Index | Name | RAM | Storage | TTL | History Bytes | History Secs | Notes |
 |-------|------|-----|---------|-----|---------------|--------------|-------|
 | 0 | `default` | 35% | magma | — | 2 GB | 3600 | rank 3, views DDocs (`scale`), CCV enabled |
-| 1 | `WAREHOUSE` | 15% | magma | — | 268 GB | 3600 | rank 3, CCV enabled |
+| 1 | `WAREHOUSE` | 15% | magma | — | 268 GB | 3600 | rank 3, CCV enabled; continuous backup enabled (see below) |
 | 2 | `NEW_ORDER` | 5% | magma | 10800 s | 2 GB | 3600 | rank 2 |
 | 3 | `ITEM` | 5% | magma | — | 50 GB | 7200 | rank 2, views DDocs (`all`) |
 | 4 | `bucket4` | 5% | magma | — | 2 GB | 14440 | CCV enabled; XDCR source → remote bucket 1 |
@@ -80,10 +80,20 @@ All 6 nodes are data-only. REST credentials match the local cluster (`Administra
 | 7 | `bucket7` | 4% | magma | — | 2 GB | 86400 | Sync Gateway source; GSI + FTS indexes |
 | 8 | `bucket8` | 4% | magma | — | 2 GB | 86400 | CCV enabled; XDCR source → remote bucket 2; Collections CRUD |
 | 9 | `bucket9` | 4% | magma | — | 2 GB | 86400 | CCV enabled; XDCR source → remote bucket 3; Collections CRUD |
-| 10 | `bucket10` | 5% | magma | — | 2 GB | 86400 | Composite + vector (L2) indexes; SIFT embeddings |
-| 11 | `bucket11` | 5% | magma | — | 2 GB | 86400 | BHive + scalar indexes; SIFT embeddings |
+| 10 | `bucket10` | 5% | couchstore | — | — | — | Composite + vector (L2) indexes; SIFT embeddings; throttle 5000/5000 |
+| 11 | `bucket11` | 4% | magma | — | 2 GB | 86400 | BHive + scalar indexes; SIFT embeddings |
+| 12 | `bucket12` | 4% | — | — | — | — | Ephemeral (`nruEviction`); throttle 2000/2000; no encryption |
 
-All local buckets use `fullEviction` and encryption at rest (except `bucket11` which has no encryption configured).
+All local buckets (except `bucket10`, `bucket12`) use `fullEviction`. Encryption at rest is enabled on buckets 0–9 with DEK rotation (every 50 ops, lifetime 100). `bucket11` and `bucket12` have no encryption configured.
+
+**WAREHOUSE continuous backup settings:**
+
+| Field | Value |
+|-------|-------|
+| `enable_continuous_backup` | `true` |
+| `continuous_backup_interval` | `15` minutes |
+| `continuous_backup_location` | `/mnt/nfs_data/test_longevity_continuous_backup` |
+| `continuous_backup_retention_period` | `200` |
 
 ### Remote Buckets (4 total)
 
@@ -154,12 +164,15 @@ tests/templates/collections.yml
 | 11 | Set FTS `bleveMaxResultWindow` → 100000 | `set_fts_manager_options` template |
 | 12 | Set FTS `bleveMaxClauseCount` → 2500 | `set_fts_manager_options` template |
 
-### Phase 2 — Backup Plan Setup (one-time)
+### Phase 2 — Backup Setup (one-time)
 
 | Step | Action |
 |------|--------|
-| 13 | Create backup plan `my_plan`: full backup every 24 h, merge every 2 days at noon; covers data, GSI, views, FTS, eventing, analytics, query |
-| 14 | Create repository `my_repo` under `/data/archive` targeting `bucket5` |
+| 13 | Configure operational backup repo `systemtestbackup` at `/mnt/nfs_data/test_longevity_backup` on the backup node (`configure_backup_repo` template) |
+| 14 | Create `/mnt/nfs_data/timestamps.txt` on the backup node — used throughout the test to record UTC timestamps before/after topology events for PITR correlation |
+| 15 | Take first full backup (`backup_cluster` template, same archive path) |
+| 16 | Create backup plan `my_plan`: full backup every 24 h, merge every 2 days at noon; covers data, GSI, views, FTS, eventing, analytics, query |
+| 17 | Create repository `my_repo` under `/data/archive` targeting `bucket5` |
 
 ### Phase 3 — Scope & Collection Setup (one-time)
 
@@ -359,7 +372,9 @@ Use `-scale N` to multiply doc counts, scope/collection counts, and rate limits 
 - **Conflict logging** is enabled on all XDCR replications, routing conflict logs to specific scopes/collections on the remote cluster.
 - **Cross-cluster versioning (CCV)** is enabled on 4 local and 4 remote buckets before XDCR starts.
 - **Vector search** is exercised on two dedicated buckets (10 and 11): bucket10 uses composite L2 indexes, bucket11 uses BHive indexes.
-- **All buckets use Magma** storage with history retention enabled (bytes + seconds bounds vary by bucket).
-- **Encryption at rest** is enabled on all local buckets except `bucket11`, with DEK rotation.
+- **Most buckets use Magma** storage with history retention enabled (bytes + seconds bounds vary by bucket). `bucket10` uses couchstore; `bucket12` is ephemeral.
+- **Continuous backup** is enabled on `WAREHOUSE` (interval 15 min, retention period 200, location `/mnt/nfs_data/test_longevity_continuous_backup`).
+- **Operational backup repo** (`systemtestbackup`) is created at `/mnt/nfs_data/test_longevity_backup`; timestamps of topology events are recorded to `/mnt/nfs_data/timestamps.txt` on the backup node throughout the test.
+- **Encryption at rest** is enabled on local buckets 0–9, with DEK rotation (every 50 ops, lifetime 100). `bucket11` and `bucket12` have no encryption configured.
 - **Topology stress** is applied to every service layer: data nodes (rebalance in/out/swap/failover), FTS nodes (failover, addback, rebalance out, rebalance in), eventing nodes (via referenced test), analytics nodes (via referenced test), and GSI nodes (via referenced 2i test).
 - **Validation gates**: item count checks for XDCR, GSI, and FTS are run after workloads stop, before final index drops.
