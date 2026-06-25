@@ -128,10 +128,10 @@ buckets:
       ram: 15%
       storage: magma
       eviction: fullEviction
-      historyretentionbytes: 268435456000
-      enableEncryptionAtRest: true
-      dekLifetime: 100
-      dekRotateEvery: 50
+      # historyretentionbytes: 268435456000
+      # enableEncryptionAtRest: true
+      # dekLifetime: 100
+      # dekRotateEvery: 50
       historyretentionseconds: 3600
       enablehistoryretentionbydefault: 1
       rank : 3
