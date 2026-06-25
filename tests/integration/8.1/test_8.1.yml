@@ -620,6 +620,54 @@
 - command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 7}} -m 1:0:2 -s {{.Scale 1}} -a create_index_from_map"
   wait: true
 
+######### FTS vector Binary Quantization (BQ) + Fastmerge indexes (bucket11) #########
+# Exercises the FTS vector BQ (bivf-flat / bivf-sq8 / ivf,rabitq) and Fastmerge
+# (params.store.vector_index_fast_merge) index types on a dedicated SIFT scope,
+# alongside the existing GSI vector workload on bucket11. Native 128-dim SIFT.
+# Requires images: sequoiatools/govectorloader and the ftsindexmanager build that
+# supports --vector_index_optimized_for / --vector_index_fast_merge.
+- image: sequoiatools/collections:1.0
+  command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 11}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count=1 --collection_count=3 --collection_distribution=uniform"
+  requires:  "{{eq true .DoOnce }}"
+  wait: true
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "120"
+  requires:  "{{eq true .DoOnce }}"
+  wait: true
+
+# Load SIFT vectors (native 128 dims, field vector_data) into each collection - one-time
+- image: sequoiatools/govectorloader
+  command: "-nodeAddress={{.Orchestrator}} -username={{.RestUsername}} -password={{.RestPassword}} -bucketName={{.NthBucket 11}} -scopeName=scope_0 -collectionName=coll_0 -startIndex=0 -endIndex=50000 -datasetName=sift -provideDefaultDocs=true"
+  requires:  "{{eq true .DoOnce }}"
+  wait: true
+- command: "-nodeAddress={{.Orchestrator}} -username={{.RestUsername}} -password={{.RestPassword}} -bucketName={{.NthBucket 11}} -scopeName=scope_0 -collectionName=coll_1 -startIndex=0 -endIndex=50000 -datasetName=sift -provideDefaultDocs=true"
+  requires:  "{{eq true .DoOnce }}"
+  wait: true
+- command: "-nodeAddress={{.Orchestrator}} -username={{.RestUsername}} -password={{.RestPassword}} -bucketName={{.NthBucket 11}} -scopeName=scope_0 -collectionName=coll_2 -startIndex=0 -endIndex=50000 -datasetName=sift -provideDefaultDocs=true"
+  requires:  "{{eq true .DoOnce }}"
+  wait: true
+
+# BQ-only indexes (coll_0): the three BQ optimization modes
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 11}} -sc scope_0 -coll coll_0 -d sift -a create_index_from_map -m 1:0:2 -dims 128 --vector_index_optimized_for bivf-flat"
+  wait: true
+- command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 11}} -sc scope_0 -coll coll_0 -d sift -a create_index_from_map -m 1:0:2 -dims 128 --vector_index_optimized_for bivf-sq8"
+  wait: true
+- command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 11}} -sc scope_0 -coll coll_0 -d sift -a create_index_from_map -m 1:0:2 -dims 128 --vector_index_optimized_for ivf,rabitq"
+  wait: true
+
+# Fastmerge-only indexes (coll_1)
+- command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 11}} -sc scope_0 -coll coll_1 -d sift -a create_index_from_map -m 2:0:2 -dims 128 --vector_index_optimized_for recall --vector_index_fast_merge true"
+  wait: true
+
+# BQ + Fastmerge indexes (coll_2)
+- command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 11}} -sc scope_0 -coll coll_2 -d sift -a create_index_from_map -m 1:0:2 -dims 128 --vector_index_optimized_for bivf-sq8 --vector_index_fast_merge true"
+  wait: true
+- command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 11}} -sc scope_0 -coll coll_2 -d sift -a create_index_from_map -m 1:0:2 -dims 128 --vector_index_optimized_for ivf,rabitq --vector_index_fast_merge true"
+  wait: true
+
 # run sync gateway testing through mobile-testkit - versions supplied are placeholders - they will be replaced with actual values during the run
 -
   image: sequoiatools/sgw
@@ -704,6 +752,10 @@
 - image: sequoiatools/ftsindexmanager
   command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}} --print_interval 600 -a run_queries -t 0 -nq 1"
 - command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 5}} --print_interval 600 -a run_flex_queries -t 0 -nq 1"
+
+# query FTS vector (BQ/Fastmerge) indexes on bucket11
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 11}} --print_interval 600 -a run_knn_queries_parallely -d sift -dims 128"
 
 # Record timestamp
 -
@@ -1216,6 +1268,16 @@
 
 - image: sequoiatools/ftsindexmanager
   command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 7}} -a delete_all_indexes"
+  wait: true
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+# Drop FTS vector (BQ/Fastmerge) indexes on bucket11
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 11}} -a delete_all_indexes"
   wait: true
 -
   image: sequoiatools/cmd

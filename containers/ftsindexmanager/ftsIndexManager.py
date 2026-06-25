@@ -930,6 +930,13 @@ class FTSIndexManager:
                             help="maxSegmentFileSize")
         parser.add_argument("-concurrentMergeLimit", "--concurrentMergeLimit", default=-1,
                             help="concurrentMergeLimit")
+        parser.add_argument("-vector_optimized_for", "--vector_index_optimized_for", default=None,
+                            help="Value for the vector field's 'vector_index_optimized_for'. "
+                                 "Use 'recall'/'latency'/'memory-efficient' for regular vector indexes, or one of the "
+                                 "binary-quantization (BQ) values 'bivf-flat', 'bivf-sq8', 'ivf,rabitq'. "
+                                 "Default None leaves the field unset (server default).")
+        parser.add_argument("-fast_merge", "--vector_index_fast_merge", type=bool, default=False,
+                            help="Set params.store.vector_index_fast_merge=true to enable FTS vector fastmerge")
 
         args = parser.parse_args()
         self.log = logging.getLogger("ftsindexmanager")
@@ -960,6 +967,8 @@ class FTSIndexManager:
         self.concurrentMergeLimit = args.concurrentMergeLimit
         self.store_in_xattr = args.xattr
         self.base_64 = args.base_64
+        self.vector_index_optimized_for = args.vector_index_optimized_for
+        self.vector_index_fast_merge = args.vector_index_fast_merge
 
         self.skip_default = args.skip_default
         self.idx_def_templates = HOTEL_DS_FIELDS
@@ -1579,6 +1588,8 @@ class FTSIndexManager:
         index_def_dict["params"]["store"] = {}
         index_def_dict["params"]["store"]["indexType"] = "scorch"
         index_def_dict["params"]["store"]["kvStoreName"] = ""
+        if self.vector_index_fast_merge:
+            index_def_dict["params"]["store"]["vector_index_fast_merge"] = True
         index_def_dict["params"]["doc_config"] = {}
         index_def_dict["params"]["doc_config"]["docid_prefix_delim"] = ""
         index_def_dict["params"]["doc_config"]["docid_regexp"] = ""
@@ -1657,7 +1668,8 @@ class FTSIndexManager:
                     'type'] = 'vector'
                 index_def_dict['params']['mapping']['types'][collection]['properties'][
                     '_$xattrs']['properties']['vector_data']['fields'][0][
-                    'vector_index_optimized_for'] = "recall"
+                    'vector_index_optimized_for'] = self.vector_index_optimized_for \
+                    if self.vector_index_optimized_for is not None else "recall"
 
             else:
                 # For each field selected to be indexed, add it to the type mapping
@@ -1686,6 +1698,8 @@ class FTSIndexManager:
                                 field_dict["similarity"] = "dot_product"
                             else:
                                 field_dict["similarity"] = random.choice(["dot_product", "l2_norm"])
+                            if self.vector_index_optimized_for is not None:
+                                field_dict["vector_index_optimized_for"] = self.vector_index_optimized_for
                         index_def_dict["params"]["mapping"]["types"][collection]["properties"][field_name]["fields"].append(
                             field_dict)
 
