@@ -99,7 +99,12 @@ def run_pitr(ssh_host, ssh_user, ssh_password, cluster_ip, rest_user, rest_passw
         )
         cmd = f"source /etc/profile.d/azure_credentials.sh; {cmd}"
     elif storage_type == "gcp":
-        cmd += f" --obj-staging-dir {obj_staging_dir}"
+        cmd += (
+            f" --obj-staging-dir {obj_staging_dir}"
+            f" --obj-region us"
+            f" --obj-auth-file $GOOGLE_APPLICATION_CREDENTIALS"
+        )
+        cmd = f"source /etc/profile.d/gcp_credentials.sh; {cmd}"
 
     print(f"Running PITR restore to timestamp: {timestamp}\n cmd: {cmd}\n")
 

@@ -13,18 +13,20 @@ Timestamps are recorded before and after every topology change to `/tmp/timestam
 | `test_cont_backup_restore_nfs.yml` | Full system test — NFS storage |
 | `test_cont_backup_restore_s3.yml` | Same test — S3 cloud storage |
 | `test_cont_backup_restore_azure.yml` | Same test — Azure Blob storage |
+| `test_cont_backup_restore_gcp.yml` | Same test — GCP Cloud Storage |
 | `scope_backup_restore_nfs.yml` | Scope for NFS test (magma storage) |
-| `scope_backup_restore_cloud.yml` | Scope for S3/Azure tests (magma storage) |
+| `scope_backup_restore_cloud.yml` | Scope for S3/Azure/GCP tests (magma storage) |
 
-Both scopes use magma-only bucket storage.
+Both scopes use magma-only bucket storage. `scope_backup_restore_nfs.yml` sets `continuous_backup_retention_period: 72` on all buckets.
 
 ## Storage Variant Differences
 
-| Variant | Backup archive | Cont-backup location | Extra section |
-|---------|---------------|----------------------|---------------|
-| NFS | `/mnt/nfs_data/test_system_backup` | `/mnt/nfs_data/test_system_continuous_backup` | — |
-| S3 | `s3://backup-restore-system-test/backups` | `s3://cont-bkp-system-test/systemtest/` | `setup_cloud_backup` |
-| Azure | `az://backup-restore-system-test/backups` | `az://cont-bkp-system-test/systemtest/` | `setup_cloud_backup` |
+| Variant | Backup archive | Cont-backup location | Template suffix | Extra section |
+|---------|---------------|----------------------|-----------------|---------------|
+| NFS | `/mnt/nfs_data/test_system_backup` | `/mnt/nfs_data/test_system_continuous_backup` | _(none)_ | — |
+| S3 | `s3://backup-restore-system-test/backups` | `s3://cont-bkp-system-test/systemtest/` | `_aws` | `setup_cloud_backup` |
+| Azure | `az://backup-restore-system-test/backups` | `az://cont-bkp-system-test/systemtest/` | `_azure` | `setup_cloud_backup` |
+| GCP | `gs://backup-restore-system-test/backups` | `gs://continuous-backup-system-test/systemtest/` | `_gcp` | `setup_cloud_backup` |
 
 Cloud variants add a `setup_cloud_backup` section (before `initial_data_load`) that:
 1. Disables auto-failover
@@ -32,13 +34,28 @@ Cloud variants add a `setup_cloud_backup` section (before `initial_data_load`) t
 3. Enables continuous backup on each bucket with `continuousBackupEnabled=true` and a cloud credential ID
 4. Re-enables auto-failover
 
+**All backup templates in the `incremental_backup_pitr` section must use the cloud-specific suffix** (`_aws`, `_azure`, `_gcp`) — not the bare NFS templates. The final `clean_backup_repo` at the end of the file must also use the cloud variant.
+
 When modifying one variant, apply the same change to others unless it is storage-specific.
+
+### GCP credential registration
+
+GCP uses service account JSON rather than access/secret key pairs. The `setup_cloud_backup` curl differs from S3/Azure:
+
+```bash
+source /etc/profile.d/gcp_credentials.sh
+curl -X POST localhost:8091/settings/credentials/systemtest-gcp-id \
+  -u Administrator:password \
+  --json "$(jq -Rs '{type:"gcp",fields:{jsonCredentials:.,region:"us"}}' $GOOGLE_APPLICATION_CREDENTIALS)"
+```
+
+`$GOOGLE_APPLICATION_CREDENTIALS` is set by `gcp_credentials.sh` and points to the service account key JSON file on the SSH host. The `jq` command reads and embeds the file contents as the `jsonCredentials` field.
 
 ## Test Sections
 
 NFS has 3 sections; S3/Azure have 4 (they prepend `setup_cloud_backup`):
 
-1. **`setup_cloud_backup`** _(S3/Azure only)_ — Register cloud credentials, enable continuous backup per bucket.
+1. **`setup_cloud_backup`** _(cloud variants only)_ — Register cloud credentials, enable continuous backup per bucket.
 2. **`initial_data_load`** — Compaction config, create scopes/collections, seed via Gideon + magmaloader.
 3. **`single_backup_pitr`** — Take one baseline backup, run topology changes with timestamp recording, chaos tests against `cbcontbk`, then multiple PITR restore cycles.
 4. **`incremental_backup_pitr`** — Interleave incremental backups with topology changes + timestamps, chaos tests, then PITR restore cycles.
@@ -75,7 +92,7 @@ command: --num_timestamps <N> --mode <MODE>
          --archive <archive-path> --repo systemtestbackup
          --cont-backup-location <cont-backup-path>
          --threads 8 --tmp-dir /data/tmp
-# Cloud variants add: --storage-type aws|azure --obj-staging-dir /data/s3
+# Cloud variants add: --storage-type aws|azure|gcp --obj-staging-dir /data/s3|/data/azure|/data/gcp
 # Resume:  add --resume
 # Purge:   add --purge
 ```
@@ -93,11 +110,14 @@ wait: true
 # Record timestamp after recovery
 ```
 
+### Magmaloader key ranges
+Each test section uses a non-overlapping `--start` offset so doc keys never collide across sections (e.g., 0→25M in `initial_data_load`, 25M→30M in `single_backup_pitr`, 30M→35M in `incremental_backup_pitr`). When adding a new section, continue from the previous section's end range rather than restarting from 0.
+
 ### Docker image conventions
 - SSH/remote commands: `sequoiatools/cmd` (not `vijayviji/sshpass` — deprecated)
 - KV load: `sequoiatools/gideon_latest`
 - Collection load: `sequoiatools/magmaloader`
-- CLI operations: `sequoiatools/couchbase-cli:7.6` (use `8.1` for cloud credential setup)
+- CLI operations: `sequoiatools/couchbase-cli:8.1`
 - PITR restore: `sequoiatools/pitr`
 
 ## PITR Restore Modes
@@ -139,10 +159,23 @@ wait: true
 | `configure_backup_repo` | Initialize backup repository (NFS/local) |
 | `configure_backup_repo_aws` | Initialize backup repository (S3) |
 | `configure_backup_repo_azure` | Initialize backup repository (Azure) |
-| `backup_cluster` | Take incremental/full backup |
-| `resume_backup_cluster` | Resume failed backup |
-| `purge_backup_cluster` | Purge failed backup state |
-| `clean_backup_repo` | Delete backup repository |
+| `configure_backup_repo_gcp` | Initialize backup repository (GCP) |
+| `backup_cluster` | Take incremental/full backup (NFS/local) |
+| `backup_cluster_aws` | Take incremental/full backup (S3) |
+| `backup_cluster_azure` | Take incremental/full backup (Azure) |
+| `backup_cluster_gcp` | Take incremental/full backup (GCP) |
+| `resume_backup_cluster` | Resume failed backup (NFS/local) |
+| `resume_backup_cluster_aws` | Resume failed backup (S3) |
+| `resume_backup_cluster_azure` | Resume failed backup (Azure) |
+| `resume_backup_cluster_gcp` | Resume failed backup (GCP) |
+| `purge_backup_cluster` | Purge failed backup state (NFS/local) |
+| `purge_backup_cluster_aws` | Purge failed backup state (S3) |
+| `purge_backup_cluster_azure` | Purge failed backup state (Azure) |
+| `purge_backup_cluster_gcp` | Purge failed backup state (GCP) |
+| `clean_backup_repo` | Delete backup repository (NFS/local) |
+| `clean_backup_repo_aws` | Delete backup repository (S3) |
+| `clean_backup_repo_azure` | Delete backup repository (Azure) |
+| `clean_backup_repo_gcp` | Delete backup repository (GCP) |
 | `rebalance_out` | Remove node (blocking) |
 | `rebalance_out_wo_wait` | Remove node (non-blocking) |
 | `rebalance_in` | Add node (blocking) |
