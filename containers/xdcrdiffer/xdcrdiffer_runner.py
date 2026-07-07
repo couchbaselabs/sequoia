@@ -321,46 +321,14 @@ def verify_strict_no_diff(mutation_dir):
 
 
 def dump_mutation_diff_details(mutation_dir):
-    """Dump the full mutationDiff file contents after retries are exhausted.
-
-    The one-line FAIL message names the offending doc keys (e.g. keys=[9]) but
-    not which scope/collection they live in. xdcrDiffer encodes the collection
-    in the mutationDiff file *name* (and, for detail files, in the body), so on
-    a terminal failure we print every non-empty file verbatim. That reveals
-    whether the offending doc sits in a real user collection (a genuine
-    replication loss) or in the `_system` scope (a false positive: XDCR's
-    filterSystemScope=true legitimately does not replicate `_system`, yet the
-    differ still compares it). Without this an ephemeral container is gone
-    before anyone can inspect the dir.
+    """Formerly printed every non-empty mutationDiff file verbatim after a
+    terminal failure. That balloons CI logs to tens of MB (thousands of docs,
+    each with a ~1-2KB base64 Body) and drowns the signal. We now emit only
+    the end sentinel; the raw diff files remain on disk in mutation_dir for
+    manual inspection while the container is alive.
     """
     if not os.path.isdir(mutation_dir):
-        print(f"[xdcrdiffer-runner] (no mutationDiff dir at {mutation_dir} to dump)")
         return
-    print(f"[xdcrdiffer-runner] ===== mutationDiff details dump ({mutation_dir}) =====")
-    dumped = False
-    for dirpath, _, files in os.walk(mutation_dir):
-        for name in sorted(files):
-            if name.endswith(".enc"):
-                continue
-            full = os.path.join(dirpath, name)
-            data = _load_json(full)
-            # Skip files that are clean (empty categories / empty list) so the
-            # dump only surfaces the actual divergence.
-            if isinstance(data, dict):
-                if not any(data.get(c) for c in DIFF_DETAIL_CATEGORIES):
-                    continue
-            elif isinstance(data, list):
-                if not data:
-                    continue
-            rel = os.path.relpath(full, mutation_dir)
-            print(f"[xdcrdiffer-runner] --- {rel} ---")
-            if isinstance(data, (dict, list)):
-                print(json.dumps(data, indent=2, sort_keys=True))
-            else:
-                print(str(data))
-            dumped = True
-    if not dumped:
-        print("[xdcrdiffer-runner] (no non-empty mutationDiff files found)")
     print("[xdcrdiffer-runner] ===== end mutationDiff details dump =====")
 
 

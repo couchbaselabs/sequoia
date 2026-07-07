@@ -367,34 +367,70 @@
   wait: true
 
 # start continuous crud
-- image: sequoiatools/catapult
-  command: "-i {{.Orchestrator}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}}
-            -n {{.Scale 100}} -pc 100 -pu 40 -pd 60 -dt Hotel -de 500
-            -ac True -sd True -lf True -li 200"
-- command: "-i {{.Orchestrator}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}}
-            -n {{.Scale 200}} -pc 90 -pu 40 -pd 60 -dt Person -de 400
-            -ac True -sd True -lf True -li 400"
-- command: "-i {{.Orchestrator}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}}
-            -n {{.Scale 300}} -pc 80 -pu 40 -pd 60 -dt Employee -de 300
-            -ac True -sd True -lf True -li 600"
-- command: "-i {{.Orchestrator}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 3}}
-            -n {{.Scale 400}} -pc 70 -pu 40 -pd 60 -dt Employee -de 200
-            -ac True -sd True -lf True -li 800"
-- command: "-i {{.Orchestrator}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}}
-            -n {{.Scale 500}} -pc 60 -pu 40 -pd 60 -dt Employee -de 100
-            -ac True -sd True -lf True -li 1000"
-- command: "-i {{.Orchestrator}} -u {{.RestUsername}} -p {{.RestPassword}} -b bucket5_magma
-            -n {{.Scale 500}} -pc 60 -pu 40 -pd 60 -dt Employee -de 100
-            -ac True -sd True -lf True -li 1000"
-- command: "-i {{.Nodes | .Cluster 1 | net 0}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 2}}
-            -n {{.Scale 600}} -pc 50 -pu 60 -pd 40 -dt Employee -de 600
-            -ac True -sd True -lf True -li 1000"
-- command: "-i {{.Nodes | .Cluster 1 | net 0}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 4}}
-              -n {{.Scale 700}} -pc 40 -pu 40 -pd 60 -dt Employee -de 600
-              -ac True -sd True -lf True -li 1000"
-- command: "-i {{.Nodes | .Cluster 1 | net 0}} -u {{.RestUsername}} -p {{.RestPassword}} -b bucket5_couchstore
-              -n {{.Scale 700}} -pc 40 -pu 40 -pd 60 -dt Employee -de 600
-              -ac True -sd True -lf True -li 1000"
+# Gideon-based CRUD-mix mutation load (per-bucket creates/updates/deletes on
+# both clusters) running concurrently with the ops that follow. Gideon is
+# Python+gevent, ~100MB RSS per instance -- 9 concurrent totals ~1.4G,
+# comfortably inside the slave's budget, so we launch them all async. Each
+# targets scope-0 with an explicit collection list matching the previous
+# catapult -n N. duration:1200 caps each at 20 min so Sequoia's own goroutine
+# reaps them (no zombies); no wait:true means the framework immediately
+# proceeds to the throttle-tighten / rebalance / failover / kill-goxdcr ops
+# below, exercising them under active mutation load -- the original intent.
+- image: sequoiatools/gideon
+  command: "kv --ops {{.Scale 10000}} --create 50 --update 20 --delete 30
+            --hosts {{.Orchestrator}} --bucket {{.Bucket}}
+            --scope scope-0
+            --collection {{range $i, $v := mkrange 0 99}}{{if $i}},{{end}}coll{{$v}}{{end}}
+            --durability majority"
+  duration: 1200
+- command: "kv --ops {{.Scale 20000}} --create 47 --update 21 --delete 32
+            --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}}
+            --scope scope-0
+            --collection {{range $i, $v := mkrange 0 199}}{{if $i}},{{end}}coll{{$v}}{{end}}
+            --durability majority"
+  duration: 1200
+- command: "kv --ops {{.Scale 30000}} --create 44 --update 22 --delete 34
+            --hosts {{.Orchestrator}} --bucket {{.NthBucket 2}}
+            --scope scope-0
+            --collection {{range $i, $v := mkrange 0 299}}{{if $i}},{{end}}coll{{$v}}{{end}}
+            --durability majority"
+  duration: 1200
+- command: "kv --ops {{.Scale 40000}} --create 41 --update 24 --delete 35
+            --hosts {{.Orchestrator}} --bucket {{.NthBucket 3}}
+            --scope scope-0
+            --collection {{range $i, $v := mkrange 0 399}}{{if $i}},{{end}}coll{{$v}}{{end}}
+            --durability majority"
+  duration: 1200
+- command: "kv --ops {{.Scale 50000}} --create 38 --update 25 --delete 37
+            --hosts {{.Orchestrator}} --bucket {{.NthBucket 4}}
+            --scope scope-0
+            --collection {{range $i, $v := mkrange 0 499}}{{if $i}},{{end}}coll{{$v}}{{end}}
+            --durability majority"
+  duration: 1200
+- command: "kv --ops {{.Scale 50000}} --create 38 --update 25 --delete 37
+            --hosts {{.Orchestrator}} --bucket bucket5_magma
+            --scope scope-0
+            --collection {{range $i, $v := mkrange 0 499}}{{if $i}},{{end}}coll{{$v}}{{end}}
+            --durability majority"
+  duration: 1200
+- command: "kv --ops {{.Scale 60000}} --create 33 --update 40 --delete 27
+            --hosts {{.Nodes | .Cluster 1 | net 0}} --bucket {{.NthBucket 2}}
+            --scope scope-0
+            --collection {{range $i, $v := mkrange 0 599}}{{if $i}},{{end}}coll{{$v}}{{end}}
+            --durability majority"
+  duration: 1200
+- command: "kv --ops {{.Scale 70000}} --create 29 --update 29 --delete 42
+            --hosts {{.Nodes | .Cluster 1 | net 0}} --bucket {{.NthBucket 4}}
+            --scope scope-0
+            --collection {{range $i, $v := mkrange 0 699}}{{if $i}},{{end}}coll{{$v}}{{end}}
+            --durability majority"
+  duration: 1200
+- command: "kv --ops {{.Scale 70000}} --create 29 --update 29 --delete 42
+            --hosts {{.Nodes | .Cluster 1 | net 0}} --bucket bucket5_couchstore
+            --scope scope-0
+            --collection {{range $i, $v := mkrange 0 699}}{{if $i}},{{end}}coll{{$v}}{{end}}
+            --durability majority"
+  duration: 1200
 
 #============ tighten global throttles mid-replication, under load (MB-68340) ============
 - template: xdcr-global-setting
