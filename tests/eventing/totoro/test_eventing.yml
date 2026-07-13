@@ -204,13 +204,13 @@
   command: "user-manage -c {{.Orchestrator}} -u {{.RestUsername}} -p {{.RestPassword}} --rbac-username eventing_rbac --rbac-password password --roles eventing_admin,bucket_admin[bucket_op] --auth-domain local --set"
   wait: true
 - image: sequoiatools/eventing:8.1
-  command: "eventing_helper.py -i {{$.EventingNode}} -u eventing_rbac -p password -s {{.Bucket}}.scope_0.coll2 -m {{.NthBucket 8}}.scope_7.coll0 -d dst_bucket.{{.Bucket}}.scope_0.coll2.rw -t bucket_op -o create --name bucket_op_rbac"
+  command: "eventing_helper.py -i {{$.EventingNode}} -u eventing_rbac -p password -s {{.Bucket}}.scope_0.coll2 -m {{.NthBucket 8}}.scope_7.coll0 -d dst_bucket.{{.Bucket}}.scope_0.coll2.rw -t bucket_op -o create --name rbacop"
   wait: true
 - image: sequoiatools/eventing:8.1
-  command: "eventing_helper.py -i {{$.EventingNode}} -u eventing_rbac -p password -o deploy --name bucket_op_rbac"
+  command: "eventing_helper.py -i {{$.EventingNode}} -u eventing_rbac -p password -o deploy --name rbacop"
   wait: true
 - image: sequoiatools/eventing:8.1
-  command: "eventing_helper.py -i {{$.EventingNode}} -u eventing_rbac -p password -o wait_for_state --state deployed --name bucket_op_rbac"
+  command: "eventing_helper.py -i {{$.EventingNode}} -u eventing_rbac -p password -o wait_for_state --state deployed --name rbacop"
   wait: true
 
 ##### create and deploy ondeploy handler #####
@@ -288,6 +288,13 @@
   template: rebalance
   wait: true
 
+
+###### Disable log encryption - test eventing encryption state-change ######
+- image: sequoiatools/couchbase-cli:8.1
+  command: "setting-encryption -c {{.Orchestrator}}:{{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --target log --type disabled --set"
+  wait: true
+
+
 ##### deploy curl, sbm #####
 - image: sequoiatools/eventing:8.1
   command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o deploy --name curl"
@@ -323,7 +330,7 @@
   command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o pause --name fts"
   wait: true
 - image: sequoiatools/eventing:8.1
-  command: "eventing_helper.py -i {{$.EventingNode}} -u eventing_rbac -p password -o pause --name bucket_op_rbac"
+  command: "eventing_helper.py -i {{$.EventingNode}} -u eventing_rbac -p password -o pause --name rbacop"
   wait: true
 
 ###############  Swap Rebalance kv ################
@@ -341,7 +348,7 @@
   wait: true
 - command: "eventing_helper.py -i {{.EventingNode}} -u {{.RestUsername}} -p {{.RestPassword}} -o wait_for_state --state paused --name fts"
   wait: true
-- command: "eventing_helper.py -i {{$.EventingNode}} -u eventing_rbac -p password -o wait_for_state --state paused --name bucket_op_rbac"
+- command: "eventing_helper.py -i {{$.EventingNode}} -u eventing_rbac -p password -o wait_for_state --state paused --name rbacop"
   wait: true
 
 ####### load data into all collections #######
@@ -393,7 +400,7 @@
   command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o resume --name fts"
   wait: true
 - image: sequoiatools/eventing:8.1
-  command: "eventing_helper.py -i {{$.EventingNode}} -u eventing_rbac -p password -o resume --name bucket_op_rbac"
+  command: "eventing_helper.py -i {{$.EventingNode}} -u eventing_rbac -p password -o resume --name rbacop"
   wait: true
 
 #### wait for all handlers to be deployed ####
@@ -412,8 +419,15 @@
   wait: true
 - command: "eventing_helper.py -i {{.EventingNode}} -u {{.RestUsername}} -p {{.RestPassword}} -o wait_for_state --state deployed --name fts"
   wait: true
-- command: "eventing_helper.py -i {{$.EventingNode}} -u eventing_rbac -p password -o wait_for_state --state deployed --name bucket_op_rbac"
+- command: "eventing_helper.py -i {{$.EventingNode}} -u eventing_rbac -p password -o wait_for_state --state deployed --name rbacop"
   wait: true
+
+
+###### Re-enable log encryption to test eventing encryption state-change ######
+- image: sequoiatools/couchbase-cli:8.1
+  command: "setting-encryption -c {{.Orchestrator}}:{{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --target log --type key --key 0 --set"
+  wait: true
+
 
 ###############  Delete and recreate scope while handlers run (timers handler watches via wildcard) ################
 - image: sequoiatools/collections:1.0
@@ -709,11 +723,11 @@
 
 # undeploy and delete handlers as non-admin user #####
 - image: sequoiatools/eventing:8.1
-  command: "eventing_helper.py -i {{$.EventingNode}} -u eventing_rbac -p password -o undeploy --name bucket_op_rbac"
+  command: "eventing_helper.py -i {{$.EventingNode}} -u eventing_rbac -p password -o undeploy --name rbacop"
   wait: true
 - image: sequoiatools/eventing:8.1
-  command: "eventing_helper.py -i {{$.EventingNode}} -u eventing_rbac -p password -o wait_for_state --state undeployed --name bucket_op_rbac"
+  command: "eventing_helper.py -i {{$.EventingNode}} -u eventing_rbac -p password -o wait_for_state --state undeployed --name rbacop"
   wait: true
 - image: sequoiatools/eventing:8.1
-  command: "eventing_helper.py -i {{$.EventingNode}} -u eventing_rbac -p password -o delete --name bucket_op_rbac"
+  command: "eventing_helper.py -i {{$.EventingNode}} -u eventing_rbac -p password -o delete --name rbacop"
   wait: true
