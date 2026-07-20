@@ -65,14 +65,7 @@
 -
    image: sequoiatools/cmd
    entrypoint: sleep
-   command: "600"
-   wait: true
-
-# Wait for some time to let the load stabilize before taking backup
--
-   image: sequoiatools/cmd
-   entrypoint: sleep
-   command: "120"
+   command: "3600"
    wait: true
 
 -
@@ -1320,6 +1313,19 @@
 -
   image: sequoiatools/cmd
   entrypoint: sleep
+  command: "3600"
+  wait: true
+
+# Take incremental backup
+-
+  template: backup_cluster
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /mnt/nfs_data/test_system_backup, systemtestbackup"
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
   command: "600"
   wait: true
 
@@ -1901,8 +1907,22 @@
 -
   image: sequoiatools/cmd
   entrypoint: sleep
+  command: "3600"
+  wait: true
+
+# Take incremental backup
+-
+  template: backup_cluster
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /mnt/nfs_data/test_system_backup, systemtestbackup"
+  wait: true
+
+# Wait for some time for continuous backup
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
   command: "600"
   wait: true
+
 
 # Record timestamp
 -
@@ -2697,7 +2717,7 @@
 -
   image: sequoiatools/cmd
   entrypoint: sleep
-  command: "600"
+  command: "3600"
   wait: true
 
 # Take incremental backup
@@ -3988,6 +4008,19 @@
 -
   image: sequoiatools/cmd
   entrypoint: sleep
+  command: "3600"
+  wait: true
+
+# Take incremental backup
+-
+  template: backup_cluster
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /mnt/nfs_data/test_system_backup, systemtestbackup"
+  wait: true
+
+# Wait for some time for continuous backup
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
   command: "600"
   wait: true
 
@@ -4566,6 +4599,19 @@
   alias: magmaloader_bucket2_doc_ops
 
 # Wait for some time for continuous backup
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "3600"
+  wait: true
+
+# Take incremental backup
+-
+  template: backup_cluster
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, /mnt/nfs_data/test_system_backup, systemtestbackup"
+  wait: true
+
+# Continue data loading
 -
   image: sequoiatools/cmd
   entrypoint: sleep

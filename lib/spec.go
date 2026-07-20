@@ -48,7 +48,7 @@ type BucketSpec struct {
 	EnableContinuousBackup          bool   `yaml:"enable_continuous_backup"`
 	ContinuousBackupInterval        string `yaml:"continuous_backup_interval"`
 	ContinuousBackupLocation        string `yaml:"continuous_backup_location"`
-	ContinuousBackupRetentionPeriod uint8  `yaml:"continuous_backup_retention_period"`
+	ContinuousBackupRetentionPeriod uint64 `yaml:"continuous_backup_retention_period"`
 	BucketThrottleReserved          uint64 `yaml:"bucketThrottleReserved"`
 	BucketThrottleHardLimit         uint64 `yaml:"bucketThrottleHardLimit"`
 }

@@ -132,14 +132,7 @@
 -
    image: sequoiatools/cmd
    entrypoint: sleep
-   command: "600"
-   wait: true
-
-# Wait for some time to let the load stabilize before taking backup
--
-   image: sequoiatools/cmd
-   entrypoint: sleep
-   command: "120"
+   command: "3600"
    wait: true
 
 -
@@ -1394,6 +1387,19 @@
 -
   image: sequoiatools/cmd
   entrypoint: sleep
+  command: "3600"
+  wait: true
+
+# Take incremental backup
+-
+  template: backup_cluster_gcp
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, gs://backup-restore-system-test/backups, systemtestbackup, /data/gcp"
+  wait: true
+
+# Continue data loading
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
   command: "600"
   wait: true
 
@@ -1970,6 +1976,19 @@
 -
   command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket {{.NthBucket 2}} --start 30000000 --end {{.Scale 35000000}} --pc 35 --pu 30 --pd 20 --expiry_mode True --percentage_expiry 30 --max_ttl {{.Scale 7200}} --doc_template Hotel --all_coll True --ops_rate {{.Scale 100}} --skip_default True"
   alias: magmaloader_bucket2_doc_ops
+
+# Wait for some time for continuous backup
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "3600"
+  wait: true
+
+# Take incremental backup
+-
+  template: backup_cluster_gcp
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, gs://backup-restore-system-test/backups, systemtestbackup, /data/gcp"
+  wait: true
 
 # Wait for some time for continuous backup
 -
@@ -2771,7 +2790,7 @@
 -
   image: sequoiatools/cmd
   entrypoint: sleep
-  command: "600"
+  command: "3600"
   wait: true
 
 # Take incremental backup
@@ -4062,6 +4081,19 @@
 -
   image: sequoiatools/cmd
   entrypoint: sleep
+  command: "3600"
+  wait: true
+
+# Take incremental backup
+-
+  template: backup_cluster_gcp
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, gs://backup-restore-system-test/backups, systemtestbackup, /data/gcp"
+  wait: true
+
+# Wait for some time for continuous backup
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
   command: "600"
   wait: true
 
@@ -4640,6 +4672,19 @@
   alias: magmaloader_bucket2_doc_ops
 
 # Wait for some time for continuous backup
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "3600"
+  wait: true
+
+# Take incremental backup
+-
+  template: backup_cluster_gcp
+  args: "{{.Nodes | .Service `arbiter` | net 0}}, {{.Nodes | .Service `arbiter` | net 0}}, gs://backup-restore-system-test/backups, systemtestbackup, /data/gcp"
+  wait: true
+
+# Continue data loading
 -
   image: sequoiatools/cmd
   entrypoint: sleep
