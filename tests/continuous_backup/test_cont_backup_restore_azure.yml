@@ -11,14 +11,14 @@
 
 # Enable node-to-node encryption
 -
-  image: sequoiatools/couchbase-cli:8.1
+  image: sequoiatools/couchbase-cli:8.5
   requires:  "{{eq true .DoOnce }}"
   command: "node-to-node-encryption -c {{.Orchestrator}}:8091 -u {{.RestUsername}} -p {{.RestPassword}} --enable"
   wait: true
 
 # Setting cluster encryption level to all
 -
-  image: sequoiatools/couchbase-cli:8.1
+  image: sequoiatools/couchbase-cli:8.5
   requires:  "{{eq true .DoOnce }}"
   command: "setting-security -c {{.Orchestrator}}:8091 -u {{.RestUsername}} -p {{.RestPassword}} --set --cluster-encryption-level all"
   wait: true

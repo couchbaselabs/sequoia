@@ -1,12 +1,12 @@
-# Integration Test — 8.1 (Magma)
+# Integration Test — 8.5 (Magma)
 
-Comprehensive multi-service integration test for Couchbase 8.1 using Magma storage. Exercises KV, GSI, FTS, N1QL, Analytics, Eventing, XDCR, Views, Sync Gateway, and Backup across a two-cluster topology with topology-change scenarios throughout.
+Comprehensive multi-service integration test for Couchbase 8.5 using Magma storage. Exercises KV, GSI, FTS, N1QL, Analytics, Eventing, XDCR, Views, Sync Gateway, and Backup across a two-cluster topology with topology-change scenarios throughout.
 
 ## What Changed Since 8.0
 
-The scope files are structurally identical between 8.0 and 8.1 — the same 12 buckets, same service layout, same encryption/DEK settings. All changes are in the **test workflow**, primarily targeting collection scalability stress.
+The scope files are structurally identical between 8.0 and 8.5 — the same 12 buckets, same service layout, same encryption/DEK settings. All changes are in the **test workflow**, primarily targeting collection scalability stress.
 
-| Area | 8.0 | 8.1 |
+| Area | 8.0 | 8.5 |
 |------|-----|-----|
 | **Scope/collection density — bucket5** | `scale × 2` scopes / `scale × 10` coll | **`scale × 3000` scopes / `scale × 8000` coll** — extreme collection limit stress |
 | Scope/collection — bucket6 | `scale × 2` / `scale × 10` | `scale × 10` / `scale × 500` |
@@ -25,7 +25,7 @@ The scope files are structurally identical between 8.0 and 8.1 — the same 12 b
 | Pillowfight — bucket5 | `scale × 2000` | **`scale × 500`** |
 | Gideon eventing source TTL | (default) | Explicit `--ttl 3600` on `event_0/coll0` for both `default` and `bucket1` |
 
-**Summary:** 8.1 is a collection-scalability stress release. The single largest change is `bucket5` expanding to `scale × 3000` scopes and `scale × 8000` collections — a deliberate boundary stress test for the collection manifest system. Per-bucket catapult loads are deliberately reduced on the high-collection buckets so total data volume stays reasonable. The scope file is unchanged from 8.0.
+**Summary:** 8.5 is a collection-scalability stress release. The single largest change is `bucket5` expanding to `scale × 3000` scopes and `scale × 8000` collections — a deliberate boundary stress test for the collection manifest system. Per-bucket catapult loads are deliberately reduced on the high-collection buckets so total data volume stays reasonable. The scope file is unchanged from 8.0.
 
 ---
 
@@ -33,12 +33,12 @@ The scope files are structurally identical between 8.0 and 8.1 — the same 12 b
 
 | File | Purpose |
 |------|---------|
-| `scope_8.1_magma.yml` | Infrastructure definition — two clusters, 12 local buckets, 4 remote buckets, users, views, sync gateway |
-| `test_8.1.yml` | Test workflow — ordered actions from initial setup through teardown and validation |
+| `scope_8.5_magma.yml` | Infrastructure definition — two clusters, 12 local buckets, 4 remote buckets, users, views, sync gateway |
+| `test_8.5.yml` | Test workflow — ordered actions from initial setup through teardown and validation |
 
 ---
 
-## Scope: `scope_8.1_magma.yml`
+## Scope: `scope_8.5_magma.yml`
 
 ### Clusters
 
@@ -131,7 +131,7 @@ One SGW node (`sg`) attached to the `local` cluster, serving `bucket7` via user 
 
 ---
 
-## Test: `test_8.1.yml`
+## Test: `test_8.5.yml`
 
 The test is structured into sequential phases. Actions marked `requires: "{{eq true .DoOnce }}"` only execute on the first loop iteration.
 
@@ -350,15 +350,15 @@ The following external test files are invoked by section:
 ./sequoia \
   -provider file:hosts.json \
   -skip_setup \
-  -scope tests/integration/8.1/scope_8.1_magma.yml \
-  -test tests/integration/8.1/test_8.1.yml
+  -scope tests/integration/8.5/scope_8.5_magma.yml \
+  -test tests/integration/8.5/test_8.5.yml
 ```
 
 Against a fresh cluster (Docker provider):
 ```bash
 ./sequoia \
-  -scope tests/integration/8.1/scope_8.1_magma.yml \
-  -test tests/integration/8.1/test_8.1.yml
+  -scope tests/integration/8.5/scope_8.5_magma.yml \
+  -test tests/integration/8.5/test_8.5.yml
 ```
 
 Use `-scale N` to multiply doc counts, scope/collection counts, and rate limits (default `scale=1`).

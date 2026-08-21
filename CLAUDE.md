@@ -106,9 +106,9 @@ Always use the CLI image that matches the Couchbase Server release being tested.
 
 | Correct | Wrong |
 |---------|-------|
-| `sequoiatools/couchbase-cli:8.1` in an 8.1 test YAML | `sequoiatools/couchbase-cli:8.0` in an 8.1 test YAML |
+| `sequoiatools/couchbase-cli:8.5` in an 8.5 test YAML | `sequoiatools/couchbase-cli:8.0` in an 8.5 test YAML |
 
-When reviewing or writing test YAMLs, check every `image: sequoiatools/couchbase-cli:<ver>` line and ensure the version matches the `-version` flag passed at runtime (e.g. `8.1.0` → `couchbase-cli:8.1`).
+When reviewing or writing test YAMLs, check every `image: sequoiatools/couchbase-cli:<ver>` line and ensure the version matches the `-version` flag passed at runtime (e.g. `8.5.0` → `couchbase-cli:8.5`).
 
 ## Architecture
 

@@ -3,7 +3,7 @@
 
 ###### update Tombstone Purge Interval ######
 -
-  image: sequoiatools/couchbase-cli:8.1
+  image: sequoiatools/couchbase-cli:8.5
   requires:  "{{eq true .DoOnce }}"
   command: "setting-compaction -c {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}} --metadata-purge-interval 0.25 --compaction-db-percentage 10 --compaction-view-percentage 10"
   wait: true
@@ -13,17 +13,17 @@
   template: disable_autofailover
   requires:  "{{eq true .DoOnce }}"
 -
-  image: sequoiatools/couchbase-cli:8.1
+  image: sequoiatools/couchbase-cli:8.5
   requires:  "{{eq true .DoOnce }}"
   command: "node-to-node-encryption -c {{.Orchestrator}}:8091 -u {{.RestUsername}} -p {{.RestPassword}} --enable"
   wait: true
 -
-  image: sequoiatools/couchbase-cli:8.1
+  image: sequoiatools/couchbase-cli:8.5
   requires:  "{{eq true .DoOnce }}"
   command: "setting-security -c {{.Orchestrator}}:8091 -u {{.RestUsername}} -p {{.RestPassword}} --set --cluster-encryption-level control"
   wait: true
 -
-  image: sequoiatools/couchbase-cli:8.1
+  image: sequoiatools/couchbase-cli:8.5
   requires:  "{{eq true .DoOnce }}"
   command: "ip-family -c {{.Orchestrator}}:8091 -u {{.RestUsername}} -p {{.RestPassword}} --set --ipv4only"
   wait: true
@@ -33,13 +33,13 @@
   requires:  "{{eq true .DoOnce }}"
 
 ####### cleanup stale handlers from previous runs #####
-- image: sequoiatools/eventing:8.1
+- image: sequoiatools/eventing:8.5
   command: "eventing_helper.py -i {{.EventingNode}} -u {{.RestUsername}} -p {{.RestPassword}} -o undeploy"
   wait: true
-- image: sequoiatools/eventing:8.1
+- image: sequoiatools/eventing:8.5
   command: "eventing_helper.py -i {{.EventingNode}} -u {{.RestUsername}} -p {{.RestPassword}} -o wait_for_state --state undeployed"
   wait: true
-- image: sequoiatools/eventing:8.1
+- image: sequoiatools/eventing:8.5
   command: "eventing_helper.py -i {{.EventingNode}} -u {{.RestUsername}} -p {{.RestPassword}} -o delete"
   wait: true
 
@@ -176,56 +176,56 @@
 
 #### create handlers #####
 - foreach: "{{range $i, $sc := mkrange 0 1}}"
-  image: sequoiatools/eventing:8.1
+  image: sequoiatools/eventing:8.5
   command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -s {{$.Bucket}}.scope_0.coll{{$sc}} -m {{$.NthBucket 8}}.scope_0.coll{{$sc}} -d dst_bucket.{{$.Bucket}}.scope_1.coll{{$sc}}.rw -d dst_bucket2.{{$.NthBucket 2}}.scope_0.coll{{$sc}}.rw  -t multiple_bucket_op -o create --name bucket_op{{$sc}}"
   wait: true
-- image: sequoiatools/eventing:8.1
+- image: sequoiatools/eventing:8.5
   command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -s {{.NthBucket 2}}.*.* -m {{.NthBucket 8}}.scope_1.coll0 -d dst_bucket.{{.NthBucket 2}}.*.*.rw -t timers -o create --name timers"
   wait: true
-- image: sequoiatools/eventing:8.1
+- image: sequoiatools/eventing:8.5
   command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -s {{.NthBucket 3}}.scope_0.* -m {{.NthBucket 8}}.scope_2.coll0 -d dst_bucket.{{.NthBucket 3}}.scope_0.*.rw -t curl -o create --name curl"
   wait: true
-- image: sequoiatools/eventing:8.1
+- image: sequoiatools/eventing:8.5
   command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -s {{.NthBucket 3}}.*.* -m {{.NthBucket 8}}.scope_3.coll0 -d dst_bucket.{{.NthBucket 4}}.scope_0.coll0.rw -t n1ql -o create --name n1ql"
   wait: true
 - foreach: "{{range $i, $sc := mkrange 0 1}}"
-  image: sequoiatools/eventing:8.1
+  image: sequoiatools/eventing:8.5
   command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -s {{$.NthBucket 1}}.scope_0.coll{{$sc}} -m {{$.NthBucket 8}}.scope_4.coll{{$sc}} -d dst_bucket.{{$.NthBucket 1}}.scope_0.coll{{$sc}}.rw -t sbm -o create --name sbm{{$sc}}"
   wait: true
-- image: sequoiatools/eventing:8.1
+- image: sequoiatools/eventing:8.5
   command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -s {{.NthBucket 5}}.scope_0.* -m {{.NthBucket 8}}.scope_5.coll0 -d dst_bucket.{{.NthBucket 7}}.scope_0.coll0.rw -t analytics -o create --name analytics --analytics_node {{.AnalyticsNode | noport}}"
   wait: true
-- image: sequoiatools/eventing:8.1
+- image: sequoiatools/eventing:8.5
   command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -s {{.NthBucket 6}}.scope_0.* -m {{.NthBucket 8}}.scope_6.coll0 -d dst_bucket.{{.NthBucket 7}}.scope_1.coll0.rw -t fts -o create --name fts --fts_node {{.FTSNode | noport}}"
   wait: true
 
 ##### create RBAC user and handler as non-admin user #####
-- image: sequoiatools/couchbase-cli:8.1
+- image: sequoiatools/couchbase-cli:8.5
   command: "user-manage -c {{.Orchestrator}} -u {{.RestUsername}} -p {{.RestPassword}} --rbac-username eventing_rbac --rbac-password password --roles eventing_admin,bucket_admin[bucket_op] --auth-domain local --set"
   wait: true
-- image: sequoiatools/eventing:8.1
+- image: sequoiatools/eventing:8.5
   command: "eventing_helper.py -i {{$.EventingNode}} -u eventing_rbac -p password -s {{.Bucket}}.scope_0.coll2 -m {{.NthBucket 8}}.scope_7.coll0 -d dst_bucket.{{.Bucket}}.scope_0.coll2.rw -t bucket_op -o create --name rbacop"
   wait: true
-- image: sequoiatools/eventing:8.1
+- image: sequoiatools/eventing:8.5
   command: "eventing_helper.py -i {{$.EventingNode}} -u eventing_rbac -p password -o deploy --name rbacop"
   wait: true
-- image: sequoiatools/eventing:8.1
+- image: sequoiatools/eventing:8.5
   command: "eventing_helper.py -i {{$.EventingNode}} -u eventing_rbac -p password -o wait_for_state --state deployed --name rbacop"
   wait: true
 
 ##### create and deploy ondeploy handler #####
-- image: sequoiatools/eventing:8.1
+- image: sequoiatools/eventing:8.5
   command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -s {{.Bucket}}.scope_0.coll3 -m {{.NthBucket 8}}.scope_8.coll0 -d dst_bucket.{{.NthBucket 7}}.scope_2.coll0.rw -t ondeploy -o create --name ondeploy"
   wait: true
-- image: sequoiatools/eventing:8.1
+- image: sequoiatools/eventing:8.5
   command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o deploy --name ondeploy"
   wait: true
-- image: sequoiatools/eventing:8.1
+- image: sequoiatools/eventing:8.5
   command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o wait_for_state --state deployed --name ondeploy"
   wait: true
 
 ##### deploy bucket op, timers, N1ql, analytics, fts #####
-- image: sequoiatools/eventing:8.1
+- image: sequoiatools/eventing:8.5
   command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o deploy --name bucket_op"
 - command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o deploy --name timers"
 - command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o deploy --name n1ql"
@@ -233,7 +233,7 @@
 - command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o deploy --name fts"
 
 #### wait for handler to be deployed ####
-- image: sequoiatools/eventing:8.1
+- image: sequoiatools/eventing:8.5
   command: "eventing_helper.py -i {{.EventingNode}} -u {{.RestUsername}} -p {{.RestPassword}} -o wait_for_state --state deployed --name bucket_op"
   wait: true
 - command: "eventing_helper.py -i {{.EventingNode}} -u {{.RestUsername}} -p {{.RestPassword}} -o wait_for_state --state deployed --name timers"
@@ -290,18 +290,18 @@
 
 
 ###### Disable log encryption - test eventing encryption state-change ######
-- image: sequoiatools/couchbase-cli:8.1
+- image: sequoiatools/couchbase-cli:8.5
   command: "setting-encryption -c {{.Orchestrator}}:{{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --target log --type disabled --set"
   wait: true
 
 
 ##### deploy curl, sbm #####
-- image: sequoiatools/eventing:8.1
+- image: sequoiatools/eventing:8.5
   command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o deploy --name curl"
 - command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o deploy --name sbm"
 
 #### wait for handler to be deployed ####
-- image: sequoiatools/eventing:8.1
+- image: sequoiatools/eventing:8.5
   command: "eventing_helper.py -i {{.EventingNode}} -u {{.RestUsername}} -p {{.RestPassword}} -o wait_for_state --state deployed"
   wait: true
 
@@ -317,19 +317,19 @@
   wait: true
 
 #### pause bucket op, timers, analytics, fts ####
-- image: sequoiatools/eventing:8.1
+- image: sequoiatools/eventing:8.5
   command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o pause --name bucket_op"
   wait: true
-- image: sequoiatools/eventing:8.1
+- image: sequoiatools/eventing:8.5
   command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o pause --name timers"
   wait: true
-- image: sequoiatools/eventing:8.1
+- image: sequoiatools/eventing:8.5
   command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o pause --name analytics"
   wait: true
-- image: sequoiatools/eventing:8.1
+- image: sequoiatools/eventing:8.5
   command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o pause --name fts"
   wait: true
-- image: sequoiatools/eventing:8.1
+- image: sequoiatools/eventing:8.5
   command: "eventing_helper.py -i {{$.EventingNode}} -u eventing_rbac -p password -o pause --name rbacop"
   wait: true
 
@@ -339,7 +339,7 @@
   wait: true
 
 #### wait for bucket, timers, analytics, fts to be paused ####
-- image: sequoiatools/eventing:8.1
+- image: sequoiatools/eventing:8.5
   command: "eventing_helper.py -i {{.EventingNode}} -u {{.RestUsername}} -p {{.RestPassword}} -o wait_for_state --state paused --name bucket_op"
   wait: true
 - command: "eventing_helper.py -i {{.EventingNode}} -u {{.RestUsername}} -p {{.RestPassword}} -o wait_for_state --state paused --name timers"
@@ -378,33 +378,33 @@
   wait: true
 
 #### resume all handlers ####
-- image: sequoiatools/eventing:8.1
+- image: sequoiatools/eventing:8.5
   command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o resume --name bucket_op"
   wait: true
-- image: sequoiatools/eventing:8.1
+- image: sequoiatools/eventing:8.5
   command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o resume --name timers"
   wait: true
-- image: sequoiatools/eventing:8.1
+- image: sequoiatools/eventing:8.5
   command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o resume --name curl"
   wait: true
-- image: sequoiatools/eventing:8.1
+- image: sequoiatools/eventing:8.5
   command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o resume --name n1ql"
   wait: true
-- image: sequoiatools/eventing:8.1
+- image: sequoiatools/eventing:8.5
   command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o resume --name sbm"
   wait: true
-- image: sequoiatools/eventing:8.1
+- image: sequoiatools/eventing:8.5
   command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o resume --name analytics"
   wait: true
-- image: sequoiatools/eventing:8.1
+- image: sequoiatools/eventing:8.5
   command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o resume --name fts"
   wait: true
-- image: sequoiatools/eventing:8.1
+- image: sequoiatools/eventing:8.5
   command: "eventing_helper.py -i {{$.EventingNode}} -u eventing_rbac -p password -o resume --name rbacop"
   wait: true
 
 #### wait for all handlers to be deployed ####
-- image: sequoiatools/eventing:8.1
+- image: sequoiatools/eventing:8.5
   command: "eventing_helper.py -i {{.EventingNode}} -u {{.RestUsername}} -p {{.RestPassword}} -o wait_for_state --state deployed --name bucket_op"
   wait: true
 - command: "eventing_helper.py -i {{.EventingNode}} -u {{.RestUsername}} -p {{.RestPassword}} -o wait_for_state --state deployed --name timers"
@@ -424,7 +424,7 @@
 
 
 ###### Re-enable log encryption to test eventing encryption state-change ######
-- image: sequoiatools/couchbase-cli:8.1
+- image: sequoiatools/couchbase-cli:8.5
   command: "setting-encryption -c {{.Orchestrator}}:{{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --target log --type key --key 0 --set"
   wait: true
 
@@ -442,7 +442,7 @@
   wait: true
 
 ###############  compact metadata bucket to stress checkpoint survival ################
-- image: sequoiatools/couchbase-cli:8.1
+- image: sequoiatools/couchbase-cli:8.5
   command: "bucket-compact -c {{.Orchestrator}}:{{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket {{.NthBucket 8}}"
   wait: true
 
@@ -651,13 +651,13 @@
   wait: true
 
 ###############  Second pause/resume cycle for lifecycle stability ################
-- image: sequoiatools/eventing:8.1
+- image: sequoiatools/eventing:8.5
   command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o pause --name bucket_op0"
 - command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o pause --name curl"
 - command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o pause --name n1ql"
 - command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o pause --name sbm0"
 
-- image: sequoiatools/eventing:8.1
+- image: sequoiatools/eventing:8.5
   command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o wait_for_state --state paused --name bucket_op0"
   wait: true
 - command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o wait_for_state --state paused --name curl"
@@ -675,13 +675,13 @@
 - command: "kv --ops {{.Scale 2000}} --create 30 --get 40 --delete 30 --hosts {{.Orchestrator}} --bucket {{.NthBucket 1}} --scope scope_0 --collection coll0,coll1"
   duration: 600
 
-- image: sequoiatools/eventing:8.1
+- image: sequoiatools/eventing:8.5
   command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o resume --name bucket_op0"
 - command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o resume --name curl"
 - command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o resume --name n1ql"
 - command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o resume --name sbm0"
 
-- image: sequoiatools/eventing:8.1
+- image: sequoiatools/eventing:8.5
   command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o wait_for_state --state deployed --name bucket_op0"
   wait: true
 - command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o wait_for_state --state deployed --name curl"
@@ -692,42 +692,42 @@
   wait: true
 
 ###############  Deploy/Undeploy cycle for lifecycle stress ################
-- image: sequoiatools/eventing:8.1
+- image: sequoiatools/eventing:8.5
   command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o undeploy --name timers"
   wait: true
-- image: sequoiatools/eventing:8.1
+- image: sequoiatools/eventing:8.5
   command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o wait_for_state --state undeployed --name timers"
   wait: true
-- image: sequoiatools/eventing:8.1
+- image: sequoiatools/eventing:8.5
   command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o deploy --name timers"
   wait: true
-- image: sequoiatools/eventing:8.1
+- image: sequoiatools/eventing:8.5
   command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o wait_for_state --state deployed --name timers"
   wait: true
 
 #### final validation: all handlers still deployed after full test lifecycle ####
-- image: sequoiatools/eventing:8.1
+- image: sequoiatools/eventing:8.5
   command: "eventing_helper.py -i {{.EventingNode}} -u {{.RestUsername}} -p {{.RestPassword}} -o wait_for_state --state deployed"
   wait: true
 
 # undeploy and delete ondeploy handler #####
-- image: sequoiatools/eventing:8.1
+- image: sequoiatools/eventing:8.5
   command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o undeploy --name ondeploy"
   wait: true
-- image: sequoiatools/eventing:8.1
+- image: sequoiatools/eventing:8.5
   command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o wait_for_state --state undeployed --name ondeploy"
   wait: true
-- image: sequoiatools/eventing:8.1
+- image: sequoiatools/eventing:8.5
   command: "eventing_helper.py -i {{$.EventingNode}} -u {{$.RestUsername}} -p {{$.RestPassword}} -o delete --name ondeploy"
   wait: true
 
 # undeploy and delete handlers as non-admin user #####
-- image: sequoiatools/eventing:8.1
+- image: sequoiatools/eventing:8.5
   command: "eventing_helper.py -i {{$.EventingNode}} -u eventing_rbac -p password -o undeploy --name rbacop"
   wait: true
-- image: sequoiatools/eventing:8.1
+- image: sequoiatools/eventing:8.5
   command: "eventing_helper.py -i {{$.EventingNode}} -u eventing_rbac -p password -o wait_for_state --state undeployed --name rbacop"
   wait: true
-- image: sequoiatools/eventing:8.1
+- image: sequoiatools/eventing:8.5
   command: "eventing_helper.py -i {{$.EventingNode}} -u eventing_rbac -p password -o delete --name rbacop"
   wait: true

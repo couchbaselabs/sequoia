@@ -2,9 +2,9 @@
 -
  include: tests/templates/rebalance.yml, tests/templates/vegeta.yml, tests/templates/kv.yml, tests/templates/fts.yml, tests/templates/n1ql.yml, tests/templates/multinode_failure.yml, tests/templates/collections.yml, tests/templates/xdcr.yml
 
-###### update Tombstone Purge Interval — random value each iteration (1–730 days, 8.1 max) ######
+###### update Tombstone Purge Interval — random value each iteration (1–730 days, 8.5 max) ######
 -
-  image: sequoiatools/couchbase-cli:8.1
+  image: sequoiatools/couchbase-cli:8.5
   command: "setting-compaction -c {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}} --metadata-purge-interval {{.RandomScale 1 730}} --compaction-db-percentage 30 --compaction-view-percentage 30"
   wait: true
 
@@ -49,17 +49,17 @@
   template: disable_autofailover
   requires:  "{{eq true .DoOnce }}"
 -
-  image: sequoiatools/couchbase-cli:8.1
+  image: sequoiatools/couchbase-cli:8.5
   requires:  "{{eq true .DoOnce }}"
   command: "node-to-node-encryption -c {{.Orchestrator}}:8091 -u {{.RestUsername}} -p {{.RestPassword}} --enable"
   wait: true
 -
-  image: sequoiatools/couchbase-cli:8.1
+  image: sequoiatools/couchbase-cli:8.5
   requires:  "{{eq true .DoOnce }}"
   command: "setting-security -c {{.Orchestrator}}:8091 -u {{.RestUsername}} -p {{.RestPassword}} --set --cluster-encryption-level control"
   wait: true
 -
-  image: sequoiatools/couchbase-cli:8.1
+  image: sequoiatools/couchbase-cli:8.5
   requires:  "{{eq true .DoOnce }}"
   command: "ip-family -c {{.Orchestrator}}:8091 -u {{.RestUsername}} -p {{.RestPassword}} --set --ipv4only"
   wait: true
@@ -88,17 +88,17 @@
 
 # Enables KV rate-limiting feature across the cluster
 -
-  image: sequoiatools/couchbase-cli:8.1
+  image: sequoiatools/couchbase-cli:8.5
   requires:  "{{eq true .DoOnce }}"
   command: "setting-cluster -c {{.Orchestrator}}:8091 -u {{.RestUsername}} -p {{.RestPassword}} --throttle-enabled 1"
   wait: true
 -
- image: sequoiatools/couchbase-cli:8.1
+ image: sequoiatools/couchbase-cli:8.5
  requires:  "{{eq true .DoOnce }}"
  command: "setting-cluster -c {{.Orchestrator}}:8091 -u {{.RestUsername}} -p {{.RestPassword}} --read-unit-size {{.Scale 10000}}"
  wait: true
 -
- image: sequoiatools/couchbase-cli:8.1
+ image: sequoiatools/couchbase-cli:8.5
  requires:  "{{eq true .DoOnce }}"
  command: "setting-cluster -c {{.Orchestrator}}:8091 -u {{.RestUsername}} -p {{.RestPassword}} --write-unit-size {{.Scale 10000}}"
  wait: true
@@ -192,7 +192,7 @@
    wait: true
 
 # Enable cross-cluster versioning for buckets 0, 4, 8, 9 ######
-- image: sequoiatools/couchbase-cli:8.1
+- image: sequoiatools/couchbase-cli:8.5
   requires:  "{{eq true .DoOnce }}"
   command: "bucket-edit -c {{.Orchestrator}}:{{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket {{.Bucket}} --enable-cross-cluster-versioning --force"
   wait: true
@@ -204,7 +204,7 @@
   wait: true
 
 # Enable cross-cluster versioning in remote cluster for buckets 0, 1, 2, 3 ######
-- image: sequoiatools/couchbase-cli:8.1
+- image: sequoiatools/couchbase-cli:8.5
   requires:  "{{eq true .DoOnce }}"
   command: "bucket-edit -c {{.Nodes | .Cluster 1 | net 0}}:{{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket {{.Nodes | .Cluster 1 | bucket 0}} --enable-cross-cluster-versioning --force"
   wait: true
@@ -255,7 +255,7 @@
   wait: true
 
 # start xdcr replications
-- image: sequoiatools/couchbase-cli:8.1
+- image: sequoiatools/couchbase-cli:8.5
   requires:  "{{eq true .DoOnce }}"
   command:  "xdcr-setup -c {{.Orchestrator}}:{{.RestPort}} --create --xdcr-cluster-name remote
         --xdcr-hostname {{.Nodes | .Cluster 1 | net 0}}

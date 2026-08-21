@@ -55,7 +55,7 @@
 **Cheshire Cat** - Couchbase 7.0
 **Neo** - Couchbase 7.2
 **Morpheus** - Couchbase 8.0 (specific features)
-**Totoro** - Couchbase 8.1 (RBAC and related features)
+**Totoro** - Couchbase 8.5 (RBAC and related features)
 
 ## Test Containers
 

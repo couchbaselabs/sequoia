@@ -14,13 +14,13 @@ This directory contains multi-service integration tests for Couchbase Server, or
 | [`7.6/`](7.6/AGENTS.md) | 7.6 | Magma | Adds shard affinity, history retention, bucket rank; alternate 25-node cluster scope | [7.6/AGENTS.md](7.6/AGENTS.md) |
 | [`7.7/`](7.7/AGENTS.md) | 7.7 | Magma | Adds `bucket10` for composite + vector (L2) indexes; SIFT embeddings | [7.7/AGENTS.md](7.7/AGENTS.md) |
 | [`8.0/`](8.0/AGENTS.md) | 8.0 | Magma | Adds `bucket11` for BHive indexes; encryption at rest + DEK rotation; CCV; conflict-logged XDCR | [8.0/AGENTS.md](8.0/AGENTS.md) |
-| [`8.1/`](8.1/AGENTS.md) | 8.1 | Magma | Adds `bucket11` BHive + CCV in scope; per-bucket history seconds tuned; scope/collection counts scaled higher | [8.1/AGENTS.md](8.1/AGENTS.md) |
+| [`8.5/`](8.5/AGENTS.md) | 8.5 | Magma | Adds `bucket11` BHive + CCV in scope; per-bucket history seconds tuned; scope/collection counts scaled higher | [8.5/AGENTS.md](8.5/AGENTS.md) |
 
 ---
 
 ## Feature Evolution Across Versions
 
-| Feature | cheshirecat | neo | 7.2 | 7.6 | 7.7 | 8.0 | 8.1 |
+| Feature | cheshirecat | neo | 7.2 | 7.6 | 7.7 | 8.0 | 8.5 |
 |---------|:-----------:|:---:|:---:|:---:|:---:|:---:|:---:|
 | Magma storage | — | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | History retention | — | — | — | ✓ | ✓ | ✓ | ✓ |

@@ -936,7 +936,7 @@ func (s *Scope) selectEncryptionKey(name string, server *ServerSpec) (Encryption
 // encryption targets (config/audit/log/bucket/other).
 func (s *Scope) EnableEncryptionKey() {
 	operation := func(name string, server *ServerSpec) {
-		if !cliVersionAtLeast(s.Version, 8.1) {
+		if !cliVersionAtLeast(s.Version, 8.5) {
 			fmt.Printf("Skipping encryption key enable for %s: cli version %s does not support it\n", name, s.Version)
 			return
 		}
@@ -1038,8 +1038,8 @@ func (s *Scope) EnableOtherEncryptionAtRest() {
 			fmt.Printf("[EnableOtherEncryptionAtRest] %s: skipped (server.EnableOtherEncryptionAtRest=false)\n", name)
 			return
 		}
-		if !cliVersionAtLeast(s.Version, 8.1) {
-			fmt.Printf("[EnableOtherEncryptionAtRest] %s: skipped (cli version %s < 8.1)\n", name, s.Version)
+		if !cliVersionAtLeast(s.Version, 8.5) {
+			fmt.Printf("[EnableOtherEncryptionAtRest] %s: skipped (cli version %s < 8.5)\n", name, s.Version)
 			return
 		}
 

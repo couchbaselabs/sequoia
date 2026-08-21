@@ -112,7 +112,7 @@ Each section uses a non-overlapping `--start` offset so doc keys never collide a
 - SSH/remote commands: `sequoiatools/cmd` (not `vijayviji/sshpass` — deprecated)
 - KV load: `sequoiatools/gideon_latest`
 - Collection load: `sequoiatools/magmaloader`
-- CLI operations: `sequoiatools/couchbase-cli:8.1`
+- CLI operations: `sequoiatools/couchbase-cli:8.5`
 - Backup manager: `sequoiatools/cbbackupmgr`
 
 ## Data Loaders

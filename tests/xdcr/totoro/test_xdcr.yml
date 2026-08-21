@@ -2,7 +2,7 @@
 
 ###### update Tombstone Purge Interval ######
 -
-  image: sequoiatools/couchbase-cli:8.1
+  image: sequoiatools/couchbase-cli:8.5
   requires:  "{{eq true .DoOnce }}"
   command: "setting-compaction -c {{.Orchestrator}} -u  {{.RestUsername}} -p  {{.RestPassword}} --metadata-purge-interval 0.25 --compaction-db-percentage 30 --compaction-view-percentage 30"
   wait: true
@@ -12,17 +12,17 @@
   template: disable_autofailover
   requires:  "{{eq true .DoOnce }}"
 -
-  image: sequoiatools/couchbase-cli:8.1
+  image: sequoiatools/couchbase-cli:8.5
   requires:  "{{eq true .DoOnce }}"
   command: "node-to-node-encryption -c {{.Orchestrator}}:8091 -u {{.RestUsername}} -p {{.RestPassword}} --enable"
   wait: true
 -
-  image: sequoiatools/couchbase-cli:8.1
+  image: sequoiatools/couchbase-cli:8.5
   requires:  "{{eq true .DoOnce }}"
   command: "setting-security -c {{.Orchestrator}}:8091 -u {{.RestUsername}} -p {{.RestPassword}} --set --cluster-encryption-level control"
   wait: true
 -
-  image: sequoiatools/couchbase-cli:8.1
+  image: sequoiatools/couchbase-cli:8.5
   requires:  "{{eq true .DoOnce }}"
   command: "ip-family -c {{.Orchestrator}}:8091 -u {{.RestUsername}} -p {{.RestPassword}} --set --ipv4only"
   wait: true
@@ -33,11 +33,11 @@
 
 # Create buckets outside of scope file as we want different types of buckets/vbuckets with different settings to test various xdcr scenarios.
 -
-  image: sequoiatools/couchbase-cli:8.1
+  image: sequoiatools/couchbase-cli:8.5
   command:  "bucket-create -c {{.Orchestrator}}:{{.RestPort}} -u  {{.RestUsername}} -p  {{.RestPassword}} --bucket=bucket5_magma  --bucket-ramsize 2281 --bucket-type couchbase --bucket-replica 1 --enable-flush 1 --wait --bucket-eviction-policy fullEviction --conflict-resolution timestamp"
   wait: true
 -
-  image: sequoiatools/couchbase-cli:8.1
+  image: sequoiatools/couchbase-cli:8.5
   command:  "bucket-create -c {{$.Nodes | $.Cluster 1 | net 0}}:{{$.RestPort}} -u  {{.RestUsername}} -p  {{.RestPassword}} --bucket=bucket5_couchstore --bucket-ramsize 2281 --bucket-type couchbase --bucket-replica 1 --enable-flush 1 --wait --bucket-eviction-policy fullEviction --storage-backend couchstore --conflict-resolution timestamp"
   wait: true
 
@@ -106,7 +106,7 @@
   alias: load_bucket5
 
 # Enable cross-cluster versioning for few buckets ######
-- image: sequoiatools/couchbase-cli:8.1
+- image: sequoiatools/couchbase-cli:8.5
   requires:  "{{eq true .DoOnce }}"
   command: "bucket-edit -c {{.Orchestrator}}:{{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket {{.NthBucket 1}} --enable-cross-cluster-versioning --force"
   wait: true
@@ -114,7 +114,7 @@
   wait: true
 
 # Enable cross-cluster versioning in remote cluster
-- image: sequoiatools/couchbase-cli:8.1
+- image: sequoiatools/couchbase-cli:8.5
   requires:  "{{eq true .DoOnce }}"
   command: "bucket-edit -c {{.Nodes | .Cluster 1 | net 0}}:{{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket {{.Nodes | .Cluster 1 | bucket 1}} --enable-cross-cluster-versioning --force"
   wait: true
@@ -147,7 +147,7 @@
   wait: true
 
 #============ Create replications ============
-- image: sequoiatools/couchbase-cli:8.1
+- image: sequoiatools/couchbase-cli:8.5
   command:  "xdcr-setup -c {{.Orchestrator}}:{{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} 
         --create --xdcr-cluster-name remote
         --xdcr-hostname {{.Nodes | .Cluster 1 | net 0}}
@@ -491,7 +491,7 @@
             -b bucket{{$offset}} -o delete -s scope-{{$offset}} -c coll --count 10"
 
 # recreate replications C1.bucket1 -> C2.bucket1, C1.bucket2 -> C2.bucket2
-- image: sequoiatools/couchbase-cli:8.1
+- image: sequoiatools/couchbase-cli:8.5
   command: "xdcr-replicate -c {{.Orchestrator}}:{{.RestPort}}
         --create
         --xdcr-cluster-name remote
@@ -577,7 +577,7 @@
 
 ##============ pause-sleep-resume 2 times ============
 # pause
-- image: sequoiatools/couchbase-cli:8.1
+- image: sequoiatools/couchbase-cli:8.5
   command: "xdcr-replicate -c {{.Orchestrator}}:{{.RestPort}} --pause -u {{.RestUsername}} -p {{.RestPassword}}
             --xdcr-replicator={{(index (.AllLogs `ReplId` | json) 0).uuid}}/{{.Bucket}}/{{.Bucket}}"
 - command: "xdcr-replicate -c {{.Orchestrator}}:{{.RestPort}} --pause -u {{.RestUsername}} -p {{.RestPassword}}
@@ -590,7 +590,7 @@
   command: "300"
   wait: true
 # resume
-- image: sequoiatools/couchbase-cli:8.1
+- image: sequoiatools/couchbase-cli:8.5
   command: "xdcr-replicate -c {{.Orchestrator}}:{{.RestPort}} --resume -u {{.RestUsername}} -p {{.RestPassword}}
             --xdcr-replicator={{(index (.AllLogs `ReplId` | json) 0).uuid}}/{{.Bucket}}/{{.Bucket}}"
 - command: "xdcr-replicate -c {{.Orchestrator}}:{{.RestPort}} --resume -u {{.RestUsername}} -p {{.RestPassword}}
@@ -603,7 +603,7 @@
   command: "300"
   wait: true
 # pause
-- image: sequoiatools/couchbase-cli:8.1
+- image: sequoiatools/couchbase-cli:8.5
   command: "xdcr-replicate -c {{.Orchestrator}}:{{.RestPort}} --pause -u {{.RestUsername}} -p {{.RestPassword}}
             --xdcr-replicator={{(index (.AllLogs `ReplId` | json) 0).uuid}}/{{.Bucket}}/{{.Bucket}}"
   wait: true
@@ -626,7 +626,7 @@
   command: "600"
   wait: true
 # resume
-- image: sequoiatools/couchbase-cli:8.1
+- image: sequoiatools/couchbase-cli:8.5
   command: "xdcr-replicate -c {{.Orchestrator}}:{{.RestPort}} --resume -u {{.RestUsername}} -p {{.RestPassword}}
             --xdcr-replicator={{(index (.AllLogs `ReplId` | json) 0).uuid}}/{{.Bucket}}/{{.Bucket}}"
 # sleep
@@ -888,7 +888,7 @@
   entrypoint: sleep
   command: "120"
   wait: true
-- image: sequoiatools/couchbase-cli:8.1
+- image: sequoiatools/couchbase-cli:8.5
   command:  "xdcr-setup -c {{$.Orchestrator}}:{{$.RestPort}} --delete --xdcr-cluster-name remote
              -u {{$.RestUsername}} -p {{$.RestPassword}}"
   wait: true

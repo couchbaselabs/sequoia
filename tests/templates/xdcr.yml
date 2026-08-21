@@ -34,7 +34,7 @@
   name: xdcr-link
   actions:
     -
-      image: sequoiatools/couchbase-cli:8.1
+      image: sequoiatools/couchbase-cli:8.5
       command: "xdcr-setup -c $0:{{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}}
                 --create --xdcr-cluster-name $1
                 --xdcr-hostname $2
@@ -47,7 +47,7 @@
   name: xdcr-replicate-bucket
   actions:
     -
-      image: sequoiatools/couchbase-cli:8.1
+      image: sequoiatools/couchbase-cli:8.5
       command: "xdcr-replicate -c $0:{{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}}
                 --create --xdcr-cluster-name $1
                 --xdcr-from-bucket $2 --xdcr-to-bucket $2"
@@ -76,7 +76,7 @@
   name: differ-smoke
   actions:
     -
-      image: sequoiatools/xdcrdiffer:8.1
+      image: sequoiatools/xdcrdiffer:8.5
       command: "--source-host $0 --source-port {{.RestPort}}
                 --source-username {{.RestUsername}} --source-password {{.RestPassword}}
                 --source-bucket $2 --target-bucket $2
@@ -93,7 +93,7 @@
   name: differ-replication
   actions:
     -
-      image: sequoiatools/xdcrdiffer:8.1
+      image: sequoiatools/xdcrdiffer:8.5
       command: "--source-host $0 --source-port {{.RestPort}}
                 --source-username {{.RestUsername}} --source-password {{.RestPassword}}
                 --source-bucket $1 --target-bucket $2

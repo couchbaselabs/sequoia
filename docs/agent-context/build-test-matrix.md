@@ -214,7 +214,7 @@ Not applicable (no git hooks or pre-commit configuration found). For code change
 - 7.6: `tests/integration/7.6/test_7.6.yml`, `tests/2i/7.6/`
 - 7.7: `tests/integration/7.7/test_7.7.yml`
 - 8.0: `tests/integration/8.0/test_8.0.yml`
-- 8.1: `tests/integration/8.1/test_8.1.yml`
+- 8.5: `tests/integration/8.5/test_8.5.yml`
 
 **Release-Specific Tests:**
 - Alice: `tests/*/alice/*`

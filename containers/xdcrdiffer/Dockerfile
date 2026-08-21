@@ -1,8 +1,8 @@
-# Builds xdcrDiffer from source so we track the 8.1 (Totoro) line instead of the
-# server image's bundled binary. The 8.1 server image isn't on Docker Hub yet, and
+# Builds xdcrDiffer from source so we track the 8.5 (Totoro) line instead of the
+# server image's bundled binary. The 8.5 server image isn't on Docker Hub yet, and
 # the differ's `main` branch is the post-Morpheus (8.0) dev tip. Pin a tag/branch
 # with --build-arg XDCR_DIFFER_REF=<ref>.
-#   docker build -t sequoiatools/xdcrdiffer:8.1 containers/xdcrdiffer/
+#   docker build -t sequoiatools/xdcrdiffer:8.5 containers/xdcrdiffer/
 ARG XDCR_DIFFER_REF=main
 
 FROM golang:1.24 AS builder
