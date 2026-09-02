@@ -113,8 +113,11 @@ func NewScope(flags TestFlags, cm *ContainerManager) Scope {
 		}
 	}
 	var loops = 0
-	if *flags.Continue == true {
-		loops++ // we've already done first pass
+	if *flags.SkipSetup {
+		// infra is already provisioned, so the first pass has already run:
+		// suppress DoOnce actions (initial data load, collection creation,
+		// xdcr-setup, n2n encryption) for this run
+		loops++
 	}
 
 	rest := NewRestClient(spec.Servers, provider, cm)

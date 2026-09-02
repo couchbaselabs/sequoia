@@ -8,7 +8,7 @@ go build
 
 # CHANGE * the IP's inside the provider file to match your own (see providers/file/ubuntu_172-23-106.yml)
          * the client to be your docker client
-./sequoia -client 172.23.108.94:2375 -provider file:centos_pine.yml -test tests/integration/test_allFeaturesWithReplica.yml -scope tests/integration/scope_ReplicaIndex.yml -scale 3 -repeat 0 -log_level 0 -version 5.0.0-1004 -skip_setup=false -skip_test=false -skip_teardown=true -skip_cleanup=false -continue=false -collect_on_error=true -stop_on_error=false -duration=0
+./sequoia -client 172.23.108.94:2375 -provider file:centos_pine.yml -test tests/integration/test_allFeaturesWithReplica.yml -scope tests/integration/scope_ReplicaIndex.yml -scale 3 -repeat 0 -log_level 0 -version 5.0.0-1004 -skip_setup=false -skip_test=false -skip_teardown=true -skip_cleanup=false -collect_on_error=true -stop_on_error=false -duration=0
 ```
 
 

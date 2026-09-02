@@ -202,7 +202,7 @@ func (f *TestFlags) AddDefaultFlags(fset *flag.FlagSet) {
 	f.SkipSetup = fset.Bool(
 		"skip_setup",
 		false,
-		"skip scope setup")
+		"skip scope setup; also treated as a resumed run, suppressing one-time (DoOnce) test actions")
 	f.SkipTest = fset.Bool(
 		"skip_test",
 		false,
@@ -226,7 +226,7 @@ func (f *TestFlags) AddDefaultFlags(fset *flag.FlagSet) {
 	f.Continue = fset.Bool(
 		"continue",
 		false,
-		"test is continuing after stopping/exiting")
+		"DEPRECATED and ignored: -skip_setup now implies continuing after stopping/exiting")
 	f.StopOnError = fset.Bool(
 		"stop_on_error",
 		false,
