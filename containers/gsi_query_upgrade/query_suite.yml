@@ -1,0 +1,144 @@
+# Baseline query suite for the GSI/Query upgrade test (tests/upgrade/gsi_query).
+#
+# capture_baseline (pre-upgrade) fills the {sample} placeholders once from the data, then records per query the
+# EXPLAIN plan summary, row count, median latency and (hash: true) a result hash, and creates a named PREPARE.
+# The exact statements are stored in the snapshot, so validate_baseline (post-upgrade) runs the identical SQL.
+#
+# Every query must be index-backed: sequential scans are disabled, so a query that loses its index errors.
+# hash: true only on static buckets and only for exact (non-ANN) queries. ordered: true keeps row order in the
+# hash (every ORDER BY ends in a unique key); otherwise rows are hashed as a multiset.
+# min_version: queries the initial version cannot run are skipped at capture and smoke-run after the upgrade.
+
+samples:
+  hs_price_lo: "SELECT RAW p.price FROM hotel_static.hs1.c1 p WHERE p.price IS NOT NULL ORDER BY p.price OFFSET 1000 LIMIT 1"
+  hs_price_mid: "SELECT RAW p.price FROM hotel_static.hs1.c1 p WHERE p.price IS NOT NULL ORDER BY p.price OFFSET 1100 LIMIT 1"
+  hs_price_hi: "SELECT RAW p.price FROM hotel_static.hs1.c1 p WHERE p.price IS NOT NULL ORDER BY p.price OFFSET 1600 LIMIT 1"
+  hs_city: "SELECT RAW c.city FROM hotel_static.hs1.c1 c WHERE c.city IS NOT NULL ORDER BY c.city OFFSET 10 LIMIT 1"
+  hs_city_lo: "SELECT RAW c.city FROM hotel_static.hs1.c2 c WHERE c.city IS NOT NULL ORDER BY c.city OFFSET 10000 LIMIT 1"
+  hs_city_hi: "SELECT RAW c.city FROM hotel_static.hs1.c2 c WHERE c.city IS NOT NULL ORDER BY c.city OFFSET 30000 LIMIT 1"
+  hs_name: "SELECT RAW n.name FROM hotel_static.hs1.c1 n WHERE n.name IS NOT NULL ORDER BY n.name DESC OFFSET 200 LIMIT 1"
+  hs_country: "SELECT RAW h.country FROM hotel_static.hs1.c1 h WHERE h.country IS NOT NULL ORDER BY h.country OFFSET 10 LIMIT 1"
+  hs_bf: "SELECT h.country, h.city FROM hotel_static.hs1.c1 h WHERE h.free_breakfast = true AND h.free_parking = true AND h.country IS NOT NULL AND h.city IS NOT NULL LIMIT 1"
+  hs_author: "SELECT RAW r.author FROM hotel_static.hs1.c1 h UNNEST h.reviews AS r WHERE r.author IS NOT NULL LIMIT 1"
+  hs_clean_author: "SELECT RAW r.author FROM hotel_static.hs1.c1 h UNNEST h.reviews AS r WHERE r.author IS NOT NULL AND r.ratings.Cleanliness < 4 LIMIT 1"
+  hs_rooms: "SELECT RAW r.ratings.Rooms FROM hotel_static.hs1.c1 h UNNEST h.reviews AS r WHERE r.ratings.Rooms IS NOT NULL LIMIT 1"
+  ss_qvec: "SELECT RAW s.embedding FROM shoes_static._default._default s WHERE s.category IS NOT NULL AND s.embedding IS NOT MISSING LIMIT 1"
+  ms_qvec: "SELECT RAW m.`sparse` FROM msmarco_sparse._default._default m WHERE m.category IS NOT NULL AND m.`sparse` IS NOT MISSING LIMIT 1"
+
+queries:
+  # ---------------- hotel_static: scans ----------------
+  - name: hs_covered_city_eq
+    hash: true
+    statement: "SELECT c.city, META(c).id AS id FROM hotel_static.hs1.c1 c WHERE c.city = {hs_city}"
+  - name: hs_covered_price_range
+    hash: true
+    statement: "SELECT p.price, p.city, p.name FROM hotel_static.hs1.c1 p WHERE p.price BETWEEN {hs_price_lo} AND {hs_price_hi}"
+  - name: hs_fetch_price_range
+    hash: true
+    statement: "SELECT META(p).id AS id, p.address, p.email FROM hotel_static.hs1.c1 p WHERE p.price BETWEEN {hs_price_lo} AND {hs_price_hi}"
+  - name: hs_order_limit_pushdown
+    hash: true
+    ordered: true
+    statement: "SELECT META(p).id AS id, p.price FROM hotel_static.hs1.c1 p WHERE p.price >= {hs_price_lo} ORDER BY p.price, META(p).id LIMIT 20 OFFSET 5"
+  - name: hs_use_index_hint
+    hash: true
+    statement: "SELECT META(p).id AS id, p.price FROM hotel_static.hs1.c1 p USE INDEX (`idx7_hsc1`) WHERE p.price BETWEEN {hs_price_lo} AND {hs_price_hi} AND p.city IS NOT NULL"
+  - name: hs_multi_predicate_choice
+    hash: true
+    statement: "SELECT META(h).id AS id FROM hotel_static.hs1.c1 h WHERE h.free_breakfast = true AND h.free_parking = true AND h.country = {hs_bf.country} AND h.city = {hs_bf.city}"
+  - name: hs_include_missing_desc
+    hash: true
+    ordered: true
+    statement: "SELECT n.name, META(n).id AS id FROM hotel_static.hs1.c1 n WHERE n.name <= {hs_name} ORDER BY n.name DESC, META(n).id LIMIT 25"
+  - name: hs_groupby_country_type
+    hash: true
+    ordered: true
+    statement: "SELECT h.type, COUNT(1) AS cnt FROM hotel_static.hs1.c1 h WHERE h.country = {hs_country} GROUP BY h.type ORDER BY h.type"
+  - name: hs_unnest_flatten_keys
+    hash: true
+    statement: "SELECT META(h).id AS id, r.ratings.Rooms AS rooms FROM hotel_static.hs1.c1 h UNNEST h.reviews AS r WHERE r.author = {hs_author}"
+  - name: hs_any_satisfies_partial_array
+    hash: true
+    statement: "SELECT META(h).id AS id FROM hotel_static.hs1.c1 h WHERE ANY r IN h.reviews SATISFIES r.author = {hs_clean_author} AND r.ratings.Cleanliness < 4 END"
+  - name: hs_array_index_count
+    hash: true
+    statement: "SELECT COUNT(1) AS cnt FROM hotel_static.hs1.c1 h WHERE ANY r IN h.reviews SATISFIES r.ratings.Rooms = {hs_rooms} END"
+
+  # ---------------- hotel_static: joins / subqueries / window (CBO, NL vs Hash) ----------------
+  - name: hs_join_ansi_cbo
+    hash: true
+    ordered: true
+    statement: "SELECT h1.city, COUNT(1) AS cnt FROM hotel_static.hs1.c1 h1 JOIN hotel_static.hs1.c2 h2 ON h2.city = h1.city WHERE h1.price BETWEEN {hs_price_lo} AND {hs_price_hi} AND h2.city BETWEEN {hs_city_lo} AND {hs_city_hi} GROUP BY h1.city ORDER BY h1.city"
+  - name: hs_join_hash_hint
+    hash: true
+    ordered: true
+    statement: "SELECT h1.city, COUNT(1) AS cnt FROM hotel_static.hs1.c1 h1 JOIN hotel_static.hs1.c2 h2 USE HASH(build) ON h2.city = h1.city WHERE h1.price BETWEEN {hs_price_lo} AND {hs_price_hi} AND h2.city BETWEEN {hs_city_lo} AND {hs_city_hi} GROUP BY h1.city ORDER BY h1.city"
+  - name: hs_join_nl_hint
+    hash: true
+    ordered: true
+    statement: "SELECT h1.city, COUNT(1) AS cnt FROM hotel_static.hs1.c1 h1 JOIN hotel_static.hs1.c2 h2 USE NL ON h2.city = h1.city WHERE h1.price BETWEEN {hs_price_lo} AND {hs_price_hi} AND h2.city BETWEEN {hs_city_lo} AND {hs_city_hi} GROUP BY h1.city ORDER BY h1.city"
+  - name: hs_subquery_in
+    hash: true
+    statement: "SELECT META(h1).id AS id FROM hotel_static.hs1.c1 h1 WHERE h1.price BETWEEN {hs_price_lo} AND {hs_price_hi} AND h1.city IN (SELECT RAW h2.city FROM hotel_static.hs1.c2 h2 WHERE h2.city BETWEEN {hs_city_lo} AND {hs_city_hi})"
+  - name: hs_correlated_subquery
+    hash: true
+    ordered: true
+    statement: "SELECT META(h1).id AS id, (SELECT RAW COUNT(1) FROM hotel_static.hs1.c2 h2 WHERE h2.city = h1.city)[0] AS n FROM hotel_static.hs1.c1 h1 WHERE h1.price BETWEEN {hs_price_lo} AND {hs_price_mid} ORDER BY META(h1).id"
+  - name: hs_window_rank
+    hash: true
+    statement: "SELECT META(p).id AS id, RANK() OVER (PARTITION BY p.city ORDER BY p.price, META(p).id) AS rnk FROM hotel_static.hs1.c1 p WHERE p.price BETWEEN {hs_price_lo} AND {hs_price_hi}"
+
+  # ---------------- hotel_static: empty collections (CBSE-23292) ----------------
+  - name: hs_empty_collection_scan
+    hash: true
+    statement: "SELECT e.city FROM hotel_static.hs1.empty_1 e WHERE e.city IS NOT NULL"
+  - name: hs_empty_collection_join
+    hash: true
+    statement: "SELECT META(h).id AS id, e.city AS ecity FROM hotel_static.hs1.c1 h LEFT JOIN hotel_static.hs1.empty_2 e ON e.city = h.city WHERE h.price BETWEEN {hs_price_lo} AND {hs_price_mid}"
+
+  # ---------------- hotel_static: UDFs (created by create_udfs) ----------------
+  - name: hs_udf_sqlpp_and_js
+    hash: true
+    statement: "SELECT META(p).id AS id, default:hotel_static.hs1.upq_price_band(p.price) AS band, upq_label(p.city, p.country) AS label FROM hotel_static.hs1.c1 p WHERE p.price BETWEEN {hs_price_lo} AND {hs_price_mid}"
+
+  # ---------------- shoes_static: scalar (hashed) + dense vector (plan + rows) ----------------
+  - name: ss_scalar_default
+    hash: true
+    statement: "SELECT META(s).id AS id FROM shoes_static._default._default s WHERE s.category = \"Shoes\" AND s.country = \"USA\" AND s.brand = \"Nike\""
+  - name: ss_scalar_c1
+    hash: true
+    statement: "SELECT META(s).id AS id, s.size FROM shoes_static.ss1.c1 s WHERE s.brand = \"Nike\" AND s.color = \"Green\""
+  - name: ss_dense_composite
+    min_version: 8.0
+    statement: "SELECT META(s).id AS id FROM shoes_static._default._default s WHERE s.category = \"Shoes\" AND s.country = \"USA\" ORDER BY APPROX_VECTOR_DISTANCE(s.embedding, {ss_qvec}, \"L2\") LIMIT 10"
+  - name: ss_dense_bhive
+    min_version: 8.0
+    statement: "SELECT META(s).id AS id, s.category FROM shoes_static.ss1.c1 s ORDER BY APPROX_VECTOR_DISTANCE(s.embedding, {ss_qvec}, \"L2\") LIMIT 10"
+
+  # ---------------- shoes_large (5M): plans + rows only, all bounded ----------------
+  - name: sl_scalar
+    statement: "SELECT META(s).id AS id FROM shoes_large._default._default s WHERE s.brand = \"Nike\" AND s.color = \"Green\" AND s.size = 5 LIMIT 50"
+  - name: sl_dense_composite
+    min_version: 8.0
+    statement: "SELECT META(s).id AS id FROM shoes_large._default._default s WHERE s.category = \"Shoes\" AND s.country = \"USA\" ORDER BY APPROX_VECTOR_DISTANCE(s.embedding, {ss_qvec}, \"L2\") LIMIT 10"
+  - name: sl_dense_bhive
+    min_version: 8.0
+    statement: "SELECT META(s).id AS id, s.size FROM shoes_large._default._default s ORDER BY APPROX_VECTOR_DISTANCE(s.embedding, {ss_qvec}, \"L2\") LIMIT 10"
+
+  # ---------------- msmarco_sparse: scalar (hashed) + sparse vector (plan + rows) ----------------
+  - name: ms_scalar_c1
+    hash: true
+    ordered: true
+    statement: "SELECT META(m).id AS id FROM msmarco_sparse.ms1.c1 m WHERE m.brand = \"Nike\" AND m.color = \"Green\" AND m.size = 5 ORDER BY META(m).id LIMIT 200"
+  - name: ms_sparse_composite
+    min_version: 8.1
+    statement: "SELECT META(m).id AS id FROM msmarco_sparse._default._default m WHERE m.category = \"Shoes\" AND m.country = \"USA\" ORDER BY SPARSE_VECTOR_DISTANCE(m.`sparse`, {ms_qvec}, 10) LIMIT 10"
+  - name: ms_sparse_bhive
+    min_version: 8.1
+    statement: "SELECT META(m).id AS id, m.category FROM msmarco_sparse.ms1.c1 m ORDER BY SPARSE_VECTOR_DISTANCE(m.`sparse`, {ms_qvec}, 10) LIMIT 10"
+
+  # ---------------- hotel_mut: plans + rows only ----------------
+  - name: hm_price_range
+    statement: "SELECT META(p).id AS id FROM hotel_mut.hm1.c1 p WHERE p.price >= {hs_price_lo} ORDER BY p.price, META(p).id LIMIT 50"
+  - name: hm_multi_predicate_count
+    statement: "SELECT COUNT(1) AS cnt FROM hotel_mut.hm1.c2 h WHERE h.free_breakfast = true AND h.free_parking = true AND h.country = {hs_bf.country}"

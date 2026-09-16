@@ -1,0 +1,233 @@
+# Every index the GSI/Query upgrade test creates (tests/upgrade/gsi_query).
+#
+# apply_index_spec creates each index whose template's min_version <= the cluster's lowest node version and that
+# does not exist yet, so the same spec runs before the upgrade (initial version) and after it (adds the indexes the
+# final version newly supports). Index name = <template>_<suffix>, keeping indexmanager's naming so its
+# item_count_check treats them the same way as in the other GSI tests.
+#
+# Templates are copied from containers/indexmanager/indexmanager.py HOTEL_DS_INDEX_TEMPLATES and
+# SHOES_INDEX_TEMPLATES. kind: gsi -> CREATE INDEX, bhive -> CREATE VECTOR INDEX.
+# vector: dense -> WITH dimension/similarity/description; sparse -> WITH description/similarity DOT.
+# Per index: replicas (0-4, 5 index nodes) and partitions (0 = not partitioned, else PARTITION BY HASH(META().id)).
+
+vector_with:
+  dense: {"dimension": 128, "similarity": "L2", "description": "IVF,SQ8"}
+  sparse: {"description": "IVF1024", "similarity": "DOT"}
+
+templates:
+  # bhive_churn: the scalar index on id serves the SQL++ deletes and writes (sequential scans are off)
+  bc_id: {min_version: 7.0, keys: "`id`"}
+  # Hotel scalar / array
+  idx1: {min_version: 7.0, keys: "country, DISTINCT ARRAY `r`.`ratings`.`Check in / front desk` FOR r in `reviews` END, array_count((`public_likes`)), array_count((`reviews`)) DESC, `type`, `phone`, `price`, `email`, `address`, `name`, `url`"}
+  idx2: {min_version: 7.0, keys: "`free_breakfast`, `type`, `free_parking`, array_count((`public_likes`)), `price`, `country`"}
+  idx3: {min_version: 7.0, keys: "`free_breakfast`, `free_parking`, `country`, `city`"}
+  idx4: {min_version: 7.0, keys: "`price`, `city`, `name`"}
+  idx5: {min_version: 7.0, keys: "ALL ARRAY `r`.`ratings`.`Rooms` FOR r IN `reviews` END, `avg_rating`"}
+  idx6: {min_version: 7.0, keys: "`city`"}
+  idx7: {min_version: 7.0, keys: "`price`, `name`, `city`, `country`"}
+  idx8: {min_version: 7.0, keys: "DISTINCT ARRAY FLATTEN_KEYS(`r`.`author`, `r`.`ratings`.`Cleanliness`) FOR r IN `reviews` WHEN `r`.`ratings`.`Cleanliness` < 4 END, `country`, `email`, `free_parking`"}
+  idx9: {min_version: 7.0, keys: "ALL ARRAY FLATTEN_KEYS(`r`.`author`, `r`.`ratings`.`Rooms`) FOR r IN `reviews` END, `free_parking`"}
+  idx10: {min_version: 7.0, keys: "(ALL (ARRAY (ALL (ARRAY FLATTEN_KEYS(n, v) FOR n:v IN (`r`.`ratings`) END)) FOR `r` IN `reviews` END))"}
+  idx11: {min_version: 7.0, keys: "ALL ARRAY FLATTEN_KEYS(`r`.`ratings`.`Rooms`, `r`.`ratings`.`Cleanliness`) FOR r IN `reviews` END, `email`, `free_parking`"}
+  idx12: {min_version: 7.0, keys: "`name` INCLUDE MISSING DESC, `phone`, `type`"}
+  idx13: {min_version: 7.0, keys: "`city` INCLUDE MISSING ASC, `phone`"}
+  # Shoes / MSMARCO scalar
+  scalarshoes1: {min_version: 7.0, keys: "`category`, `country`, `brand`"}
+  scalarshoes2: {min_version: 7.0, keys: "`brand`, `color`, `size`"}
+  scalarshoes3: {min_version: 7.0, keys: "`type`, `review`"}
+  scalarshoes4: {min_version: 7.0, keys: "`country` INCLUDE MISSING DESC, `brand`"}
+  scalarshoes5: {min_version: 7.0, keys: "`size`, `category`, `type`"}
+  # Dense vector (8.0+)
+  composite_shoes1: {min_version: 8.0, vector: dense, keys: "`category`, `country`, `embedding` VECTOR"}
+  composite_shoes2: {min_version: 8.0, vector: dense, keys: "`brand`, `color`, `embedding` VECTOR"}
+  composite_shoes3: {min_version: 8.0, vector: dense, keys: "`size`, `embedding` VECTOR"}
+  idxbhive1_shoes: {min_version: 8.0, vector: dense, kind: bhive, keys: "`embedding` VECTOR", include: "`category`"}
+  idxbhive2_shoes: {min_version: 8.0, vector: dense, kind: bhive, keys: "`embedding` VECTOR", include: "`country`"}
+  idxbhive3_shoes: {min_version: 8.0, vector: dense, kind: bhive, keys: "`embedding` VECTOR", include: "`brand`, `color`"}
+  idxbhive4_shoes: {min_version: 8.0, vector: dense, kind: bhive, keys: "`embedding` VECTOR", include: "`size`"}
+  # Sparse vector (8.1+; 8.1 was renamed 8.5, builds may report either)
+  sparseshoes1: {min_version: 8.1, vector: sparse, keys: "`category`, `country`, `sparse` SPARSE VECTOR"}
+  sparseshoes2: {min_version: 8.1, vector: sparse, keys: "`brand`, `color`, `sparse` SPARSE VECTOR"}
+  sparseshoes3: {min_version: 8.1, vector: sparse, keys: "`size`, `sparse` SPARSE VECTOR"}
+  idxbhivesparse1_shoes: {min_version: 8.1, vector: sparse, kind: bhive, keys: "`sparse` SPARSE VECTOR", include: "`category`"}
+  idxbhivesparse2_shoes: {min_version: 8.1, vector: sparse, kind: bhive, keys: "`sparse` SPARSE VECTOR", include: "`country`"}
+
+# Fields given distribution statistics by update_statistics, per dataset
+stats_fields:
+  hotel: "price, city, country, name, free_breakfast, free_parking"
+  shoes: "category, country, brand, color, size"
+
+# Index templates that serve the suite's queries equally (the same leading key, and both cover them): after an upgrade a plan
+# that only swaps one for the other (the first of a group stands for all) is a warning, not a failure. Series 11, #23
+# (8.0.3 -> 8.5): ten hotel_static.hs1.c1 queries moved from idx7 to idx4, both covering and both leading with `price`. The
+# covered / fetch part of a scan stays in the comparison, so a swap to an index that stops covering still fails.
+equivalent_indexes:
+  - [idx4, idx7]
+
+keyspaces:
+  # ---------------- hotel_static (static) ----------------
+  - keyspace: hotel_static.hs1.c1
+    dataset: hotel
+    suffix: hsc1
+    indexes:
+      - {t: idx1, replicas: 0}
+      - {t: idx2, replicas: 1}
+      - {t: idx3, replicas: 2, partitions: 4}
+      - {t: idx4, replicas: 3}
+      - {t: idx5, replicas: 4}
+      - {t: idx6, replicas: 1}
+      - {t: idx7, replicas: 2, partitions: 8}
+      - {t: idx8, replicas: 0}
+      - {t: idx9, replicas: 1}
+      - {t: idx10, replicas: 2}
+      - {t: idx11, replicas: 3}
+      - {t: idx12, replicas: 1, partitions: 4}
+      - {t: idx13, replicas: 0}
+  - keyspace: hotel_static.hs1.c2
+    dataset: hotel
+    suffix: hsc2
+    indexes:
+      - {t: idx4, replicas: 1}
+      - {t: idx6, replicas: 2}
+  - keyspace: hotel_static.hs1.empty_1
+    dataset: hotel
+    suffix: hse1
+    indexes:
+      - {t: idx6, replicas: 1}
+  - keyspace: hotel_static.hs1.empty_2
+    dataset: hotel
+    suffix: hse2
+    indexes:
+      - {t: idx6, replicas: 0}
+
+  # ---------------- hotel_mut (mutating) ----------------
+  - keyspace: hotel_mut.hm1.c1
+    dataset: hotel
+    suffix: hmc1
+    indexes:
+      - {t: idx1, replicas: 1}
+      - {t: idx2, replicas: 2, partitions: 4}
+      - {t: idx3, replicas: 0}
+      - {t: idx4, replicas: 4}
+      - {t: idx5, replicas: 1}
+      - {t: idx6, replicas: 3}
+      - {t: idx7, replicas: 0}
+      - {t: idx8, replicas: 2}
+      - {t: idx9, replicas: 1}
+      - {t: idx10, replicas: 0}
+      - {t: idx11, replicas: 1}
+      - {t: idx12, replicas: 2}
+      - {t: idx13, replicas: 1, partitions: 8}
+  - keyspace: hotel_mut.hm1.c2
+    dataset: hotel
+    suffix: hmc2
+    indexes:
+      - {t: idx2, replicas: 1}
+      - {t: idx3, replicas: 0}
+      - {t: idx4, replicas: 2}
+      - {t: idx6, replicas: 1}
+      - {t: idx7, replicas: 3, partitions: 4}
+      - {t: idx12, replicas: 0}
+
+  # ---------------- shoes_large (5M, mutating) ----------------
+  - keyspace: shoes_large._default._default
+    dataset: shoes
+    suffix: sld
+    indexes:
+      - {t: scalarshoes1, replicas: 1}
+      - {t: scalarshoes2, replicas: 2, partitions: 8}
+      - {t: scalarshoes3, replicas: 0}
+      - {t: scalarshoes4, replicas: 1}
+      - {t: scalarshoes5, replicas: 3}
+      - {t: composite_shoes1, replicas: 1}
+      - {t: composite_shoes2, replicas: 0}
+      - {t: composite_shoes3, replicas: 2}
+      - {t: idxbhive1_shoes, replicas: 1}
+      - {t: idxbhive2_shoes, replicas: 0}
+      - {t: idxbhive3_shoes, replicas: 2}
+      - {t: idxbhive4_shoes, replicas: 1}
+
+  # ---------------- shoes_static (static) ----------------
+  - keyspace: shoes_static._default._default
+    dataset: shoes
+    suffix: ssd
+    indexes:
+      - {t: scalarshoes1, replicas: 2}
+      - {t: scalarshoes2, replicas: 1}
+      - {t: composite_shoes1, replicas: 1}
+      - {t: idxbhive1_shoes, replicas: 0}
+  - keyspace: shoes_static.ss1.c1
+    dataset: shoes
+    suffix: ssc1
+    indexes:
+      - {t: scalarshoes1, replicas: 0}
+      - {t: scalarshoes2, replicas: 4}
+      - {t: composite_shoes1, replicas: 2}
+      - {t: idxbhive1_shoes, replicas: 1}
+
+  # ---------------- msmarco_sparse (static) ----------------
+  - keyspace: msmarco_sparse._default._default
+    dataset: shoes
+    suffix: msd
+    indexes:
+      - {t: scalarshoes1, replicas: 1}
+      - {t: scalarshoes2, replicas: 0}
+      - {t: sparseshoes1, replicas: 1}
+      - {t: sparseshoes2, replicas: 2}
+      - {t: sparseshoes3, replicas: 0}
+      - {t: idxbhivesparse1_shoes, replicas: 1}
+      - {t: idxbhivesparse2_shoes, replicas: 0}
+  - keyspace: msmarco_sparse.ms1.c1
+    dataset: shoes
+    suffix: msc1
+    indexes:
+      - {t: scalarshoes1, replicas: 3}
+      - {t: scalarshoes2, replicas: 1}
+      - {t: sparseshoes1, replicas: 0}
+      - {t: sparseshoes2, replicas: 1}
+      - {t: sparseshoes3, replicas: 2}
+      - {t: idxbhivesparse1_shoes, replicas: 0}
+      - {t: idxbhivesparse2_shoes, replicas: 1}
+
+  # ---------------- hotel_background (constant mutations, load only) ----------------
+  # validate: false -> statistics are updated for it but it is left out of every stats check
+  - keyspace: hotel_background._default._default
+    dataset: hotel
+    suffix: hbd
+    validate: false
+    indexes:
+      - {t: idx1, replicas: 1}
+      - {t: idx2, replicas: 1}
+      - {t: idx3, replicas: 1}
+      - {t: idx4, replicas: 1}
+      - {t: idx5, replicas: 1}
+      - {t: idx6, replicas: 1}
+      - {t: idx7, replicas: 1}
+      - {t: idx8, replicas: 1}
+      - {t: idx9, replicas: 1}
+      - {t: idx10, replicas: 1}
+      - {t: idx11, replicas: 1}
+      - {t: idx12, replicas: 1}
+      - {t: idx13, replicas: 1}
+
+  # ---------------- bhive_churn (BigANN 1M each; BHIVE churn + recall, 8.0+ sources) ----------------
+  # only_if_loaded: left alone while empty (a BHIVE index cannot train without data, and runs that do not use the bucket
+  # never load it); validate: false: the docs are churned, so no item counts or stats checks
+  - keyspace: bhive_churn.scope_0.coll_0
+    dataset: shoes
+    suffix: bc0
+    validate: false
+    only_if_loaded: true
+    indexes:
+      - {t: bc_id, replicas: 0}
+      - {t: idxbhive4_shoes, replicas: 0}
+  - keyspace: bhive_churn.scope_0.coll_1
+    dataset: shoes
+    suffix: bc1
+    validate: false
+    only_if_loaded: true
+    indexes:
+      - {t: bc_id, replicas: 0}
+      - {t: idxbhive4_shoes, replicas: 1}
+
+  # ---------------- new_doctype: reserved, add its keyspaces/indexes here ----------------

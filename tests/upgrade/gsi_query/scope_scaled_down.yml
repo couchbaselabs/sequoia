@@ -1,0 +1,104 @@
+---
+# scope_gsi_query_upgrade.yml
+# GSI/Query upgrade test topology. Used by test_gsi_query_pre_upgrade.yml (with -version <initial>) and
+# test_gsi_query_post_upgrade.yml (with -version <final> -skip_setup). See README.md in this folder.
+#
+# TEMPORARY scaled-down variant of scope_gsi_query_upgrade.yml, for when one VM of the 12-host pool is unusable
+# (172.23.220.255 / sg2703-deb12 lost its /data disk, 2026-10-28). Do not merge as the default scope.
+# 11 hosts: nodes 1-3 data, 4-5 query, 6-10 index (10 nodes in the cluster); node 11 stays out of the cluster and
+# is the spare for the online swap rebalance, then is rebalanced in as an index node by the post-upgrade test.
+# 5 index nodes are kept because some indexes use 4 replicas.
+
+bucketscopes:
+  - name: scope_0
+    collections: coll_0, coll_1
+  - name: hs1
+    collections: c1, c2, empty_1, empty_2
+  - name: hm1
+    collections: c1, c2
+  - name: ss1
+    collections: c1
+  - name: ms1
+    collections: c1
+
+buckets:
+  # 5M shoes docs (dense `embedding`), continuous writes in the post-upgrade phase
+  - name: shoes_large
+    ram: 23%
+    eviction: fullEviction
+    storage: magma
+  # 100k shoes docs in _default and ss1.c1, static
+  - name: shoes_static
+    ram: 6%
+    eviction: fullEviction
+    storage: magma
+    bucketscopes: ss1
+  # 1M MSMARCO docs (sparse vectors) in _default and ms1.c1, static
+  - name: msmarco_sparse
+    ram: 10%
+    eviction: fullEviction
+    storage: magma
+    bucketscopes: ms1
+  # 200k Hotel docs in hm1.c1 and hm1.c2, continuous writes in the post-upgrade phase.
+  # Its _default collection holds AWR data.
+  - name: hotel_mut
+    ram: 8%
+    eviction: fullEviction
+    storage: couchstore
+    bucketscopes: hm1
+  # 200k Hotel docs in hs1.c1 and hs1.c2, plus two empty collections, static
+  - name: hotel_static
+    ram: 8%
+    eviction: fullEviction
+    storage: magma
+    bucketscopes: hs1
+  # 100k Hotel docs with a constant ~500 ops/sec mutation workload for the whole run (pre, upgrade, post).
+  # Load only: not validated (no result hashes, item counts or stats checks).
+  - name: hotel_background
+    ram: 4%
+    eviction: fullEviction
+    storage: magma
+  # Reserved for a planned new doc type: no data or indexes yet
+  - name: new_doctype
+    ram: 4%
+    eviction: fullEviction
+    storage: magma
+  # 10k Hotel docs, no indexes of its own: offline upgrades only, run_ddl creates and drops throwaway indexes on it
+  # while the cluster is mixed-version (the bucket is loaded only when UPGRADE_MODE=offline)
+  - name: ddl_scratch
+    ram: 4%
+    eviction: fullEviction
+    storage: magma
+  # Holes for plasma: Hotel docs are loaded, indexed and then deleted / moved / expired before the upgrade;
+  # offline upgrades and online upgrades with shard affinity only. The test creates scope_0.coll_0..coll_3 itself
+  # (sequoiatools/collections), so indexmanager create_n_indexes_on_buckets picks them
+  - name: plasma_holes
+    ram: 6%
+    eviction: fullEviction
+    storage: magma
+  # Magma-backed BHIVE indexes on real BigANN vectors (1M each: the groundtruth fits only the full 1M): churned (deletes,
+  # then the same docs loaded again) before the upgrade, recall measured before and after (8.0+ sources only; the collections
+  # are named scope_0 / coll_* because query_manager only picks those)
+  - name: bhive_churn
+    ram: 7%
+    eviction: fullEviction
+    storage: magma
+    bucketscopes: scope_0
+
+servers: # each server tag represents a cluster
+  - name: local
+    count: 11
+    ram: 80%
+    index_ram: 80%
+    index_storage: default
+    services:
+      index: 5
+      index_start: 6
+      query: 2
+      query_start: 4
+    rest_username: Administrator
+    rest_password: password
+    data_path: "/data"
+    index_path: "/data"
+    init_nodes: 10
+    buckets: shoes_large, shoes_static, msmarco_sparse, hotel_mut, hotel_static, hotel_background, new_doctype, ddl_scratch, plasma_holes, bhive_churn

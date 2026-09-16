@@ -1,0 +1,373 @@
+# test_gsi_query_post_upgrade.yml
+# Scope: tests/upgrade/gsi_query/scope_gsi_query_upgrade.yml
+# Run with -version <final version> -skip_setup after test_gsi_query_pre_upgrade.yml and the upgrade
+# (sequoia-provision upgrade.sh), on the same sequoia client so the /data snapshots from the pre run are there.
+#   1. validate against the pre-upgrade capture before anything writes
+#   2. add what the final version newly supports (dense/sparse vector indexes, AWR/AUS)
+#   3. writes + queries, then one index rebalance-in and one rebalance-out on the upgraded cluster
+#   4. stop, wait for indexes to catch up, final checks
+# See README.md in this folder.
+
+############### Stop the pre-upgrade background workload: the upgrade is done ###############
+# The pre-upgrade test started magmaloader / query_manager / run_suite containers and left them running through the upgrade
+# (that run uses -skip_cleanup). This run's alias table does not know them, so remove them through the docker
+# socket. Only containers of those images whose command line names a node of THIS cluster are removed: the docker host
+# may be shared, and another job's magmaloader / query_manager targets other IPs (grep -w: 10.0.0.1 does not match 10.0.0.10).
+- image: docker:27.3.1-cli
+  entrypoint: sh
+  command: "-c 'ids=$(docker ps --no-trunc --filter ancestor=sequoiatools/magmaloader --filter ancestor=sequoiatools/query_manager:dev --filter ancestor=sequoiatools/gsi_query_upgrade:dev | grep -wF{{range .NodeAddresses .Nodes}} -e {{.}}{{end}} | cut -d\" \" -f1); echo removing pre-upgrade background workload: $ids; [ -z \"$ids\" ] || docker rm -f $ids'"
+  volumes: "/var/run/docker.sock:/var/run/docker.sock"
+  wait: true
+
+############### Results of the query suite during the upgrade window ###############
+# run_suite ran from the pre-upgrade capture through the upgrade: any result that differed from the baseline fails;
+# query errors (nodes leaving during swaps) are only reported.
+- image: sequoiatools/gsi_query_upgrade:dev
+  command: "-n {{.Nodes | .Service `n1ql` | net 0}} -u {{.RestUsername}} -p {{.RestPassword}} -a suite_report --fail_on_query_error false --snapshot_file /data/gsi_query_upgrade_baseline.json"
+  volumes: "/data:/data"
+  wait: true
+
+# Offline upgrade only: run_ddl created and dropped throwaway indexes while the cluster was mixed-version. Fails on any
+# error it saw, drops an index left by a round that was interrupted when the container was removed, and warns if no
+# round ran in the mixed-version window. Before the index checks below so nothing of it is left behind.
+- command: "-n {{.Nodes | .Service `n1ql` | net 0}} -u {{.RestUsername}} -p {{.RestPassword}} -a ddl_report --ddl_file /data/gsi_query_upgrade_ddl_run.json"
+  requires: "{{eq (env `UPGRADE_MODE`) `offline`}}"
+  volumes: "/data:/data"
+  wait: true
+
+# After an offline (in-place, node by node) upgrade every indexer has restarted and recovers its indexes from disk;
+# wait for all of them before anything queries (returns at once after an online upgrade)
+- command: "-n {{.Nodes | .Service `n1ql` | net 0}} -u {{.RestUsername}} -p {{.RestPassword}} -a wait_for_indexes --timeout 7200"
+  wait: true
+
+# Offline upgrade only: how long each indexer took to warm up (recover its indexes from disk) after its in-place
+# restart. Read from indexer.log* on every index node: "Status Warmup" -> "Status Active", only the warmups that
+# started after the pre-upgrade capture_index_names snapshot (the install-time first starts are left out). Report
+# only, no limit. It exits 1 on purpose so sequoia dumps the report to the console (hence expect_error); the reading
+# is over SSH (root) like the Totoro test's report. An online upgrade has no warmup to report: the swapped-out nodes
+# and their logs are gone.
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a report_indexer_warmup_times --since_snapshot /data/gsi_query_upgrade_indexes.json --log_level ERROR"
+  requires: "{{eq (env `UPGRADE_MODE`) `offline`}}"
+  volumes: "/data:/data"
+  expect_error: true
+  wait: true
+
+# The holes made before the upgrade (plasma_holes) after the persisted indexes were recovered (CBSE-23065, MB-65842, MB-68945).
+# indexmanager report_storage_stats reads right after the upgrade, for 20 minutes with no scans, then (after a full scan of every
+# index) for 20 more; light writes (churn_keyspaces touch) follow, the indexers must drain them (wait_until_mutations_processed:
+# writers not throttled), and a last read. validate_plasma judges the files: no item lost, empty pages that stay are a warning.
+# Same gate as the pre-upgrade steps, but on the SOURCE version (UPGRADE_SOURCE_VERSION): .Version is the final version
+# here, so `.Version | le 7.6` was always true and a 7.2 source ran these steps with no holes made (series 11, #21).
+# validate_plasma fails when the pre-upgrade snapshot is missing (this gate says the pre-upgrade run should have made it).
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a report_storage_stats --stats_prefix plasma_holes:scope_0: --storage_stats_file /data/gsi_query_upgrade_plasma_after.json --log_level WARNING"
+  requires: "{{and (ne (env `UPGRADE_DEPTH`) `quick`) (or (eq (env `UPGRADE_MODE`) `offline`) (and (eq (env `UPGRADE_MODE`) `online`) (eq (env `ENABLE_SHARD_AFFINITY`) `true`) (ne (env `UPGRADE_SOURCE_VERSION`) ``) (ge (slice (env `UPGRADE_SOURCE_VERSION`) 0 3) `7.6`)))}}"
+  volumes: "/data:/data"
+  wait: true
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a report_storage_stats --stats_prefix plasma_holes:scope_0: --watch_seconds 1200 --watch_interval 60 --storage_stats_file /data/gsi_query_upgrade_plasma_a.json --log_level WARNING"
+  requires: "{{and (ne (env `UPGRADE_DEPTH`) `quick`) (or (eq (env `UPGRADE_MODE`) `offline`) (and (eq (env `UPGRADE_MODE`) `online`) (eq (env `ENABLE_SHARD_AFFINITY`) `true`) (ne (env `UPGRADE_SOURCE_VERSION`) ``) (ge (slice (env `UPGRADE_SOURCE_VERSION`) 0 3) `7.6`)))}}"
+  volumes: "/data:/data"
+  wait: true
+- image: sequoiatools/gsi_query_upgrade:dev
+  command: "-n {{.Nodes | .Service `n1ql` | net 0}} -u {{.RestUsername}} -p {{.RestPassword}} -a plasma_scans"
+  requires: "{{and (ne (env `UPGRADE_DEPTH`) `quick`) (or (eq (env `UPGRADE_MODE`) `offline`) (and (eq (env `UPGRADE_MODE`) `online`) (eq (env `ENABLE_SHARD_AFFINITY`) `true`) (ne (env `UPGRADE_SOURCE_VERSION`) ``) (ge (slice (env `UPGRADE_SOURCE_VERSION`) 0 3) `7.6`)))}}"
+  wait: true
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a report_storage_stats --stats_prefix plasma_holes:scope_0: --watch_seconds 1200 --watch_interval 60 --storage_stats_file /data/gsi_query_upgrade_plasma_b.json --log_level WARNING"
+  requires: "{{and (ne (env `UPGRADE_DEPTH`) `quick`) (or (eq (env `UPGRADE_MODE`) `offline`) (and (eq (env `UPGRADE_MODE`) `online`) (eq (env `ENABLE_SHARD_AFFINITY`) `true`) (ne (env `UPGRADE_SOURCE_VERSION`) ``) (ge (slice (env `UPGRADE_SOURCE_VERSION`) 0 3) `7.6`)))}}"
+  volumes: "/data:/data"
+  wait: true
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a churn_keyspaces --churn_plan plasma_holes.scope_0.coll_0=touch,plasma_holes.scope_0.coll_1=touch,plasma_holes.scope_0.coll_2=touch,plasma_holes.scope_0.coll_3=touch --churn_field price --churn_set_field phone --churn_seconds 300 --timeout 60 --log_level WARNING"
+  requires: "{{and (ne (env `UPGRADE_DEPTH`) `quick`) (or (eq (env `UPGRADE_MODE`) `offline`) (and (eq (env `UPGRADE_MODE`) `online`) (eq (env `ENABLE_SHARD_AFFINITY`) `true`) (ne (env `UPGRADE_SOURCE_VERSION`) ``) (ge (slice (env `UPGRADE_SOURCE_VERSION`) 0 3) `7.6`)))}}"
+  wait: true
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a wait_until_mutations_processed --bucket_list plasma_holes --timeout 1800 --log_level WARNING"
+  requires: "{{and (ne (env `UPGRADE_DEPTH`) `quick`) (or (eq (env `UPGRADE_MODE`) `offline`) (and (eq (env `UPGRADE_MODE`) `online`) (eq (env `ENABLE_SHARD_AFFINITY`) `true`) (ne (env `UPGRADE_SOURCE_VERSION`) ``) (ge (slice (env `UPGRADE_SOURCE_VERSION`) 0 3) `7.6`)))}}"
+  wait: true
+# the last reading is a 20-minute watch that starts after the light writes and the drain wait: the purger and the hole cleaner are
+# driven by writes (no mvccPurger run at all during the 40 idle minutes before, series 12 #25), so the empty pages are judged here, and
+# validate_plasma says whether they fell during these 20 minutes
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a report_storage_stats --stats_prefix plasma_holes:scope_0: --watch_seconds 1200 --watch_interval 60 --storage_stats_file /data/gsi_query_upgrade_plasma_final.json --log_level WARNING"
+  requires: "{{and (ne (env `UPGRADE_DEPTH`) `quick`) (or (eq (env `UPGRADE_MODE`) `offline`) (and (eq (env `UPGRADE_MODE`) `online`) (eq (env `ENABLE_SHARD_AFFINITY`) `true`) (ne (env `UPGRADE_SOURCE_VERSION`) ``) (ge (slice (env `UPGRADE_SOURCE_VERSION`) 0 3) `7.6`)))}}"
+  volumes: "/data:/data"
+  wait: true
+- image: sequoiatools/gsi_query_upgrade:dev
+  command: "-n {{.Nodes | .Service `n1ql` | net 0}} -u {{.RestUsername}} -p {{.RestPassword}} -a validate_plasma --plasma_file /data/gsi_query_upgrade_plasma.json --stats_after /data/gsi_query_upgrade_plasma_after.json --stats_timeline /data/gsi_query_upgrade_plasma_a.json,/data/gsi_query_upgrade_plasma_b.json,/data/gsi_query_upgrade_plasma_final.json --stats_final /data/gsi_query_upgrade_plasma_final.json"
+  requires: "{{and (ne (env `UPGRADE_DEPTH`) `quick`) (or (eq (env `UPGRADE_MODE`) `offline`) (and (eq (env `UPGRADE_MODE`) `online`) (eq (env `ENABLE_SHARD_AFFINITY`) `true`) (ne (env `UPGRADE_SOURCE_VERSION`) ``) (ge (slice (env `UPGRADE_SOURCE_VERSION`) 0 3) `7.6`)))}}"
+  volumes: "/data:/data"
+  wait: true
+
+# BHIVE churn (sources 8.0+): reads right after the upgrade, a 15 minute watch on the Magma data size and purge ratio, light writes
+# the indexers must drain, a last read; validate_bhive judges the files (same indexed items, data size not grown beyond 1.5x:
+# a warning). Then recall reading 3 and the comparison with reading 2 (taken after the churn, before the upgrade): a mean recall
+# that falls by more than 2 points warns, by more than 10 fails. validate_bhive fails when the pre-upgrade run made no
+# snapshot; the other steps are gated on the source version (UPGRADE_SOURCE_VERSION, set by the Jenkinsfile), because a source
+# before 8.0 has no BHIVE data.
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a report_storage_stats --stats_prefix bhive_churn:scope_0: --stats_name_has bhive --storage_stats_file /data/gsi_query_upgrade_bhive_after.json --log_level WARNING"
+  requires: "{{and (ne (env `UPGRADE_DEPTH`) `quick`) (and (ne (env `UPGRADE_SOURCE_VERSION`) ``) (ge (slice (env `UPGRADE_SOURCE_VERSION`) 0 1) `8`))}}"
+  volumes: "/data:/data"
+  wait: true
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a report_storage_stats --stats_prefix bhive_churn:scope_0: --stats_name_has bhive --watch_seconds 900 --watch_interval 60 --storage_stats_file /data/gsi_query_upgrade_bhive_timeline.json --log_level WARNING"
+  requires: "{{and (ne (env `UPGRADE_DEPTH`) `quick`) (and (ne (env `UPGRADE_SOURCE_VERSION`) ``) (ge (slice (env `UPGRADE_SOURCE_VERSION`) 0 1) `8`))}}"
+  volumes: "/data:/data"
+  wait: true
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a churn_keyspaces --churn_plan bhive_churn.scope_0.coll_0=touch,bhive_churn.scope_0.coll_1=touch --churn_field id --churn_set_field type --churn_seconds 300 --timeout 60 --log_level WARNING"
+  requires: "{{and (ne (env `UPGRADE_DEPTH`) `quick`) (and (ne (env `UPGRADE_SOURCE_VERSION`) ``) (ge (slice (env `UPGRADE_SOURCE_VERSION`) 0 1) `8`))}}"
+  wait: true
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a wait_until_mutations_processed --bucket_list bhive_churn --timeout 1800 --log_level WARNING"
+  requires: "{{and (ne (env `UPGRADE_DEPTH`) `quick`) (and (ne (env `UPGRADE_SOURCE_VERSION`) ``) (ge (slice (env `UPGRADE_SOURCE_VERSION`) 0 1) `8`))}}"
+  wait: true
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a report_storage_stats --stats_prefix bhive_churn:scope_0: --stats_name_has bhive --storage_stats_file /data/gsi_query_upgrade_bhive_final.json --log_level WARNING"
+  requires: "{{and (ne (env `UPGRADE_DEPTH`) `quick`) (and (ne (env `UPGRADE_SOURCE_VERSION`) ``) (ge (slice (env `UPGRADE_SOURCE_VERSION`) 0 1) `8`))}}"
+  volumes: "/data:/data"
+  wait: true
+- image: sequoiatools/gsi_query_upgrade:dev
+  command: "-n {{.Nodes | .Service `n1ql` | net 0}} -u {{.RestUsername}} -p {{.RestPassword}} -a validate_bhive --bhive_file /data/gsi_query_upgrade_bhive.json --stats_after /data/gsi_query_upgrade_bhive_after.json --stats_timeline /data/gsi_query_upgrade_bhive_timeline.json --stats_final /data/gsi_query_upgrade_bhive_final.json"
+  requires: "{{and (ne (env `UPGRADE_DEPTH`) `quick`) (and (ne (env `UPGRADE_SOURCE_VERSION`) ``) (ge (slice (env `UPGRADE_SOURCE_VERSION`) 0 1) `8`))}}"
+  volumes: "/data:/data"
+  wait: true
+# snapshot of the cluster just before recall reading 3 (versions, rebalance, index states), for troubleshooting
+- image: sequoiatools/gsi_query_upgrade:dev
+  command: "-n {{.Nodes | .Service `n1ql` | net 0}} -u {{.RestUsername}} -p {{.RestPassword}} -a cluster_state --state_label before_reading_3 --state_buckets bhive_churn --state_file /data/gsi_query_upgrade_state_before_reading_3.json"
+  requires: "{{and (ne (env `UPGRADE_DEPTH`) `quick`) (and (ne (env `UPGRADE_SOURCE_VERSION`) ``) (ge (slice (env `UPGRADE_SOURCE_VERSION`) 0 1) `8`))}}"
+  volumes: "/data:/data"
+  wait: true
+# record every request during the recall reading (threshold 0): see the report after it
+- image: sequoiatools/gsi_query_upgrade:dev
+  command: "-n {{.Nodes | .Service `n1ql` | net 0}} -u {{.RestUsername}} -p {{.RestPassword}} -a completed_requests --cr_mode start"
+  requires: "{{and (ne (env `UPGRADE_DEPTH`) `quick`) (and (ne (env `UPGRADE_SOURCE_VERSION`) ``) (ge (slice (env `UPGRADE_SOURCE_VERSION`) 0 1) `8`))}}"
+  volumes: "/data:/data"
+  wait: true
+- image: sequoiatools/query_manager:dev
+  command: "--connection_string {{.Nodes | .Service `n1ql` | net 0}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 300 --refresh_duration 300 --timeout 600 --num_concurrent_queries 2 --use_sdk true --query_type n1ql --template shoes_1M --bucket_list bhive_churn --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default true --run_bhive_queries true --nprobe 50 --recall_file /data/gsi_query_upgrade_recall_3.json"
+  requires: "{{and (ne (env `UPGRADE_DEPTH`) `quick`) (and (ne (env `UPGRADE_SOURCE_VERSION`) ``) (ge (slice (env `UPGRADE_SOURCE_VERSION`) 0 1) `8`))}}"
+  volumes: "/data:/data"
+  wait: true
+# the empty vector results of series 12 (#26: 2 of 14, 20-56 ms, no error) were never in system:completed_requests: it keeps
+# only requests over 1000 ms. Restore the threshold, then list the vector requests of the reading that returned no rows
+- image: sequoiatools/gsi_query_upgrade:dev
+  command: "-n {{.Nodes | .Service `n1ql` | net 0}} -u {{.RestUsername}} -p {{.RestPassword}} -a completed_requests --cr_mode stop"
+  requires: "{{and (ne (env `UPGRADE_DEPTH`) `quick`) (and (ne (env `UPGRADE_SOURCE_VERSION`) ``) (ge (slice (env `UPGRADE_SOURCE_VERSION`) 0 1) `8`))}}"
+  volumes: "/data:/data"
+  wait: true
+- command: "-n {{.Nodes | .Service `n1ql` | net 0}} -u {{.RestUsername}} -p {{.RestPassword}} -a completed_requests --cr_mode report"
+  requires: "{{and (ne (env `UPGRADE_DEPTH`) `quick`) (and (ne (env `UPGRADE_SOURCE_VERSION`) ``) (ge (slice (env `UPGRADE_SOURCE_VERSION`) 0 1) `8`))}}"
+  volumes: "/data:/data"
+  wait: true
+- image: sequoiatools/gsi_query_upgrade:dev
+  command: "-n {{.Nodes | .Service `n1ql` | net 0}} -u {{.RestUsername}} -p {{.RestPassword}} -a compare_recall --recall_files after_churn=/data/gsi_query_upgrade_recall_2.json,after_upgrade=/data/gsi_query_upgrade_recall_3.json"
+  requires: "{{and (ne (env `UPGRADE_DEPTH`) `quick`) (and (ne (env `UPGRADE_SOURCE_VERSION`) ``) (ge (slice (env `UPGRADE_SOURCE_VERSION`) 0 1) `8`))}}"
+  volumes: "/data:/data"
+  wait: true
+
+############### Background workload: constant for the whole post-upgrade run ###############
+# Same ~500 ops/sec mutations on hotel_background and queries on every bucket, started again by this run.
+- image: sequoiatools/magmaloader
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket hotel_background --start 0 --end {{.Scale 100000}} --doc_template Hotel --scope _default --collection _default --mutations_mode true --mutations_timeout 86400 --ops_rate 500 --num_workers 1"
+  alias: bg_mutations
+  requires: "{{ne (env `UPGRADE_DEPTH`) `quick`}}"
+- image: sequoiatools/query_manager:dev
+  command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 86400 --refresh_duration 600 --timeout 600 --num_concurrent_queries 2 --use_sdk true --query_type n1ql --template hotel --bucket_list hotel_background --use_tls false --skip_default false"
+  alias: bg_queries_hotel
+  requires: "{{ne (env `UPGRADE_DEPTH`) `quick`}}"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 86400 --refresh_duration 600 --timeout 600 --num_concurrent_queries 2 --use_sdk true --query_type n1ql --template shoes_10M --bucket_list shoes_large,shoes_static --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false --run_bhive_queries true"
+  requires: "{{and (ne (env `UPGRADE_DEPTH`) `quick`) (.Version | le 8.0)}}"
+  alias: bg_queries_shoes
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 86400 --refresh_duration 600 --timeout 600 --num_concurrent_queries 1 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list msmarco_sparse -qf /queries.dev.csr -gf /base_1M.dev.gt --use_tls false --skip_default false --run_bhive_queries true"
+  requires: "{{and (ne (env `UPGRADE_DEPTH`) `quick`) (.Version | le 8.1)}}"
+  alias: bg_queries_msmarco
+
+############### 1. Validate against the pre-upgrade capture ###############
+# No index instance lost
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a validate_index_names --snapshot_file /data/gsi_query_upgrade_indexes.json"
+  volumes: "/data:/data"
+  wait: true
+
+# CBO stats survived/migrated, every keyspace answers (no migration deadlock), UPDATE STATISTICS completes
+- image: sequoiatools/gsi_query_upgrade:dev
+  command: "-n {{.Nodes | .Service `n1ql` | net 0}} -u {{.RestUsername}} -p {{.RestPassword}} -a validate_statistics --snapshot_file /data/gsi_query_upgrade_baseline.json"
+  volumes: "/data:/data"
+  wait: true
+
+# Plans, results on every query node, prepared statements, UDFs, sequential-scan setting, plan stability /
+# QUERY_METADATA, and a smoke run of the queries the initial version could not run.
+# UPGRADE_MODE (exported by the sequoia-provision Jenkinsfile): online or offline fails on any lost prepared
+# statement (upgrade.sh restarts one query node at a time in both); unset (local runs) only fails when some were
+# lost while others survived.
+# the prepared statements each query node holds now, compared with the snapshot taken before the upgrade: what is gone, on
+# which node, and which fields of the surviving copies changed (a loss is judged by validate_baseline right after)
+- command: "-n {{.Nodes | .Service `n1ql` | net 0}} -u {{.RestUsername}} -p {{.RestPassword}} -a prepareds_state --state_label after_upgrade --previous_file /data/gsi_query_upgrade_prepareds_pre.json --state_file /data/gsi_query_upgrade_prepareds_post.json"
+  volumes: "/data:/data"
+  wait: true
+- command: "-n {{.Nodes | .Service `n1ql` | net 0}} -u {{.RestUsername}} -p {{.RestPassword}} -a validate_baseline --snapshot_file /data/gsi_query_upgrade_baseline.json --upgrade_mode={{env `UPGRADE_MODE`}}"
+  volumes: "/data:/data"
+  wait: true
+
+- image: sequoiatools/query_manager:dev
+  command: "--connection_string {{.Nodes | .Service `n1ql` | net 0}} --username {{.RestUsername}} --password {{.RestPassword}} --bucket_list hotel_mut --action run_udf_queries --num_udf_queries 50 --use_tls false"
+  wait: true
+
+############### 2. What the final version newly supports ###############
+- image: sequoiatools/gsi_query_upgrade:dev
+  command: "-n {{.Nodes | .Service `n1ql` | net 0}} -u {{.RestUsername}} -p {{.RestPassword}} -a apply_index_spec --timeout 14400 --max_concurrent_builds 16"
+  wait: true
+- command: "-n {{.Nodes | .Service `n1ql` | net 0}} -u {{.RestUsername}} -p {{.RestPassword}} -a update_statistics"
+  wait: true
+
+- image: sequoiatools/query_manager:dev
+  command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action set_awr_aus --bucket_list hotel_mut"
+  requires: "{{.Version | le 8.0}}"
+  wait: true
+
+# Index instances after the new indexes, checked after each rebalance
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a capture_index_names --snapshot_file /data/gsi_query_upgrade_indexes_post.json"
+  volumes: "/data:/data"
+  wait: true
+
+############### 3. Writes + queries on the upgraded cluster ###############
+# Writes: shoes_large and hotel_mut only (the other buckets stay static). Each writer runs at a random 1 to 1000 ops/sec
+# (RandomScale, the number is in the command line of the console), so some runs mutate lightly: at magmaloader's default
+# (40000) the indexes fall minutes behind and run_suite's request_plus scans time out, and even at 5000 ops/sec per writer
+# one index node fell about 400k mutations behind for ten minutes (series 12, #24). 0 is not used: it would mean no writes
+# and magmaloader treats a missing rate as 40000.
+- image: sequoiatools/magmaloader
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket shoes_large --start 0 --end {{.Scale 5000000}} --sift_path /root/bigann/ --scope _default --collection _default --mutations_mode true --mutations_timeout 7200 --ops_rate {{.RandomScale 1 1000}}"
+  volumes: "/data/bigann/:/root/bigann"
+  alias: writes_shoes_large
+  requires: "{{ne (env `UPGRADE_DEPTH`) `quick`}}"
+- command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket hotel_mut --start 0 --end {{.Scale 200000}} --doc_template Hotel --scope hm1 --collection c1 --mutations_mode true --mutations_timeout 7200 --ops_rate {{.RandomScale 1 1000}}"
+  alias: writes_hotel_mut_c1
+  requires: "{{ne (env `UPGRADE_DEPTH`) `quick`}}"
+- command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket hotel_mut --start 0 --end {{.Scale 200000}} --doc_template Hotel --scope hm1 --collection c2 --mutations_mode true --mutations_timeout 7200 --ops_rate {{.RandomScale 1 1000}}"
+  alias: writes_hotel_mut_c2
+  requires: "{{ne (env `UPGRADE_DEPTH`) `quick`}}"
+
+# Queries: the captured suite on every bucket (static results must keep matching the baseline), on top of the
+# background query workload
+- image: sequoiatools/gsi_query_upgrade:dev
+  command: "-n {{.Nodes | .Service `n1ql` | net 0}} -u {{.RestUsername}} -p {{.RestPassword}} -a run_suite --duration 7200 --snapshot_file /data/gsi_query_upgrade_baseline.json"
+  volumes: "/data:/data"
+  alias: queries_suite
+  requires: "{{ne (env `UPGRADE_DEPTH`) `quick`}}"
+
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+  requires: "{{ne (env `UPGRADE_DEPTH`) `quick`}}"
+
+############### Rebalance-in the spare node as an index node ###############
+- image: sequoiatools/gsi_query_upgrade:dev
+  command: "-n {{.Orchestrator}} -u {{.RestUsername}} -p {{.RestPassword}} -a rebalance_in --node {{.InActiveNode}} --services index --timeout 7200"
+  volumes: "/data:/data"      # rebalance windows (gsi_query_upgrade_rebalance_windows.json), read by suite_report
+  wait: true
+  requires: "{{ne (env `UPGRADE_DEPTH`) `quick`}}"
+
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a validate_index_names --snapshot_file /data/gsi_query_upgrade_indexes_post.json"
+  volumes: "/data:/data"
+  wait: true
+  requires: "{{ne (env `UPGRADE_DEPTH`) `quick`}}"
+
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+  requires: "{{ne (env `UPGRADE_DEPTH`) `quick`}}"
+
+############### Rebalance-out an index node ###############
+- image: sequoiatools/gsi_query_upgrade:dev
+  command: "-n {{.Orchestrator}} -u {{.RestUsername}} -p {{.RestPassword}} -a rebalance_out --node {{.ActiveIndexNode 0}} --timeout 7200"
+  volumes: "/data:/data"      # rebalance windows (gsi_query_upgrade_rebalance_windows.json), read by suite_report
+  wait: true
+  requires: "{{ne (env `UPGRADE_DEPTH`) `quick`}}"
+
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a validate_index_names --snapshot_file /data/gsi_query_upgrade_indexes_post.json"
+  volumes: "/data:/data"
+  wait: true
+  requires: "{{ne (env `UPGRADE_DEPTH`) `quick`}}"
+
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+  requires: "{{ne (env `UPGRADE_DEPTH`) `quick`}}"
+
+############### 4. Stop, catch up, final checks ###############
+- client:
+    op: rm
+    container: writes_shoes_large
+  requires: "{{ne (env `UPGRADE_DEPTH`) `quick`}}"
+- client:
+    op: rm
+    container: writes_hotel_mut_c1
+  requires: "{{ne (env `UPGRADE_DEPTH`) `quick`}}"
+- client:
+    op: rm
+    container: writes_hotel_mut_c2
+  requires: "{{ne (env `UPGRADE_DEPTH`) `quick`}}"
+- client:
+    op: rm
+    container: queries_suite
+  requires: "{{ne (env `UPGRADE_DEPTH`) `quick`}}"
+- client:
+    op: rm
+    container: bg_mutations
+  requires: "{{ne (env `UPGRADE_DEPTH`) `quick`}}"
+- client:
+    op: rm
+    container: bg_queries_hotel
+  requires: "{{ne (env `UPGRADE_DEPTH`) `quick`}}"
+- client:
+    op: rm
+    container: bg_queries_shoes
+  requires: "{{ne (env `UPGRADE_DEPTH`) `quick`}}"
+- client:
+    op: rm
+    container: bg_queries_msmarco
+  requires: "{{ne (env `UPGRADE_DEPTH`) `quick`}}"
+
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a wait_until_mutations_processed --timeout 7200 --bucket_list shoes_large,hotel_mut"
+  wait: true
+
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b hotel_static -a item_count_check --sample_size 10"
+  wait: true
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b hotel_mut -a item_count_check --sample_size 10"
+  wait: true
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b shoes_static -d shoes -a item_count_check --sample_size 10"
+  wait: true
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b shoes_large -d shoes -a item_count_check --sample_size 10"
+  wait: true
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b msmarco_sparse -d shoes -a item_count_check --sample_size 10"
+  wait: true
+
+# Static-bucket results matched the baseline on every pass, including during both rebalances
+- image: sequoiatools/gsi_query_upgrade:dev
+  command: "-n {{.Nodes | .Service `n1ql` | net 0}} -u {{.RestUsername}} -p {{.RestPassword}} -a suite_report --snapshot_file /data/gsi_query_upgrade_baseline.json"
+  volumes: "/data:/data"
+  wait: true
+  requires: "{{ne (env `UPGRADE_DEPTH`) `quick`}}"
+
+- image: sequoiatools/query_manager:dev
+  command: "--connection_string {{.Nodes | .Service `n1ql` | net 0}} --username {{.RestUsername}} --password {{.RestPassword}} --bucket_list hotel_mut --action run_udf_queries --num_udf_queries 50 --use_tls false"
+  wait: true
+
+############### cbcollect of the upgraded cluster ###############
+# One cluster-wide cbcollect, uploaded to S3, so there is no need to wait for eagle eye to collect post-upgrade logs
+# (before the next upgrade path of a series reinstalls the cluster). The bundle URLs are printed in this step's output.
+- image: sequoiatools/logcollector
+  command: "--hostname {{.Nodes | .Service `n1ql` | net 0}} --username {{.RestUsername}} --password {{.RestPassword}} --customer_name upgrade-post --iterations 1 --collect_only true"
+  wait: true

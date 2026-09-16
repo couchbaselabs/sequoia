@@ -1,0 +1,385 @@
+# test_gsi_query_pre_upgrade.yml
+# Scope: tests/upgrade/gsi_query/scope_gsi_query_upgrade.yml
+# Run with -version <initial version>. Sets up data, indexes and Query features, then records what the
+# post-upgrade test compares against. No background workload, no faults, no topology changes.
+# Version gates: dense vector >= 8.0, sparse vector >= 8.1 (8.1 was renamed 8.5) (index_spec.yml), AWR/AUS >= 8.0, plan stability >= 8.1.
+# See README.md in this folder.
+
+- include: tests/templates/n1ql.yml
+
+############### Remove the previous run's files ###############
+# /data persists on the client across runs: every file this test pair writes starts with gsi_query_upgrade_, and a
+# leftover (recall reading, plasma/BHIVE snapshot, suite run) must never be judged as this run's
+- image: sequoiatools/cmd
+  entrypoint: sh
+  command: "-c 'rm -fv /data/gsi_query_upgrade_*'"
+  volumes: "/data:/data"
+  requires: "{{eq true .DoOnce}}"
+  wait: true
+
+############### Indexer settings ###############
+- template: set_gsi_config
+  args: "{{.ActiveIndexNode 0}}, 'indexer.settings.rebalance.redistribute_indexes':true"
+  requires: "{{eq true .DoOnce}}"
+
+# Shard affinity (file-based index rebalance), opt-in: set ENABLE_SHARD_AFFINITY: true in the sequoia-provision
+# upgrade job's TEST_ENV (it is forwarded to the pre- and post-upgrade sequoia runs as the ENABLE_SHARD_AFFINITY
+# env var), online upgrades only (the swaps are the rebalances it changes), initial version 7.6+ (where the
+# setting exists). Set before any index is created so every index gets shard affinity.
+- template: set_gsi_config
+  args: "{{.ActiveIndexNode 0}}, 'indexer.settings.enable_shard_affinity':true"
+  requires: "{{and .DoOnce (eq (env `ENABLE_SHARD_AFFINITY`) `true`) (eq (env `UPGRADE_MODE`) `online`) (.Version | le 7.6)}}"
+
+############### Initial data load (parallel, then wait for all) ###############
+# shoes_large: 5M shoes docs (dense `embedding`)
+- image: sequoiatools/magmaloader
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket shoes_large --start 0 --end {{.Scale 5000000}} --sift_path /root/bigann/ --scope _default --collection _default"
+  volumes: "/data/bigann/:/root/bigann"
+  alias: load_shoes_large
+# shoes_static: 100k shoes docs in _default and ss1.c1
+- command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket shoes_static --start 0 --end {{.Scale 100000}} --sift_path /root/bigann/ --scope _default --collection _default"
+  volumes: "/data/bigann/:/root/bigann"
+  alias: load_shoes_static_default
+- command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket shoes_static --start 0 --end {{.Scale 100000}} --sift_path /root/bigann/ --scope ss1 --collection c1"
+  volumes: "/data/bigann/:/root/bigann"
+  alias: load_shoes_static_c1
+# msmarco_sparse: 1M MSMARCO docs (sparse vectors) in _default and ms1.c1. key_prefix needs the dash.
+- command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket msmarco_sparse --start 0 --end {{.Scale 1000000}} --msmarco_mode true --vec_file_path /data/sparse/collection.vecs --key_prefix msmarco- --scope _default --collection _default"
+  volumes: "/data/sparse/:/data/sparse"
+  alias: load_msmarco_default
+- command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket msmarco_sparse --start 0 --end {{.Scale 1000000}} --msmarco_mode true --vec_file_path /data/sparse/collection.vecs --key_prefix msmarco- --scope ms1 --collection c1"
+  volumes: "/data/sparse/:/data/sparse"
+  alias: load_msmarco_c1
+# hotel_mut: 200k Hotel docs in hm1.c1 and hm1.c2
+- command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket hotel_mut --start 0 --end {{.Scale 200000}} --doc_template Hotel --scope hm1 --collection c1"
+  alias: load_hotel_mut_c1
+- command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket hotel_mut --start 0 --end {{.Scale 200000}} --doc_template Hotel --scope hm1 --collection c2"
+  alias: load_hotel_mut_c2
+# hotel_static: 200k Hotel docs in hs1.c1 and hs1.c2; hs1.empty_1 and hs1.empty_2 stay empty
+- command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket hotel_static --start 0 --end {{.Scale 200000}} --doc_template Hotel --scope hs1 --collection c1"
+  alias: load_hotel_static_c1
+- command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket hotel_static --start 0 --end {{.Scale 200000}} --doc_template Hotel --scope hs1 --collection c2"
+  alias: load_hotel_static_c2
+# hotel_background: 100k Hotel docs in _default (load-only bucket for the constant mutation workload)
+- command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket hotel_background --start 0 --end {{.Scale 100000}} --doc_template Hotel --scope _default --collection _default"
+  alias: load_hotel_background
+# ddl_scratch: 10k Hotel docs for run_ddl's throwaway indexes (offline upgrades only, see the end of this file)
+- command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket ddl_scratch --start 0 --end {{.Scale 10000}} --doc_template Hotel --scope _default --collection _default"
+  requires: "{{eq (env `UPGRADE_MODE`) `offline`}}"
+  alias: load_ddl_scratch
+# bhive_churn (8.0+ sources): 1M real BigANN vectors per collection (not scaled: the BigANN groundtruth idx_1M.ivecs is for the
+# first 1M vectors, and the filter size=5 of the shoes_1M query selects exactly those)
+- image: sequoiatools/magmaloader
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket bhive_churn --start 0 --end 1000000 --sift_path /root/bigann/ --scope scope_0 --collection coll_0"
+  requires: "{{and (ne (env `UPGRADE_DEPTH`) `quick`) (.Version | le 8.0)}}"
+  volumes: "/data/bigann/:/root/bigann"
+  alias: load_bhive_coll_0
+- image: sequoiatools/magmaloader
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket bhive_churn --start 0 --end 1000000 --sift_path /root/bigann/ --scope scope_0 --collection coll_1"
+  requires: "{{and (ne (env `UPGRADE_DEPTH`) `quick`) (.Version | le 8.0)}}"
+  volumes: "/data/bigann/:/root/bigann"
+  alias: load_bhive_coll_1
+
+# Wait for every load to finish before any index is created: vector indexes train on the data present at build
+# time, so shoes_large and msmarco_sparse must be fully loaded. (sequoia has no client op to wait on async
+# containers, so this checks doc counts reach the loaded ranges and stop changing.)
+- image: sequoiatools/gsi_query_upgrade:dev
+  command: "-n {{.Nodes | .Service `n1ql` | net 0}} -u {{.RestUsername}} -p {{.RestPassword}} -a wait_for_docs --timeout 28800 --expected_docs shoes_large._default._default={{.Scale 5000000}},shoes_static._default._default={{.Scale 100000}},shoes_static.ss1.c1={{.Scale 100000}},msmarco_sparse._default._default={{.Scale 1000000}},msmarco_sparse.ms1.c1={{.Scale 1000000}},hotel_mut.hm1.c1={{.Scale 200000}},hotel_mut.hm1.c2={{.Scale 200000}},hotel_static.hs1.c1={{.Scale 200000}},hotel_static.hs1.c2={{.Scale 200000}},hotel_background._default._default={{.Scale 100000}}{{if eq (env `UPGRADE_MODE`) `offline`}},ddl_scratch._default._default={{.Scale 10000}}{{end}}"
+  wait: true
+
+############### bhive_churn: wait for the loads (8.0+ sources) ###############
+- image: sequoiatools/gsi_query_upgrade:dev
+  command: "-n {{.Nodes | .Service `n1ql` | net 0}} -u {{.RestUsername}} -p {{.RestPassword}} -a wait_for_docs --timeout 28800 --expected_docs bhive_churn.scope_0.coll_0=1000000,bhive_churn.scope_0.coll_1=1000000"
+  requires: "{{and (ne (env `UPGRADE_DEPTH`) `quick`) (.Version | le 8.0)}}"
+  wait: true
+
+############### plasma_holes: collections, load and indexes (only where the upgrade recovers persisted indexes) ###############
+# Offline upgrades and online upgrades with shard affinity (7.6+) recover the persisted plasma files; a plain online
+# upgrade rebuilds the indexes on new nodes, so holes made now would not be carried over. scope_0 gets coll_0..coll_3, one
+# per hole pattern: coll_0 scatter, coll_1 range, coll_2 keymove, coll_3 expiry (the names are what create_n_indexes_on_buckets
+# picks). magmaloader loads 200k Hotel docs into each (keys doc<17 digits>; `counter` follows the key, `price` is random).
+# coll_3 (expiry) is loaded in expiry mode: the last 90% of the docs get a 1800 s TTL at creation, so they expire after the
+# load, the collections, indexes and builds below, i.e. while the indexes exist (the TTL clock starts at the load).
+# TODO: tune --max_ttl 1800 after the next run. It must be longer than load + create_n_indexes_on_buckets + build_deferred_index
+# (previous runs' apply_index_spec took 12.5 min on 7.6.12 and 29 min on 8.0.3 for everything, plasma alone was never timed);
+# if the docs expire before the indexes are online there are no holes (capture_plasma_state warns), if it is too long the wait
+# for empty pages below runs out. Read the timestamps of the load and of build_deferred_index in the console.
+- image: sequoiatools/collections:1.0
+  command: "-i {{.Orchestrator}}:8091 -b plasma_holes -o create_multi_scope_collection -s scope_ -c coll_ --scope_count=1 --collection_count=4 --collection_distribution=uniform"
+  requires: "{{and (ne (env `UPGRADE_DEPTH`) `quick`) (or (eq (env `UPGRADE_MODE`) `offline`) (and (eq (env `UPGRADE_MODE`) `online`) (eq (env `ENABLE_SHARD_AFFINITY`) `true`) (.Version | le 7.6)))}}"
+  wait: true
+- image: sequoiatools/magmaloader
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket plasma_holes --start 0 --end {{.Scale 200000}} --doc_template Hotel --scope scope_0 --collection coll_0"
+  requires: "{{and (ne (env `UPGRADE_DEPTH`) `quick`) (or (eq (env `UPGRADE_MODE`) `offline`) (and (eq (env `UPGRADE_MODE`) `online`) (eq (env `ENABLE_SHARD_AFFINITY`) `true`) (.Version | le 7.6)))}}"
+  wait: true
+- command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket plasma_holes --start 0 --end {{.Scale 200000}} --doc_template Hotel --scope scope_0 --collection coll_1"
+  requires: "{{and (ne (env `UPGRADE_DEPTH`) `quick`) (or (eq (env `UPGRADE_MODE`) `offline`) (and (eq (env `UPGRADE_MODE`) `online`) (eq (env `ENABLE_SHARD_AFFINITY`) `true`) (.Version | le 7.6)))}}"
+  wait: true
+- command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket plasma_holes --start 0 --end {{.Scale 200000}} --doc_template Hotel --scope scope_0 --collection coll_2"
+  requires: "{{and (ne (env `UPGRADE_DEPTH`) `quick`) (or (eq (env `UPGRADE_MODE`) `offline`) (and (eq (env `UPGRADE_MODE`) `online`) (eq (env `ENABLE_SHARD_AFFINITY`) `true`) (.Version | le 7.6)))}}"
+  wait: true
+- command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket plasma_holes --start 0 --end {{.Scale 200000}} --doc_template Hotel --scope scope_0 --collection coll_3 --expiry_mode true --percentage_expiry 90 --max_ttl 1800"
+  requires: "{{and (ne (env `UPGRADE_DEPTH`) `quick`) (or (eq (env `UPGRADE_MODE`) `offline`) (and (eq (env `UPGRADE_MODE`) `online`) (eq (env `ENABLE_SHARD_AFFINITY`) `true`) (.Version | le 7.6)))}}"
+  wait: true
+# expired docs are only removed when the expiry pager runs (default interval: far longer than this test wants to wait): run it every 10 s
+- image: appropriate/curl
+  command: "-u {{.RestUsername}}:{{.RestPassword}} -s -X POST http://{{.Orchestrator}}:{{.RestPort}}/pools/default/buckets/plasma_holes -d expiryPagerSleepTime=10"
+  requires: "{{and (ne (env `UPGRADE_DEPTH`) `quick`) (or (eq (env `UPGRADE_MODE`) `offline`) (and (eq (env `UPGRADE_MODE`) `online`) (eq (env `ENABLE_SHARD_AFFINITY`) `true`) (.Version | le 7.6)))}}"
+  wait: true
+# every scalar Hotel template on each of the four collections (4 x 13 = 52 indexes), at most 1 replica; some are deferred,
+# so they are built explicitly
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list plasma_holes -a create_n_indexes_on_buckets --dataset hotel --num_of_indexes_per_bucket 52 --set_max_replicas 1 --skip_default_collection true --log_level WARNING"
+  requires: "{{and (ne (env `UPGRADE_DEPTH`) `quick`) (or (eq (env `UPGRADE_MODE`) `offline`) (and (eq (env `UPGRADE_MODE`) `online`) (eq (env `ENABLE_SHARD_AFFINITY`) `true`) (.Version | le 7.6)))}}"
+  wait: true
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b plasma_holes -a build_deferred_index -m 5 --log_level WARNING"
+  requires: "{{and (ne (env `UPGRADE_DEPTH`) `quick`) (or (eq (env `UPGRADE_MODE`) `offline`) (and (eq (env `UPGRADE_MODE`) `online`) (eq (env `ENABLE_SHARD_AFFINITY`) `true`) (.Version | le 7.6)))}}"
+  wait: true
+# range pattern (coll_1): none of the Hotel templates follows the key, so one index on `counter` (about the key) is created here
+# on its own; deleting the first 90% of the keys then empties whole pages of it
+- image: sequoiatools/cbq
+  command: "-e=http://{{.Nodes | .Service `n1ql` | net 0}}:8093 -u={{.RestUsername}} -p={{.RestPassword}} -script='CREATE INDEX `ph_counter` ON `plasma_holes`.`scope_0`.`coll_1`(`counter`)'"
+  requires: "{{and (ne (env `UPGRADE_DEPTH`) `quick`) (or (eq (env `UPGRADE_MODE`) `offline`) (and (eq (env `UPGRADE_MODE`) `online`) (eq (env `ENABLE_SHARD_AFFINITY`) `true`) (.Version | le 7.6)))}}"
+  wait: true
+# the CREATE INDEX may have been queued behind a running build ("Build Already In Progress"; the cbq error is ignored, GSI
+# retries in the background): give it a minute, then require_indexes polls for up to 10 minutes
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "60"
+  requires: "{{and (ne (env `UPGRADE_DEPTH`) `quick`) (or (eq (env `UPGRADE_MODE`) `offline`) (and (eq (env `UPGRADE_MODE`) `online`) (eq (env `ENABLE_SHARD_AFFINITY`) `true`) (.Version | le 7.6)))}}"
+  wait: true
+# cbq exits 0 even when the statement failed, so the index is checked
+- image: sequoiatools/gsi_query_upgrade:dev
+  command: "-n {{.Nodes | .Service `n1ql` | net 0}} -u {{.RestUsername}} -p {{.RestPassword}} -a require_indexes --expected_indexes plasma_holes.scope_0.coll_1=ph_counter --timeout 600"
+  requires: "{{and (ne (env `UPGRADE_DEPTH`) `quick`) (or (eq (env `UPGRADE_MODE`) `offline`) (and (eq (env `UPGRADE_MODE`) `online`) (eq (env `ENABLE_SHARD_AFFINITY`) `true`) (.Version | le 7.6)))}}"
+  wait: true
+
+############### Indexes: everything in index_spec.yml the initial version supports, built and online ###############
+- image: sequoiatools/gsi_query_upgrade:dev
+  command: "-n {{.Nodes | .Service `n1ql` | net 0}} -u {{.RestUsername}} -p {{.RestPassword}} -a apply_index_spec --timeout 14400 --max_concurrent_builds 16"
+  wait: true
+
+############### plasma_holes: make the holes, wait until they exist, capture them (CBSE-23065) ###############
+# One pattern per collection: coll_0 scatter and coll_1 range (magmaloader --delete_mode deletes the first 90% of the keys,
+# a contiguous block; the Hotel indexes start with fields unrelated to the key, so the delete is scattered in their pages,
+# while ph_counter (created below, on `counter`) follows the key, so the same delete empties whole pages of it: the range pattern),
+# coll_2 keymove (indexmanager churn_keyspaces adds 10000 to `price` of the docs below 1850, about 90%: their entries leave the
+# old range and fill a new one), coll_3 expiry (nothing to do here: the 90% of its docs loaded with a TTL expire by themselves).
+# The purger and hole finder act tens of minutes later, so report_storage_stats waits (up to 40 minutes) for empty pages before
+# the capture; the upgrade then recovers pages that are already empty, and validate_plasma (post-upgrade) checks them.
+- image: sequoiatools/magmaloader
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket plasma_holes --delete_mode true --start 0 --end {{.Scale 180000}} --doc_template Hotel --scope scope_0 --collection coll_0"
+  requires: "{{and (ne (env `UPGRADE_DEPTH`) `quick`) (or (eq (env `UPGRADE_MODE`) `offline`) (and (eq (env `UPGRADE_MODE`) `online`) (eq (env `ENABLE_SHARD_AFFINITY`) `true`) (.Version | le 7.6)))}}"
+  wait: true
+- command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket plasma_holes --delete_mode true --start 0 --end {{.Scale 180000}} --doc_template Hotel --scope scope_0 --collection coll_1"
+  requires: "{{and (ne (env `UPGRADE_DEPTH`) `quick`) (or (eq (env `UPGRADE_MODE`) `offline`) (and (eq (env `UPGRADE_MODE`) `online`) (eq (env `ENABLE_SHARD_AFFINITY`) `true`) (.Version | le 7.6)))}}"
+  wait: true
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a churn_keyspaces --churn_plan plasma_holes.scope_0.coll_2=keymove --churn_field price --churn_cut 1850 --churn_move_by 10000 --churn_wait_timeout 3600 --timeout 60 --log_level WARNING"
+  requires: "{{and (ne (env `UPGRADE_DEPTH`) `quick`) (or (eq (env `UPGRADE_MODE`) `offline`) (and (eq (env `UPGRADE_MODE`) `online`) (eq (env `ENABLE_SHARD_AFFINITY`) `true`) (.Version | le 7.6)))}}"
+  wait: true
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a wait_until_mutations_processed --bucket_list plasma_holes --timeout 3600 --log_level WARNING"
+  requires: "{{and (ne (env `UPGRADE_DEPTH`) `quick`) (or (eq (env `UPGRADE_MODE`) `offline`) (and (eq (env `UPGRADE_MODE`) `online`) (eq (env `ENABLE_SHARD_AFFINITY`) `true`) (.Version | le 7.6)))}}"
+  wait: true
+# coll_3: the last 90% of its docs carry a TTL; the first 10% (20,000 at scale 1) stay. Wait until the others are gone before
+# the baseline: the "no item lost" check of validate_plasma would otherwise count TTL expiries as losses
+- image: sequoiatools/gsi_query_upgrade:dev
+  command: "-n {{.Nodes | .Service `n1ql` | net 0}} -u {{.RestUsername}} -p {{.RestPassword}} -a wait_for_docs --docs_at_most true --expected_docs plasma_holes.scope_0.coll_3={{.Scale 20000}} --timeout 3600"
+  requires: "{{and (ne (env `UPGRADE_DEPTH`) `quick`) (or (eq (env `UPGRADE_MODE`) `offline`) (and (eq (env `UPGRADE_MODE`) `online`) (eq (env `ENABLE_SHARD_AFFINITY`) `true`) (.Version | le 7.6)))}}"
+  wait: true
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a report_storage_stats --stats_prefix plasma_holes:scope_0: --wait_empty_pages 1 --wait_timeout 2400 --watch_interval 60 --storage_stats_file /data/gsi_query_upgrade_plasma_raw.json --log_level WARNING"
+  requires: "{{and (ne (env `UPGRADE_DEPTH`) `quick`) (or (eq (env `UPGRADE_MODE`) `offline`) (and (eq (env `UPGRADE_MODE`) `online`) (eq (env `ENABLE_SHARD_AFFINITY`) `true`) (.Version | le 7.6)))}}"
+  volumes: "/data:/data"
+  wait: true
+- image: sequoiatools/gsi_query_upgrade:dev
+  command: "-n {{.Nodes | .Service `n1ql` | net 0}} -u {{.RestUsername}} -p {{.RestPassword}} -a capture_plasma_state --stats_file /data/gsi_query_upgrade_plasma_raw.json --plasma_file /data/gsi_query_upgrade_plasma.json"
+  requires: "{{and (ne (env `UPGRADE_DEPTH`) `quick`) (or (eq (env `UPGRADE_MODE`) `offline`) (and (eq (env `UPGRADE_MODE`) `online`) (eq (env `ENABLE_SHARD_AFFINITY`) `true`) (.Version | le 7.6)))}}"
+  volumes: "/data:/data"
+  wait: true
+
+############### bhive_churn: recall, churn, reload, recall (8.0+ sources) ###############
+# BHIVE indexes are Magma-backed (no plasma pages: the empty-page checks above do not apply). Reading 1: recall right after
+# the build against the exact BigANN groundtruth (nprobe fixed at 50). Churn (indexmanager churn_keyspaces, SQL++: SIFTLoader
+# cannot delete): coll_0 loses 50% of its vectors spread over the key range, coll_1 the first 50%; magmaloader --sift_reload
+# then writes the same docs again (DocLoader creates are inserts, the update path is an upsert), so the end state is the
+# original 1M and the groundtruth still applies. Reading 2 after the reload; a drop from reading 1 is only a warning here
+# (churn alone, not the upgrade).
+# snapshot of the cluster just before recall reading 1 (versions, rebalance, index states), for troubleshooting
+- image: sequoiatools/gsi_query_upgrade:dev
+  command: "-n {{.Nodes | .Service `n1ql` | net 0}} -u {{.RestUsername}} -p {{.RestPassword}} -a cluster_state --state_label before_reading_1 --state_buckets bhive_churn --state_file /data/gsi_query_upgrade_state_before_reading_1.json"
+  requires: "{{and (ne (env `UPGRADE_DEPTH`) `quick`) (.Version | le 8.0)}}"
+  volumes: "/data:/data"
+  wait: true
+- image: sequoiatools/query_manager:dev
+  command: "--connection_string {{.Nodes | .Service `n1ql` | net 0}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 300 --refresh_duration 300 --timeout 600 --num_concurrent_queries 2 --use_sdk true --query_type n1ql --template shoes_1M --bucket_list bhive_churn --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default true --run_bhive_queries true --nprobe 50 --recall_file /data/gsi_query_upgrade_recall_1.json"
+  requires: "{{and (ne (env `UPGRADE_DEPTH`) `quick`) (.Version | le 8.0)}}"
+  volumes: "/data:/data"
+  wait: true
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a churn_keyspaces --churn_plan bhive_churn.scope_0.coll_0=scatter,bhive_churn.scope_0.coll_1=range --churn_field id --churn_docs 1000000 --churn_pct 50 --churn_wait_timeout 3600 --timeout 60 --log_level WARNING"
+  requires: "{{and (ne (env `UPGRADE_DEPTH`) `quick`) (.Version | le 8.0)}}"
+  wait: true
+- image: sequoiatools/magmaloader
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket bhive_churn --start 0 --end 1000000 --sift_path /root/bigann/ --scope scope_0 --collection coll_0 --sift_reload true --num_workers 4"
+  requires: "{{and (ne (env `UPGRADE_DEPTH`) `quick`) (.Version | le 8.0)}}"
+  volumes: "/data/bigann/:/root/bigann"
+  wait: true
+- command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket bhive_churn --start 0 --end 1000000 --sift_path /root/bigann/ --scope scope_0 --collection coll_1 --sift_reload true --num_workers 4"
+  requires: "{{and (ne (env `UPGRADE_DEPTH`) `quick`) (.Version | le 8.0)}}"
+  volumes: "/data/bigann/:/root/bigann"
+  wait: true
+- image: sequoiatools/gsi_query_upgrade:dev
+  command: "-n {{.Nodes | .Service `n1ql` | net 0}} -u {{.RestUsername}} -p {{.RestPassword}} -a wait_for_docs --timeout 7200 --expected_docs bhive_churn.scope_0.coll_0=1000000,bhive_churn.scope_0.coll_1=1000000"
+  requires: "{{and (ne (env `UPGRADE_DEPTH`) `quick`) (.Version | le 8.0)}}"
+  wait: true
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a wait_until_mutations_processed --bucket_list bhive_churn --timeout 3600 --log_level WARNING"
+  requires: "{{and (ne (env `UPGRADE_DEPTH`) `quick`) (.Version | le 8.0)}}"
+  wait: true
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a report_storage_stats --stats_prefix bhive_churn:scope_0: --stats_name_has bhive --storage_stats_file /data/gsi_query_upgrade_bhive_raw.json --log_level WARNING"
+  requires: "{{and (ne (env `UPGRADE_DEPTH`) `quick`) (.Version | le 8.0)}}"
+  volumes: "/data:/data"
+  wait: true
+- image: sequoiatools/gsi_query_upgrade:dev
+  command: "-n {{.Nodes | .Service `n1ql` | net 0}} -u {{.RestUsername}} -p {{.RestPassword}} -a capture_bhive_state --stats_file /data/gsi_query_upgrade_bhive_raw.json --bhive_docs 1000000 --bhive_file /data/gsi_query_upgrade_bhive.json"
+  requires: "{{and (ne (env `UPGRADE_DEPTH`) `quick`) (.Version | le 8.0)}}"
+  volumes: "/data:/data"
+  wait: true
+# snapshot of the cluster just before recall reading 2 (versions, rebalance, index states), for troubleshooting
+- image: sequoiatools/gsi_query_upgrade:dev
+  command: "-n {{.Nodes | .Service `n1ql` | net 0}} -u {{.RestUsername}} -p {{.RestPassword}} -a cluster_state --state_label before_reading_2 --state_buckets bhive_churn --state_file /data/gsi_query_upgrade_state_before_reading_2.json"
+  requires: "{{and (ne (env `UPGRADE_DEPTH`) `quick`) (.Version | le 8.0)}}"
+  volumes: "/data:/data"
+  wait: true
+- image: sequoiatools/query_manager:dev
+  command: "--connection_string {{.Nodes | .Service `n1ql` | net 0}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 300 --refresh_duration 300 --timeout 600 --num_concurrent_queries 2 --use_sdk true --query_type n1ql --template shoes_1M --bucket_list bhive_churn --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default true --run_bhive_queries true --nprobe 50 --recall_file /data/gsi_query_upgrade_recall_2.json"
+  requires: "{{and (ne (env `UPGRADE_DEPTH`) `quick`) (.Version | le 8.0)}}"
+  volumes: "/data:/data"
+  wait: true
+- image: sequoiatools/gsi_query_upgrade:dev
+  command: "-n {{.Nodes | .Service `n1ql` | net 0}} -u {{.RestUsername}} -p {{.RestPassword}} -a compare_recall --recall_files after_build=/data/gsi_query_upgrade_recall_1.json,after_churn=/data/gsi_query_upgrade_recall_2.json --recall_fail_drop 100"
+  requires: "{{and (ne (env `UPGRADE_DEPTH`) `quick`) (.Version | le 8.0)}}"
+  volumes: "/data:/data"
+  wait: true
+
+############### Background workload: from here until the upgrade is done ###############
+# ~500 ops/sec mutations on hotel_background (load only, never validated) and query_manager queries on the
+# collections that have the indexes its templates expect (Hotel: hotel_background, which has all 13 Hotel indexes;
+# dense vector: shoes _default; sparse: msmarco _default). The other buckets get the test's own index-backed
+# query suite (run_suite, started after the baseline capture).
+# Deliberately never stopped by this test: for an upgrade, Jenkins runs this test with -skip_cleanup so these
+# containers keep running through the upgrade, and the post-upgrade test removes them as its first step.
+- image: sequoiatools/magmaloader
+  command: "--host {{.Orchestrator}} --user {{.RestUsername}} --password {{.RestPassword}} --bucket hotel_background --start 0 --end {{.Scale 100000}} --doc_template Hotel --scope _default --collection _default --mutations_mode true --mutations_timeout 86400 --ops_rate 500 --num_workers 1"
+  alias: bg_mutations
+- image: sequoiatools/query_manager:dev
+  command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 86400 --refresh_duration 600 --timeout 600 --num_concurrent_queries 2 --use_sdk true --query_type n1ql --template hotel --bucket_list hotel_background --use_tls false --skip_default false"
+  alias: bg_queries_hotel
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 86400 --refresh_duration 600 --timeout 600 --num_concurrent_queries 2 --use_sdk true --query_type n1ql --template shoes_10M --bucket_list shoes_large,shoes_static --distance_algo L2 --num_query_vectors 10000 --num_groundtruth_vectors 1000 --query_file /bigann_query.bvecs --validate_vector_query_results true --use_tls false --skip_default false --run_bhive_queries true"
+  requires: "{{.Version | le 8.0}}"
+  alias: bg_queries_shoes
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 86400 --refresh_duration 600 --timeout 600 --num_concurrent_queries 1 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list msmarco_sparse -qf /queries.dev.csr -gf /base_1M.dev.gt --use_tls false --skip_default false --run_bhive_queries true"
+  requires: "{{.Version | le 8.1}}"
+  alias: bg_queries_msmarco
+
+############### Query features ###############
+# Sequential scans off (7.6+): every suite query has to be index-backed
+- image: sequoiatools/gsi_query_upgrade:dev
+  command: "-n {{.Nodes | .Service `n1ql` | net 0}} -u {{.RestUsername}} -p {{.RestPassword}} -a disable_sequential_scans"
+  wait: true
+
+# Fixed UDFs called by the baseline suite: scoped SQL++ hotel_static.hs1.upq_price_band, global JS upq_label
+- command: "-n {{.Nodes | .Service `n1ql` | net 0}} -u {{.RestUsername}} -p {{.RestPassword}} -a create_udfs"
+  wait: true
+
+# More UDFs (JS library + SQL++/JS per scope) on hotel_mut, exercised again after the upgrade
+- image: sequoiatools/query_manager:dev
+  command: "--connection_string {{.Nodes | .Service `n1ql` | net 0}} --username {{.RestUsername}} --password {{.RestPassword}} --action create_n1ql_udf --lib_name n1qludf --lib_filename n1ql_udf.js --use_tls false"
+  wait: true
+- command: "--connection_string {{.Nodes | .Service `n1ql` | net 0}} --username {{.RestUsername}} --password {{.RestPassword}} --bucket_list hotel_mut --action create_udf --num_udf_per_scope 5 --use_tls false"
+  wait: true
+- command: "--connection_string {{.Nodes | .Service `n1ql` | net 0}} --username {{.RestUsername}} --password {{.RestPassword}} --bucket_list hotel_mut --action run_udf_queries --num_udf_queries 50 --use_tls false"
+  wait: true
+
+# AWR + automatic update statistics (8.0+). AWR data goes to hotel_mut's _default collection.
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action set_awr_aus --bucket_list hotel_mut"
+  requires: "{{.Version | le 8.0}}"
+  wait: true
+
+############### Indexes match KV ###############
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b hotel_static -a item_count_check --sample_size 10"
+  wait: true
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b hotel_mut -a item_count_check --sample_size 10"
+  wait: true
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b shoes_static -d shoes -a item_count_check --sample_size 10"
+  wait: true
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b shoes_large -d shoes -a item_count_check --sample_size 10"
+  wait: true
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b msmarco_sparse -d shoes -a item_count_check --sample_size 10"
+  wait: true
+
+############### CBO statistics on every keyspace, empty collections included ###############
+# The upgrade has to migrate these (CBSE-23292). Runs after the UDF / AWR / AUS steps and right before the capture:
+# The step fails if any collection has no stats stored (N1QL_SYSTEM_BUCKET or <bucket>._system._query); it does not
+# use system:dictionary, which only lists the answering query node's cache and differs between query nodes.
+- image: sequoiatools/gsi_query_upgrade:dev
+  command: "-n {{.Nodes | .Service `n1ql` | net 0}} -u {{.RestUsername}} -p {{.RestPassword}} -a update_statistics"
+  wait: true
+
+############### Plan stability (8.1+): prepared plans are persisted and must survive the upgrade ###############
+- image: sequoiatools/query_manager:dev
+  command: "--connection_string {{.Nodes | .Service `n1ql` | net 0}} --username {{.RestUsername}} --password {{.RestPassword}} --action set_plan_stability --plan_stability_mode prepared_only"
+  requires: "{{.Version | le 8.1}}"
+  wait: true
+
+############### Baseline: scan results + EXPLAIN details + named PREPAREs for query_suite.yml ###############
+- image: sequoiatools/gsi_query_upgrade:dev
+  command: "-n {{.Nodes | .Service `n1ql` | net 0}} -u {{.RestUsername}} -p {{.RestPassword}} -a capture_baseline --snapshot_file /data/gsi_query_upgrade_baseline.json"
+  volumes: "/data:/data"
+  wait: true
+# which prepared statements each query node holds before the upgrade (plan time, index API version, node uptime), so the
+# post-upgrade run can say exactly what was lost and where
+- command: "-n {{.Nodes | .Service `n1ql` | net 0}} -u {{.RestUsername}} -p {{.RestPassword}} -a prepareds_state --state_label before_upgrade --state_file /data/gsi_query_upgrade_prepareds_pre.json"
+  volumes: "/data:/data"
+  wait: true
+
+############### Captured query suite on every bucket, from here through the upgrade ###############
+# Static-bucket results must keep matching the baseline while nodes run mixed versions; the post-upgrade test
+# reports this window (suite_report) right after stopping it.
+- image: sequoiatools/gsi_query_upgrade:dev
+  command: "-n {{.Nodes | .Service `n1ql` | net 0}} -u {{.RestUsername}} -p {{.RestPassword}} -a run_suite --duration 86400 --snapshot_file /data/gsi_query_upgrade_baseline.json"
+  volumes: "/data:/data"
+  alias: suite_upgrade_window
+
+- image: sequoiatools/query_manager:dev
+  command: "--connection_string {{.Nodes | .Service `n1ql` | net 0}} --username {{.RestUsername}} --password {{.RestPassword}} --action verify_query_metadata --non_zero_check true"
+  requires: "{{.Version | le 8.1}}"
+  wait: true
+
+############### Index instances before the upgrade (post-upgrade checks none are lost) ###############
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a capture_index_names --snapshot_file /data/gsi_query_upgrade_indexes.json"
+  volumes: "/data:/data"
+  wait: true
+
+############### cbcollect of the pre-upgrade cluster ###############
+# One cluster-wide cbcollect, uploaded to S3, before upgrade.sh reinstalls any node (a swapped-out node's logs are gone
+# afterwards). The bundle URLs are printed in this step's output.
+- image: sequoiatools/logcollector
+  command: "--hostname {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --customer_name upgrade-pre --iterations 1 --collect_only true"
+  wait: true
+
+############### Index DDL while the cluster is mixed-version (offline upgrade only) ###############
+# DDL is not allowed during a rebalance and an offline (in place) upgrade has none, so run_ddl creates, builds,
+# queries and drops a throwaway index on ddl_scratch in a loop, but only while the cluster is mixed-version. Started
+# last, so it is idle until upgrade.sh upgrades the first node; the post-upgrade test removes it and runs ddl_report.
+# Like the other background workload it is never stopped here (Jenkins runs this test with -skip_cleanup).
+- image: sequoiatools/gsi_query_upgrade:dev
+  command: "-n {{.Nodes | .Service `n1ql` | net 0}} -u {{.RestUsername}} -p {{.RestPassword}} -a run_ddl --duration 86400 --ddl_file /data/gsi_query_upgrade_ddl_run.json"
+  requires: "{{eq (env `UPGRADE_MODE`) `offline`}}"
+  volumes: "/data:/data"
+  alias: ddl_upgrade_window
