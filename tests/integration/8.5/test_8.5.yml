@@ -152,11 +152,13 @@
   command: "sshpass -p {{.SSHPassword}} ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Nodes | .Service `backup` | net 0}} 'echo $(date -u +%Y-%m-%dT%H:%M:%SZ) >> /mnt/nfs_data/timestamps.txt'"
   wait: true
 
-### create (scale * 10) scopes and (scale * 80) collections in local cluster across 6 buckets as scope_1,scope_2 ... ######
+### create scopes/collections in local cluster across 6 buckets as scope_1,scope_2 ... ######
+### Couchbase caps a cluster at 10200 collections (collections:get_max_supported(num_collections)).
+### Bulk total below is 10010; the eventing setup later needs 16 more, so keep ~190 spare. ######
 - template: create-multi-scopes-collections
   args: "{{.Orchestrator}}, {{.NthBucket 4}}, {{.Scale 2}}, {{.Scale 10}}, uniform"
   requires:  "{{eq true .DoOnce }}"
-- args: "{{.Orchestrator}}, {{.NthBucket 5}}, {{.Scale 3000}}, {{.Scale 8000}}, uniform"
+- args: "{{.Orchestrator}}, {{.NthBucket 5}}, {{.Scale 3000}}, {{.Scale 7800}}, uniform"
   requires:  "{{eq true .DoOnce }}"
 - args: "{{.Orchestrator}}, {{.NthBucket 6}}, {{.Scale 10}}, {{.Scale 500}}, uniform"
   requires:  "{{eq true .DoOnce }}"
@@ -168,8 +170,9 @@
   requires:  "{{eq true .DoOnce }}"
 
 ###### Create scopes and collections in remote cluster (target ~10K aggregate, mirrors source) ######
+###### Same 10200-collection cluster cap applies here; bulk total below is 10010. ######
 - template: create-multi-scopes-collections
-  args: "{{.Nodes | .Cluster 1 | net 0}}, {{.Nodes | .Cluster 1 | bucket 0}}, {{.Scale 3000}}, {{.Scale 9000}}, uniform"
+  args: "{{.Nodes | .Cluster 1 | net 0}}, {{.Nodes | .Cluster 1 | bucket 0}}, {{.Scale 3000}}, {{.Scale 8800}}, uniform"
   requires:  "{{eq true .DoOnce }}"
 - args: "{{.Nodes | .Cluster 1 | net 0}}, {{.Nodes | .Cluster 1 | bucket 1}}, {{.Scale 2}}, {{.Scale 10}}, uniform"
   requires:  "{{eq true .DoOnce }}"
