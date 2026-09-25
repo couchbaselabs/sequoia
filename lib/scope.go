@@ -156,8 +156,7 @@ func (s *Scope) SetupServer() {
 		)
 		s.AddNodes()
 		s.RebalanceClusters()
-		/* this setting is no longer needed. Uncomment if it causes problems*/
-		//s.ApplyInternalSettings()
+		s.ApplyInternalSettings()
 		s.CreateBuckets()
 		s.OverrideBucketDekTimingSeconds()
 	}
@@ -1169,6 +1168,12 @@ func (s *Scope) RebalanceClusters() {
 }
 
 func (s *Scope) ApplyInternalSettings() {
+	// magma's 1024 MiB minimum bucket quota is only enforced on the 7.x
+	// line, so lower it there and leave 8.x clusters untouched
+	if v, err := strconv.ParseFloat(s.Version, 64); err != nil || v >= 8.0 {
+		return
+	}
+
 	var image = "appropriate/curl"
 
 	operation := func(name string, server *ServerSpec) {
