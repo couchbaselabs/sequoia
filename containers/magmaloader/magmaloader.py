@@ -293,7 +293,7 @@ class MagmaLoader:
                         ep = self.expiry_percentage
                         cr = 100 - ep
                         expiry_s, expiry_e = self.get_expiry_range()
-                        command = f"java -jar magmadocloader.jar -n {self.host} " \
+                        command = f"java -Xmx512m -jar magmadocloader.jar -n {self.host} " \
                             f"-user '{self.username}' -pwd '{self.password}' -b {self.bucket_name} " \
                             f"-p 11207 -create_s {self.start} -create_e {self.end} -expiry_s {expiry_s} -expiry_e {expiry_e} " \
                             f"-cr {cr} -up 0 -rd 0 -ex {ep} " \
@@ -302,7 +302,7 @@ class MagmaLoader:
                             f"-workers {self.workers} -maxTTL {self.expiry_duration} -ops {self.ops_rate} -valueType {self.doc_template} "\
                             f"-model {self.model} -base64 {self.base64}"
                     else:
-                        command = f"java -jar magmadocloader.jar -n {self.host} " \
+                        command = f"java -Xmx512m -jar magmadocloader.jar -n {self.host} " \
                             f"-user '{self.username}' -pwd '{self.password}' -b {self.bucket_name} " \
                             f"-p 11207 -create_s {self.start} -create_e {self.end} " \
                             f"-cr 100 -up 0 -rd 0" \
