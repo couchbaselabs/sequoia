@@ -67,7 +67,7 @@ def get_timestamps_by_mode(timestamps, n, mode):
 
 def run_pitr(ssh_host, ssh_user, ssh_password, cluster_ip, rest_user, rest_password,
              archive_path, repo_name, cont_backup_location, timestamp, threads=8, tmp_dir="/data/tmp",
-             resume=False, purge=False, storage_type="nfs", obj_staging_dir=None):
+             resume=False, purge=False, storage_type="nfs", obj_staging_dir=None, force_updates=False):
     """Run PITR restore command on remote host via SSH using paramiko."""
     cmd = (
         f"/opt/couchbase/bin/cbcontbk restore "
@@ -80,6 +80,8 @@ def run_pitr(ssh_host, ssh_user, ssh_password, cluster_ip, rest_user, rest_passw
         cmd += " --resume"
     if purge:
         cmd += " --purge"
+    if force_updates:
+        cmd += " --force-updates"
 
     if storage_type == "aws":
         cmd += (
@@ -154,6 +156,7 @@ def main():
     parser.add_argument('--tmp-dir', default='/data/tmp', help='Temporary directory (-d)')
     parser.add_argument('--resume', action='store_true', help='Resume a previous restore operation')
     parser.add_argument('--purge', action='store_true', help='Purge a previous failed restore operation')
+    parser.add_argument('--force-updates', action='store_true', help='Specify this option to force backup data to overwrite newer data.')
     parser.add_argument('--storage-type', choices=['nfs', 'aws', 'azure', 'gcp'],
                         default='nfs', help='Storage type for backup archive (default: nfs)')
     parser.add_argument('--obj-staging-dir', help='Object staging directory (required for aws, azure, gcp)')
@@ -186,7 +189,8 @@ def main():
             args.cluster_ip, args.rest_user, args.rest_password,
             args.archive, args.repo, args.cont_backup_location,
             ts, args.threads, args.tmp_dir,
-            args.resume, args.purge, args.storage_type, args.obj_staging_dir
+            args.resume, args.purge, args.storage_type, args.obj_staging_dir,
+            args.force_updates
         ):
             print(f"Error: PITR failed for timestamp {ts}. Exiting.", file=sys.stderr)
             sys.exit(1)
