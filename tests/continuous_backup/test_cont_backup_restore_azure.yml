@@ -1345,6 +1345,31 @@
   command: --num_timestamps 43 --mode first-n --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive az://backup-restore-system-test/backups --repo systemtest --cont-backup-location az://continuous-backup-system-test/continuous-backups --threads 8 --tmp-dir /data/tmp --storage-type azure --obj-staging-dir /data/azure
   wait: true
 
+# Flush Bucket again
+-
+  image: sequoiatools/couchbase-cli
+  command:  "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 1}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+-
+  command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 2}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+-
+  command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.Bucket}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+
+# Wait before restore
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "120"
+  wait: true
+
+# Restore to everything
+-
+  image: sequoiatools/pitr
+  command: --mode everything --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive az://backup-restore-system-test/backups --repo systemtest --cont-backup-location az://continuous-backup-system-test/continuous-backups --threads 8 --tmp-dir /data/tmp --storage-type azure --obj-staging-dir /data/azure --force-updates
+  wait: true
+
 # Enable continuous backup again after restore
 -
   image: sequoiatools/couchbase-cli
@@ -1937,6 +1962,31 @@
 -
   image: sequoiatools/pitr
   command: --num_timestamps 52 --mode first-n --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive az://backup-restore-system-test/backups --repo systemtest --cont-backup-location az://continuous-backup-system-test/continuous-backups --threads 8 --tmp-dir /data/tmp --storage-type azure --obj-staging-dir /data/azure --force-updates
+  wait: true
+
+# Flush Bucket again
+-
+  image: sequoiatools/couchbase-cli
+  command:  "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 1}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+-
+  command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 2}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+-
+  command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.Bucket}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+
+# Wait before restore
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "120"
+  wait: true
+
+# Restore to everything
+-
+  image: sequoiatools/pitr
+  command: --mode everything --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive az://backup-restore-system-test/backups --repo systemtest --cont-backup-location az://continuous-backup-system-test/continuous-backups --threads 8 --tmp-dir /data/tmp --storage-type azure --obj-staging-dir /data/azure --force-updates
   wait: true
 
 # Enable continuous backup again after restore
@@ -2740,6 +2790,31 @@
 -
   image: sequoiatools/pitr
   command: --num_timestamps 1 --resume --mode latest-n --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive az://backup-restore-system-test/backups --repo systemtest --cont-backup-location az://continuous-backup-system-test/continuous-backups --threads 8 --tmp-dir /data/tmp --storage-type azure --obj-staging-dir /data/azure --force-updates
+  wait: true
+
+# Flush Bucket again
+-
+  image: sequoiatools/couchbase-cli
+  command:  "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 1}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+-
+  command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 2}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+-
+  command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.Bucket}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+
+# Wait before restore
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "120"
+  wait: true
+
+# Restore to everything
+-
+  image: sequoiatools/pitr
+  command: --mode everything --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive az://backup-restore-system-test/backups --repo systemtest --cont-backup-location az://continuous-backup-system-test/continuous-backups --threads 8 --tmp-dir /data/tmp --storage-type azure --obj-staging-dir /data/azure --force-updates
   wait: true
 
 -
@@ -4039,6 +4114,31 @@
   command: --num_timestamps 95 --mode first-n --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive az://backup-restore-system-test/backups --repo systemtest --cont-backup-location az://continuous-backup-system-test/continuous-backups --threads 8 --tmp-dir /data/tmp --storage-type azure --obj-staging-dir /data/azure --force-updates
   wait: true
 
+# Flush Bucket again
+-
+  image: sequoiatools/couchbase-cli
+  command:  "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 1}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+-
+  command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 2}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+-
+  command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.Bucket}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+
+# Wait before restore
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "120"
+  wait: true
+
+# Restore to everything
+-
+  image: sequoiatools/pitr
+  command: --mode everything --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive az://backup-restore-system-test/backups --repo systemtest --cont-backup-location az://continuous-backup-system-test/continuous-backups --threads 8 --tmp-dir /data/tmp --storage-type azure --obj-staging-dir /data/azure --force-updates
+  wait: true
+
 # Enable continuous backup again after restore
 -
   image: sequoiatools/couchbase-cli
@@ -4631,6 +4731,31 @@
 -
   image: sequoiatools/pitr
   command: --num_timestamps 104 --mode first-n --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive az://backup-restore-system-test/backups --repo systemtest --cont-backup-location az://continuous-backup-system-test/continuous-backups --threads 8 --tmp-dir /data/tmp --storage-type azure --obj-staging-dir /data/azure --force-updates
+  wait: true
+
+# Flush Bucket again
+-
+  image: sequoiatools/couchbase-cli
+  command:  "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 1}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+-
+  command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 2}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+-
+  command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.Bucket}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+
+# Wait before restore
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "120"
+  wait: true
+
+# Restore to everything
+-
+  image: sequoiatools/pitr
+  command: --mode everything --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive az://backup-restore-system-test/backups --repo systemtest --cont-backup-location az://continuous-backup-system-test/continuous-backups --threads 8 --tmp-dir /data/tmp --storage-type azure --obj-staging-dir /data/azure --force-updates
   wait: true
 
 # Enable continuous backup again after restore
@@ -5434,6 +5559,31 @@
 -
   image: sequoiatools/pitr
   command: --num_timestamps 1 --resume --mode latest-n --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive az://backup-restore-system-test/backups --repo systemtest --cont-backup-location az://continuous-backup-system-test/continuous-backups --threads 8 --tmp-dir /data/tmp --storage-type azure --obj-staging-dir /data/azure --force-updates
+  wait: true
+
+# Flush Bucket again
+-
+  image: sequoiatools/couchbase-cli
+  command:  "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 1}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+-
+  command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.NthBucket 2}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+-
+  command: "bucket-flush -c  {{.Orchestrator}}:{{.RestPort}} --bucket {{.Bucket}} -u  {{.RestUsername}} -p  {{.RestPassword}} --force"
+  wait: true
+
+# Wait before restore
+-
+  image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "120"
+  wait: true
+
+# Restore to everything
+-
+  image: sequoiatools/pitr
+  command: --mode everything --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive az://backup-restore-system-test/backups --repo systemtest --cont-backup-location az://continuous-backup-system-test/continuous-backups --threads 8 --tmp-dir /data/tmp --storage-type azure --obj-staging-dir /data/azure --force-updates
   wait: true
 
 -
