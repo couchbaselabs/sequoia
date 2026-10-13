@@ -44,19 +44,19 @@
   image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}}
               ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Orchestrator}}
-                'curl -X POST localhost:8091/pools/default/buckets/{{.Bucket}} -u {{.RestUsername}}:{{.RestPassword}} -d name={{.Bucket}} -d continuousBackupEnabled=true -d continuous_backup_cloud_storage_cred_id=systemtest-azure-id -d continuousBackupLocation=az://continuous-backup-system-test/continuous-backups -d continuousBackupInterval=60'"
+                'curl -X POST localhost:8091/pools/default/buckets/{{.Bucket}} -u {{.RestUsername}}:{{.RestPassword}} -d name={{.Bucket}} -d continuousBackupEnabled=true -d continuous_backup_cloud_storage_cred_id=systemtest-azure-id -d continuousBackupLocation=az://continuous-backup-system-test/continuous-backups -d continuousBackupInterval=60 -d continuousBackupRetentionPeriod=1440'"
   wait: true
 -
   image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}}
               ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Orchestrator}}
-                'curl -X POST localhost:8091/pools/default/buckets/{{.NthBucket 1}} -u {{.RestUsername}}:{{.RestPassword}} -d name={{.NthBucket 1}} -d continuousBackupEnabled=true -d continuous_backup_cloud_storage_cred_id=systemtest-azure-id -d continuousBackupLocation=az://continuous-backup-system-test/continuous-backups -d continuousBackupInterval=15'"
+                'curl -X POST localhost:8091/pools/default/buckets/{{.NthBucket 1}} -u {{.RestUsername}}:{{.RestPassword}} -d name={{.NthBucket 1}} -d continuousBackupEnabled=true -d continuous_backup_cloud_storage_cred_id=systemtest-azure-id -d continuousBackupLocation=az://continuous-backup-system-test/continuous-backups -d continuousBackupInterval=15 -d continuousBackupRetentionPeriod=1440'"
   wait: true
 -
   image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}}
               ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Orchestrator}}
-                'curl -X POST localhost:8091/pools/default/buckets/{{.NthBucket 2}} -u {{.RestUsername}}:{{.RestPassword}} -d name={{.NthBucket 2}} -d continuousBackupEnabled=true -d continuous_backup_cloud_storage_cred_id=systemtest-azure-id -d continuousBackupLocation=az://continuous-backup-system-test/continuous-backups -d continuousBackupInterval=2'"
+                'curl -X POST localhost:8091/pools/default/buckets/{{.NthBucket 2}} -u {{.RestUsername}}:{{.RestPassword}} -d name={{.NthBucket 2}} -d continuousBackupEnabled=true -d continuous_backup_cloud_storage_cred_id=systemtest-azure-id -d continuousBackupLocation=az://continuous-backup-system-test/continuous-backups -d continuousBackupInterval=2 -d continuousBackupRetentionPeriod=1440'"
   wait: true
 
 # Enable auto failover again
