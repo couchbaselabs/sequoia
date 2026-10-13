@@ -1586,7 +1586,7 @@
 # Restore to all random timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 52 --mode random --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 52 --mode random --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -1611,7 +1611,7 @@
 # Restore to all random timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 52 --mode random --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 52 --mode random --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -1636,7 +1636,7 @@
 # Restore to all random timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 52 --mode random --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 52 --mode random --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -1661,7 +1661,7 @@
 # Restore to 15 random timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 15 --mode random --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 15 --mode random --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -1686,7 +1686,7 @@
 # Restore to 15 random timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 15 --mode random --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 15 --mode random --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -1711,7 +1711,7 @@
 # Restore to 15 random timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 15 --mode random --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 15 --mode random --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -1736,7 +1736,7 @@
 # Restore to all latest-n timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 52 --mode latest-n --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 52 --mode latest-n --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -1761,7 +1761,7 @@
 # Restore to non-sequential timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 20 --mode non-sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 20 --mode non-sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -1786,7 +1786,7 @@
 # Restore to non-sequential timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 20 --mode non-sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 20 --mode non-sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -1811,7 +1811,7 @@
 # Restore to non-sequential timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 20 --mode non-sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 20 --mode non-sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -1836,7 +1836,7 @@
 # Restore to sequential timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 20 --mode sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 20 --mode sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -1861,7 +1861,7 @@
 # Restore to sequential timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 20 --mode sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 20 --mode sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -1886,7 +1886,7 @@
 # Restore to sequential timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 20 --mode sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 20 --mode sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -1911,7 +1911,7 @@
 # Restore to sequential timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 20 --mode sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 20 --mode sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -1936,7 +1936,7 @@
 # Restore to all first-n timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 52 --mode first-n --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 52 --mode first-n --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Enable continuous backup again after restore
@@ -2180,7 +2180,7 @@
 # Restore to all random timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 61 --mode random --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 61 --mode random --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -2205,7 +2205,7 @@
 # Restore to all random timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 61 --mode random --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 61 --mode random --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -2230,7 +2230,7 @@
 # Restore to all random timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 61 --mode random --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 61 --mode random --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -2255,7 +2255,7 @@
 # Restore to 15 random timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 15 --mode random --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 15 --mode random --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -2280,7 +2280,7 @@
 # Restore to 15 random timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 15 --mode random --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 15 --mode random --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -2305,7 +2305,7 @@
 # Restore to 15 random timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 15 --mode random --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 15 --mode random --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -2330,7 +2330,7 @@
 # Restore to all latest-n timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 61 --mode latest-n --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 61 --mode latest-n --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -2355,7 +2355,7 @@
 # Restore to non-sequential timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 20 --mode non-sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 20 --mode non-sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -2380,7 +2380,7 @@
 # Restore to non-sequential timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 20 --mode non-sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 20 --mode non-sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -2405,7 +2405,7 @@
 # Restore to non-sequential timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 20 --mode non-sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 20 --mode non-sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -2430,7 +2430,7 @@
 # Restore to sequential timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 20 --mode sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 20 --mode sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -2455,7 +2455,7 @@
 # Restore to sequential timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 20 --mode sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 20 --mode sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -2480,7 +2480,7 @@
 # Restore to sequential timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 20 --mode sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 20 --mode sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -2505,7 +2505,7 @@
 # Restore to sequential timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 20 --mode sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 20 --mode sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -2530,7 +2530,7 @@
 # Restore to all first-n timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 61 --mode first-n --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 61 --mode first-n --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Chaos: Kill cbcontbk before restore
@@ -2570,7 +2570,7 @@
 # Restore to latest timestamp
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 1 --mode latest-n --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 1 --mode latest-n --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Chaos: Kill cbcontbk after restore
@@ -2609,7 +2609,7 @@
 # Restore to latest timestamp and kill cbcontbk during restore
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 1 --mode latest-n --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 1 --mode latest-n --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   expect_error: true
 
 # Wait for some time and then kill cbcontbk during restore
@@ -2635,7 +2635,7 @@
 # Resume restore
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 1 --resume --mode latest-n --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 1 --resume --mode latest-n --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Chaos: Kill cbcontbk during restore and purge
@@ -2661,7 +2661,7 @@
 # Restore to latest timestamp and kill cbcontbk during restore
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 1 --mode latest-n --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 1 --mode latest-n --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   expect_error: true
 
 # Wait for some time and then kill cbcontbk during restore
@@ -2687,7 +2687,7 @@
 # Purge restore
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 1 --purge --mode latest-n --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 1 --purge --mode latest-n --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Chaos: Kill memcached during restore
@@ -2713,7 +2713,7 @@
 # Restore to latest timestamp and kill memcached during restore
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 1 --mode latest-n --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 1 --mode latest-n --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   expect_error: true
 
 # Wait for some time and then kill memcached during restore
@@ -2739,7 +2739,7 @@
 # Resume restore
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 1 --resume --mode latest-n --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 1 --resume --mode latest-n --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 -
@@ -3686,7 +3686,7 @@
 # Restore to all random timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 95 --mode random --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 95 --mode random --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -3711,7 +3711,7 @@
 # Restore to all random timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 95 --mode random --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 95 --mode random --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -3736,7 +3736,7 @@
 # Restore to all random timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 95 --mode random --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 95 --mode random --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -3761,7 +3761,7 @@
 # Restore to 15 random timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 15 --mode random --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 15 --mode random --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -3786,7 +3786,7 @@
 # Restore to 15 random timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 15 --mode random --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 15 --mode random --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -3811,7 +3811,7 @@
 # Restore to 15 random timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 15 --mode random --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 15 --mode random --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -3836,7 +3836,7 @@
 # Restore to all latest-n timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 95 --mode latest-n --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 95 --mode latest-n --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -3861,7 +3861,7 @@
 # Restore to non-sequential timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 40 --mode non-sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 40 --mode non-sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -3886,7 +3886,7 @@
 # Restore to non-sequential timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 40 --mode non-sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 40 --mode non-sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -3911,7 +3911,7 @@
 # Restore to non-sequential timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 40 --mode non-sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 40 --mode non-sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -3936,7 +3936,7 @@
 # Restore to sequential timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 40 --mode sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 40 --mode sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -3961,7 +3961,7 @@
 # Restore to sequential timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 40 --mode sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 40 --mode sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -3986,7 +3986,7 @@
 # Restore to sequential timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 40 --mode sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 40 --mode sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -4011,7 +4011,7 @@
 # Restore to sequential timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 40 --mode sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 40 --mode sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -4036,7 +4036,7 @@
 # Restore to all first-n timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 95 --mode first-n --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 95 --mode first-n --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Enable continuous backup again after restore
@@ -4280,7 +4280,7 @@
 # Restore to all random timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 104 --mode random --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 104 --mode random --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -4305,7 +4305,7 @@
 # Restore to all random timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 104 --mode random --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 104 --mode random --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -4330,7 +4330,7 @@
 # Restore to all random timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 104 --mode random --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 104 --mode random --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -4355,7 +4355,7 @@
 # Restore to 15 random timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 15 --mode random --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 15 --mode random --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -4380,7 +4380,7 @@
 # Restore to 15 random timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 15 --mode random --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 15 --mode random --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -4405,7 +4405,7 @@
 # Restore to 15 random timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 15 --mode random --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 15 --mode random --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -4430,7 +4430,7 @@
 # Restore to all latest-n timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 104 --mode latest-n --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 104 --mode latest-n --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -4455,7 +4455,7 @@
 # Restore to non-sequential timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 40 --mode non-sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 40 --mode non-sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -4480,7 +4480,7 @@
 # Restore to non-sequential timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 40 --mode non-sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 40 --mode non-sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -4505,7 +4505,7 @@
 # Restore to non-sequential timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 40 --mode non-sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 40 --mode non-sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -4530,7 +4530,7 @@
 # Restore to sequential timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 40 --mode sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 40 --mode sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -4555,7 +4555,7 @@
 # Restore to sequential timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 40 --mode sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 40 --mode sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -4580,7 +4580,7 @@
 # Restore to sequential timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 40 --mode sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 40 --mode sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -4605,7 +4605,7 @@
 # Restore to sequential timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 40 --mode sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 40 --mode sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -4630,7 +4630,7 @@
 # Restore to all first-n timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 104 --mode first-n --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 104 --mode first-n --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Enable continuous backup again after restore
@@ -4874,7 +4874,7 @@
 # Restore to all random timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 113 --mode random --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 113 --mode random --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -4899,7 +4899,7 @@
 # Restore to all random timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 113 --mode random --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 113 --mode random --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -4924,7 +4924,7 @@
 # Restore to all random timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 113 --mode random --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 113 --mode random --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -4949,7 +4949,7 @@
 # Restore to 15 random timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 15 --mode random --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 15 --mode random --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -4974,7 +4974,7 @@
 # Restore to 15 random timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 15 --mode random --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 15 --mode random --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -4999,7 +4999,7 @@
 # Restore to 15 random timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 15 --mode random --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 15 --mode random --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -5024,7 +5024,7 @@
 # Restore to all latest-n timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 113 --mode latest-n --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 113 --mode latest-n --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -5049,7 +5049,7 @@
 # Restore to non-sequential timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 40 --mode non-sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 40 --mode non-sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -5074,7 +5074,7 @@
 # Restore to non-sequential timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 40 --mode non-sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 40 --mode non-sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -5099,7 +5099,7 @@
 # Restore to non-sequential timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 40 --mode non-sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 40 --mode non-sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -5124,7 +5124,7 @@
 # Restore to sequential timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 40 --mode sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 40 --mode sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -5149,7 +5149,7 @@
 # Restore to sequential timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 40 --mode sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 40 --mode sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -5174,7 +5174,7 @@
 # Restore to sequential timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 40 --mode sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 40 --mode sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -5199,7 +5199,7 @@
 # Restore to sequential timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 40 --mode sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 40 --mode sequential --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Flush Bucket again
@@ -5224,7 +5224,7 @@
 # Restore to all first-n timestamps
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 113 --mode first-n --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 113 --mode first-n --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Chaos: Kill cbcontbk before restore
@@ -5264,7 +5264,7 @@
 # Restore to latest timestamp
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 1 --mode latest-n --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 1 --mode latest-n --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Chaos: Kill cbcontbk after restore
@@ -5303,7 +5303,7 @@
 # Restore to latest timestamp and kill cbcontbk during restore
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 1 --mode latest-n --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 1 --mode latest-n --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   expect_error: true
 
 # Wait for some time and then kill cbcontbk during restore
@@ -5329,7 +5329,7 @@
 # Resume restore
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 1 --resume --mode latest-n --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 1 --resume --mode latest-n --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Chaos: Kill cbcontbk during restore and purge
@@ -5355,7 +5355,7 @@
 # Restore to latest timestamp and kill cbcontbk during restore
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 1 --mode latest-n --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 1 --mode latest-n --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   expect_error: true
 
 # Wait for some time and then kill cbcontbk during restore
@@ -5381,7 +5381,7 @@
 # Purge restore
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 1 --purge --mode latest-n --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 1 --purge --mode latest-n --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 # Chaos: Kill memcached during restore
@@ -5407,7 +5407,7 @@
 # Restore to latest timestamp and kill memcached during restore
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 1 --mode latest-n --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 1 --mode latest-n --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   expect_error: true
 
 # Wait for some time and then kill memcached during restore
@@ -5433,7 +5433,7 @@
 # Resume restore
 -
   image: sequoiatools/pitr
-  command: --num_timestamps 1 --resume --mode latest-n --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp
+  command: --num_timestamps 1 --resume --mode latest-n --ssh-host {{.Nodes | .Service `arbiter` | net 0}} --ssh-user {{.SSHUsername}} --ssh-password {{.SSHPassword}} --cluster-ip {{.Orchestrator}} --rest-user {{.RestUsername}} --rest-password {{.RestPassword}} --archive gs://backup-restore-system-test/backups --repo systemtest --cont-backup-location gs://continuous-backup-system-test/systemtest/ --threads 8 --tmp-dir /data/tmp --storage-type gcp --obj-staging-dir /data/gcp --force-updates
   wait: true
 
 -
