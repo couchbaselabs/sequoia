@@ -139,10 +139,11 @@ def run_pitr(ssh_host, ssh_user, ssh_password, cluster_ip, rest_user, rest_passw
 def main():
     parser = argparse.ArgumentParser(description='Point in time recovery to n timestamps')
     parser.add_argument('--num_timestamps', type=int, help='Number of timestamps to recover to')
-    parser.add_argument('--mode', choices=['random', 'sequential', 'non-sequential', 'latest-n', 'first-n'],
+    parser.add_argument('--mode', choices=['random', 'sequential', 'non-sequential', 'latest-n', 'first-n', 'everything'],
                         default='random', help='Timestamp selection mode: random (n random), '
                         'sequential (n random sorted ascending), non-sequential (n random sorted descending), '
-                        'latest-n (n most recent descending), first-n (n earliest ascending)')
+                        'latest-n (n most recent descending), first-n (n earliest ascending), '
+                        'everything (single restore with -T everything; num_timestamps not needed)')
     parser.add_argument('--ssh-host', required=True, help='SSH host IP to run cbcontbk on')
     parser.add_argument('--ssh-user', required=True, help='SSH username')
     parser.add_argument('--ssh-password', required=True, help='SSH password')
@@ -167,17 +168,20 @@ def main():
         print(f"Error: --obj-staging-dir is required when storage-type is {args.storage_type}", file=sys.stderr)
         sys.exit(1)
 
-    if args.num_timestamps <= 0:
-        print("Error: num_timestamps must be a positive integer", file=sys.stderr)
-        sys.exit(1)
+    if args.mode == "everything":
+        selected_ts = ["everything"]
+    else:
+        if args.num_timestamps is None or args.num_timestamps <= 0:
+            print("Error: num_timestamps must be a positive integer", file=sys.stderr)
+            sys.exit(1)
 
-    print(f"Fetching timestamps from {args.ssh_host}:{REMOTE_TIMESTAMP_FILE}")
-    timestamps = read_timestamps_from_remote(args.ssh_host, args.ssh_user, args.ssh_password)
-    if not timestamps:
-        print("Error: No timestamps found in file", file=sys.stderr)
-        sys.exit(1)
+        print(f"Fetching timestamps from {args.ssh_host}:{REMOTE_TIMESTAMP_FILE}")
+        timestamps = read_timestamps_from_remote(args.ssh_host, args.ssh_user, args.ssh_password)
+        if not timestamps:
+            print("Error: No timestamps found in file", file=sys.stderr)
+            sys.exit(1)
 
-    selected_ts = get_timestamps_by_mode(timestamps, args.num_timestamps, args.mode)
+        selected_ts = get_timestamps_by_mode(timestamps, args.num_timestamps, args.mode)
     print(f"Selected {len(selected_ts)} timestamps for PITR (mode: {args.mode}):")
     for ts in selected_ts:
         print(f"  {ts}")
