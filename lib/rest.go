@@ -16,6 +16,9 @@ type RestClient struct {
 	TopologyChanged bool
 	nodeCache       cmap.ConcurrentMap
 	IsWatching      bool
+	// services each node last reported, kept apart from nodeCache because
+	// any unparseable REST response clears that cache
+	lastKnownServices cmap.ConcurrentMap
 }
 
 type NodeSelf struct {
@@ -82,12 +85,13 @@ type EncryptionKey struct {
 
 func NewRestClient(clusters []ServerSpec, provider Provider, cm *ContainerManager) RestClient {
 	rest := RestClient{
-		Clusters:        clusters,
-		Provider:        provider,
-		Cm:              cm,
-		TopologyChanged: true,
-		nodeCache:       cmap.New(),
-		IsWatching:      false,
+		Clusters:          clusters,
+		Provider:          provider,
+		Cm:                cm,
+		TopologyChanged:   true,
+		nodeCache:         cmap.New(),
+		IsWatching:        false,
+		lastKnownServices: cmap.New(),
 	}
 
 	return rest
@@ -174,7 +178,18 @@ func (r *RestClient) NodeHasService(service, host string) bool {
 	// answer can outlive a server-add/rebalance that changed the node's
 	// real services, causing those selectors to return the wrong node.
 	n := r.getHostNodeSelf(host)
-	for _, s := range n.Services {
+	services := n.Services
+	if n.Hostname == "" {
+		// no valid /nodes/self reply, e.g. couchbase-server is stopped on the
+		// node: use the services it last reported so it keeps its position in
+		// selectors like `.Nodes | .Service "kv" | net N` until it is back
+		if val, ok := r.lastKnownServices.Get(host); ok {
+			services = val.([]string)
+		}
+	} else {
+		r.lastKnownServices.Set(host, services)
+	}
+	for _, s := range services {
 		if s == service {
 			return true
 		}

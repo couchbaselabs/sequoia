@@ -167,7 +167,7 @@ Key type: `RestClient` — holds cluster specs, provider, container manager, and
 
 Key methods:
 - `GetServerVersion()` — query `/pools/default` for version string
-- `NodeHasService(service, host)` — check if a node runs a given service (cached)
+- `NodeHasService(service, host)` — check if a node runs a given service (always queried live; if the node does not reply, e.g. couchbase-server is stopped, its last reported services are used)
 - `IsNodeActive(host)` — check node membership in cluster
 - `GetMemTotal(host)` / `GetMemReserved(host)` / `GetIndexQuota(host)` — memory introspection
 - `ClusterIsRebalancing(host)` — poll `/pools/default/rebalanceProgress`
