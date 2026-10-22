@@ -68,6 +68,9 @@ buckets:
       eviction: nruEviction
       type: ephemeral
       replica: 1
+      # ~1h tombstone purge age (default 1 day); setting-compaction in the tests
+      # does not apply to ephemeral buckets, and a 1-day age stalls rebalances
+      purge_interval: 0.04
 
 
 servers: # each server tag represents a cluster

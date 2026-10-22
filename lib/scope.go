@@ -1473,6 +1473,9 @@ func (s *Scope) CreateBuckets() {
 				if bucket.BucketThrottleHardLimit > 0 {
 					command = append(command, "--throttle-hard-limit", strconv.FormatUint(bucket.BucketThrottleHardLimit, 10))
 				}
+				if bucket.PurgeInterval != "" {
+					command = append(command, "--purge-interval", bucket.PurgeInterval)
+				}
 
 				desc := "bucket create " + bucketName
 				task := ContainerTask{

@@ -51,6 +51,12 @@ type BucketSpec struct {
 	ContinuousBackupRetentionPeriod uint64 `yaml:"continuous_backup_retention_period"`
 	BucketThrottleReserved          uint64 `yaml:"bucketThrottleReserved"`
 	BucketThrottleHardLimit         uint64 `yaml:"bucketThrottleHardLimit"`
+	// Tombstone purge interval in days, passed as --purge-interval to
+	// bucket-create. For ephemeral buckets this sets ep_ephemeral_metadata_purge_age
+	// (default 1 day), which the cluster-wide setting-compaction value does not
+	// affect. On couchbase buckets couchbase-cli also turns on per-bucket
+	// auto-compaction, overriding the cluster compaction settings.
+	PurgeInterval string `yaml:"purge_interval"`
 }
 
 type BucketScopeSpec struct {
