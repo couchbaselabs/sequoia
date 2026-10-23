@@ -24,11 +24,20 @@
   wait: true
 
 # Add S3 Credentials
+# Uses Couchbase Server's bundled curl (the node's system curl may predate --json).
+# Keep the JSON to escaped double quotes: sequoia's command parsing breaks nested
+# single quotes. Skips the create on reruns, when POST would return 409.
 -
   image: sequoiatools/cmd
-  command: "sshpass -p {{.SSHPassword}}
-              ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Orchestrator}}
-                'source /etc/profile.d/s3_credentials.sh; curl localhost:8091/settings/credentials/systemtest-s3-id -u {{.RestUsername}}:{{.RestPassword}} --json '\"'\"'{\"type\": \"aws\", \"fields\": {\"region\": \"us-east-1\", \"accessKeyId\": \"'\"'\"'$AWS_ACCESS_KEY_ID'\"'\"'\", \"secretAccessKey\": \"'\"'\"'$AWS_SECRET_ACCESS_KEY'\"'\"'\"}}'\"'\"''"
+  command: >-
+    sshpass -p {{.SSHPassword}}
+    ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Orchestrator}}
+    'source /etc/profile.d/s3_credentials.sh &&
+    if /opt/couchbase/bin/curl -sf -o /dev/null -u {{.RestUsername}}:{{.RestPassword}} localhost:8091/settings/credentials/systemtest-s3-id;
+    then echo credential systemtest-s3-id already exists;
+    else /opt/couchbase/bin/curl -sS --fail-with-body -u {{.RestUsername}}:{{.RestPassword}} localhost:8091/settings/credentials/systemtest-s3-id
+    --json "{\"type\": \"aws\", \"fields\": {\"region\": \"us-east-1\", \"accessKeyId\": \"$AWS_ACCESS_KEY_ID\", \"secretAccessKey\": \"$AWS_SECRET_ACCESS_KEY\"}}";
+    fi'
   wait: true
 
 # Grant backup service access to S3 credentials
@@ -36,7 +45,7 @@
   image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}}
               ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Orchestrator}}
-                'curl -X PUT -u {{.RestUsername}}:{{.RestPassword}} http://localhost:8091/settings/rbac/services/backup/roles -d \"roles=credential_consumer[systemtest-s3-id]\"'"
+                '/opt/couchbase/bin/curl -sS --fail-with-body -X PUT -u {{.RestUsername}}:{{.RestPassword}} http://localhost:8091/settings/rbac/services/backup/roles -d \"roles=credential_consumer[systemtest-s3-id]\"'"
   wait: true
 
 # Update bucket configurations to enable continuous backup
@@ -44,19 +53,19 @@
   image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}}
               ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Orchestrator}}
-                'curl -X POST localhost:8091/pools/default/buckets/{{.Bucket}} -u {{.RestUsername}}:{{.RestPassword}} -d name={{.Bucket}} -d continuousBackupEnabled=true -d continuous_backup_cloud_storage_cred_id=systemtest-s3-id -d continuousBackupLocation=s3://cont-bkp-system-test/systemtest/ -d continuousBackupInterval=60 -d continuousBackupRetentionPeriod=1440'"
+                '/opt/couchbase/bin/curl -sS --fail-with-body -X POST localhost:8091/pools/default/buckets/{{.Bucket}} -u {{.RestUsername}}:{{.RestPassword}} -d name={{.Bucket}} -d continuousBackupEnabled=true -d continuous_backup_cloud_storage_cred_id=systemtest-s3-id -d continuousBackupLocation=s3://cont-bkp-system-test/systemtest/ -d continuousBackupInterval=60 -d continuousBackupRetentionPeriod=1440'"
   wait: true
 -
   image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}}
               ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Orchestrator}}
-                'curl -X POST localhost:8091/pools/default/buckets/{{.NthBucket 1}} -u {{.RestUsername}}:{{.RestPassword}} -d name={{.NthBucket 1}} -d continuousBackupEnabled=true -d continuous_backup_cloud_storage_cred_id=systemtest-s3-id -d continuousBackupLocation=s3://cont-bkp-system-test/systemtest/ -d continuousBackupInterval=15 -d continuousBackupRetentionPeriod=1440'"
+                '/opt/couchbase/bin/curl -sS --fail-with-body -X POST localhost:8091/pools/default/buckets/{{.NthBucket 1}} -u {{.RestUsername}}:{{.RestPassword}} -d name={{.NthBucket 1}} -d continuousBackupEnabled=true -d continuous_backup_cloud_storage_cred_id=systemtest-s3-id -d continuousBackupLocation=s3://cont-bkp-system-test/systemtest/ -d continuousBackupInterval=15 -d continuousBackupRetentionPeriod=1440'"
   wait: true
 -
   image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}}
               ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Orchestrator}}
-                'curl -X POST localhost:8091/pools/default/buckets/{{.NthBucket 2}} -u {{.RestUsername}}:{{.RestPassword}} -d name={{.NthBucket 2}} -d continuousBackupEnabled=true -d continuous_backup_cloud_storage_cred_id=systemtest-s3-id -d continuousBackupLocation=s3://cont-bkp-system-test/systemtest/ -d continuousBackupInterval=2 -d continuousBackupRetentionPeriod=1440'"
+                '/opt/couchbase/bin/curl -sS --fail-with-body -X POST localhost:8091/pools/default/buckets/{{.NthBucket 2}} -u {{.RestUsername}}:{{.RestPassword}} -d name={{.NthBucket 2}} -d continuousBackupEnabled=true -d continuous_backup_cloud_storage_cred_id=systemtest-s3-id -d continuousBackupLocation=s3://cont-bkp-system-test/systemtest/ -d continuousBackupInterval=2 -d continuousBackupRetentionPeriod=1440'"
   wait: true
 
 # Enable auto failover again

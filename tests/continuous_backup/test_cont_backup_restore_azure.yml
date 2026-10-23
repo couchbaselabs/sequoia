@@ -24,11 +24,20 @@
   wait: true
 
 # Add Azure Credentials
+# Uses Couchbase Server's bundled curl (the node's system curl may predate --json).
+# Keep the JSON to escaped double quotes: sequoia's command parsing breaks nested
+# single quotes. Skips the create on reruns, when POST would return 409.
 -
   image: sequoiatools/cmd
-  command: "sshpass -p {{.SSHPassword}}
-              ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Orchestrator}}
-                'source /etc/profile.d/azure_credentials.sh; curl localhost:8091/settings/credentials/systemtest-azure-id -u {{.RestUsername}}:{{.RestPassword}} --json '\"'\"'{\"type\": \"azureShared\", \"fields\": {\"accountName\": \"'\"'\"'$AZURE_STORAGE_ACCOUNT'\"'\"'\", \"accountKey\": \"'\"'\"'$AZURE_STORAGE_KEY'\"'\"'\", \"endpoint\": \"'\"'\"'$AZURE_STORAGE_ENDPOINT'\"'\"'\"}}'\"'\"''"
+  command: >-
+    sshpass -p {{.SSHPassword}}
+    ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Orchestrator}}
+    'source /etc/profile.d/azure_credentials.sh &&
+    if /opt/couchbase/bin/curl -sf -o /dev/null -u {{.RestUsername}}:{{.RestPassword}} localhost:8091/settings/credentials/systemtest-azure-id;
+    then echo credential systemtest-azure-id already exists;
+    else /opt/couchbase/bin/curl -sS --fail-with-body -u {{.RestUsername}}:{{.RestPassword}} localhost:8091/settings/credentials/systemtest-azure-id
+    --json "{\"type\": \"azureShared\", \"fields\": {\"accountName\": \"$AZURE_STORAGE_ACCOUNT\", \"accountKey\": \"$AZURE_STORAGE_KEY\", \"endpoint\": \"$AZURE_STORAGE_ENDPOINT\"}}";
+    fi'
   wait: true
 
 # Grant backup service access to azure credentials
@@ -36,7 +45,7 @@
   image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}}
               ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Orchestrator}}
-                'curl -X PUT -u {{.RestUsername}}:{{.RestPassword}} http://localhost:8091/settings/rbac/services/backup/roles -d \"roles=credential_consumer[systemtest-azure-id]\"'"
+                '/opt/couchbase/bin/curl -sS --fail-with-body -X PUT -u {{.RestUsername}}:{{.RestPassword}} http://localhost:8091/settings/rbac/services/backup/roles -d \"roles=credential_consumer[systemtest-azure-id]\"'"
   wait: true
 
 # Update bucket configurations to enable continuous backup
@@ -44,19 +53,19 @@
   image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}}
               ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Orchestrator}}
-                'curl -X POST localhost:8091/pools/default/buckets/{{.Bucket}} -u {{.RestUsername}}:{{.RestPassword}} -d name={{.Bucket}} -d continuousBackupEnabled=true -d continuous_backup_cloud_storage_cred_id=systemtest-azure-id -d continuousBackupLocation=az://continuous-backup-system-test/continuous-backups -d continuousBackupInterval=60 -d continuousBackupRetentionPeriod=1440'"
+                '/opt/couchbase/bin/curl -sS --fail-with-body -X POST localhost:8091/pools/default/buckets/{{.Bucket}} -u {{.RestUsername}}:{{.RestPassword}} -d name={{.Bucket}} -d continuousBackupEnabled=true -d continuous_backup_cloud_storage_cred_id=systemtest-azure-id -d continuousBackupLocation=az://continuous-backup-system-test/continuous-backups -d continuousBackupInterval=60 -d continuousBackupRetentionPeriod=1440'"
   wait: true
 -
   image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}}
               ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Orchestrator}}
-                'curl -X POST localhost:8091/pools/default/buckets/{{.NthBucket 1}} -u {{.RestUsername}}:{{.RestPassword}} -d name={{.NthBucket 1}} -d continuousBackupEnabled=true -d continuous_backup_cloud_storage_cred_id=systemtest-azure-id -d continuousBackupLocation=az://continuous-backup-system-test/continuous-backups -d continuousBackupInterval=15 -d continuousBackupRetentionPeriod=1440'"
+                '/opt/couchbase/bin/curl -sS --fail-with-body -X POST localhost:8091/pools/default/buckets/{{.NthBucket 1}} -u {{.RestUsername}}:{{.RestPassword}} -d name={{.NthBucket 1}} -d continuousBackupEnabled=true -d continuous_backup_cloud_storage_cred_id=systemtest-azure-id -d continuousBackupLocation=az://continuous-backup-system-test/continuous-backups -d continuousBackupInterval=15 -d continuousBackupRetentionPeriod=1440'"
   wait: true
 -
   image: sequoiatools/cmd
   command: "sshpass -p {{.SSHPassword}}
               ssh -o StrictHostKeyChecking=no {{.SSHUsername}}@{{.Orchestrator}}
-                'curl -X POST localhost:8091/pools/default/buckets/{{.NthBucket 2}} -u {{.RestUsername}}:{{.RestPassword}} -d name={{.NthBucket 2}} -d continuousBackupEnabled=true -d continuous_backup_cloud_storage_cred_id=systemtest-azure-id -d continuousBackupLocation=az://continuous-backup-system-test/continuous-backups -d continuousBackupInterval=2 -d continuousBackupRetentionPeriod=1440'"
+                '/opt/couchbase/bin/curl -sS --fail-with-body -X POST localhost:8091/pools/default/buckets/{{.NthBucket 2}} -u {{.RestUsername}}:{{.RestPassword}} -d name={{.NthBucket 2}} -d continuousBackupEnabled=true -d continuous_backup_cloud_storage_cred_id=systemtest-azure-id -d continuousBackupLocation=az://continuous-backup-system-test/continuous-backups -d continuousBackupInterval=2 -d continuousBackupRetentionPeriod=1440'"
   wait: true
 
 # Enable auto failover again

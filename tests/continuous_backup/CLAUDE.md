@@ -38,18 +38,26 @@ Cloud variants add a `setup_cloud_backup` section (before `initial_data_load`) t
 
 When modifying one variant, apply the same change to others unless it is storage-specific.
 
-### GCP credential registration
+### Credential registration (setup_cloud_backup)
 
-GCP uses service account JSON rather than access/secret key pairs. The `setup_cloud_backup` curl differs from S3/Azure:
+Rules for the remote `curl` steps in `setup_cloud_backup`:
+
+- **Use `/opt/couchbase/bin/curl`, not `curl`.** The node's system curl can be too old: Debian 10 ships 7.64, which has no `--json` (added in 7.82) and no `--fail-with-body` (added in 7.76). Couchbase Server's bundled curl is current.
+- **No single quotes inside the remote command.** The only single quotes allowed are the outer pair around the ssh command. Sequoia's `CompileCommand` pairs up words that contain `'` and strips one quote from each, so nested `'"'"'` quoting turns the JSON into invalid JSON or truncates the command. Build JSON with `\"` inside a bash double-quoted string, and write the command as a YAML `>-` block so backslashes need no YAML escaping.
+- **Every call uses `-sS --fail-with-body`.** ns_server reports errors as HTTP 400 and plain curl still exits 0, so without it a bad credential or bucket edit passes silently.
+- **The credential step skips creation if the credential already exists.** POST `/settings/credentials/<id>` returns 409 once the credential exists, and there is no create-or-update call (PUT returns 404). The section has no `DoOnce` guard, so it runs on every loop and on reruns.
+
+GCP uses a service account JSON file rather than access/secret key pairs. curl embeds the file as the `jsonCredentials` string through a curl variable, so `jq` is not needed on the node:
 
 ```bash
 source /etc/profile.d/gcp_credentials.sh
-curl -X POST localhost:8091/settings/credentials/systemtest-gcp-id \
-  -u Administrator:password \
-  --json "$(jq -Rs '{type:"gcp",fields:{jsonCredentials:.,region:"us"}}' $GOOGLE_APPLICATION_CREDENTIALS)"
+/opt/couchbase/bin/curl -sS --fail-with-body -u Administrator:password \
+  localhost:8091/settings/credentials/systemtest-gcp-id \
+  --variable "gcp_key@$GOOGLE_APPLICATION_CREDENTIALS" \
+  --expand-json "{\"type\": \"gcp\", \"fields\": {\"jsonCredentials\": \"{{gcp_key:json}}\", \"region\": \"us\"}}"
 ```
 
-`$GOOGLE_APPLICATION_CREDENTIALS` is set by `gcp_credentials.sh` and points to the service account key JSON file on the SSH host. The `jq` command reads and embeds the file contents as the `jsonCredentials` field.
+In the test YAML, write `{{gcp_key:json}}` as ``{{`{{`}}gcp_key:json}}`` so that sequoia's Go templating outputs a literal `{{`. `$GOOGLE_APPLICATION_CREDENTIALS` is set by `gcp_credentials.sh` and points to the key file on the node.
 
 ## Test Sections
 
