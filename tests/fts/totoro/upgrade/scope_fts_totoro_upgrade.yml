@@ -1,0 +1,48 @@
+---
+# scope_fts_totoro_upgrade.yml
+# Pair with: tests/fts/totoro/upgrade/test_fts_totoro_upgrade.yml
+#
+# 10 nodes: 9 in the cluster (nodes 1-4 data, node 5 query, nodes 6-9 fts)
+# and node 10 as the spare used for topology changes and the swap-rebalance upgrade.
+users:
+  -
+      name: bucket1
+      password: password
+      roles: admin
+      auth_domain: local
+  -
+      name: bucket2
+      password: password
+      roles: admin
+      auth_domain: local
+buckets:
+  # Hotel text docs for the text indexes
+  -
+      name: bucket1
+      ram: 30%
+      eviction: fullEviction
+      storage: magma
+  # SIFT vectors for the vector indexes (recall/latency before the upgrade, BQ/fastmerge after)
+  -
+      name: bucket2
+      ram: 50%
+      eviction: fullEviction
+      storage: magma
+servers: # each server tag represents a cluster
+  -
+      name: local
+      count: 10
+      ram: 90%
+      fts_ram: 70%
+      services:
+        query: 1
+        query_start: 5
+        fts: 4
+        fts_start: 6
+      rest_username: Administrator
+      rest_password: password
+      data_path: "/data"
+      index_path: "/data"
+      init_nodes: 9
+      buckets: bucket1, bucket2
+      users: bucket1, bucket2

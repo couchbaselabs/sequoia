@@ -1,0 +1,472 @@
+- include: tests/templates/kv.yml, tests/templates/rebalance.yml, tests/templates/fts.yml
+
+- template: set_fts_manager_options
+  args: "{{.Nodes | .Service `fts` | net 0}}, 'bleveMaxResultWindow':'100000'"
+
+############### Set FTS bleveMaxClauseCount to 2500 ################
+- template: set_fts_manager_options
+  args: "{{.Nodes | .Service `fts` | net 0}}, 'bleveMaxClauseCount':'2500'"
+
+############### Set FTS disableFileTransferRebalance to false ################
+- template: set_fts_manager_options
+  args: "{{.Nodes | .Service `fts` | net 0}}, 'disableFileTransferRebalance':false"
+
+############### Set FTS seqChecksTimeoutInSec to 20 ################
+- template: set_fts_manager_options
+  args: "{{.Nodes | .Service `fts` | net 0}}, 'seqChecksTimeoutInSec':'20'"
+
+############### Create scopes and collections ###############
+# bucket1: 1 scope x 3 collections of hotel docs.
+# bucket2: 1 scope x 5 collections of SIFT vectors. coll_0 and coll_1 are used before the
+# upgrade; coll_2, coll_3 and coll_4 are loaded after it for BQ, Fastmerge and BQ + Fastmerge.
+- image: sequoiatools/collections:1.0
+  command: "-i {{.Orchestrator}}:8091 -b {{.Bucket}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count=1 --collection_count=3 --collection_distribution=uniform"
+  wait: true
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 1}} -o create_multi_scope_collection -s scope_ -c coll_ --scope_count=1 --collection_count=5 --collection_distribution=uniform"
+  wait: true
+
+############### Sleep for some time to allow collections manifest to sync ###############
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+############### Initial data loading ################
+- image: sequoiatools/catapult
+  command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -n {{.Scale 1700000}} -pc 100 -dt Hotel -nt 4 -ds 1000 -ac True"
+  requires: "{{eq true .DoOnce }}"
+  wait: true
+
+############## Load SIFT vector dataset (128 dims) into coll_0 and coll_1 ################
+# 2.5M docs per collection (5M in bucket2 before the upgrade). SIFT has 1M base vectors, so
+# govectorloader reuses them (vector index = doc number % 1M); every doc still gets its own ID.
+- image: sequoiatools/govectorloader
+  command: "-nodeAddress={{$.Orchestrator}} -username=Administrator -password=password -bucketName={{.NthBucket 1}} -scopeName=scope_0 -collectionName=coll_0 -startIndex=0 -endIndex={{.Scale 2500000}} -datasetName=sift -provideDefaultDocs=true"
+  requires: "{{eq true $.DoOnce }}"
+  wait: true
+- image: sequoiatools/govectorloader
+  command: "-nodeAddress={{$.Orchestrator}} -username=Administrator -password=password -bucketName={{.NthBucket 1}} -scopeName=scope_0 -collectionName=coll_1 -startIndex=0 -endIndex={{.Scale 2500000}} -datasetName=sift -provideDefaultDocs=true"
+  requires: "{{eq true $.DoOnce }}"
+  wait: true
+
+###############  Create text indexes on bucket1 ################
+- section_start: create_fts_indexes
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -m 2:1:6,2:0:4 -s {{.Scale 1}} -a create_index_from_map"
+  wait: true
+- section_end: create_fts_indexes
+
+###############  Create 7.6-compatible vector indexes on bucket2 ################
+# recall on coll_0 and latency on coll_1. BQ and Fastmerge need 8.x, so they are created in phase 2.
+- section_start: create_vector_indexes
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -sc scope_0 -coll coll_0 -d sift -a create_index_from_map -m 2:0:6,1:1:6 -dims 128 --vector_index_optimized_for recall"
+  wait: true
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -sc scope_0 -coll coll_1 -d sift -a create_index_from_map -m 2:0:6,1:1:6 -dims 128 --vector_index_optimized_for latency"
+  wait: true
+- section_end: create_vector_indexes
+
+############### Wait for indexes to build ###############
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+################ Check for active queries #####################################
+- section_start: monitor_active_queries
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a active_queries_check"
+  alias: pre_upgrade_active_queries
+- section_end: monitor_active_queries
+
+############### Text and KNN query load ################
+- section_start: query_fts_indexes
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a run_queries -nq 5 --print_interval 600"
+  alias: pre_upgrade_text_queries
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a run_knn_queries_parallely -d sift -dims 128"
+- section_end: query_fts_indexes
+
+############### CRUD load on bucket1 ################
+- image: sequoiatools/catapult
+  command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -n {{.Scale 50000}} -pc 50 -pu 25 -pd 25
+    -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 60 -fu price,free_parking -ac True"
+  alias: pre_upgrade_doc_ops
+
+# Sleep for some time after starting the load (5 mins)
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+# ###############  Rebalance in an FTS node ################
+- template: rebalance_in
+  args: "{{.InActiveNode}}, fts"
+- template: wait_for_rebalance
+  wait: true
+
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+# ############### Kill CBFT process on an FTS node ################
+- template: kill_process
+  args: "{{.Nodes | .Service `fts` | net 1}}, cbft"
+
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+################# Run KNN queries after rebalance-in ##############
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a run_knn_queries_parallely -d sift -dims 128"
+
+# Re-upsert the same key range to keep the vector indexes mutating
+- image: sequoiatools/govectorloader
+  command: "-nodeAddress={{$.Orchestrator}} -username=Administrator -password=password -bucketName={{.NthBucket 1}} -scopeName=scope_0 -collectionName=coll_0 -startIndex=0 -endIndex=100000 -datasetName=sift -provideDefaultDocs=true"
+
+# ###############  Rebalance out an FTS node ################
+- template: rebalance_out
+  args: "{{.Nodes | .Service `fts` | net 1}}"
+  wait: true
+
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+# ###############  Swap rebalance an FTS node ################
+- template: rebalance_swap
+  args: "{{.InActiveNode}}, {{.Nodes | .Service `fts` | net 1}}, fts"
+  wait: true
+
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+################# Run KNN queries after swap rebalance ##############
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a run_knn_queries_parallely -d sift -dims 128"
+
+# ###############  Swap rebalance a data node ################
+- template: rebalance_swap
+  args: "{{.InActiveNode}}, {{.NthDataNode 2}}"
+  wait: true
+
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+# ###############  Hard failover + recovery of an FTS node ################
+- template: failover_force_and_recover_wait
+  args: "{{.Nodes | .Service `fts` | net 1}}, full"
+  wait: true
+
+# Re-upsert the same key range on coll_1
+- image: sequoiatools/govectorloader
+  command: "-nodeAddress={{$.Orchestrator}} -username=Administrator -password=password -bucketName={{.NthBucket 1}} -scopeName=scope_0 -collectionName=coll_1 -startIndex=0 -endIndex=100000 -datasetName=sift -provideDefaultDocs=true"
+  wait: true
+
+############### Stop query and CRUD load before the item count check and the upgrade ###############
+- client:
+    op: rm
+    container: pre_upgrade_doc_ops
+- client:
+    op: rm
+    container: pre_upgrade_text_queries
+- client:
+    op: rm
+    container: pre_upgrade_active_queries
+
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+################ Check for item count (pre-upgrade) #####################################
+- section_start: fts_indexes_item_count_check
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a item_count_check -vt 1200"
+  wait: true
+- section_end: fts_indexes_item_count_check
+
+############### Save the FTS index names before the upgrade ###############
+# couchbase-cli:7.6 is only used here for its bash, curl and python3.
+# Sequoia groups a single-quoted command into one argument, so the script must not contain other single quotes.
+- image: sequoiatools/couchbase-cli:7.6
+  entrypoint: bash
+  volumes: "/data:/data"
+  command: >-
+    -c 'set -euo pipefail;
+    curl -sS --fail -u {{.RestUsername}}:{{.RestPassword}} http://{{.FTSNodePort}}/api/index
+    | python3 -c "import json, sys; print(chr(10).join(sorted(json.load(sys.stdin)[\"indexDefs\"][\"indexDefs\"])))"
+    > /data/fts_upgrade_index_snapshot.txt;
+    echo Saved $(wc -l < /data/fts_upgrade_index_snapshot.txt) FTS index names:;
+    cat /data/fts_upgrade_index_snapshot.txt'
+  wait: true
+
+- image: sequoiatools/couchbase-cli:7.6
+  entrypoint: bash
+  command: >-
+    -c 'echo Waiting for the cluster to be upgraded;
+    deadline=$((SECONDS + 14400));
+    until curl -sS --fail -m 30 -u {{.RestUsername}}:{{.RestPassword}} http://{{.Orchestrator}}:8091/pools/default
+    | python3 -c "import json, sys;
+    expected, target = int(sys.argv[1]), sys.argv[2];
+    major, minor = map(int, target.split(\".\"));
+    pool = json.load(sys.stdin);
+    nodes = pool[\"nodes\"];
+    active = [n for n in nodes if n[\"clusterMembership\"] == \"active\"];
+    versions = sorted(set(n[\"version\"] for n in nodes));
+    print(len(active), \"active nodes, versions\", versions, \"rebalance\", pool[\"rebalanceStatus\"]);
+    sys.exit(0 if len(nodes) == len(active) == expected
+    and all(n[\"version\"].startswith(target + \".\") for n in nodes)
+    and all(n[\"clusterCompatibility\"] >= major * 0x10000 + minor for n in nodes)
+    and pool[\"rebalanceStatus\"] == \"none\" else 1)" 9 8.5;
+    do
+    if [ $SECONDS -ge $deadline ]; then echo Timed out waiting for the upgrade; exit 1; fi;
+    sleep 60;
+    done;
+    echo Cluster upgrade complete'
+  wait: true
+
+# Let services settle after the last upgrade rebalance (10 mins)
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+#####################################################################################
+############################ Phase 2: 8.5 (post-upgrade) ############################
+#####################################################################################
+
+############### Validate no FTS index was lost across the upgrade ###############
+- image: sequoiatools/couchbase-cli:7.6
+  entrypoint: bash
+  volumes: "/data:/data"
+  command: >-
+    -c 'set -euo pipefail; export LC_ALL=C;
+    curl -sS --fail -u {{.RestUsername}}:{{.RestPassword}} http://{{.FTSNodePort}}/api/index
+    | python3 -c "import json, sys; print(chr(10).join(sorted(json.load(sys.stdin)[\"indexDefs\"][\"indexDefs\"])))"
+    > /tmp/fts_post_upgrade_indexes.txt;
+    echo FTS indexes before the upgrade: $(wc -l < /data/fts_upgrade_index_snapshot.txt), after: $(wc -l < /tmp/fts_post_upgrade_indexes.txt);
+    missing=$(comm -23 /data/fts_upgrade_index_snapshot.txt /tmp/fts_post_upgrade_indexes.txt);
+    if [ -n "$missing" ]; then echo FTS indexes lost across the upgrade: $missing; exit 1; fi;
+    echo All pre-upgrade FTS indexes are present'
+  wait: true
+
+################ Check for item count on the pre-upgrade indexes #####################################
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a item_count_check -vt 1200"
+  wait: true
+
+################ Check for active queries #####################################
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a active_queries_check"
+  alias: post_upgrade_active_queries
+
+############### Query the pre-upgrade indexes ################
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a run_queries -nq 5 --print_interval 600"
+  alias: post_upgrade_text_queries
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a run_knn_queries_parallely -d sift -dims 128"
+  wait: true
+
+############### Mutate the data behind the pre-upgrade indexes ################
+- image: sequoiatools/catapult
+  command: "-i {{.Orchestrator}} -u Administrator -p password -b {{.Bucket}} -n {{.Scale 50000}} -pc 50 -pu 25 -pd 25
+    -dt Hotel -de {{.Scale 7200}} -ds 1000 -lf True -li 60 -fu price,free_parking -ac True"
+  alias: post_upgrade_doc_ops
+- image: sequoiatools/govectorloader
+  command: "-nodeAddress={{$.Orchestrator}} -username=Administrator -password=password -bucketName={{.NthBucket 1}} -scopeName=scope_0 -collectionName=coll_0 -startIndex=0 -endIndex=100000 -datasetName=sift -provideDefaultDocs=true"
+- image: sequoiatools/govectorloader
+  command: "-nodeAddress={{$.Orchestrator}} -username=Administrator -password=password -bucketName={{.NthBucket 1}} -scopeName=scope_0 -collectionName=coll_1 -startIndex=0 -endIndex=100000 -datasetName=sift -provideDefaultDocs=true"
+
+# Disable FTS file-based rebalance (use DCP-based) for the BQ/Fastmerge cycle, as in
+# test_fts_bq_fastmerge_clusterops.yml.
+############### Set FTS disableFileTransferRebalance to true ################
+- template: set_fts_manager_options
+  args: "{{.Nodes | .Service `fts` | net 0}}, 'disableFileTransferRebalance':true"
+
+############## Load SIFT vector dataset into coll_2, coll_3 and coll_4 ################
+- image: sequoiatools/govectorloader
+  command: "-nodeAddress={{$.Orchestrator}} -username=Administrator -password=password -bucketName={{.NthBucket 1}} -scopeName=scope_0 -collectionName=coll_2 -startIndex=0 -endIndex={{.Scale 1000000}} -datasetName=sift -provideDefaultDocs=true"
+  wait: true
+- image: sequoiatools/govectorloader
+  command: "-nodeAddress={{$.Orchestrator}} -username=Administrator -password=password -bucketName={{.NthBucket 1}} -scopeName=scope_0 -collectionName=coll_3 -startIndex=0 -endIndex={{.Scale 1000000}} -datasetName=sift -provideDefaultDocs=true"
+  wait: true
+- image: sequoiatools/govectorloader
+  command: "-nodeAddress={{$.Orchestrator}} -username=Administrator -password=password -bucketName={{.NthBucket 1}} -scopeName=scope_0 -collectionName=coll_4 -startIndex=0 -endIndex={{.Scale 1000000}} -datasetName=sift -provideDefaultDocs=true"
+  wait: true
+
+###############  Create BQ-only vector indexes on coll_2 ################
+- section_start: create_bq_indexes
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -sc scope_0 -coll coll_2 -d sift -a create_index_from_map -m 2:0:6 -dims 128 --vector_index_optimized_for bivf-flat"
+  wait: true
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -sc scope_0 -coll coll_2 -d sift -a create_index_from_map -m 2:0:6 -dims 128 --vector_index_optimized_for bivf-sq8"
+  wait: true
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -sc scope_0 -coll coll_2 -d sift -a create_index_from_map -m 1:0:6 -dims 128 --vector_index_optimized_for ivf,rabitq"
+  wait: true
+- section_end: create_bq_indexes
+
+###############  Create Fastmerge-only vector indexes on coll_3 ################
+- section_start: create_fastmerge_indexes
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -sc scope_0 -coll coll_3 -d sift -a create_index_from_map -m 5:0:6 -dims 128 --vector_index_optimized_for recall --vector_index_fast_merge true"
+  wait: true
+- section_end: create_fastmerge_indexes
+
+###############  Create BQ + Fastmerge vector indexes on coll_4 ################
+- section_start: create_bq_fastmerge_indexes
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -sc scope_0 -coll coll_4 -d sift -a create_index_from_map -m 2:0:6 -dims 128 --vector_index_optimized_for bivf-flat --vector_index_fast_merge true"
+  wait: true
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -sc scope_0 -coll coll_4 -d sift -a create_index_from_map -m 2:0:6 -dims 128 --vector_index_optimized_for bivf-sq8 --vector_index_fast_merge true"
+  wait: true
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -sc scope_0 -coll coll_4 -d sift -a create_index_from_map -m 1:0:6 -dims 128 --vector_index_optimized_for ivf,rabitq --vector_index_fast_merge true"
+  wait: true
+- section_end: create_bq_fastmerge_indexes
+
+############### Wait for indexes to build ###############
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+################# Run KNN queries across all vector indexes (baseline) ##############
+# run_knn_queries_parallely picks up every FTS index on bucket2, so this covers the
+# pre-upgrade recall/latency indexes and the new BQ/Fastmerge indexes together.
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a run_knn_queries_parallely -d sift -dims 128"
+
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+# ###############  Rebalance in an FTS node ################
+- template: rebalance_in
+  args: "{{.InActiveNode}}, fts"
+- template: wait_for_rebalance
+  wait: true
+
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+################# Run KNN queries after rebalance-in ##############
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a run_knn_queries_parallely -d sift -dims 128"
+
+# Re-upsert the same key range on the BQ and BQ + Fastmerge collections
+- image: sequoiatools/govectorloader
+  command: "-nodeAddress={{$.Orchestrator}} -username=Administrator -password=password -bucketName={{.NthBucket 1}} -scopeName=scope_0 -collectionName=coll_2 -startIndex=0 -endIndex=100000 -datasetName=sift -provideDefaultDocs=true"
+- image: sequoiatools/govectorloader
+  command: "-nodeAddress={{$.Orchestrator}} -username=Administrator -password=password -bucketName={{.NthBucket 1}} -scopeName=scope_0 -collectionName=coll_4 -startIndex=0 -endIndex=100000 -datasetName=sift -provideDefaultDocs=true"
+
+# ###############  Rebalance out an FTS node ################
+- template: rebalance_out
+  args: "{{.Nodes | .Service `fts` | net 1}}"
+  wait: true
+
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+# ############### Kill CBFT process on an FTS node ################
+- template: kill_process
+  args: "{{.Nodes | .Service `fts` | net 1}}, cbft"
+
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+################# Run KNN queries after rebalance-out ##############
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a run_knn_queries_parallely -d sift -dims 128"
+
+# ###############  Swap rebalance an FTS node ################
+- template: rebalance_swap
+  args: "{{.InActiveNode}}, {{.Nodes | .Service `fts` | net 1}}, fts"
+  wait: true
+
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+################# Run KNN queries after swap rebalance ##############
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a run_knn_queries_parallely -d sift -dims 128"
+
+# ###############  Hard failover + recovery of an FTS node ################
+# FTS-only nodes cannot be gracefully failed over, so use hard failover.
+- template: failover_force_and_recover_wait
+  args: "{{.Nodes | .Service `fts` | net 1}}, full"
+  wait: true
+
+################# Run KNN queries after failover and recovery ##############
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.Nodes | .Service `fts` | net 0}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a run_knn_queries_parallely -d sift -dims 128"
+
+# Re-upsert the same key range on the Fastmerge collection
+- image: sequoiatools/govectorloader
+  command: "-nodeAddress={{$.Orchestrator}} -username=Administrator -password=password -bucketName={{.NthBucket 1}} -scopeName=scope_0 -collectionName=coll_3 -startIndex=0 -endIndex=100000 -datasetName=sift -provideDefaultDocs=true"
+  wait: true
+
+############### Stop query and CRUD load before the final item count check ###############
+- client:
+    op: rm
+    container: post_upgrade_doc_ops
+- client:
+    op: rm
+    container: post_upgrade_text_queries
+- client:
+    op: rm
+    container: post_upgrade_active_queries
+
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+
+################ Check for item count (post-upgrade) #####################################
+- section_start: fts_indexes_item_count_check_post_upgrade
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a item_count_check -vt 1200"
+  wait: true
+- section_end: fts_indexes_item_count_check_post_upgrade
+
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  wait: true
+
+###############  Drop all Indexes ################
+- section_start: drop_all_indexes
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a delete_all_indexes"
+  wait: true
+- image: sequoiatools/ftsindexmanager
+  command: "-n {{.FTSNode}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 1}} -a delete_all_indexes"
+  wait: true
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "600"
+  wait: true
+- section_end: drop_all_indexes
