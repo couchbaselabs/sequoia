@@ -647,7 +647,7 @@
    wait: true
 ############### Validate no index loss after rebalance ################
 - image: sequoiatools/indexmanager
-  command: "-n {.Orchestrator} -o {.RestPort} -u {.RestUsername} -p {.RestPassword} -a validate_index_names --snapshot_file /data/index_snapshot_rebalance_9.json"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a validate_index_names --snapshot_file /data/index_snapshot_rebalance_9.json"
   volumes: "/data:/data"
   wait: true
 
@@ -683,7 +683,7 @@
    wait: true
 ############### Validate no index loss after rebalance ################
 - image: sequoiatools/indexmanager
-  command: "-n {.Orchestrator} -o {.RestPort} -u {.RestUsername} -p {.RestPassword} -a validate_index_names --snapshot_file /data/index_snapshot_rebalance_10.json"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a validate_index_names --snapshot_file /data/index_snapshot_rebalance_10.json"
   volumes: "/data:/data"
   wait: true
 
@@ -759,7 +759,7 @@
    wait: true
 ############### Validate no index loss after rebalance ################
 - image: sequoiatools/indexmanager
-  command: "-n {.Orchestrator} -o {.RestPort} -u {.RestUsername} -p {.RestPassword} -a validate_index_names --snapshot_file /data/index_snapshot_rebalance_11.json"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a validate_index_names --snapshot_file /data/index_snapshot_rebalance_11.json"
   volumes: "/data:/data"
   wait: true
 
@@ -790,7 +790,7 @@
    wait: true
 ############### Validate no index loss after rebalance ################
 - image: sequoiatools/indexmanager
-  command: "-n {.Orchestrator} -o {.RestPort} -u {.RestUsername} -p {.RestPassword} -a validate_index_names --snapshot_file /data/index_snapshot_rebalance_12.json"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a validate_index_names --snapshot_file /data/index_snapshot_rebalance_12.json"
   volumes: "/data:/data"
   wait: true
 
@@ -885,7 +885,7 @@
    wait: true
 ############### Validate no index loss after rebalance ################
 - image: sequoiatools/indexmanager
-  command: "-n {.Orchestrator} -o {.RestPort} -u {.RestUsername} -p {.RestPassword} -a validate_index_names --snapshot_file /data/index_snapshot_rebalance_15.json"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a validate_index_names --snapshot_file /data/index_snapshot_rebalance_15.json"
   volumes: "/data:/data"
   wait: true
 
@@ -1427,7 +1427,7 @@
    wait: true
 ############### Validate no index loss after rebalance ################
 - image: sequoiatools/indexmanager
-  command: "-n {.Orchestrator} -o {.RestPort} -u {.RestUsername} -p {.RestPassword} -a validate_index_names --snapshot_file /data/index_snapshot_rebalance_25.json"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a validate_index_names --snapshot_file /data/index_snapshot_rebalance_25.json"
   volumes: "/data:/data"
   wait: true
 
@@ -1463,7 +1463,7 @@
    wait: true
 ############### Validate no index loss after rebalance ################
 - image: sequoiatools/indexmanager
-  command: "-n {.Orchestrator} -o {.RestPort} -u {.RestUsername} -p {.RestPassword} -a validate_index_names --snapshot_file /data/index_snapshot_rebalance_26.json"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a validate_index_names --snapshot_file /data/index_snapshot_rebalance_26.json"
   volumes: "/data:/data"
   wait: true
 
@@ -1539,7 +1539,7 @@
    wait: true
 ############### Validate no index loss after rebalance ################
 - image: sequoiatools/indexmanager
-  command: "-n {.Orchestrator} -o {.RestPort} -u {.RestUsername} -p {.RestPassword} -a validate_index_names --snapshot_file /data/index_snapshot_rebalance_27.json"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a validate_index_names --snapshot_file /data/index_snapshot_rebalance_27.json"
   volumes: "/data:/data"
   wait: true
 
@@ -1570,7 +1570,7 @@
    wait: true
 ############### Validate no index loss after rebalance ################
 - image: sequoiatools/indexmanager
-  command: "-n {.Orchestrator} -o {.RestPort} -u {.RestUsername} -p {.RestPassword} -a validate_index_names --snapshot_file /data/index_snapshot_rebalance_28.json"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a validate_index_names --snapshot_file /data/index_snapshot_rebalance_28.json"
   volumes: "/data:/data"
   wait: true
 
