@@ -807,6 +807,14 @@ func (s *Scope) EnableClientCertAuth(state, pathVal, prefix, delimiter, outputDi
 	var image = s.GetCliImage()
 
 	operation := func(name string, server *ServerSpec) {
+		// The "hybrid" client certificate state is new in 8.0: older servers reject it
+		// ("Invalid value 'hybrid' for key 'state'"), e.g. the source cluster of an upgrade test.
+		// Nothing re-enables it once such a cluster is upgraded to 8.0+, so upgrade tests run
+		// without hybrid client-cert auth unless the test YAML enables it after the upgrade.
+		if state == "hybrid" && !cliVersionAtLeast(s.Version, 8.0) {
+			fmt.Printf("Skipping client certificate auth for %s: state %q needs 8.0+, version is %s\n", name, state, s.Version)
+			return
+		}
 		orchestrator := server.Names[0]
 		filePath, err := s.CreateClientAuthFile(state, pathVal, prefix, delimiter, "/tmp")
 		if err != nil {

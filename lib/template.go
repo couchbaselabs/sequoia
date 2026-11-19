@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"math/rand"
 	"net"
+	"os"
 	"reflect"
 	"strconv"
 	"strings"
@@ -42,6 +43,7 @@ func ParseTemplate(s *Scope, command string) string {
 		"mkrange":           tResolv.MkRange,
 		"to_ip":             tResolv.ToIp,
 		"active":            tResolv.ActiveFilter,
+		"env":               tResolv.Env,
 	}
 	tmpl, err := template.New("t").Funcs(netFunc).Parse(command)
 	logerr(err)
@@ -51,6 +53,17 @@ func ParseTemplate(s *Scope, command string) string {
 	logerr(err)
 
 	return fmt.Sprintf("%s", out)
+}
+
+// Env returns the value of an environment variable on the host running sequoia,
+// warning when it is unset so a typo doesn't silently become an empty argument.
+// The rendered command is logged, so don't pass secrets through it.
+func (t *TemplateResolver) Env(key string) string {
+	val, ok := os.LookupEnv(key)
+	if !ok {
+		fmt.Fprintf(os.Stderr, "Warning: template env var %q is not set, using empty string\n", key)
+	}
+	return val
 }
 
 func (t *TemplateResolver) Version() float64 {
