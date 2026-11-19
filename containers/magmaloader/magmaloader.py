@@ -42,7 +42,9 @@ class MagmaLoader:
         self.skip_default = False
         self.doc_template = "Hotel"
         self.mutations_mode = False
+        self.delete_mode = False
         self.mutate = 0
+        self.sift_reload = False
         self.expiry_mode = False
         self.expiry_percentage = 0
         self.expiry_duration = 0
@@ -85,8 +87,14 @@ class MagmaLoader:
         parser.add_argument("--doc_template", dest="doc_template", help="doc template to be used for loader", default="Hotel")
         parser.add_argument("--mutations_mode", dest="mutations_mode", help="running magmaloader in continuous mutations mode",
                             default="false")
+        parser.add_argument("--delete_mode", dest="delete_mode", default="false",
+                            help="One pass that deletes the keys --start..--end (end exclusive) and exits. Unlike --mutations_mode, "
+                                 "which keeps mutating until --mutations_timeout")
         parser.add_argument("--mutate", dest="mutate", help="mutation count",
                             default=0)
+        parser.add_argument("--sift_reload", dest="sift_reload", default="false",
+                            help="With --sift_path: upsert the exact SIFT docs of --start..--end (restores deleted docs, rewrites "
+                                 "existing ones identically). Unlike --mutations_mode, which shifts the vectors (-mutate 5)")
         parser.add_argument("--expiry_mode", dest="expiry_mode", help="running magmaloader with expiry workload",
                             default="false")
         parser.add_argument("--percentage_expiry", dest="percentage_expiry", help="percentage of documents to be expired",
@@ -121,7 +129,9 @@ class MagmaLoader:
         self.bucket_name = args.bucket
         self.model = args.model
         self.mutations_mode = args.mutations_mode.lower() == 'true'
+        self.delete_mode = args.delete_mode.lower() == 'true'
         self.mutate = int(args.mutate)
+        self.sift_reload = args.sift_reload.lower() == 'true'
         self.expiry_mode = args.expiry_mode.lower() == 'true'
         self.mutations_timeout = int(args.mutations_timeout)
         self.sift_path = args.sift_path
@@ -146,6 +156,10 @@ class MagmaLoader:
             self.log.info("Hostname is mandatory")
             parser.print_help()
             exit(1)
+        if self.delete_mode and (self.sift_path or (self.msmarco_mode and self.vec_file_path)):
+            # the SIFT and MS MARCO loaders run first and would load these keys instead of deleting them
+            self.log.error("--delete_mode only works with the regular loader: drop --sift_path / --msmarco_mode")
+            exit(1)
         if self.rr is None:
             if self.msmarco_mode and self.vec_file_path:
                 self.load_msmarco_data(bucket_name=self.bucket_name, mutations_mode=self.mutations_mode)
@@ -155,7 +169,7 @@ class MagmaLoader:
                 start_time = time.time()
                 while True:
                     self.load_data(bucket_name=self.bucket_name, random_key_prefix=False)
-                    if not self.mutations_mode or self.mutate > 0: # No mutation or single mutation
+                    if not self.mutations_mode or self.mutate > 0 or self.delete_mode: # No mutation, single mutation or one-shot delete
                         break
                     if time.time() - start_time >= self.mutations_timeout: # continuous mutations
                         self.log.info(f"Mutations timeout of {self.mutations_timeout} seconds reached")
@@ -288,7 +302,16 @@ class MagmaLoader:
                 if coll == '_default' and self.skip_default:
                     continue
                 
-                if not self.mutations_mode:
+                if self.delete_mode:
+                    command = f"java -Xmx512m -jar magmadocloader.jar -n {self.host} " \
+                            f"-user '{self.username}' -pwd '{self.password}' -b {self.bucket_name} " \
+                            f"-p 11207 -create_s 0 -create_e 0 -update_s 0 -update_e 0 " \
+                            f"-delete_s {self.start} -delete_e {self.end} -cr 0 -up 0 -dl 100" \
+                            f" -docSize {self.doc_size} -keyPrefix {self.key_prefix} " \
+                            f"-scope {scope} -collection {coll} " \
+                            f"-workers {self.workers} -ops {self.ops_rate} -valueType {self.doc_template} "\
+                            f"-model {self.model} -base64 {self.base64}"
+                elif not self.mutations_mode:
                     if self.expiry_mode:
                         ep = self.expiry_percentage
                         cr = 100 - ep
@@ -374,7 +397,17 @@ class MagmaLoader:
             for coll in coll_list:
                 if coll == '_default' and self.skip_default:
                     continue
-                if not mutations_mode:
+                if self.sift_reload:
+                    # DocLoader inserts on the create path (a key that exists is a failure) and upserts on the update
+                    # path, so a reload goes through the update path: the doc of every id in start..end is written
+                    # again with its own vector (-mutate 0: no vector offset) and the fields of its id range.
+                    command = f"java -cp magmadocloader.jar SIFTLoader -n {self.host} " \
+                          f"-user '{self.username}' -pwd '{self.password}' -b {self.bucket_name} " \
+                          f"-create_s 0 -create_e 0 -update_s {self.start} -update_e {self.end} -cr 0 -up 100 -dl 0 " \
+                          f"-scope {scope} -collection {coll} -p 11207 " \
+                          f"-workers {self.workers} -ops {self.ops_rate} -valueType siftBigANN " \
+                          f"-baseVectorsFilePath {self.sift_path} -mutate 0"
+                elif not mutations_mode:
                     command = f"java -cp magmadocloader.jar SIFTLoader -n {self.host} " \
                           f"-user '{self.username}' -pwd '{self.password}' -b {self.bucket_name} " \
                           f"-create_s {self.start} -keyType Sequential -create_e {self.end} -cr 100 " \

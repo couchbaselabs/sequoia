@@ -1,5 +1,7 @@
 import json
+import os
 import string
+import sys
 import threading
 from datetime import datetime
 from couchbase.cluster import Cluster, ClusterOptions, QueryOptions
@@ -325,7 +327,12 @@ SHOES_INDEX_TEMPLATES = [
 ]
 
 DISTANCE_SUPPORTED_FUNCTIONS = ["L2", "L2_SQUARED", "DOT", "COSINE", "EUCLIDEAN", "EUCLIDEAN_SQUARED"]
-DESCRIPTION_LIST = ["IVF,PQ8x8", "IVF,SQ8", "IVF,PQ128x8", "IVF,PQ64x8", "IVF,PQ32x8", "IVF,SQfp16"]
+# IVF,SQfp16 (and PQ FastScan) were disabled in 8.0: https://jira.issues.couchbase.com/browse/MB-66337
+DESCRIPTION_LIST = ["IVF,PQ8x8", "IVF,SQ8", "IVF,PQ128x8", "IVF,PQ64x8", "IVF,PQ32x8"]
+# MainStore stats report_storage_stats keeps by default: plasma pages and hole finder (7.6.9+), and Magma (BHIVE) stats
+STORAGE_STATS_DEFAULT = ("num_pages,items_count,total_records,num_empty_pages,hf_num_empty,hf_num_holes,hf_num_small_holes,"
+                         "merges_emptypages,reader_emptypage_cnt,resident_ratio,lss_data_size,mvcc_purge_ratio,purges,"
+                         "item_count,approx_total_records,total_data_size,purge_ratio")
 SCAN_NPROBE_MIN = 5
 SCAN_NPROBE_MAX = 20
 
@@ -362,7 +369,9 @@ class IndexManager:
                                      "cleanup_s3", "poll_total_requests_during_rebalance",
                                      "wait_until_rebalance_cleanup_done", "print_stats",
                                      "wait_until_mutations_processed", "random_index_lifecycle", "poll_index_status",
-                                     "capture_index_names", "validate_index_names"],
+                                     "capture_index_names", "validate_index_names",
+                                     "report_indexer_warmup_times", "churn_keyspaces",
+                                     "report_storage_stats"],
                             help="Choose an action to be performed. Valid actions : create_index | build_deferred_index | drop_all_indexes | create_index_loop | "
                                  "drop_index_loop | alter_indexes | enable_cbo | delete_statistics | replica_count_check "
                                  "| item_count_check | random_recovery | create_udf | drop_udf | create_n1ql_udf | post_topology_change_validations"
@@ -417,6 +426,42 @@ class IndexManager:
         parser.add_argument("-sbhi", "--create_sparse_bhive_indexes", help="create_sparse_bhive_indexes")
         parser.add_argument("--randomise-trainlist-wait", help="Randomly set train_list_wait to true/false for vector indexes",
                             action='store_true', default=False)
+        parser.add_argument("--train_list_wait", default="false",
+                            help="Set train_list_wait:true on every vector index created by create_n_indexes_on_buckets. "
+                                 "Indexes are not randomly deferred in this mode, so they wait for training data")
+        parser.add_argument("--indexer_log_dir", default="/opt/couchbase/var/lib/couchbase/logs",
+                            help="Directory holding indexer.log* on the index nodes")
+        parser.add_argument("--churn_plan", default="",
+                            help="churn_keyspaces: comma separated keyspace=pattern (scatter | range | keymove | touch)")
+        parser.add_argument("--churn_field", default="id",
+                            help="churn_keyspaces: indexed number the statements filter on (id for SIFT docs, price for Hotel docs)")
+        parser.add_argument("--churn_docs", type=int, default=200000, help="churn_keyspaces: docs per keyspace")
+        parser.add_argument("--churn_pct", type=int, default=90, help="churn_keyspaces: percent of the docs to delete / move")
+        parser.add_argument("--churn_cut", type=int, default=None,
+                            help="churn_keyspaces range / keymove: docs with the field below this value (default: churn_docs * churn_pct / 100)")
+        parser.add_argument("--churn_move_by", type=int, default=None,
+                            help="churn_keyspaces keymove: added to the field (default: churn_docs * 10)")
+        parser.add_argument("--churn_seconds", type=int, default=300, help="churn_keyspaces touch: seconds of light writes")
+        parser.add_argument("--churn_set_field", default="state", help="churn_keyspaces touch: field the writes set")
+        parser.add_argument("--churn_wait_timeout", type=int, default=3600,
+                            help="churn_keyspaces: seconds to wait for the doc count after a statement")
+        parser.add_argument("--storage_stats_file", default="/tmp/storage_stats.json",
+                            help="report_storage_stats: JSON output (instances of the last read + the timeline of every read)")
+        parser.add_argument("--stats_prefix", default="",
+                            help="report_storage_stats: only index instances whose Index starts with this "
+                                 "(bucket:scope:collection: ...)")
+        parser.add_argument("--stats_name_has", default="", help="report_storage_stats: only index names containing this")
+        parser.add_argument("--stats_names", default=STORAGE_STATS_DEFAULT,
+                            help="report_storage_stats: comma separated MainStore stats to keep")
+        parser.add_argument("--watch_seconds", type=int, default=0, help="report_storage_stats: keep reading for this long")
+        parser.add_argument("--watch_interval", type=int, default=60, help="report_storage_stats: seconds between reads")
+        parser.add_argument("--wait_empty_pages", type=int, default=0,
+                            help="report_storage_stats: wait until this many empty pages exist (or, where the indexer does "
+                                 "not report them, until purges have happened)")
+        parser.add_argument("--wait_timeout", type=int, default=3600, help="report_storage_stats: seconds to wait")
+        parser.add_argument("--since_snapshot", default=None,
+                            help="report_indexer_warmup_times: only report warmups that started after the 'timestamp' "
+                                 "of this snapshot file (written by capture_index_names), e.g. the warmups of an upgrade")
         parser.add_argument("--randomise-trainlistval", help="Randomly set train_list to a positive integer for vector indexes",
                             action='store_true', default=False)
         parser.add_argument("-da", "--distance_algo", help="distance algorithm", default=None)
@@ -514,6 +559,26 @@ class IndexManager:
         self.create_sparse_bhive_indexes = args.create_sparse_bhive_indexes == 'true'
         self.randomise_trainlist_wait = args.randomise_trainlist_wait
         self.randomise_trainlistval = args.randomise_trainlistval
+        self.train_list_wait = args.train_list_wait == 'true'
+        self.indexer_log_dir = args.indexer_log_dir
+        self.since_snapshot = args.since_snapshot
+        self.churn_plan = [item.split("=", 1) for item in args.churn_plan.split(",") if "=" in item]
+        self.churn_field = args.churn_field
+        self.churn_docs = args.churn_docs
+        self.churn_pct = args.churn_pct
+        self.churn_cut = args.churn_cut
+        self.churn_move_by = args.churn_move_by
+        self.churn_seconds = args.churn_seconds
+        self.churn_set_field = args.churn_set_field
+        self.churn_wait_timeout = args.churn_wait_timeout
+        self.storage_stats_file = args.storage_stats_file
+        self.stats_prefix = args.stats_prefix
+        self.stats_name_has = args.stats_name_has
+        self.stats_names = [n for n in args.stats_names.split(",") if n]
+        self.watch_seconds = args.watch_seconds
+        self.watch_interval = args.watch_interval
+        self.wait_empty_pages = args.wait_empty_pages
+        self.wait_timeout = args.wait_timeout
         self.num_dimensions = args.num_dimensions
         self.use_tls = args.tls == 'true' or args.tls is True
         self.capella_run = args.capella == 'true' or args.capella is True
@@ -985,7 +1050,11 @@ class IndexManager:
                             is_partitioned_idx = False
                         else:
                             is_partitioned_idx = bool(random.getrandbits(1))
-                    is_defer_idx = bool(random.getrandbits(1)) or self.defer_build
+                    if self.train_list_wait:
+                        # Deferred indexes skip the wait-for-training path, so honour --defer_build only
+                        is_defer_idx = self.defer_build
+                    else:
+                        is_defer_idx = bool(random.getrandbits(1)) or self.defer_build
                     with_clause_list = []
                     idx_statement = idx_statement.replace("keyspacenameplaceholder", keyspace)
                     idx_statement = idx_statement.replace('idxprefix', idx_prefix)
@@ -1070,11 +1139,13 @@ class IndexManager:
                             sqrt_val = math.floor(math.sqrt(self.num_vectors))
                             train_list_value = random.randint(sqrt_val * 8, sqrt_val * 10)
                             with_clause_list.append(f"\"train_list\":{train_list_value}")
-                        if self.randomise_trainlist_wait:
+                        if self.train_list_wait:
+                            with_clause_list.append("\"train_list_wait\":true")
+                        elif self.randomise_trainlist_wait:
                             train_list_wait_value = random.choice(["true", "false"])
                             with_clause_list.append(f"\"train_list_wait\":{train_list_wait_value}")
                     if (is_partitioned_idx and not self.disable_partitioned_indexes) or (
-                            self.max_num_replica > 0) or is_defer_idx:
+                            self.max_num_replica > 0) or is_defer_idx or (self.train_list_wait and with_clause_list):
                         idx_statement = idx_statement + " with {"
                         idx_statement = idx_statement + ','.join(with_clause_list) + "}"
                         create_index_statements.append(idx_statement)
@@ -1087,16 +1158,24 @@ class IndexManager:
                         total_idx_created += 1
                         sleep(10)
                     except Exception as err:
-                        error_obj = {
-                            "bucket": bucket_name,
-                            "statement": create_index_statement,
-                            "error": str(err)
-                        }
-                        creation_errors.append(error_obj)
-                        self.log.error(f"Index creation failed for statement: {create_index_statement}")
-                        self.log.error(err)
-                        if "Planner not able to find any node" in str(err):
-                            break
+                        if self.train_list_wait and ("RetryableTrainListSizeError" in str(err)
+                                                     or "transient error" in str(err)):
+                            # Expected on an empty/sparse keyspace: the index is created and the
+                            # indexer retries the build once enough training vectors arrive.
+                            self.log.info(f"Expected retryable train list error with train_list_wait=true: {err}")
+                            total_idx_created += 1
+                            sleep(10)
+                        else:
+                            error_obj = {
+                                "bucket": bucket_name,
+                                "statement": create_index_statement,
+                                "error": str(err)
+                            }
+                            creation_errors.append(error_obj)
+                            self.log.error(f"Index creation failed for statement: {create_index_statement}")
+                            self.log.error(err)
+                            if "Planner not able to find any node" in str(err):
+                                break
 
                     if total_idx_created == num_of_indexes_per_bucket:
                         break
@@ -1824,9 +1903,274 @@ class IndexManager:
             if timeout > 0 and time.time() > end_time:
                 break
             # Sleep for random duration before the next recovery
-            interval = random.randint(min_frequency, max_frequency)
+            interval = random.randint(min_frequency, max(min_frequency, max_frequency))
             self.log.info("Sleeping for %s seconds" % str(interval))
             sleep(interval)
+
+    def _ssh_exec(self, node, command, timeout=120):
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        try:
+            ssh.connect(node, username=self.ssh_username, password=self.ssh_password, timeout=10)
+            _, stdout, stderr = ssh.exec_command(command, timeout=timeout)
+            out = stdout.read().decode(errors="replace")
+            err = stderr.read().decode(errors="replace")
+            return stdout.channel.recv_exit_status(), out, err
+        finally:
+            ssh.close()
+
+    @staticmethod
+    def _parse_log_timestamp(line):
+        """Parse the leading ISO-8601 timestamp of an indexer.log line, e.g. 2026-10-14T10:00:00.123+00:00"""
+        m = re.match(r"^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.(\d+))?(Z|[+-]\d{2}:?\d{2})?", line)
+        if not m:
+            return None
+        base, frac, tz = m.groups()
+        frac = (frac or "0")[:6].ljust(6, "0")
+        if not tz or tz == "Z":
+            tz = "+00:00"
+        elif ":" not in tz:
+            tz = tz[:3] + ":" + tz[3:]
+        try:
+            return datetime.fromisoformat(f"{base}.{frac}{tz}")
+        except ValueError:
+            return None
+
+    def report_indexer_warmup_times(self):
+        """
+        SSH into every index node, pair each 'Indexer::NewIndexer Status Warmup' line in indexer.log*
+        with the following 'Indexer::NewIndexer Status Active' line and print how long each warmup took.
+        """
+        warmup_marker = "Indexer::NewIndexer Status Warmup"
+        active_marker = "Indexer::NewIndexer Status Active"
+        cmd = (f"cd {self.indexer_log_dir} && for f in indexer.log*; do "
+               f"case \"$f\" in *.gz) zcat \"$f\" ;; *) cat \"$f\" ;; esac; done "
+               f"| grep -F -e '{warmup_marker}' -e '{active_marker}'")
+        index_nodes = self.find_nodes_with_service(self.get_services_map(), "index")
+        all_warmups = []
+        for node in index_nodes:
+            try:
+                rc, out, err = self._ssh_exec(node, cmd, timeout=600)
+            except Exception as e:
+                self.log.error(f"Unable to read indexer logs on {node}: {e}")
+                continue
+            if rc not in (0, 1):
+                self.log.error(f"Reading indexer logs on {node} returned {rc}. stderr={err}")
+            events = set()
+            for line in out.splitlines():
+                ts = self._parse_log_timestamp(line)
+                if ts is None:
+                    continue
+                if warmup_marker in line:
+                    events.add((ts, "warmup"))
+                elif active_marker in line:
+                    events.add((ts, "active"))
+            start = None
+            for ts, kind in sorted(events):
+                if kind == "warmup":
+                    if start is not None:
+                        all_warmups.append((node, start, None, "interrupted (new warmup before Active)"))
+                    start = ts
+                elif start is not None:
+                    all_warmups.append((node, start, ts, "done"))
+                    start = None
+            if start is not None:
+                all_warmups.append((node, start, None, "incomplete (no Active yet)"))
+
+        # sequoia only echoes container output to its console with -log_level 2, but always dumps the
+        # container log on a non-zero exit - so exit 1 on purpose (no traceback) to keep the report visible.
+        # Keep the output compact: one line per warmup plus summaries.
+        since = None
+        if self.since_snapshot:
+            with open(self.since_snapshot) as f:
+                # capture_index_names writes str(datetime.now()), a naive time in this container's time zone
+                since = datetime.fromisoformat(json.load(f)["timestamp"]).astimezone()
+            all_warmups = [w for w in all_warmups if w[1] >= since]
+        print("Indexer warmup times (Indexer::NewIndexer Status Warmup -> Status Active)"
+              + (f", started after {since.strftime('%Y-%m-%dT%H:%M:%S%z')}" if since else ""))
+        if not all_warmups:
+            print(f"No warmup entries found on index nodes {index_nodes}" + (" after that time" if since else ""))
+            sys.exit(1)
+        for node, start, end, status in sorted(all_warmups, key=lambda w: w[1]):
+            duration = f"{(end - start).total_seconds():.1f}s" if end is not None else status
+            print(f"  {start.strftime('%Y-%m-%dT%H:%M:%S')}  {node}  {duration}")
+
+        def summary(warmups):
+            secs = [(end - start).total_seconds() for _, start, end, _ in warmups if end is not None]
+            if not secs:
+                return f"warmups={len(warmups)} completed=0"
+            return (f"warmups={len(warmups)} completed={len(secs)} min={min(secs):.1f}s "
+                    f"max={max(secs):.1f}s avg={sum(secs) / len(secs):.1f}s")
+        for node in index_nodes:
+            print(f"  [{node}] {summary([w for w in all_warmups if w[0] == node])}")
+        print(f"  [all] {summary(all_warmups)}")
+        sys.exit(1)
+
+    # ------------------------------------------------------------------ generic churn and storage stats
+    # Used by the GSI upgrade test (tests/upgrade/gsi_query): make holes in the indexes of a keyspace with deletes, key moves,
+    # expiry or light writes, and read the storage stats (plasma pages and hole finder, Magma for BHIVE) of the index nodes.
+
+    def _sql(self, statement):
+        """(ok, rows) of one statement; _execute_query logs and swallows query errors (status None). This SDK reports
+        QueryStatus.RUNNING even after every row was read, so success is "no exception and not a failure status", never
+        a match on SUCCESS."""
+        failed = ("FATAL", "ERRORS", "TIMEOUT", "STOPPED", "CLOSED", "ABORTED")
+        for attempt in range(1, 4):
+            status, results, _ = self._execute_query(statement)
+            rows = []
+            if status is not None:
+                try:
+                    rows = list(results) if results is not None else []
+                    if not any(word in str(status).upper() for word in failed):
+                        return True, rows
+                except Exception as e:
+                    self.log.error(f"reading the rows failed: {e}")
+            self.log.error(f"statement failed (attempt {attempt}/3, status {status}): {statement[:200]}")
+            if attempt < 3:
+                time.sleep(10)
+        return False, []
+
+    @staticmethod
+    def _keyspace_path(keyspace):
+        return ".".join(f"`{part}`" for part in keyspace.split("."))
+
+    def _wait_doc_count(self, path, expected, timeout):
+        deadline = time.time() + timeout
+        count = None
+        while True:
+            ok, rows = self._sql(f"SELECT RAW COUNT(1) FROM {path}")
+            count = rows[0] if ok and rows else None
+            if count == expected:
+                return True, count
+            if time.time() > deadline:
+                return False, count
+            time.sleep(15)
+
+    def _sql_mutations(self, statement):
+        """(ok, mutation count) of one DELETE / UPDATE; the count is what the statement itself changed."""
+        try:
+            timeout = timedelta(minutes=self.timeout) if self.timeout else timedelta(minutes=20)
+            result = self.cluster.query(statement, QueryOptions(timeout=timeout, metrics=True))
+            list(result.rows())
+            count = result.metadata().metrics().mutation_count()
+            return True, int(getattr(count, "value", count))
+        except Exception as e:
+            self.log.error(f"statement failed: {e}: {statement[:200]}")
+            return False, 0
+
+    def churn_keyspaces(self):
+        """Makes holes in the indexes of the keyspaces in --churn_plan (keyspace=pattern,...), on the field --churn_field
+        (an indexed number; docs are --churn_docs, a multiple of 100, unless --churn_cut says where the cut is):
+        scatter = delete --churn_pct % of the docs spread over the whole key range (sparse pages)
+        range   = delete the docs below the cut (the first --churn_pct % of --churn_docs, or --churn_cut)
+        keymove = add --churn_move_by to the field of the docs below the cut (the old range empties, a new one fills)
+        touch   = light writes for --churn_seconds (set --churn_set_field on a tenth of the docs per round)
+        After each statement the doc count is checked against the count before minus what the statement deleted (the count
+        before for keymove), so the field need not be unique or dense. Waiting for the indexers to drain is
+        wait_until_mutations_processed."""
+        docs, pct, field = self.churn_docs, self.churn_pct, self.churn_field
+        cut = self.churn_cut if self.churn_cut is not None else docs * pct // 100
+        move_by = self.churn_move_by if self.churn_move_by is not None else docs * 10
+        spread = f"({field} * 7919) % 100 < {pct}"      # 7919 is coprime to 100: pct of every 100 consecutive ids, scattered
+        patterns = {
+            "scatter": (f"DELETE FROM {{ks}} WHERE {spread}", True),
+            "range": (f"DELETE FROM {{ks}} WHERE {field} < {cut}", True),
+            "keymove": (f"UPDATE {{ks}} SET {field} = {field} + {move_by} WHERE {field} < {cut}", False),
+        }
+        failures = []
+        for keyspace, pattern in self.churn_plan:
+            path = self._keyspace_path(keyspace)
+            if pattern == "touch":
+                deadline = time.time() + self.churn_seconds
+                round_no = 0
+                while time.time() < deadline:
+                    ok, _ = self._sql(f'UPDATE {path} SET {self.churn_set_field} = "w{round_no}" '
+                                      f'WHERE {field} IS NOT NULL AND {field} % 10 = {round_no % 10}')
+                    if not ok:
+                        failures.append(f"{keyspace}: touch round {round_no} failed")
+                        break
+                    round_no += 1
+                self.log.info(f"{keyspace}: {round_no} touch rounds")
+                continue
+            if pattern not in patterns:
+                failures.append(f"{keyspace}: unknown pattern {pattern} (scatter | range | keymove | touch)")
+                continue
+            statement, deletes = patterns[pattern]
+            ok, rows = self._sql(f"SELECT RAW COUNT(1) FROM {path}")
+            before = rows[0] if ok and rows else None
+            if before is None:
+                failures.append(f"{keyspace}: could not count the docs before {pattern}")
+                continue
+            ok, mutated = self._sql_mutations(statement.format(ks=path))
+            if not ok:
+                failures.append(f"{keyspace}: {pattern} statement failed")
+                continue
+            remaining = before - mutated if deletes else before
+            ok, count = self._wait_doc_count(path, remaining, self.churn_wait_timeout)
+            self.log.info(f"{keyspace}: {pattern} changed {mutated} of {before} docs, {count} docs now")
+            if not ok:
+                failures.append(f"{keyspace}: {count} docs after {pattern}, expected {remaining}")
+        if failures:
+            raise Exception("; ".join(failures))
+
+    def _read_storage_stats(self):
+        """{'<node>|<Index>|<PartitionId>': {stat: value or None}}: the plasma MainStore stats of the index instances that
+        match --stats_prefix / --stats_name_has, from GET /stats/storage on every index node."""
+        found = {}
+        for node in self.find_nodes_with_service(self.get_services_map(), "index"):
+            response = requests.get(f"{self.scheme}://{node}:{self.node_port_index}/stats/storage",
+                                    auth=(self.username, self.password), verify=False, timeout=300)
+            response.raise_for_status()
+            for entry in response.json():
+                index = str(entry.get("Index", ""))
+                if not index.startswith(self.stats_prefix):
+                    continue
+                if self.stats_name_has and self.stats_name_has not in index.split(":")[-1]:
+                    continue
+                store = (entry.get("Stats") or {}).get("MainStore") or {}
+                found[f"{node}|{index}|{entry.get('PartitionId', 0)}"] = {k: store.get(k) for k in self.stats_names}
+        return found
+
+    @staticmethod
+    def _storage_totals(instances):
+        def total(*names):
+            return sum((stats.get(n) or 0) for stats in instances.values() for n in names)
+        return {"instances": len(instances), "pages": total("num_pages"), "items": total("items_count", "item_count"),
+                "empty_pages": total("num_empty_pages"), "purges": total("purges"), "merged_empty": total("merges_emptypages"),
+                "data_size": total("total_data_size"),
+                "hole_stats": any(stats.get("num_empty_pages") is not None for stats in instances.values())}
+
+    def report_storage_stats(self):
+        """Reads the storage stats of the matching index instances, prints one line per read and writes --storage_stats_file:
+        {captured_at, prefix, instances (last read), timeline [{at, instances}]}. One read by default; --watch_seconds keeps
+        reading every --watch_interval; --wait_empty_pages N reads until N empty pages exist (purges, where the indexer does
+        not report empty pages), giving up with a warning after --wait_timeout."""
+        timeline = []
+        start = time.time()
+        wait_deadline = start + self.wait_timeout
+        while True:
+            instances = self._read_storage_stats()
+            timeline.append({"at": datetime.utcnow().isoformat() + "Z", "instances": instances})
+            totals = self._storage_totals(instances)
+            print(f"{timeline[-1]['at']} instances={totals['instances']} pages={totals['pages']} items={totals['items']} "
+                  f"empty_pages={totals['empty_pages']} purges={totals['purges']} merged_empty={totals['merged_empty']} "
+                  f"data_size={totals['data_size']}")
+            if self.wait_empty_pages:
+                ready = (totals["empty_pages"] >= self.wait_empty_pages if totals["hole_stats"] else totals["purges"] > 0)
+                if ready:
+                    break
+                if time.time() > wait_deadline:
+                    self.log.warning(f"fewer than {self.wait_empty_pages} empty pages after {self.wait_timeout}s")
+                    break
+            elif time.time() - start >= self.watch_seconds:
+                break
+            time.sleep(self.watch_interval)
+        with open(self.storage_stats_file + ".tmp", "w") as f:
+            json.dump({"captured_at": timeline[-1]["at"], "prefix": self.stats_prefix, "instances": timeline[-1]["instances"],
+                       "timeline": timeline}, f)
+        os.replace(self.storage_stats_file + ".tmp", self.storage_stats_file)
+        if not timeline[-1]["instances"]:
+            raise Exception(f"no index instances matching {self.stats_prefix!r} in /stats/storage on the index nodes")
 
     def get_index_map_from_system_indexes(self):
         query = "Select * from system:indexes"
@@ -3334,10 +3678,20 @@ class IndexManager:
 
         validation_failed = False
         real_missing_inst_ids = []
+        current_buckets = {entry.get('bucket') for entry in current_by_inst.values()}
 
         for identity in snapshot_ids_by_identity:
             missing_for_identity = snapshot_ids_by_identity[identity] - current_ids_by_identity.get(identity, set())
             if not missing_for_identity:
+                continue
+
+            # Case 0: before 7.6, CBO statistics live in N1QL_SYSTEM_BUCKET (with a primary index). An upgrade to 7.6+
+            # migrates them to each bucket's _system._query and drops that bucket with its index. Not a bug.
+            if identity[0] == 'N1QL_SYSTEM_BUCKET' and 'N1QL_SYSTEM_BUCKET' not in current_buckets:
+                self.log.info(
+                    f"  ~ {keyspace_of(snapshot_by_inst[next(iter(missing_for_identity))])}.{identity[3]} : "
+                    f"{len(missing_for_identity)} instance(s) gone with N1QL_SYSTEM_BUCKET (CBO statistics migrated "
+                    f"to _system._query, not a bug)")
                 continue
 
             new_for_identity = current_ids_by_identity.get(identity, set()) - snapshot_ids_by_identity[identity]
@@ -3498,10 +3852,17 @@ if __name__ == '__main__':
         indexMgr.capture_index_names(indexMgr.snapshot_file)
     elif indexMgr.action == 'validate_index_names':
         indexMgr.validate_index_names(indexMgr.snapshot_file)
+    elif indexMgr.action == 'report_indexer_warmup_times':
+        indexMgr.report_indexer_warmup_times()
+    elif indexMgr.action == 'churn_keyspaces':
+        indexMgr.churn_keyspaces()
+    elif indexMgr.action == 'report_storage_stats':
+        indexMgr.report_storage_stats()
     else:
         print("Invalid choice for action. Choose from the following - "
               "create_index | build_deferred_index | drop_all_indexes | create_index_loop | alter_indexes | "
               "enable_cbo | drop_index_loop | item_count_check | random_recovery | post_topology_change_validations"
               "| create_udf | drop_udf | create_n1ql_udf | validate_tenant_affinity | set_fast_rebalance_config | "
               "validate_s3_cleanup | cleanup_s3 | replica_count_check | wait_until_mutations_processed | random_index_lifecycle"
-              "| capture_index_names | validate_index_names")
+              "| capture_index_names | validate_index_names | report_indexer_warmup_times | churn_keyspaces "
+              "| report_storage_stats")

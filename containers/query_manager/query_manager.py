@@ -1,10 +1,13 @@
 import argparse
+import faulthandler
 import logging
 import time
 import random
 import json
 import os
+import re
 import sys
+import uuid
 from dns import resolver
 import struct
 import requests
@@ -19,16 +22,22 @@ from couchbase.options import (ClusterOptions,
                                QueryOptions, AnalyticsOptions)
 from couchbase.exceptions import CouchbaseException
 from couchbase.cluster import QueryScanConsistency
-from couchbase.exceptions import CouchbaseException, QueryErrorContext
 import threading
+
+# Long numeric list literals (dense query vectors, sparse indices/values) substituted into statements.
+VECTOR_LITERAL_RE = re.compile(r"\[[-+0-9.eE,\s]{80,}\]")
+# Distinct messages / ids kept per failure group so the summary stays bounded on long runs.
+MAX_SAMPLES_PER_FAILURE_GROUP = 3
+
 
 class QueryManager:
     def __init__(self, connection_string, username, password, timeout, duration, doc_template, use_sdk, query_type,
                  query_file, groundtruth_file, validate_vector_query_results, distance_algo, bucket_list, use_tls,
                  capella="false", skip_default="false", num_groundtruth_vectors=100, num_query_vectors=10000,
                  base64_encoding="false", xattrs="false", sample_size=20, bhive_queries=False, print_frequency=30,
-                 log_level="INFO", smoke_test_run="false", enable_scan_report="false"):
+                 log_level="INFO", smoke_test_run="false", enable_scan_report="false", nprobe=None):
         self.connection_string = connection_string
+        self.nprobe = nprobe  # fixed nprobe for every vector query (None: derived from the filter / random)
         self.username = username
         self.password = password
         self.cluster = None
@@ -54,14 +63,36 @@ class QueryManager:
         self.bhive_queries = bhive_queries == "true"
         self.enable_scan_report = enable_scan_report == "true"
         self.smoke_test_run = smoke_test_run == "true"
-        self.query_error_obj = dict()
+        # generated statement -> {"query_id": "<template>#<n>", "keyspace": "b.s.c"}
+        self.query_catalog = {}
+        # failure group key -> aggregated failure info, see record_query_failure()
+        self.query_failure_groups = {}
+        # (query_id, keyspace) -> number of executions attempted
+        self.query_exec_counts = {}
+        self._failures_lock = threading.Lock()
         self.print_frequency = print_frequency
         self.log = logging.getLogger("query_manager")
         # Set log level based on parameter
         log_level = getattr(logging, log_level.upper(), logging.INFO)
         self.log.setLevel(log_level)
         ch = logging.StreamHandler()
+        # sparse (msmarco) recall: the .gt files hold the unfiltered top-10 per query (0-based row ids), keys are <prefix>-<row>
+        self.sparse_recall = self.validate_vector_query_results and "sparse" in self.template
+        self.sparse_id_offset = 0
+        self.sparse_limit = 10
+        self.dense_topn = None  # topNScan for dense BHIVE queries (6th argument of APPROX_VECTOR_DISTANCE); None = not passed
+        self.sparse_topn = None  # topNScan, 4th argument of SPARSE_VECTOR_DISTANCE; None = server default
+        self.keyspace_list = None  # explicit keyspaces (bucket.scope.collection), overrides discovery
+        # MS MARCO qrels per query-vector row (list of relevant passage ids), for IR-style recall; None = not measured
+        self.qrels = None
+        self.qrels_sum = 0.0
+        self.qrels_queries = 0
         self.recall_dict = dict()
+        self.recall_sum = 0
+        self.recall_queries = 0
+        # one record per recall execution (see compute_recall), written to the recall file for troubleshooting
+        self.recall_executions = []
+        self.recall_started_at = datetime.now().isoformat(timespec="seconds")
         ch.setLevel(log_level)
         formatter = logging.Formatter(
             "%(asctime)s - %(name)s - %(levelname)s - %(message)s")
@@ -72,9 +103,6 @@ class QueryManager:
         fh.setFormatter(formatter)
         self.log.addHandler(fh)
         self.log.info("Query manager started")
-        # store index stats validation failures collected during queries
-        self.index_stats_validation_failures = {}
-        self._index_stats_lock = threading.Lock()
 
     def get_recall_dict(self):
         return self.recall_dict
@@ -86,7 +114,25 @@ class QueryManager:
             self.recall_dict[range_index] += 1
         else:
             self.recall_dict[range_index] = 1
+        self.recall_sum += recall_percentage
+        self.recall_queries += 1
         return
+
+    def write_recall_file(self, path, params=None):
+        """Recall of this run as JSON (histogram by 10% bucket, query count, mean recall) so a later step can compare
+        runs, for example before and after an upgrade. Written atomically."""
+        mean = self.recall_sum / self.recall_queries if self.recall_queries else None
+        data = {"histogram": {str(k): v for k, v in sorted(self.recall_dict.items())}, "queries": self.recall_queries,
+                "mean_recall": mean, "template": self.template,
+                "qrels_recall_mean": (100 * self.qrels_sum / self.qrels_queries) if self.qrels_queries else None,
+                "qrels_queries": self.qrels_queries,
+                "started_at": self.recall_started_at, "ended_at": datetime.now().isoformat(timespec="seconds"),
+                "params": params or {}, "executions": list(self.recall_executions)}
+        tmp = f"{path}.tmp"
+        with open(tmp, "w") as f:
+            json.dump(data, f, indent=2)
+        os.replace(tmp, path)
+        self.log.info(f"Recall written to {path}: {self.recall_queries} queries, mean recall {mean}")
 
     def create_cluster_object(self):
         auth = PasswordAuthenticator(self.username, self.password)
@@ -118,6 +164,8 @@ class QueryManager:
 
     def fetch_keyspaces_list(self):
         keyspaces = []
+        if self.keyspace_list:
+            return [k.strip() for k in self.keyspace_list.split(",") if k.strip()]
         self.create_cluster_object()
         if self.query_type == 'analytics':
             query = """select value ds.DatabaseName || "." || ds.DataverseName || "." || ds.DatasetName 
@@ -281,10 +329,6 @@ class QueryManager:
             header = struct.unpack('QQQ', f.read(24))
             num_rows, num_cols, num_non_zeros = header
             self.log.debug(f"CSR file: {num_rows} rows, {num_cols} cols, {num_non_zeros} non-zeros")
-            header_bytes = f.read(24)
-            if len(header_bytes) != 24:
-                raise ValueError(f'CSR header truncated: expected 24 bytes, got {len(header_bytes)}')
-            num_rows, num_cols, num_non_zeros = struct.unpack('QQQ', header_bytes)
             # Read indptr (row offsets)
             indptr_size = (num_rows + 1) * 8
             indptr = struct.unpack(f'{num_rows + 1}Q', f.read(indptr_size))
@@ -324,16 +368,14 @@ class QueryManager:
         gtVectors = []
         with open(filename, 'rb') as f:
             # Read header
-            header = struct.unpack('<ii', f.read(8))
-            num_queries, top_k = header
-            self.log.debug(f"GT file: {num_queries} queries, top_k={top_k}")
-            
-            # Limit to num_vectors
-            queries_to_read = min(num_vectors, num_queries)
             header_bytes = f.read(8)
             if len(header_bytes) != 8:
                 raise ValueError(f'GT header truncated: expected 8 bytes, got {len(header_bytes)}')
             num_queries, top_k = struct.unpack('<ii', header_bytes)
+            self.log.debug(f"GT file: {num_queries} queries, top_k={top_k}")
+
+            # Limit to num_vectors
+            queries_to_read = min(num_vectors, num_queries)
             # Read all groundtruth ids
             total_ids = queries_to_read * top_k
             all_ids = struct.unpack(f'<{total_ids}i', f.read(total_ids * 4))
@@ -345,9 +387,34 @@ class QueryManager:
         
         return gtVectors
 
-    def compute_recall(self, groundtruth_vectors, result, index):
+    def compute_recall(self, groundtruth_vectors, result, index, context=None):
         groundtruth_result_vector = groundtruth_vectors[index]
         query_res_list = [item['id'] for item in result]
+        if self.sparse_recall:
+            top_k = len(groundtruth_result_vector)
+            query_res_list = [int(s.split('-')[-1]) - self.sparse_id_offset for s in query_res_list]
+            # exact-neighbour recall: how many of the exact top_k neighbours appear anywhere in the LIMIT results
+            # (top_k-recall@LIMIT; with LIMIT == top_k it is plain recall@top_k)
+            hits = len(set(groundtruth_result_vector).intersection(query_res_list))
+            recall_percentage = hits * 100 // top_k
+            self.update_recall_dict(recall_percentage)
+            record = {"at": datetime.now().isoformat(timespec="milliseconds"), "recall": recall_percentage,
+                      "query_vector_index": index, "result_count": len(query_res_list)}
+            if self.qrels is not None and index < len(self.qrels) and self.qrels[index]:
+                relevant = set(self.qrels[index])
+                qrels_hits = len(relevant.intersection(query_res_list))
+                record["qrels_recall"] = round(100 * qrels_hits / len(relevant), 2)
+                record["qrels_hits"] = qrels_hits
+                record["qrels_relevant"] = len(relevant)
+                with self._failures_lock:
+                    self.qrels_sum += qrels_hits / len(relevant)
+                    self.qrels_queries += 1
+            record.update(context or {})
+            with self._failures_lock:
+                self.recall_executions.append(record)
+            if recall_percentage < 50:
+                self.log.warning(f"LOW RECALL {recall_percentage}%: {json.dumps(record, default=str)}")
+            return
         if 'shoes' not in self.template:
             query_res_list = [int(s.lstrip('doc')) - 1 for s in query_res_list]
             self.log.info(f"Query result {query_res_list}")
@@ -355,6 +422,14 @@ class QueryManager:
         self.log.debug(f"Query result {query_res_list}")
         recall_percentage = len(list(set(groundtruth_result_vector[:100]).intersection(query_res_list)))
         self.update_recall_dict(recall_percentage)
+        record = {"at": datetime.now().isoformat(timespec="milliseconds"), "recall": recall_percentage,
+                  "query_vector_index": index, "result_count": len(query_res_list)}
+        record.update(context or {})
+        with self._failures_lock:
+            self.recall_executions.append(record)
+        if recall_percentage < 50:
+            # a failed or empty query counts as recall 0, so say which it was
+            self.log.warning(f"LOW RECALL {recall_percentage}%: {json.dumps(record, default=str)}")
 
     def calculate_nprobe(self, filter_value):
         """
@@ -980,6 +1055,7 @@ function run_n1ql_query(bucketname) {
 
     def run_n1ql_query(self, query, iterate_over_results=False, query_node=None, groundtruth_vectors=None,
                        validate_vector_query_results=False, groundtruth_file=None):
+        query_info = self.query_catalog.get(query, {})
         query_vectors = self.read_query_file()
         index = 0
         limit_val = None
@@ -990,16 +1066,27 @@ function run_n1ql_query(bucketname) {
             query = query.replace("qvec", str(query_vectors[index]))
             vector_query = True
         if "nprobe" in query:
-            if "shoes" in self.template:
+            if self.nprobe:
+                nprobe_val = self.nprobe
+            elif "shoes" in self.template:
                 # Extract number before 'M' from filename like 'idx_5M.ivecs'
                 filter_value = int(groundtruth_file.split('M')[0].split('_')[-1])
                 nprobe_val = self.calculate_nprobe(filter_value)
             else:
                 nprobe_val = random.randint(50, 100)
             self.log.debug(f"Nprobe value is {nprobe_val}")
+            if "SPARSE_VECTOR_DISTANCE" in query:
+                # sparse: SPARSE_VECTOR_DISTANCE(vec, qvec, nprobe[, topNScan[, topNTerms]]) - the 4th argument is an integer
+                # topNScan (Hyperscale/BHIVE only), not the boolean rerank flag of APPROX_VECTOR_DISTANCE, so never append ", true"
+                with_topn = self.sparse_topn and self.bhive_queries
+                query = query.replace("nprobe", f"{nprobe_val}, {self.sparse_topn}" if with_topn else str(nprobe_val))
             #uncomment once reranking can be enabled
-            run_with_reranking = random.random() < 0.2
-            if self.bhive_queries and run_with_reranking:
+            elif self.bhive_queries and self.dense_topn:
+                # APPROX_VECTOR_DISTANCE(vec, qvec, metric, nprobes, rerank, topNScan): topNScan (BHIVE only) needs nprobes
+                # and rerank to be present, so rerank is passed explicitly (true for random queries)
+                rerank = "true" if random.random() < 0.2 else "false"
+                query = query.replace("nprobe", f"{nprobe_val}, {rerank}, {self.dense_topn}")
+            elif self.bhive_queries and random.random() < 0.2:
                 #reranking set to true for random queries
                 concat_str = str(nprobe_val) + ", true"
                 query = query.replace("nprobe", concat_str)
@@ -1008,7 +1095,9 @@ function run_n1ql_query(bucketname) {
         if "DIST_ALGO" in query:
             query = query.replace("DIST_ALGO", self.distance_algo)
         if "LIMIT_N_VAL" in query:
-            if self.validate_vector_query_results:
+            if self.sparse_recall:
+                limit_val = self.sparse_limit  # exact groundtruth is top-10; qrels recall uses the whole LIMIT
+            elif self.validate_vector_query_results:
                 limit_val = 100
             else:
                 limit_val = random.randint(1, 100)
@@ -1017,252 +1106,366 @@ function run_n1ql_query(bucketname) {
             query = query.replace("vectors", "decode_vector(vectors,false)")
         if self.xattrs:
             query = query.replace("vectors", "meta().xattrs.vectors")
+        self._count_query_execution(query_info)
+        client_context_id = str(uuid.uuid4())
         if self.use_sdk:
             if not self.cluster:
                 self.create_cluster_object()
             consistency_type = random.getrandbits(1)
             profile_enabled = self.enable_scan_report and (random.random() < 0.2)
-            qo_kwargs = {"timeout": self.timeout}
+            qo_kwargs = {"timeout": self.timeout, "client_context_id": client_context_id}
+            # Template queries are always profiled so index usage can be checked: profile=phases is
+            # enough to see which scans ran, timings also carries the scan report
+            profile_mode = "timings" if profile_enabled else ("phases" if query_info else None)
+            if profile_mode:
+                qo_kwargs["profile"] = profile_mode
             if profile_enabled:
-                qo_kwargs["profile"] = "timings"
-                # Log at INFO so it's visible even at higher log levels and easy to correlate
-                self.log.debug("Profile timings requested for query: %s", query if len(query) < 200 else query[:200])
+                self.log.debug("Profile timings requested for query: %s", self._abbreviate_vectors(query))
                 include_scanreport_detailed = bool(random.getrandbits(1))
                 if include_scanreport_detailed:
-                    self.log.debug(f"Including scanreport_wait=100000 for query {query}")
-                    qo_kwargs["scanreport_wait"] = "100000"
+                    # The SDK has no scanreport_wait option, so pass it through as a raw request
+                    # parameter. The query service accepts a duration of at most 15s.
+                    scanreport_wait = f"{random.randint(1, 15)}s"
+                    self.log.debug(f"Including scanreport_wait={scanreport_wait} for query "
+                                   f"{self._abbreviate_vectors(query)}")
+                    qo_kwargs["raw"] = {"scanreport_wait": scanreport_wait}
             if consistency_type:
                 qo_kwargs["scan_consistency"] = QueryScanConsistency.REQUEST_PLUS
             self.log.debug(f"Query options for this query: {qo_kwargs}")
             query_opts = QueryOptions(**qo_kwargs)
-            result_obj = None
             result = []
+            run_error = None
+            meta = None
+            start_time = time.time()
             try:
-                self.log.debug(f"running query - {query} via SDK with parameters {qo_kwargs}")
+                self.log.debug(f"running query - {self._abbreviate_vectors(query)} via SDK with parameters {qo_kwargs}")
                 result_obj = self.cluster.query(query, query_opts)
-                # Materialize rows immediately so we can safely inspect metadata and log results.
+                # The SDK runs the query lazily: errors surface here, while iterating the rows,
+                # so this must stay inside the try that records the failure.
                 materialized_rows = []
-                try:
-                    # rows() may raise if the result is an error; guard it
-                    if iterate_over_results or self.enable_scan_report:
-                        materialized_rows = [r for r in result_obj.rows()]
-                except Exception as e:
-                    self.log.info(f"Could not materialize rows from result_obj - Exception: {type(e).__name__}: {str(e)}")
-
-                # Try to read metadata() after materializing rows
-                if self.enable_scan_report:
-                    meta = None
+                if iterate_over_results:
+                    materialized_rows = [r for r in result_obj.rows()]
+                elif self.enable_scan_report or profile_mode:
+                    # The metadata is only complete once every row has been read, but nothing uses the
+                    # rows here, so drain them without keeping them in memory
+                    for _ in result_obj.rows():
+                        pass
+                elapsed = time.time() - start_time
+                meta = None
+                if iterate_over_results or self.enable_scan_report or profile_mode:
                     try:
                         meta = result_obj.metadata()
-                        self.log.info(f"Meta object obtained: {type(meta).__name__}")
-                        self.log.debug(f"Meta object details: {meta}")
-                        valid = self.validate_index_stats(meta)
-                        if not valid:
-                            self.log.info(f"Index stats validation failed for query")
-                            # derive a request id / key from metadata if possible
-                            req_id_key = None
-                            try:
-                                if isinstance(meta, dict):
-                                    req_id_key = meta.get('request_id')
-                                else:
-                                    try:
-                                        req_id_key = meta.request_id() if callable(getattr(meta, 'request_id', None)) else getattr(meta, 'request_id', None)
-                                    except Exception:
-                                        req_id_key = None
-                            except Exception:
-                                req_id_key = None
-                            if not req_id_key:
-                                req_id_key = str(time.time())
-                            entry = {req_id_key: {"statement": query, "errors": "Metadata validation failed for index stats. Response is {}.".format(meta)}}
-                            try:
-                                with self._index_stats_lock:
-                                    self.index_stats_validation_failures.update(entry)
-                            except Exception:
-                                # best-effort: log and continue
-                                self.log.exception("Failed to record index stats validation failure")
-                    except Exception:
-                        meta = None
-                    except Exception:
-                        self.log.debug("Could not fetch request_id/metrics from result object")
-
-                # Use the materialized rows for the iterate_over_results path to avoid re-consuming the iterator
+                    except Exception as e:
+                        self.log.debug(f"Could not read query metadata: {type(e).__name__}: {e}")
+                usage_problem = None
+                if profile_mode:
+                    usage_problem = self.index_usage_problem(self._metadata_value(meta, "profile"))
+                    if usage_problem:
+                        self.record_query_failure("no_index_scan", query, usage_problem, query_info,
+                                                  client_context_id=client_context_id,
+                                                  request_id=self._metadata_value(meta, "request_id"),
+                                                  elapsed=elapsed)
+                # Only queries run with profile=timings carry the #indexStats scan report, and only
+                # index scans produce one
+                if profile_enabled and not usage_problem:
+                    problem = self.index_stats_problem(meta)
+                    if problem:
+                        self.record_query_failure("index_stats_validation", query, problem, query_info,
+                                                  client_context_id=client_context_id,
+                                                  request_id=self._metadata_value(meta, "request_id"),
+                                                  elapsed=elapsed)
                 if iterate_over_results:
                     result = materialized_rows
-                    if vector_query:
-                        if limit_val and len(result) != limit_val:
-                            self.log.debug(f"Query {query} has fetched incorrect number of results "
-                                           f"though a limit was specified. Limit specified {limit_val}. "
-                                           f"Result length {len(result)}")
-                            # derive request id from metadata
-                            req_id_key = None
-                            request_time = None
-                            try:
-                                # meta is the result metadata object
-                                if meta is not None:
-                                    # Try to get request_id
-                                    if hasattr(meta, 'request_id'):
-                                        try:
-                                            req_id_key = meta.request_id() if callable(getattr(meta, 'request_id', None)) else getattr(meta, 'request_id', None)
-                                        except Exception:
-                                            pass
-                                    # Try client_context_id as fallback
-                                    if not req_id_key:
-                                        for attr in ("client_context_id", "clientContextID"):
-                                            if hasattr(meta, attr):
-                                                try:
-                                                    v = getattr(meta, attr)
-                                                    if callable(v):
-                                                        v = v()
-                                                    if v:
-                                                        req_id_key = v
-                                                        break
-                                                except Exception:
-                                                    continue
-                                    # Try to get request_time
-                                    if hasattr(meta, 'request_time'):
-                                        try:
-                                            request_time = meta.request_time() if callable(getattr(meta, 'request_time', None)) else getattr(meta, 'request_time', None)
-                                        except Exception:
-                                            pass
-                            except Exception:
-                                pass
-                            if not req_id_key:
-                                req_id_key = f"unknown-{int(time.time())}"
-                            item_dict = {req_id_key: {"statement": query,
-                                                      "first_error_message": f"Incorrect result count. Limit: {limit_val}, Got: {len(result)}",
-                                                      "request_time": request_time}}
-                            self.query_error_obj.update(item_dict)
-                else:
-                    # not iterating results: keep result empty
-                    result = []
+                    if vector_query and limit_val and len(result) != limit_val:
+                        self.record_query_failure("result_count_mismatch", query,
+                                                  f"Incorrect result count. Limit: {limit_val}, Got: {len(result)}",
+                                                  query_info, client_context_id=client_context_id,
+                                                  request_id=self._metadata_value(meta, "request_id"),
+                                                  elapsed=elapsed)
             except CouchbaseException as ex:
-                # Extract error context from the CouchbaseException
-                item_key = None
-                request_time = None
-                first_error_message = None
-                
-                try:
-                    # Try to get context from the exception
-                    if hasattr(ex, 'context') and ex.context is not None:
-                        ctx = ex.context
-                        # Try to get request_id from context
-                        if hasattr(ctx, 'request_id'):
-                            item_key = ctx.request_id
-                        # Fallback to client_context_id
-                        if not item_key and hasattr(ctx, 'client_context_id'):
-                            item_key = ctx.client_context_id
-                        # Try to get request_time
-                        if hasattr(ctx, 'request_time'):
-                            request_time = ctx.request_time
-                        # Try to get error message
-                        if hasattr(ctx, 'first_error_message'):
-                            first_error_message = ctx.first_error_message
-                        elif hasattr(ctx, 'errors') and ctx.errors:
-                            first_error_message = str(ctx.errors[0]) if isinstance(ctx.errors, list) else str(ctx.errors)
-                    
-                    # Fallback: try result_obj.metadata() if available
-                    if not item_key and result_obj:
-                        try:
-                            meta = result_obj.metadata()
-                            if meta:
-                                if hasattr(meta, 'request_id'):
-                                    item_key = meta.request_id() if callable(getattr(meta, 'request_id', None)) else getattr(meta, 'request_id', None)
-                                if not item_key:
-                                    for attr in ("client_context_id", "clientContextID", "clientContextId"):
-                                        if hasattr(meta, attr):
-                                            v = getattr(meta, attr)
-                                            if callable(v):
-                                                v = v()
-                                            if v:
-                                                item_key = v
-                                                break
-                        except Exception:
-                            pass
-                    
-                    # Last resort fallback
-                    if not item_key:
-                        item_key = f"unknown-{time.time()}"
-                    
-                    if not first_error_message:
-                        first_error_message = str(ex)
-                        
-                except Exception:
-                    self.log.exception("Failed to extract error metadata from exception")
-                    item_key = f"unknown-{time.time()}"
-                    first_error_message = str(ex)
-                
-                item_dict = {item_key: {
-                    "statement": query,
-                    "first_error_message": first_error_message,
-                    "request_time": request_time
-                }}
-                self.query_error_obj.update(item_dict)
-            except Exception:
-                self.log.exception("Unexpected error during query execution/logging")
+                details = self._couchbase_error_details(ex)
+                run_error = f"{type(ex).__name__}: {details['message']}"
+                self.record_query_failure("error", query, details["message"], query_info,
+                                          error_code=details["code"], error_type=type(ex).__name__,
+                                          query_node=details["node"],
+                                          client_context_id=details["client_context_id"] or client_context_id,
+                                          elapsed=time.time() - start_time)
+            except Exception as ex:
+                run_error = f"{type(ex).__name__}: {ex}"
+                self.record_query_failure("error", query, str(ex), query_info, error_type=type(ex).__name__,
+                                          client_context_id=client_context_id, elapsed=time.time() - start_time)
+                self.log.debug("Unexpected error during query execution", exc_info=True)
             if validate_vector_query_results:
-                self.compute_recall(groundtruth_vectors, result, index)
+                elapsed_first = round(time.time() - start_time, 3)
+                # A vector query that returns no rows and no error (seen returning in tens of ms, against seconds for a normal
+                # BHIVE scan): keep what the service said about it and ask once more, so the log shows whether the same
+                # statement is empty again (deterministic) or not (a transient state)
+                warnings, retry_count = [], None
+                if vector_query and not result and not run_error:
+                    try:
+                        warnings = [str(w)[:240] for w in (self._metadata_value(meta, "warnings") or [])][:5]
+                    except Exception:
+                        pass
+                    try:
+                        retry_count = sum(1 for _ in self.cluster.query(query, query_opts).rows())
+                    except Exception as e:
+                        retry_count = f"error: {str(e)[:100]}"
+                self.compute_recall(groundtruth_vectors, result, index, {
+                    "query_id": query_info.get("query_id"), "keyspace": query_info.get("keyspace"), "limit": limit_val,
+                    "elapsed_s": elapsed_first, "error": run_error,
+                    "scan_consistency": "request_plus" if consistency_type else "not_bounded",
+                    "client_context_id": client_context_id,
+                    "request_id": self._metadata_value(meta, "request_id"),
+                    "warnings": warnings, "retry_result_count": retry_count})
             return result
         else:
-            self.log.debug(f"running query - {query} via rest")
-            if query_node:
+            self.log.debug(f"running query - {self._abbreviate_vectors(query)} via rest")
+            if not query_node:
                 query_node = random.choice(self.get_all_n1ql_nodes())
             auth = (self.username, self.password)
-            payload = {"statement": query}
+            payload = {"statement": query, "client_context_id": client_context_id}
+            if query_info:
+                payload["profile"] = "phases"
             api = f"http://" + query_node + ':8093/query/service'
+            start_time = time.time()
             try:
                 response = requests.post(url=api, auth=auth, timeout=self.timeout, verify=False,
                                          headers={'Content-Type': 'application/json'}, json=payload)
+                elapsed = time.time() - start_time
                 if response.status_code == 200:
-                    return response.json()['results']
-            except:
-                pass
+                    body = response.json()
+                    if query_info:
+                        usage_problem = self.index_usage_problem(body.get("profile"))
+                        if usage_problem:
+                            self.record_query_failure("no_index_scan", query, usage_problem, query_info,
+                                                      query_node=query_node, client_context_id=client_context_id,
+                                                      request_id=body.get("requestID"), elapsed=elapsed)
+                    return body['results']
+                error_code, message = None, response.text
+                try:
+                    body = response.json()
+                    first_error = (body.get("errors") or [{}])[0]
+                    error_code, message = first_error.get("code"), first_error.get("msg", message)
+                    request_id = body.get("requestID")
+                except ValueError:
+                    request_id = None
+                self.record_query_failure("error", query, message, query_info, error_code=error_code,
+                                          error_type=f"HTTP {response.status_code}", query_node=query_node,
+                                          client_context_id=client_context_id, request_id=request_id,
+                                          elapsed=elapsed)
+            except Exception as ex:
+                self.record_query_failure("error", query, str(ex), query_info, error_type=type(ex).__name__,
+                                          query_node=query_node, client_context_id=client_context_id,
+                                          elapsed=time.time() - start_time)
 
-    def validate_index_stats(self, metadata: dict) -> bool:
-        self.log.debug("validate_index_stats called")
-        if metadata is None:
-            self.log.debug("validate_index_stats: metadata is None")
-            return False
+    @staticmethod
+    def _abbreviate_vectors(statement):
+        """Collapse vector literals so statements stay readable in logs."""
+        return VECTOR_LITERAL_RE.sub(lambda m: f"[<{m.group(0).count(',') + 1} values>]", str(statement))
+
+    @staticmethod
+    def _metadata_value(meta, name):
+        """Read a field from a QueryMetaData object (accessor methods) or a raw dict."""
+        if meta is None:
+            return None
+        if isinstance(meta, dict):
+            return meta.get(name)
         try:
-            children = metadata["profile"]["executionTimings"]["~child"]["~children"]
-        except KeyError as ke:
-            self.log.info(f"validate_index_stats: Missing expected key in metadata structure: {ke}")
-            self.log.debug(f"Metadata structure: {metadata}")
-            return False
+            value = getattr(meta, name, None)
+            return value() if callable(value) else value
+        except Exception:
+            return None
+
+    @staticmethod
+    def _couchbase_error_details(ex):
+        """Pull code, message, node and client_context_id out of a CouchbaseException's error context."""
+        ctx = getattr(ex, "context", None)
+        code = getattr(ctx, "first_error_code", None) or None
+        message = getattr(ctx, "first_error_message", None) or None
+        if not message:
+            # Timeouts and other client-side errors carry no server error; use the exception text
+            message = getattr(ex, "message", None) or str(ex)
+        return {"code": code,
+                "message": message,
+                "node": getattr(ctx, "last_dispatched_to", None),
+                "client_context_id": getattr(ctx, "client_context_id", None)}
+
+    def _count_query_execution(self, query_info):
+        key = (query_info.get("query_id", "adhoc"), query_info.get("keyspace", "n/a"))
+        with self._failures_lock:
+            self.query_exec_counts[key] = self.query_exec_counts.get(key, 0) + 1
+
+    def record_query_failure(self, kind, statement, message, query_info=None, error_code=None, error_type=None,
+                             query_node=None, client_context_id=None, request_id=None, elapsed=None):
+        """Record one failed query execution.
+
+        kind is "error" (query raised), "result_count_mismatch" (vector query returned fewer rows than
+        its LIMIT), "no_index_scan" (plan used a sequential scan or no index) or "index_stats_validation"
+        (scan report in the profile was missing/invalid).
+        Failures are aggregated per kind/query/keyspace/error so memory stays bounded on long runs.
+        """
+        query_info = query_info or {}
+        query_id = query_info.get("query_id", "adhoc")
+        keyspace = query_info.get("keyspace", "n/a")
+        message = str(message).strip()
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        # Errors are split by code/type; for the validation kinds the message varies per run
+        # (e.g. "Limit: 37, Got: 12"), so it is kept as a sample instead.
+        key = (kind, query_id, keyspace, error_code, error_type)
+        if kind == "error" and error_code is None:
+            key += (message[:120],)
+        sample_id = client_context_id or request_id
+        with self._failures_lock:
+            group = self.query_failure_groups.get(key)
+            if group is None:
+                group = {"kind": kind, "query_id": query_id, "keyspace": keyspace, "error_code": error_code,
+                         "error_type": error_type, "count": 0, "first_seen": now, "last_seen": now,
+                         "messages": {}, "nodes": {}, "ids": [], "min_elapsed": None, "max_elapsed": None,
+                         "statement": self._abbreviate_vectors(statement)}
+                self.query_failure_groups[key] = group
+            group["count"] += 1
+            group["last_seen"] = now
+            if message in group["messages"] or len(group["messages"]) < MAX_SAMPLES_PER_FAILURE_GROUP:
+                group["messages"][message] = group["messages"].get(message, 0) + 1
+            if query_node:
+                group["nodes"][query_node] = group["nodes"].get(query_node, 0) + 1
+            if sample_id and len(group["ids"]) < MAX_SAMPLES_PER_FAILURE_GROUP:
+                group["ids"].append(sample_id)
+            if elapsed is not None:
+                group["min_elapsed"] = elapsed if group["min_elapsed"] is None else min(group["min_elapsed"], elapsed)
+                group["max_elapsed"] = elapsed if group["max_elapsed"] is None else max(group["max_elapsed"], elapsed)
+        self.log.debug(f"QUERY_FAILURE kind={kind} query={query_id} keyspace={keyspace} code={error_code} "
+                       f"type={error_type} node={query_node} client_context_id={client_context_id} "
+                       f"request_id={request_id} elapsed={elapsed} message={message} "
+                       f"statement={self._abbreviate_vectors(statement)}")
+
+    def get_query_failure_count(self):
+        with self._failures_lock:
+            return sum(group["count"] for group in self.query_failure_groups.values())
+
+    def print_failure_summary(self):
+        """Log failed queries grouped by query/keyspace/error. Every line of a group starts with
+        QUERY_FAILURE[<n>] so `grep QUERY_FAILURE` on the console log shows the full picture."""
+        with self._failures_lock:
+            groups = sorted(self.query_failure_groups.values(), key=lambda g: g["count"], reverse=True)
+            exec_counts = dict(self.query_exec_counts)
+        total_execs = sum(exec_counts.values())
+        total_failures = sum(group["count"] for group in groups)
+        if not groups:
+            self.log.info(f"===== QUERY FAILURE SUMMARY: no failed queries ({total_execs} executions) =====")
+            return
+        self.log.info(f"===== QUERY FAILURE SUMMARY: {total_failures} failed executions in {len(groups)} groups "
+                      f"({total_execs} executions in total) =====")
+        for n, group in enumerate(groups, 1):
+            tag = f"QUERY_FAILURE[{n}]"
+            execs = exec_counts.get((group["query_id"], group["keyspace"]))
+            ratio = f"{group['count']}/{execs}" if execs else str(group["count"])
+            lines = [f"{tag} {group['kind']}: query {group['query_id']} on {group['keyspace']} - "
+                     f"{ratio} executions failed"]
+            error = " ".join(str(part) for part in (group["error_code"], group["error_type"]) if part)
+            for message, count in group["messages"].items():
+                lines.append(f"{tag}   error      : {error + ': ' if error else ''}{message}"
+                             f"{f' (x{count})' if len(group['messages']) > 1 else ''}")
+            lines.append(f"{tag}   seen       : first {group['first_seen']}, last {group['last_seen']}")
+            if group["nodes"]:
+                nodes = ", ".join(f"{node} x{count}" for node, count in
+                                  sorted(group["nodes"].items(), key=lambda item: item[1], reverse=True))
+                lines.append(f"{tag}   query nodes: {nodes}")
+            if group["min_elapsed"] is not None:
+                lines.append(f"{tag}   elapsed    : min {group['min_elapsed']:.2f}s, max {group['max_elapsed']:.2f}s")
+            if group["ids"]:
+                lines.append(f"{tag}   context ids: {', '.join(group['ids'])}")
+            lines.append(f"{tag}   statement  : {group['statement']}")
+            for line in lines:
+                self.log.info(line)
+        self.log.info("===== END QUERY FAILURE SUMMARY =====")
+
+    @staticmethod
+    def index_usage_problem(profile):
+        """Return why a query did not scan a GSI index, or None if it did.
+
+        Uses the profile's phaseOperators, which profile=phases and profile=timings both return:
+        index scans show up as indexScan.GSI / indexScan.CVI, a query that fell back to a
+        sequential scan (no usable index) as primaryScan.Seq.
+        """
+        if not profile:
+            return "no profile in query metadata"
+        operators = profile.get("phaseOperators") or {}
+        if operators.get("primaryScan.Seq"):
+            return f"sequential scan used instead of an index (phaseOperators: {json.dumps(operators, sort_keys=True)})"
+        if not any(op.startswith(("indexScan", "indexCountScan", "primaryScan")) for op in operators):
+            return f"no index scan in the plan (phaseOperators: {json.dumps(operators, sort_keys=True)})"
+        return None
+
+    @classmethod
+    def _find_gsi_scans(cls, node, found=None):
+        """Return every GSI scan operator in a profile operator tree, including ones nested under
+        DistinctScan/UnionScan/IntersectScan and in subqueries."""
+        if found is None:
+            found = []
+        if isinstance(node, dict):
+            operator = str(node.get("#operator", ""))
+            if operator.startswith(("IndexScan", "PrimaryScan")) and node.get("using") == "gsi":
+                found.append(node)
+            node = list(node.values())
+        if isinstance(node, list):
+            for child in node:
+                if isinstance(child, (dict, list)):
+                    cls._find_gsi_scans(child, found)
+        return found
+
+    def validate_index_stats(self, metadata) -> bool:
+        return self.index_stats_problem(metadata) is None
+
+    def index_stats_problem(self, metadata):
+        """Return why the #indexStats scan report in a profiled query's metadata is invalid, or None if valid."""
+        if metadata is None:
+            return "no query metadata"
+        # metadata may be a raw dict OR a Couchbase QueryMetaData object. The object is
+        # not subscriptable, so read the profile via its accessor rather than metadata["profile"].
+        try:
+            profile = self._metadata_value(metadata, "profile")
         except Exception as e:
-            self.log.info(f"validate_index_stats: Error accessing metadata structure: {type(e).__name__}: {e}")
-            return False
-        # find the operator that contains #indexStats
-        index_stats = None
-        for child in children:
-            if "#indexStats" in child:
-                index_stats = child["#indexStats"]
-                break
+            return f"could not read profile from metadata: {type(e).__name__}: {e}"
+        if not profile:
+            return "no profile in metadata (was the query run with profile=timings?)"
+        try:
+            execution_timings = profile["executionTimings"]
+        except (KeyError, TypeError) as ke:
+            self.log.debug(f"Profile structure: {profile}")
+            return f"missing expected key in profile structure: {ke}"
+        # Scan operators are not always direct children: array index scans nest them as
+        # DistinctScan -> "scan" -> IndexScan3, UnionScan holds several, and subqueries have
+        # their own. Every GSI scan should carry its own report.
+        scans = self._find_gsi_scans(execution_timings)
+        if not scans:
+            return "no GSI index scan operator in execution plan"
+        for scan in scans:
+            problem = self._index_stats_problem(scan.get("#indexStats"))
+            if problem:
+                return f"{scan.get('#operator')} on {scan.get('index')}: {problem}"
+        self.log.debug("validate_index_stats: Validation passed")
+        return None
+
+    @staticmethod
+    def _index_stats_problem(index_stats):
+        """Return why one scan operator's #indexStats is invalid, or None if valid."""
         if not index_stats:
-            self.log.info("validate_index_stats: No #indexStats found in execution plan")
-            return False
-        # validate defn
+            return "no #indexStats"
         if not isinstance(index_stats.get("defn"), list):
-            self.log.info(f"validate_index_stats: defn is not a list, got {type(index_stats.get('defn'))}")
-            return False
-        # validate num_scans
+            return f"defn is not a list, got {type(index_stats.get('defn')).__name__}"
         num_scans = index_stats.get("num_scans")
         if not isinstance(num_scans, int) or num_scans <= 0:
-            self.log.info(f"validate_index_stats: num_scans is invalid, got {num_scans} (type: {type(num_scans)})")
-            return False
-        # validate srvr_avg_ns
+            return f"num_scans is invalid, got {num_scans!r}"
         avg_ns = index_stats.get("srvr_avg_ns", {})
         for key in ["scan", "total", "wait"]:
             if key not in avg_ns or avg_ns[key] < 0:
-                self.log.info(f"validate_index_stats: srvr_avg_ns[{key}] is missing or negative: {avg_ns.get(key)}")
-                return False
-        # validate srvr_total_counts
+                return f"srvr_avg_ns[{key}] is missing or negative: {avg_ns.get(key)}"
         total_counts = index_stats.get("srvr_total_counts", {})
         for key in ["bytesRead", "rowsReturn", "rowsScan"]:
             if key not in total_counts or total_counts[key] < 0:
-                self.log.info(f"validate_index_stats: srvr_total_counts[{key}] is missing or negative: {total_counts.get(key)}")
-                return False
-        self.log.info("validate_index_stats: Validation passed")
-        return True
+                return f"srvr_total_counts[{key}] is missing or negative: {total_counts.get(key)}"
+        return None
 
     def get_services_map(self):
         """
@@ -1307,23 +1510,30 @@ function run_n1ql_query(bucketname) {
         with open(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'queries.json')) as f:
             data = f.read()
         query_json = json.loads(data)
+        templates_list = [template] if template else self.template.split(",")
+        # (query_id, statement) where query_id is "<template>#<position in queries.json>"
         queries_list = []
-        if template:
-            queries_list = query_json[template]
-        else:
-            if "," in self.template:
-                templates_list = self.template.split(",")
-                for template in templates_list:
-                    queries_list += query_json[template]
-            else:
-                queries_list = query_json[self.template]
+        for template_name in templates_list:
+            queries_list += [(f"{template_name}#{n}", item) for n, item in enumerate(query_json[template_name])]
         self.log.debug(f"Queries per template {len(queries_list)}")
         keyspaces = self.fetch_keyspaces_list()
+        if not keyspaces:
+            # Without this the workload silently runs zero queries for its whole duration
+            default_note = ("_default._default is skipped (--skip_default true); pass --skip_default false "
+                            "to query it" if self.skip_default else "_default._default is included")
+            raise Exception(f"No keyspaces to query in bucket(s) {self.bucket_list or '(all)'}: only "
+                            f"scope_*.coll_* collections are queried and {default_note}")
         for keyspace in keyspaces:
             bucket, scope, collection = keyspace.split(".")
-            for item in queries_list:
+            for query_id, item in queries_list:
                 query_statement = item.replace("keyspacenameplaceholder", f"`{bucket}`.`{scope}`.`{collection}`")
+                if self.sparse_recall and " where " in item.lower():
+                    continue  # groundtruth is unfiltered, so only unfiltered statements give a valid recall
                 generated_queries.append(query_statement)
+                query_info = {"query_id": query_id, "keyspace": keyspace}
+                self.query_catalog[query_statement] = query_info
+                # shoes templates carry "<statement>; <groundtruth file>" and are split before running
+                self.query_catalog.setdefault(query_statement.split(";")[0], query_info)
         return generated_queries
 
     def find_nodes_with_service(self, service):
@@ -1399,30 +1609,8 @@ function run_n1ql_query(bucketname) {
         if failed_query_count > 0:
             raise Exception("There are failed queries in the completed_requests call. Check logs")
 
-    def print_query_errors(self):
-        """Prints current query errors in a formatted table"""
-        query_error_resp_dict = self.get_query_errors_dict()
-        if query_error_resp_dict:
-            self.log.info("========================Queries that have ended in errors==============================================================")
-            table = BeautifulTable()
-            table.column_headers = ["Request ID", "Statement", "Error", "Request Time"]
-            # Disable word wrapping - each cell shows content on single line
-            table.wrap_on_max_width = False
-            
-            for item in query_error_resp_dict.keys():
-                request_time = query_error_resp_dict[item].get("requestTime", "NA")
-                statement = query_error_resp_dict[item]["statement"]
-                error_message = query_error_resp_dict[item].get("first_error_message", "N/A")
-                table.append_row([item,
-                                statement,
-                                error_message,
-                                request_time])
-            self.log.info("\n" + str(table))
-            self.query_error_obj = {}
-
     def run_query_workload(self, num_concurrent_queries=5, refresh_duration=1800):
         self.log.info("Running query workload")
-        query_tasks = []
         time_now = time.time()
         time_last_refresh = time.time()
         queries = self.generate_queries()
@@ -1445,6 +1633,7 @@ function run_n1ql_query(bucketname) {
             if time.time() - time_last_refresh >= refresh_duration:
                 queries = self.generate_queries()
                 time_last_refresh = time.time()
+            query_tasks = []
             with ThreadPoolExecutor() as executor_main:
                 if len(queries) < num_concurrent_queries:
                     queries_chosen = queries
@@ -1472,23 +1661,29 @@ function run_n1ql_query(bucketname) {
                 try:
                     task.result()
                 except CouchbaseException as ex:
-                    if isinstance(ex.context, QueryErrorContext):
-                        item_dict = {ex.context.client_context_id: {"statement": ex.context.statement,
-                                                                    "first_error_message": ex.context.first_error_message}}
-                        self.query_error_obj.update(item_dict)
-                except:
-                    print("Unexpected error:", sys.exc_info()[0])
+                    details = self._couchbase_error_details(ex)
+                    statement = getattr(ex.context, "statement", None) or ""
+                    self.record_query_failure("error", statement, details["message"],
+                                              self.query_catalog.get(statement), error_code=details["code"],
+                                              error_type=type(ex).__name__, query_node=details["node"],
+                                              client_context_id=details["client_context_id"])
+                except Exception:
+                    # Log the FULL exception (type, message, file:line, traceback) instead of
+                    # just the class, and rate-limit it: a persistent per-query error would
+                    # otherwise print hundreds of thousands of identical lines and flood the run.
+                    self._unexpected_error_count = getattr(self, "_unexpected_error_count", 0) + 1
+                    if self._unexpected_error_count <= 5:
+                        self.log.exception("Unexpected error while awaiting query task result")
+                    elif self._unexpected_error_count % 1000 == 0:
+                        self.log.warning(
+                            "Unexpected error while awaiting query task result "
+                            "(suppressed after first 5; %d occurrences so far)",
+                            self._unexpected_error_count)
 
             sleep_duration = random.randint(10, 60)
             time.sleep(sleep_duration)
         self.log.info(f"Exiting query workload loop Current time {time.time()}  start time {time_now} "
                       f" Duration {self.duration}")
-
-    def get_query_errors_dict(self):
-        return self.query_error_obj
-
-    def get_index_stats_validation_failures(self):
-        return self.index_stats_validation_failures
 
     def periodic_print_recall_stats(self, frequency=30):
         time_now = time.time()
@@ -1497,6 +1692,9 @@ function run_n1ql_query(bucketname) {
             time.sleep(frequency * 60)  # Convert minutes to seconds
 
     def print_recall_stats(self):
+        if self.qrels_queries:
+            self.log.info(f"QRELS recall@{self.sparse_limit}: {100 * self.qrels_sum / self.qrels_queries:.2f}% "
+                          f"over {self.qrels_queries} queries")
         table = BeautifulTable()
         table.column_headers = ["Recall range", "Query count", "Percentage"]
         self.log.debug(f"Recall dict {self.recall_dict}")
@@ -1610,6 +1808,10 @@ function run_n1ql_query(bucketname) {
 
 
 if __name__ == '__main__':
+    # Dump the native/Python stack of the crashing thread to stderr on a fatal signal
+    # (e.g. SIGSEGV from the SDK). Without this a crash is just a silent exit 139 and,
+    # because cp-cli removes the container afterwards, the cause is unrecoverable.
+    faulthandler.enable()
     parser = argparse.ArgumentParser()
     parser.add_argument("-c", "--connection_string", help="SDK connection string")
     parser.add_argument("-u", "--username", help="username", default="Administrator")
@@ -1660,6 +1862,25 @@ if __name__ == '__main__':
                         default="false")
     parser.add_argument("-sr", "--enable_scan_report", help="True or False. Is it a scan report?", 
                         default="false")
+    parser.add_argument("--recall_file", default=None,
+                        help="run_query_workload with --validate_vector_query_results: write the recall (histogram, query "
+                             "count, mean recall) of the run to this JSON file")
+    parser.add_argument("--dense_topn", type=int, default=None,
+                        help="topNScan (6th argument of APPROX_VECTOR_DISTANCE) for dense BHIVE queries (needs --run_bhive_queries true); "
+                             "rerank is then passed explicitly (true for ~20%% of queries); default: not passed")
+    parser.add_argument("--sparse_topn", type=int, default=None,
+                        help="topNScan (4th argument of SPARSE_VECTOR_DISTANCE) for sparse BHIVE queries (needs --run_bhive_queries true); default: not passed")
+    parser.add_argument("--keyspace_list", default=None,
+                        help="comma-separated bucket.scope.collection to query, instead of discovering scope_*/coll_* (and _default "
+                             "unless --skip_default true); use when the data sits in one known collection")
+    parser.add_argument("--qrels_file", default=None,
+                        help="sparse recall: JSON list (one entry per query-vector row) of relevant passage ids, e.g. /msmarco_qrels.json")
+    parser.add_argument("--sparse_limit", type=int, default=10,
+                        help="sparse recall: LIMIT used for validated queries (exact recall = exact top-10 found within this many results)")
+    parser.add_argument("--sparse_id_offset", type=int, default=0,
+                        help="sparse recall: subtract this from the numeric suffix of the doc key to get the groundtruth row id")
+    parser.add_argument("--nprobe", type=int, default=None,
+                        help="Fixed nprobe for every vector query (default: derived from the filtering ratio / random 50-100)")
     parser.add_argument("--statement_types", default="scalar,vector_dense,vector_sparse,bhive_dense,bhive_sparse",
                         help="Comma-separated list of prepared statement types")
     parser.add_argument("--prepared_iterations", type=int, default=100,
@@ -1691,12 +1912,29 @@ if __name__ == '__main__':
                                  args.bucket_list, args.use_tls, args.capella, args.skip_default,
                                  args.num_groundtruth_vectors, args.num_query_vectors, args.base64,
                                  args.xattrs, args.sample_size, args.run_bhive_queries, args.print_frequency,
-                                 args.log_level, args.smoke_test_run, args.enable_scan_report)
+                                 args.log_level, args.smoke_test_run, args.enable_scan_report, nprobe=args.nprobe)
+    query_manager.sparse_id_offset = args.sparse_id_offset
+    query_manager.sparse_limit = args.sparse_limit
+    query_manager.keyspace_list = args.keyspace_list
+    query_manager.sparse_topn = args.sparse_topn
+    query_manager.dense_topn = args.dense_topn
+    if args.qrels_file:
+        with open(args.qrels_file) as qf:
+            query_manager.qrels = json.load(qf)
     args.validate_vector_query_results = True if args.validate_vector_query_results == "true" else False
     try:
         if args.action == "run_query_workload":
             query_manager.run_query_workload(int(args.num_concurrent_queries), int(args.refresh_duration))
             if args.validate_vector_query_results and args.run_vector_queries:
+                if args.recall_file:
+                    # before print_recall_stats: a smoke gate may raise there
+                    query_manager.write_recall_file(args.recall_file, params={
+                        "connection_string": args.connection_string, "bucket_list": args.bucket_list,
+                        "nprobe": args.nprobe, "distance_algo": args.distance_algo, "duration": args.duration,
+                        "num_concurrent_queries": args.num_concurrent_queries,
+                        "num_query_vectors": args.num_query_vectors,
+                        "num_groundtruth_vectors": args.num_groundtruth_vectors,
+                        "run_bhive_queries": args.run_bhive_queries, "query_type": args.query_type})
                 query_manager.print_recall_stats()
                 smoke_run = args.smoke_test_run == "true"
                 # if not smoke_run:
@@ -1764,49 +2002,6 @@ if __name__ == '__main__':
             query_manager.print_recall_stats()
         raise
     finally:
-        query_error_resp_dict = query_manager.get_query_errors_dict()
-        index_stats_failures = query_manager.get_index_stats_validation_failures()
-        if query_error_resp_dict:
-            print(
-                "========================Queries that have ended in errors==============================================================")
-            try:
-                table = BeautifulTable()
-                table.column_headers = ["Request ID", "Statement", "Error", "Request Time"]
-                # Disable word wrapping - each cell shows content on single line
-                table.wrap_on_max_width = False
-                
-                for item in query_error_resp_dict.keys():
-                    try:
-                        request_time = str(query_error_resp_dict[item].get("requestTime", "NA"))
-                        statement = str(query_error_resp_dict[item].get("statement", ""))
-                        error_message = str(query_error_resp_dict[item].get("first_error_message", ""))
-                            
-                        table.append_row([str(item),
-                                        statement,
-                                        error_message,
-                                        request_time])
-                    except Exception as e:
-                        print(f"Error processing row for item {item}: {str(e)}")
-                        continue
-                
-                # Only print if table has rows
-                if len(table.rows) > 0:
-                    print(table)
-                else:
-                    print("No valid error data to display")
-                    
-            except Exception as e:
-                print(f"Error creating error table: {str(e)}")
-                print("Raw error data:", query_error_resp_dict)
-        # If any index-stats validation failures were recorded, log them (INFO/ERROR) for visibility
-        if index_stats_failures:
-            try:
-                query_manager.log.info("\n========================Index stats validation failures==============================================================")
-                for k, v in index_stats_failures.items():
-                    msg = f"RequestId: {k} Statement: {v.get('statement')} Errors: {v.get('errors')}"
-                    # log as ERROR so it shows up even at higher log levels; INFO line above gives context
-                    query_manager.log.error(msg)
-            except Exception as e:
-                # Fallback to printing if logging somehow fails
-                print(f"Error logging index-stats failures: {e}")
-                print(f"Index stats failures: {index_stats_failures}")
+        # Final, grep-able (QUERY_FAILURE) summary of failed queries; query failures do not change the exit code
+        if args.action == "run_query_workload" or query_manager.get_query_failure_count():
+            query_manager.print_failure_summary()

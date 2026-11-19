@@ -2,6 +2,6 @@ beautifultable
 couchbase==4.2.1
 deepdiff==5.0.2
 dnspython
-numpy
+numpy<2
 requests
 pytz
