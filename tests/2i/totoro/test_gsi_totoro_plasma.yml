@@ -689,6 +689,7 @@
 
 # Wait for rebalance to complete
 - template: wait_for_rebalance
+  wait: true
 
 ############### Validate no index loss after rebalance #1 ################
 - image: sequoiatools/indexmanager
@@ -1110,6 +1111,7 @@
 - template: rebalance
 
 - template: wait_for_rebalance
+  wait: true
 
 ############### Validate no index loss after rebalance #5 ################
 - image: sequoiatools/indexmanager
@@ -1171,6 +1173,7 @@
 
 # Wait for rebalance to complete
 - template: wait_for_rebalance
+  wait: true
 
 ############### Validate no index loss after rebalance #6 ################
 - image: sequoiatools/indexmanager
@@ -1300,6 +1303,7 @@
 - template: rebalance
 
 - template: wait_for_rebalance
+  wait: true
 
 ############### Validate no index loss after rebalance #8 ################
 - image: sequoiatools/indexmanager
@@ -1379,6 +1383,7 @@
 
 # Wait for rebalance to complete
 - template: wait_for_rebalance
+  wait: true
 
 ############### Validate no index loss after rebalance #9 ################
 - image: sequoiatools/indexmanager
@@ -1422,6 +1427,7 @@
 
 # Wait for rebalance to complete
 - template: wait_for_rebalance
+  wait: true
 
 ############### Validate no index loss after rebalance #10 ################
 - image: sequoiatools/indexmanager
@@ -1508,6 +1514,7 @@
 
 # Wait for rebalance to complete
 - template: wait_for_rebalance
+  wait: true
 
 ############### Validate no index loss after rebalance #11 ################
 - image: sequoiatools/indexmanager
@@ -1569,6 +1576,7 @@
 
 # Wait for rebalance to complete
 - template: wait_for_rebalance
+  wait: true
 
 ############### Validate no index loss after rebalance #12 ################
 - image: sequoiatools/indexmanager
@@ -1931,6 +1939,7 @@
   wait: true
 
 - template: wait_for_rebalance
+  wait: true
 
 ############### Validate no index loss after rebalance #17 ################
 - image: sequoiatools/indexmanager
@@ -1959,6 +1968,7 @@
 - template: rebalance
 
 - template: wait_for_rebalance
+  wait: true
 
 ############### Validate no index loss after rebalance #18 ################
 - image: sequoiatools/indexmanager
@@ -2099,6 +2109,7 @@
   wait: true
 
 - template: wait_for_rebalance
+  wait: true
 
 ############### Validate no index loss after rebalance #19 ################
 - image: sequoiatools/indexmanager
@@ -2176,6 +2187,7 @@
 - template: rebalance
 
 - template: wait_for_rebalance
+  wait: true
 
 ############### Validate no index loss after rebalance #21 ################
 - image: sequoiatools/indexmanager
@@ -2307,6 +2319,7 @@
 - template: rebalance
 
 - template: wait_for_rebalance
+  wait: true
 
 ############### Validate no index loss after rebalance #23 ################
 - image: sequoiatools/indexmanager
@@ -2378,6 +2391,7 @@
 
 # Wait for rebalance to complete
 - template: wait_for_rebalance
+  wait: true
 
 ############### Validate no index loss after rebalance #24 ################
 - image: sequoiatools/indexmanager
@@ -2422,6 +2436,7 @@
 
 
 - template: wait_for_rebalance
+  wait: true
 
 ############### Validate no index loss after rebalance #25 ################
 - image: sequoiatools/indexmanager
@@ -2475,6 +2490,7 @@
 
 # Wait for rebalance to complete
 - template: wait_for_rebalance
+  wait: true
 
 ############### Validate no index loss after rebalance #26 ################
 - image: sequoiatools/indexmanager
@@ -2519,6 +2535,7 @@
 
 # Wait for rebalance to complete
 - template: wait_for_rebalance
+  wait: true
 
 ############### Validate no index loss after rebalance #27 ################
 - image: sequoiatools/indexmanager
@@ -2580,6 +2597,7 @@
 
 # Wait for rebalance to complete
 - template: wait_for_rebalance
+  wait: true
 
 ############### Validate no index loss after rebalance #28 ################
 - image: sequoiatools/indexmanager
@@ -2833,6 +2851,7 @@
 - template: rebalance
 
 - template: wait_for_rebalance
+  wait: true
 
 ############### Validate no index loss after rebalance #32 ################
 - image: sequoiatools/indexmanager
@@ -2908,6 +2927,7 @@
 
 ###############  Complete the rebalance ################
 - template: wait_for_rebalance
+  wait: true
 
 ############### Validate no index loss after rebalance #32 ################
 - image: sequoiatools/indexmanager
@@ -2936,6 +2956,7 @@
 - template: rebalance
 
 - template: wait_for_rebalance
+  wait: true
 
 ############### Validate no index loss after rebalance #33 ################
 - image: sequoiatools/indexmanager
@@ -3188,6 +3209,7 @@
 
 # Wait for rebalance to complete
 - template: wait_for_rebalance
+  wait: true
 
 ############### Validate no index loss after rebalance #36 ################
 - image: sequoiatools/indexmanager
@@ -3215,6 +3237,7 @@
 
 # Wait for rebalance to complete
 - template: wait_for_rebalance
+  wait: true
 
 ############### Validate no index loss after rebalance #37 ################
 - image: sequoiatools/indexmanager

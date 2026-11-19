@@ -279,9 +279,9 @@
 ##### so batch 2 isn't building 4+ BHIVE sets concurrently. bucket9's 50M BHIVE stays in batch 2 - it's not small.
 - section_start: create_replica_indexes
 - image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.Bucket}} -i {{.Scale 1}} -a create_n_indexes_on_buckets --set_max_partitions 24 -v --num_of_indexes_per_bucket 13 --skip_default_collection false"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.Bucket}} -i {{.Scale 1}} -a create_n_indexes_on_buckets --set_max_partitions 24 -v --num_of_indexes_per_bucket 13 --skip_default_collection true"
   wait: true
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 1}} -i {{.Scale 1}} -a create_n_indexes_on_buckets --set_max_partitions 24 -v --num_of_indexes_per_bucket 13 --skip_default_collection false --set_max_replicas 1"
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 1}} -i {{.Scale 1}} -a create_n_indexes_on_buckets --set_max_partitions 24 -v --num_of_indexes_per_bucket 13 --skip_default_collection true --set_max_replicas 1"
   wait: true
 - command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 11}} -i {{.Scale 1}} -a create_n_indexes_on_buckets --set_max_partitions 24 -v --num_of_indexes_per_bucket 13 --skip_default_collection false --set_max_replicas 0"
   wait: true
@@ -320,9 +320,9 @@
 ##### bucket6 default is composite (dense, 50M shoes). bucket9 is BHIVE (50M shoes) - the one large BHIVE set left in this batch.
 - section_start: create_replica_indexes
 - image: sequoiatools/indexmanager
-  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.Bucket}}  -a create_n_indexes_on_buckets --timeout 30 --num_of_indexes_per_bucket 6  --create_vector_indexes true --num_dimensions 128 --skip_default_collection false --num_vectors 1000000 --distance_algo EUCLIDEAN_SQUARED --use_description IVF,PQ8x8"
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.Bucket}}  -a create_n_indexes_on_buckets --timeout 30 --num_of_indexes_per_bucket 6  --create_vector_indexes true --num_dimensions 128 --skip_default_collection true --num_vectors 1000000 --distance_algo EUCLIDEAN_SQUARED --use_description IVF,PQ8x8"
   wait: true
-- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.Bucket}}  -a create_n_indexes_on_buckets --timeout 30 --num_of_indexes_per_bucket 6  --create_vector_indexes true --num_dimensions 128 --skip_default_collection false --num_vectors 1000000 --distance_algo EUCLIDEAN_SQUARED --use_description IVF,PQ64x8"
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.Bucket}}  -a create_n_indexes_on_buckets --timeout 30 --num_of_indexes_per_bucket 6  --create_vector_indexes true --num_dimensions 128 --skip_default_collection true --num_vectors 1000000 --distance_algo EUCLIDEAN_SQUARED --use_description IVF,PQ64x8"
   wait: true
 - command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 8}}  -a create_n_indexes_on_buckets --timeout 30  -v --num_of_indexes_per_bucket 4  --create_bhive_indexes true  --dataset shoes --num_dimensions 128 --skip_default_collection false --num_vectors 50000000 --distance_algo L2 --defer_build true --set_max_replicas 1 --use_description IVF1000,SQ8 --set_max_partitions 8"
   wait: true
@@ -426,6 +426,93 @@
 # already paired with their own build_deferred_index/wait right after each create batch)
 - image: sequoiatools/wait_for_idx_build_complete
   command: "{{.ActiveIndexNode 0}} {{.RestUsername}} {{.RestPassword}}"
+  wait: true
+
+############### train_list_wait: vector indexes created on empty collections (bucket13) ################
+##### bucket13.tlw.sift_dense     -> SIFT 10k (dense `embedding`)    : BHIVE + composite vector indexes
+##### bucket13.tlw.msmarco_sparse -> MSMARCO 10k (sparse `sparse`)   : sparse BHIVE + sparse composite indexes
+##### All indexes are created non-deferred with train_list_wait:true while the collections are still empty, so the
+##### indexer has to hold them until enough training vectors arrive. Data is loaded afterwards and the indexes must
+##### then come online on their own (no build_deferred_index is issued for bucket13).
+##### Scope/collection names deliberately avoid the scope_/coll_ prefixes so the generic all-collection steps skip them.
+- image: sequoiatools/collections:1.0
+  command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 12}} -o create -s tlw"
+  requires: "{{eq true .DoOnce }}"
+  wait: true
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 12}} -o create -s tlw -c sift_dense"
+  requires: "{{eq true .DoOnce }}"
+  wait: true
+- command: "-i {{.Orchestrator}}:8091 -b {{.NthBucket 12}} -o create -s tlw -c msmarco_sparse"
+  requires: "{{eq true .DoOnce }}"
+  wait: true
+
+# Sleep for some time to allow collections manifest to sync
+- image: sequoiatools/cmd
+  entrypoint: sleep
+  command: "300"
+  requires: "{{eq true .DoOnce }}"
+  wait: true
+
+############### bucket13.tlw.sift_dense: BHIVE + composite dense vector indexes with train_list_wait (collection is empty) ################
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 12}} -a create_n_indexes_on_buckets --timeout 30 -v --num_of_indexes_per_bucket 4 --create_bhive_indexes true --dataset shoes --use_custom_keyspace tlw.sift_dense --num_dimensions 128 --num_vectors 10000 --distance_algo L2 --use_description IVF,SQ8 --set_max_replicas 1 --set_max_partitions 4 --train_list_wait true"
+  requires: "{{eq true .DoOnce }}"
+  wait: true
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 12}} -a create_n_indexes_on_buckets --timeout 30 -v --num_of_indexes_per_bucket 3 --create_vector_indexes true --dataset shoes --use_custom_keyspace tlw.sift_dense --num_dimensions 128 --num_vectors 10000 --distance_algo L2 --use_description IVF,SQ8 --set_max_replicas 1 --set_max_partitions 4 --train_list_wait true"
+  requires: "{{eq true .DoOnce }}"
+  wait: true
+
+############### bucket13.tlw.msmarco_sparse: sparse BHIVE + sparse composite indexes with train_list_wait (collection is empty) ################
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 12}} -a create_n_indexes_on_buckets --timeout 30 --num_of_indexes_per_bucket 4 --create_sparse_bhive_indexes true --dataset shoes --use_custom_keyspace tlw.msmarco_sparse --num_vectors 10000 --use_description IVF --set_max_replicas 1 --set_max_partitions 4 --train_list_wait true"
+  requires: "{{eq true .DoOnce }}"
+  wait: true
+- command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} --bucket_list {{.NthBucket 12}} -a create_n_indexes_on_buckets --timeout 30 --num_of_indexes_per_bucket 3 --create_sparse_vector_indexes true --dataset shoes --use_custom_keyspace tlw.msmarco_sparse --num_vectors 10000 --use_description IVF --set_max_replicas 1 --set_max_partitions 4 --train_list_wait true"
+  requires: "{{eq true .DoOnce }}"
+  wait: true
+
+############### Load data into the empty collections: SIFT 10k (dense) and MSMARCO 10k (sparse) ################
+- image: sequoiatools/magmaloader
+  command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 12}} --start 0  --end 10000 --sift_path /root/bigann/ --scope tlw --collection sift_dense"
+  volumes: "/data/bigann/:/root/bigann"
+  requires: "{{eq true .DoOnce }}"
+  wait: true
+# key_prefix must contain the dash (see the bucket11 msmarco load above)
+- command: "--host {{.Orchestrator}} --user Administrator --password password --bucket {{.NthBucket 12}} --start 0  --end 10000 --msmarco_mode true --vec_file_path /data/sparse/collection.vecs --key_prefix msmarco- --scope tlw --collection msmarco_sparse"
+  volumes: "/data/sparse/:/data/sparse"
+  requires: "{{eq true .DoOnce }}"
+  wait: true
+
+############### train_list_wait indexes on bucket13 must now be online ################
+- image: sequoiatools/wait_for_idx_build_complete
+  command: "{{.ActiveIndexNode 0}} {{.RestUsername}} {{.RestPassword}}"
+  requires: "{{eq true .DoOnce }}"
+  wait: true
+
+############### Item count check for the dense (SIFT) and sparse (MSMARCO) train_list_wait indexes ################
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.NthBucket 12}} -a item_count_check --dataset shoes --sample_size 30 --all_docs_indexed true"
+  requires: "{{eq true .DoOnce }}"
+  wait: true
+
+############### Quiet period (~2h50m, --timeout 10192s): no workload, indexer killed on a random index node every 20 mins ################
+##### The next step waits for the indexes to come back after the last kill.
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a random_recovery --timeout 10192 --interval 1200"
+  requires: "{{eq true .DoOnce }}"
+  wait: true
+
+- image: sequoiatools/wait_for_idx_build_complete
+  command: "{{.ActiveIndexNode 0}} {{.RestUsername}} {{.RestPassword}}"
+  requires: "{{eq true .DoOnce }}"
+  wait: true
+
+############### Report indexer warmup times (Indexer::NewIndexer Status Warmup -> Status Active) from indexer.log* on every index node ################
+- image: sequoiatools/indexmanager
+  command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -b {{.Bucket}} -a report_indexer_warmup_times --log_level ERROR"
+  requires: "{{eq true .DoOnce }}"
+  # report_indexer_warmup_times always exits 1 on purpose so sequoia dumps the (compact) report to the console;
+  # --log_level ERROR keeps indexmanager's startup logging out of that dump
+  expect_error: true
   wait: true
 
 ############### Capture index count once all indexes are built (see logs/*capture_index_names* for the "Captured N index instances" line, or total_instances in the snapshot file) ################
@@ -581,17 +668,17 @@
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 1800 --refresh_duration 900 --timeout 600 --num_concurrent_queries 1 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list  {{.NthBucket 7}} --distance_algo L2 --use_tls false --skip_default false --xattrs true"
   alias: query_workload_6a
 ############### bucket12 queries ################
-# - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 1800 --refresh_duration 900 --timeout 3600 --num_concurrent_queries 20 --use_sdk true --query_type n1ql --template hotel,hotel_vectors --bucket_list {{.NthBucket 11}} --distance_algo EUCLIDEAN_SQUARED --use_tls false"
+# - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 1800 --refresh_duration 900 --timeout 3600 --num_concurrent_queries 20 --use_sdk true --query_type n1ql --template hotel,hotel_vectors --bucket_list {{.NthBucket 11}} --skip_default false --distance_algo EUCLIDEAN_SQUARED --use_tls false"
 #   alias: query_workload_12
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 1800 --refresh_duration 900 --timeout 3600 --num_concurrent_queries 60 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list {{.NthBucket 11}} --distance_algo DOT --num_query_vectors 1000 --num_groundtruth_vectors 100 --query_file /gist_query.fvecs --groundtruth_file /gist_groundtruth.ivecs --use_tls false --run_bhive_queries true"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 1800 --refresh_duration 900 --timeout 3600 --num_concurrent_queries 60 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list {{.NthBucket 11}} --skip_default false --distance_algo DOT --num_query_vectors 1000 --num_groundtruth_vectors 100 --query_file /gist_query.fvecs --groundtruth_file /gist_groundtruth.ivecs --use_tls false --run_bhive_queries true"
   alias: query_workload_12_bhive
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 1800 --refresh_duration 120 --timeout 300 --num_concurrent_queries 10 --use_sdk true --query_type n1ql --template hotel_sparse_vectors --bucket_list {{.NthBucket 11}} -qf /queries.dev.csr -gf /base_1M.dev.gt --use_tls false --skip_default false"
   alias: query_workload_12_sparse
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 1800 --refresh_duration 120 --timeout 300 --num_concurrent_queries 10 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list {{.NthBucket 10}} -qf /queries.dev.csr -gf /base_full.dev.gt --use_tls false --skip_default false"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 1800 --refresh_duration 120 --timeout 300 --num_concurrent_queries 10 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list {{.NthBucket 10}} -qf /queries.dev.csr -gf /base_full.dev.gt --use_tls false --validate_vector_query_results true --keyspace_list {{.NthBucket 10}}.scope_0.coll_0 --qrels_file /msmarco_qrels.json --sparse_limit 100 --nprobe 100 --num_query_vectors 1000 --num_groundtruth_vectors 1000 --skip_default false"
   alias: query_workload_11_sparse
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 1800 --refresh_duration 120 --timeout 300 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template hotel_sparse_vectors --bucket_list {{.NthBucket 11}} -qf /queries.dev.csr -gf /base_1M.dev.gt --use_tls false --skip_default false --run_bhive_queries true"
   alias: query_workload_12_sparse_bhive
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 1800 --refresh_duration 120 --timeout 300 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list {{.NthBucket 4}} -qf /queries.dev.csr -gf /base_full.dev.gt --use_tls false --skip_default false --run_bhive_queries true"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 1800 --refresh_duration 120 --timeout 300 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list {{.NthBucket 4}} -qf /queries.dev.csr -gf /base_full.dev.gt --use_tls false --validate_vector_query_results true --sparse_topn 400 --keyspace_list {{.NthBucket 4}}._default._default --qrels_file /msmarco_qrels.json --sparse_limit 100 --nprobe 100 --num_query_vectors 1000 --num_groundtruth_vectors 1000 --skip_default false --run_bhive_queries true"
   alias: query_workload_5_sparse_bhive
 - image: sequoiatools/query_manager:dev
   command: "--connection_string {{.Nodes | .Service `n1ql` | net 0}} --username {{.RestUsername}} --password {{.RestPassword}} --bucket_list {{.NthBucket 11}} --action run_udf_queries --num_udf_queries 200 --use_tls false"
@@ -728,17 +815,17 @@
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 1800 --refresh_duration 900 --timeout 600 --num_concurrent_queries 1 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list  {{.NthBucket 7}} --distance_algo L2 --use_tls false --skip_default false --xattrs true"
   alias: query_workload_6a
 ############### bucket12 queries ################
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 1800 --refresh_duration 900 --timeout 3600 --num_concurrent_queries 60 --use_sdk true --query_type n1ql --template hotel,hotel_vectors --bucket_list {{.NthBucket 11}} --distance_algo EUCLIDEAN_SQUARED --use_tls false"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 1800 --refresh_duration 900 --timeout 3600 --num_concurrent_queries 60 --use_sdk true --query_type n1ql --template hotel,hotel_vectors --bucket_list {{.NthBucket 11}} --skip_default false --distance_algo EUCLIDEAN_SQUARED --use_tls false"
   alias: query_workload_12
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 1800 --refresh_duration 900 --timeout 3600 --num_concurrent_queries 60 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list {{.NthBucket 11}} --distance_algo DOT --num_query_vectors 1000 --num_groundtruth_vectors 100 --query_file /gist_query.fvecs --groundtruth_file /gist_groundtruth.ivecs --use_tls false --run_bhive_queries true"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 1800 --refresh_duration 900 --timeout 3600 --num_concurrent_queries 60 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list {{.NthBucket 11}} --skip_default false --distance_algo DOT --num_query_vectors 1000 --num_groundtruth_vectors 100 --query_file /gist_query.fvecs --groundtruth_file /gist_groundtruth.ivecs --use_tls false --run_bhive_queries true"
   alias: query_workload_12_bhive
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 1800 --refresh_duration 120 --timeout 300 --num_concurrent_queries 10 --use_sdk true --query_type n1ql --template hotel_sparse_vectors --bucket_list {{.NthBucket 11}} -qf /queries.dev.csr -gf /base_1M.dev.gt --use_tls false --skip_default false"
   alias: query_workload_12_sparse
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 1800 --refresh_duration 120 --timeout 300 --num_concurrent_queries 10 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list {{.NthBucket 10}} -qf /queries.dev.csr -gf /base_full.dev.gt --use_tls false --skip_default false"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 1800 --refresh_duration 120 --timeout 300 --num_concurrent_queries 10 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list {{.NthBucket 10}} -qf /queries.dev.csr -gf /base_full.dev.gt --use_tls false --validate_vector_query_results true --keyspace_list {{.NthBucket 10}}.scope_0.coll_0 --qrels_file /msmarco_qrels.json --sparse_limit 100 --nprobe 100 --num_query_vectors 1000 --num_groundtruth_vectors 1000 --skip_default false"
   alias: query_workload_11_sparse
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 1800 --refresh_duration 120 --timeout 300 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template hotel_sparse_vectors --bucket_list {{.NthBucket 11}} -qf /queries.dev.csr -gf /base_1M.dev.gt --use_tls false --skip_default false --run_bhive_queries true"
   alias: query_workload_12_sparse_bhive
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 1800 --refresh_duration 120 --timeout 300 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list {{.NthBucket 4}} -qf /queries.dev.csr -gf /base_full.dev.gt --use_tls false --skip_default false --run_bhive_queries true"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 1800 --refresh_duration 120 --timeout 300 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list {{.NthBucket 4}} -qf /queries.dev.csr -gf /base_full.dev.gt --use_tls false --validate_vector_query_results true --sparse_topn 400 --keyspace_list {{.NthBucket 4}}._default._default --qrels_file /msmarco_qrels.json --sparse_limit 100 --nprobe 100 --num_query_vectors 1000 --num_groundtruth_vectors 1000 --skip_default false --run_bhive_queries true"
   alias: query_workload_5_sparse_bhive
 - section_end: query_vector_indexes
 
@@ -788,17 +875,17 @@
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 43200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 1 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list  {{.NthBucket 7}} --distance_algo L2 --use_tls false --skip_default false --xattrs true"
   alias: soak_query_6a
 ############### bucket12 queries ###############
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 43200 --refresh_duration 900 --timeout 3600 --num_concurrent_queries 20 --use_sdk true --query_type n1ql --template hotel,hotel_vectors --bucket_list {{.NthBucket 11}} --distance_algo EUCLIDEAN_SQUARED --use_tls false"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 43200 --refresh_duration 900 --timeout 3600 --num_concurrent_queries 20 --use_sdk true --query_type n1ql --template hotel,hotel_vectors --bucket_list {{.NthBucket 11}} --skip_default false --distance_algo EUCLIDEAN_SQUARED --use_tls false"
   alias: soak_query_12
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 43200 --refresh_duration 900 --timeout 3600 --num_concurrent_queries 20 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list {{.NthBucket 11}} --distance_algo DOT --num_query_vectors 1000 --num_groundtruth_vectors 100 --query_file /gist_query.fvecs --groundtruth_file /gist_groundtruth.ivecs --use_tls false --run_bhive_queries true"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 43200 --refresh_duration 900 --timeout 3600 --num_concurrent_queries 20 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list {{.NthBucket 11}} --skip_default false --distance_algo DOT --num_query_vectors 1000 --num_groundtruth_vectors 100 --query_file /gist_query.fvecs --groundtruth_file /gist_groundtruth.ivecs --use_tls false --run_bhive_queries true"
   alias: soak_query_12_bhive
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 43200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 10 --use_sdk true --query_type n1ql --template hotel_sparse_vectors --bucket_list {{.NthBucket 11}} -qf /queries.dev.csr -gf /base_1M.dev.gt --use_tls false --skip_default false"
   alias: soak_query_12_sparse
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 43200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 10 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list {{.NthBucket 10}} -qf /queries.dev.csr -gf /base_full.dev.gt --use_tls false --skip_default false"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 43200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 10 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list {{.NthBucket 10}} -qf /queries.dev.csr -gf /base_full.dev.gt --use_tls false --validate_vector_query_results true --keyspace_list {{.NthBucket 10}}.scope_0.coll_0 --qrels_file /msmarco_qrels.json --sparse_limit 100 --nprobe 100 --num_query_vectors 1000 --num_groundtruth_vectors 1000 --skip_default false"
   alias: soak_query_11_sparse
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 43200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template hotel_sparse_vectors --bucket_list {{.NthBucket 11}} -qf /queries.dev.csr -gf /base_1M.dev.gt --use_tls false --skip_default false --run_bhive_queries true"
   alias: soak_query_12_sparse_bhive
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 43200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list {{.NthBucket 4}} -qf /queries.dev.csr -gf /base_full.dev.gt --use_tls false --skip_default false --run_bhive_queries true"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 43200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list {{.NthBucket 4}} -qf /queries.dev.csr -gf /base_full.dev.gt --use_tls false --validate_vector_query_results true --sparse_topn 400 --keyspace_list {{.NthBucket 4}}._default._default --qrels_file /msmarco_qrels.json --sparse_limit 100 --nprobe 100 --num_query_vectors 1000 --num_groundtruth_vectors 1000 --skip_default false --run_bhive_queries true"
   alias: soak_query_5_sparse_bhive
 
 ############### Background mutations (12h) - vector embeddings + scalar fields, same pattern as the rebalance-phase mutators ###############
@@ -913,6 +1000,7 @@
 
 # Wait for rebalance to complete
 - template: wait_for_rebalance
+  wait: true
 
 # Safety wait: hold 10 min after rebalance completion so the index/service
 # rebalance phase fully settles before validation / item_count_check
@@ -1137,19 +1225,19 @@
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 1 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list  {{.NthBucket 7}} --distance_algo L2 --use_tls false --skip_default false --xattrs true"
   alias: query_workload_6a
 ############## bucket12 queries ################
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 900 --timeout 3600 --num_concurrent_queries 20 --use_sdk true --query_type n1ql --template hotel,hotel_vectors --bucket_list {{.NthBucket 11}} --distance_algo EUCLIDEAN_SQUARED --use_tls false"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 900 --timeout 3600 --num_concurrent_queries 20 --use_sdk true --query_type n1ql --template hotel,hotel_vectors --bucket_list {{.NthBucket 11}} --skip_default false --distance_algo EUCLIDEAN_SQUARED --use_tls false"
   alias: query_workload_12
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 900 --timeout 3600 --num_concurrent_queries 10 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list {{.NthBucket 11}} --distance_algo DOT --num_query_vectors 1000 --num_groundtruth_vectors 100 --query_file /gist_query.fvecs --groundtruth_file /gist_groundtruth.ivecs --use_tls false --run_bhive_queries true"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 900 --timeout 3600 --num_concurrent_queries 10 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list {{.NthBucket 11}} --skip_default false --distance_algo DOT --num_query_vectors 1000 --num_groundtruth_vectors 100 --query_file /gist_query.fvecs --groundtruth_file /gist_groundtruth.ivecs --use_tls false --run_bhive_queries true"
   alias: query_workload_12_bhive
 
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 10 --use_sdk true --query_type n1ql --template hotel_sparse_vectors --bucket_list {{.NthBucket 11}} -qf /queries.dev.csr -gf /base_1M.dev.gt --use_tls false --skip_default false"
   alias: query_workload_12_sparse
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 10 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list {{.NthBucket 10}} -qf /queries.dev.csr -gf /base_full.dev.gt --use_tls false --skip_default false"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 10 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list {{.NthBucket 10}} -qf /queries.dev.csr -gf /base_full.dev.gt --use_tls false --validate_vector_query_results true --keyspace_list {{.NthBucket 10}}.scope_0.coll_0 --qrels_file /msmarco_qrels.json --sparse_limit 100 --nprobe 100 --num_query_vectors 1000 --num_groundtruth_vectors 1000 --skip_default false"
   alias: query_workload_11_sparse
 
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template hotel_sparse_vectors --bucket_list {{.NthBucket 11}} -qf /queries.dev.csr -gf /base_1M.dev.gt --use_tls false --skip_default false --run_bhive_queries true"
   alias: query_workload_12_sparse_bhive
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list {{.NthBucket 4}} -qf /queries.dev.csr -gf /base_full.dev.gt --use_tls false --skip_default false --run_bhive_queries true"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list {{.NthBucket 4}} -qf /queries.dev.csr -gf /base_full.dev.gt --use_tls false --validate_vector_query_results true --sparse_topn 400 --keyspace_list {{.NthBucket 4}}._default._default --qrels_file /msmarco_qrels.json --sparse_limit 100 --nprobe 100 --num_query_vectors 1000 --num_groundtruth_vectors 1000 --skip_default false --run_bhive_queries true"
   alias: query_workload_5_sparse_bhive
 - section_end: query_vector_indexes
 
@@ -1441,6 +1529,7 @@
 - template: rebalance
 
 - template: wait_for_rebalance
+  wait: true
 
 # Safety wait: hold 10 min after rebalance completion so the index/service
 # rebalance phase fully settles before validation / item_count_check
@@ -1522,6 +1611,7 @@
 
 # Wait for rebalance to complete
 - template: wait_for_rebalance
+  wait: true
 
 # Safety wait: hold 10 min after rebalance completion so the index/service
 # rebalance phase fully settles before validation / item_count_check
@@ -1581,19 +1671,19 @@
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 1 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list  {{.NthBucket 7}} --distance_algo L2 --use_tls false --skip_default false --xattrs true"
   alias: query_workload_6a
 ############### bucket12 queries ################
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 3600 --num_concurrent_queries 20 --use_sdk true --query_type n1ql --template hotel,hotel_vectors --bucket_list {{.NthBucket 11}} --distance_algo EUCLIDEAN_SQUARED --use_tls false"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 3600 --num_concurrent_queries 20 --use_sdk true --query_type n1ql --template hotel,hotel_vectors --bucket_list {{.NthBucket 11}} --skip_default false --distance_algo EUCLIDEAN_SQUARED --use_tls false"
   alias: query_workload_12
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 3600 --num_concurrent_queries 20 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list {{.NthBucket 11}} --distance_algo DOT --num_query_vectors 1000 --num_groundtruth_vectors 100 --query_file /gist_query.fvecs --groundtruth_file /gist_groundtruth.ivecs --use_tls false --run_bhive_queries true"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 3600 --num_concurrent_queries 20 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list {{.NthBucket 11}} --skip_default false --distance_algo DOT --num_query_vectors 1000 --num_groundtruth_vectors 100 --query_file /gist_query.fvecs --groundtruth_file /gist_groundtruth.ivecs --use_tls false --run_bhive_queries true"
   alias: query_workload_12_bhive
 
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 10 --use_sdk true --query_type n1ql --template hotel_sparse_vectors --bucket_list {{.NthBucket 11}} -qf /queries.dev.csr -gf /base_1M.dev.gt --use_tls false --skip_default false"
   alias: query_workload_12_sparse
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 10 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list {{.NthBucket 10}} -qf /queries.dev.csr -gf /base_full.dev.gt --use_tls false --skip_default false"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 10 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list {{.NthBucket 10}} -qf /queries.dev.csr -gf /base_full.dev.gt --use_tls false --validate_vector_query_results true --keyspace_list {{.NthBucket 10}}.scope_0.coll_0 --qrels_file /msmarco_qrels.json --sparse_limit 100 --nprobe 100 --num_query_vectors 1000 --num_groundtruth_vectors 1000 --skip_default false"
   alias: query_workload_11_sparse
 
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template hotel_sparse_vectors --bucket_list {{.NthBucket 11}} -qf /queries.dev.csr -gf /base_1M.dev.gt --use_tls false --skip_default false --run_bhive_queries true"
   alias: query_workload_12_sparse_bhive
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list {{.NthBucket 4}} -qf /queries.dev.csr -gf /base_full.dev.gt --use_tls false --skip_default false --run_bhive_queries true"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list {{.NthBucket 4}} -qf /queries.dev.csr -gf /base_full.dev.gt --use_tls false --validate_vector_query_results true --sparse_topn 400 --keyspace_list {{.NthBucket 4}}._default._default --qrels_file /msmarco_qrels.json --sparse_limit 100 --nprobe 100 --num_query_vectors 1000 --num_groundtruth_vectors 1000 --skip_default false --run_bhive_queries true"
   alias: query_workload_5_sparse_bhive
 - section_end: query_vector_indexes
 
@@ -1712,6 +1802,7 @@
 - template: rebalance
 
 - template: wait_for_rebalance
+  wait: true
 
 # Safety wait: hold 10 min after rebalance completion so the index/service
 # rebalance phase fully settles before validation / item_count_check
@@ -1765,19 +1856,19 @@
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 1 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list  {{.NthBucket 7}} --distance_algo L2 --use_tls false --skip_default false --xattrs true"
   alias: query_workload_6a
 ############### bucket12 queries ################
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 3600 --num_concurrent_queries 20 --use_sdk true --query_type n1ql --template hotel,hotel_vectors --bucket_list {{.NthBucket 11}} --distance_algo EUCLIDEAN_SQUARED --use_tls false"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 3600 --num_concurrent_queries 20 --use_sdk true --query_type n1ql --template hotel,hotel_vectors --bucket_list {{.NthBucket 11}} --skip_default false --distance_algo EUCLIDEAN_SQUARED --use_tls false"
   alias: query_workload_12
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 3600 --num_concurrent_queries 20 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list {{.NthBucket 11}} --distance_algo DOT --num_query_vectors 1000 --num_groundtruth_vectors 100 --query_file /gist_query.fvecs --groundtruth_file /gist_groundtruth.ivecs --use_tls false --run_bhive_queries true"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 3600 --num_concurrent_queries 20 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list {{.NthBucket 11}} --skip_default false --distance_algo DOT --num_query_vectors 1000 --num_groundtruth_vectors 100 --query_file /gist_query.fvecs --groundtruth_file /gist_groundtruth.ivecs --use_tls false --run_bhive_queries true"
   alias: query_workload_12_bhive
 
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 10 --use_sdk true --query_type n1ql --template hotel_sparse_vectors --bucket_list {{.NthBucket 11}} -qf /queries.dev.csr -gf /base_1M.dev.gt --use_tls false --skip_default false"
   alias: query_workload_12_sparse
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 10 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list {{.NthBucket 10}} -qf /queries.dev.csr -gf /base_full.dev.gt --use_tls false --skip_default false"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 10 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list {{.NthBucket 10}} -qf /queries.dev.csr -gf /base_full.dev.gt --use_tls false --validate_vector_query_results true --keyspace_list {{.NthBucket 10}}.scope_0.coll_0 --qrels_file /msmarco_qrels.json --sparse_limit 100 --nprobe 100 --num_query_vectors 1000 --num_groundtruth_vectors 1000 --skip_default false"
   alias: query_workload_11_sparse
 
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template hotel_sparse_vectors --bucket_list {{.NthBucket 11}} -qf /queries.dev.csr -gf /base_1M.dev.gt --use_tls false --skip_default false --run_bhive_queries true"
   alias: query_workload_12_sparse_bhive
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list {{.NthBucket 4}} -qf /queries.dev.csr -gf /base_full.dev.gt --use_tls false --skip_default false --run_bhive_queries true"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list {{.NthBucket 4}} -qf /queries.dev.csr -gf /base_full.dev.gt --use_tls false --validate_vector_query_results true --sparse_topn 400 --keyspace_list {{.NthBucket 4}}._default._default --qrels_file /msmarco_qrels.json --sparse_limit 100 --nprobe 100 --num_query_vectors 1000 --num_groundtruth_vectors 1000 --skip_default false --run_bhive_queries true"
   alias: query_workload_5_sparse_bhive
 - section_end: query_vector_indexes
 
@@ -1832,6 +1923,7 @@
 
 # Wait for rebalance to complete
 - template: wait_for_rebalance
+  wait: true
 
 # Safety wait: hold 10 min after rebalance completion so the index/service
 # rebalance phase fully settles before validation / item_count_check
@@ -1881,19 +1973,19 @@
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 1 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list  {{.NthBucket 7}} --distance_algo L2 --use_tls false --skip_default false --xattrs true"
   alias: query_workload_6a
 ############### bucket12 queries ################
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 3600 --num_concurrent_queries 20 --use_sdk true --query_type n1ql --template hotel,hotel_vectors --bucket_list {{.NthBucket 11}} --distance_algo EUCLIDEAN_SQUARED --use_tls false"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 3600 --num_concurrent_queries 20 --use_sdk true --query_type n1ql --template hotel,hotel_vectors --bucket_list {{.NthBucket 11}} --skip_default false --distance_algo EUCLIDEAN_SQUARED --use_tls false"
   alias: query_workload_12
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 3600 --num_concurrent_queries 20 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list {{.NthBucket 11}} --distance_algo DOT --num_query_vectors 1000 --num_groundtruth_vectors 100 --query_file /gist_query.fvecs --groundtruth_file /gist_groundtruth.ivecs --use_tls false --run_bhive_queries true"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 3600 --num_concurrent_queries 20 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list {{.NthBucket 11}} --skip_default false --distance_algo DOT --num_query_vectors 1000 --num_groundtruth_vectors 100 --query_file /gist_query.fvecs --groundtruth_file /gist_groundtruth.ivecs --use_tls false --run_bhive_queries true"
   alias: query_workload_12_bhive
 
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 10 --use_sdk true --query_type n1ql --template hotel_sparse_vectors --bucket_list {{.NthBucket 11}} -qf /queries.dev.csr -gf /base_1M.dev.gt --use_tls false --skip_default false"
   alias: query_workload_12_sparse
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 10 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list {{.NthBucket 10}} -qf /queries.dev.csr -gf /base_full.dev.gt --use_tls false --skip_default false"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 10 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list {{.NthBucket 10}} -qf /queries.dev.csr -gf /base_full.dev.gt --use_tls false --validate_vector_query_results true --keyspace_list {{.NthBucket 10}}.scope_0.coll_0 --qrels_file /msmarco_qrels.json --sparse_limit 100 --nprobe 100 --num_query_vectors 1000 --num_groundtruth_vectors 1000 --skip_default false"
   alias: query_workload_11_sparse
 
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template hotel_sparse_vectors --bucket_list {{.NthBucket 11}} -qf /queries.dev.csr -gf /base_1M.dev.gt --use_tls false --skip_default false --run_bhive_queries true"
   alias: query_workload_12_sparse_bhive
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list {{.NthBucket 4}} -qf /queries.dev.csr -gf /base_full.dev.gt --use_tls false --skip_default false --run_bhive_queries true"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list {{.NthBucket 4}} -qf /queries.dev.csr -gf /base_full.dev.gt --use_tls false --validate_vector_query_results true --sparse_topn 400 --keyspace_list {{.NthBucket 4}}._default._default --qrels_file /msmarco_qrels.json --sparse_limit 100 --nprobe 100 --num_query_vectors 1000 --num_groundtruth_vectors 1000 --skip_default false --run_bhive_queries true"
   alias: query_workload_5_sparse_bhive
 - section_end: query_vector_indexes
 
@@ -1916,6 +2008,7 @@
 
 # Wait for rebalance to complete
 - template: wait_for_rebalance
+  wait: true
 
 # Safety wait: hold 10 min after rebalance completion so the index/service
 # rebalance phase fully settles before validation / item_count_check
@@ -1965,19 +2058,19 @@
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 1 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list  {{.NthBucket 7}} --distance_algo L2 --use_tls false --skip_default false --xattrs true"
   alias: query_workload_6a
 ############### bucket12 queries ################
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 3600 --num_concurrent_queries 20 --use_sdk true --query_type n1ql --template hotel,hotel_vectors --bucket_list {{.NthBucket 11}} --distance_algo EUCLIDEAN_SQUARED --use_tls false"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 3600 --num_concurrent_queries 20 --use_sdk true --query_type n1ql --template hotel,hotel_vectors --bucket_list {{.NthBucket 11}} --skip_default false --distance_algo EUCLIDEAN_SQUARED --use_tls false"
   alias: query_workload_12
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 3600 --num_concurrent_queries 20 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list {{.NthBucket 11}} --distance_algo DOT --num_query_vectors 1000 --num_groundtruth_vectors 100 --query_file /gist_query.fvecs --groundtruth_file /gist_groundtruth.ivecs --use_tls false --run_bhive_queries true"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 3600 --num_concurrent_queries 20 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list {{.NthBucket 11}} --skip_default false --distance_algo DOT --num_query_vectors 1000 --num_groundtruth_vectors 100 --query_file /gist_query.fvecs --groundtruth_file /gist_groundtruth.ivecs --use_tls false --run_bhive_queries true"
   alias: query_workload_12_bhive
 
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 10 --use_sdk true --query_type n1ql --template hotel_sparse_vectors --bucket_list {{.NthBucket 11}} -qf /queries.dev.csr -gf /base_1M.dev.gt --use_tls false --skip_default false"
   alias: query_workload_12_sparse
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 10 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list {{.NthBucket 10}} -qf /queries.dev.csr -gf /base_full.dev.gt --use_tls false --skip_default false"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 10 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list {{.NthBucket 10}} -qf /queries.dev.csr -gf /base_full.dev.gt --use_tls false --validate_vector_query_results true --keyspace_list {{.NthBucket 10}}.scope_0.coll_0 --qrels_file /msmarco_qrels.json --sparse_limit 100 --nprobe 100 --num_query_vectors 1000 --num_groundtruth_vectors 1000 --skip_default false"
   alias: query_workload_11_sparse
 
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template hotel_sparse_vectors --bucket_list {{.NthBucket 11}} -qf /queries.dev.csr -gf /base_1M.dev.gt --use_tls false --skip_default false --run_bhive_queries true"
   alias: query_workload_12_sparse_bhive
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list {{.NthBucket 4}} -qf /queries.dev.csr -gf /base_full.dev.gt --use_tls false --skip_default false --run_bhive_queries true"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list {{.NthBucket 4}} -qf /queries.dev.csr -gf /base_full.dev.gt --use_tls false --validate_vector_query_results true --sparse_topn 400 --keyspace_list {{.NthBucket 4}}._default._default --qrels_file /msmarco_qrels.json --sparse_limit 100 --nprobe 100 --num_query_vectors 1000 --num_groundtruth_vectors 1000 --skip_default false --run_bhive_queries true"
   alias: query_workload_5_sparse_bhive
 - section_end: query_vector_indexes
 
@@ -2043,6 +2136,7 @@
 
 # Wait for rebalance to complete
 - template: wait_for_rebalance
+  wait: true
 
 # Safety wait: hold 10 min after rebalance completion so the index/service
 # rebalance phase fully settles before validation / item_count_check
@@ -2092,19 +2186,19 @@
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 1 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list  {{.NthBucket 7}} --distance_algo L2 --use_tls false --skip_default false --xattrs true"
   alias: query_workload_6a
 ############### bucket12 queries ################
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 900 --timeout 3600 --num_concurrent_queries 20 --use_sdk true --query_type n1ql --template hotel,hotel_vectors --bucket_list {{.NthBucket 11}} --distance_algo EUCLIDEAN_SQUARED --use_tls false"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 900 --timeout 3600 --num_concurrent_queries 20 --use_sdk true --query_type n1ql --template hotel,hotel_vectors --bucket_list {{.NthBucket 11}} --skip_default false --distance_algo EUCLIDEAN_SQUARED --use_tls false"
   alias: query_workload_12
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 900 --timeout 3600 --num_concurrent_queries 10 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list {{.NthBucket 11}} --distance_algo DOT --num_query_vectors 1000 --num_groundtruth_vectors 100 --query_file /gist_query.fvecs --groundtruth_file /gist_groundtruth.ivecs --use_tls false --run_bhive_queries true"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 900 --timeout 3600 --num_concurrent_queries 10 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list {{.NthBucket 11}} --skip_default false --distance_algo DOT --num_query_vectors 1000 --num_groundtruth_vectors 100 --query_file /gist_query.fvecs --groundtruth_file /gist_groundtruth.ivecs --use_tls false --run_bhive_queries true"
   alias: query_workload_12_bhive
 
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 10 --use_sdk true --query_type n1ql --template hotel_sparse_vectors --bucket_list {{.NthBucket 11}} -qf /queries.dev.csr -gf /base_1M.dev.gt --use_tls false --skip_default false"
   alias: query_workload_12_sparse
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 10 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list {{.NthBucket 10}} -qf /queries.dev.csr -gf /base_full.dev.gt --use_tls false --skip_default false"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 10 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list {{.NthBucket 10}} -qf /queries.dev.csr -gf /base_full.dev.gt --use_tls false --validate_vector_query_results true --keyspace_list {{.NthBucket 10}}.scope_0.coll_0 --qrels_file /msmarco_qrels.json --sparse_limit 100 --nprobe 100 --num_query_vectors 1000 --num_groundtruth_vectors 1000 --skip_default false"
   alias: query_workload_11_sparse
 
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template hotel_sparse_vectors --bucket_list {{.NthBucket 11}} -qf /queries.dev.csr -gf /base_1M.dev.gt --use_tls false --skip_default false --run_bhive_queries true"
   alias: query_workload_12_sparse_bhive
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list {{.NthBucket 4}} -qf /queries.dev.csr -gf /base_full.dev.gt --use_tls false --skip_default false --run_bhive_queries true"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list {{.NthBucket 4}} -qf /queries.dev.csr -gf /base_full.dev.gt --use_tls false --validate_vector_query_results true --sparse_topn 400 --keyspace_list {{.NthBucket 4}}._default._default --qrels_file /msmarco_qrels.json --sparse_limit 100 --nprobe 100 --num_query_vectors 1000 --num_groundtruth_vectors 1000 --skip_default false --run_bhive_queries true"
   alias: query_workload_5_sparse_bhive
 - section_end: query_vector_indexes
 
@@ -2125,14 +2219,14 @@
   requires: "{{eq true .DoOnce }}"
 
 ###############  Rebalance-in two index nodes ################
-- template: add_node
-  args: "{{.NthInActiveNode 0}}, index"
-- args: "{{.NthInActiveNode 1}}, index"
 ############### Capture index names before rebalance #12 ################
 - image: sequoiatools/indexmanager
   command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a capture_index_names --snapshot_file /data/index_snapshot_12.json"
   volumes: "/data:/data"
   wait: true
+- template: add_node
+  args: "{{.NthInActiveNode 0}}, index"
+- args: "{{.NthInActiveNode 1}}, index"
 
 
 - template: rebalance
@@ -2145,6 +2239,7 @@
 
 # Wait for rebalance to complete
 - template: wait_for_rebalance
+  wait: true
 
 # Safety wait: hold 10 min after rebalance completion so the index/service
 # rebalance phase fully settles before validation / item_count_check
@@ -2265,6 +2360,11 @@
   args: "{{.ActiveIndexNode 1}}"
   wait: true
 
+# autofailover1IndexNode leaves the timeout at 30s; restore 120s so long index rebalances are not auto-failed-over mid-flight
+- template: enable_autofailover
+  args: "120,1"
+  wait: true
+
 ###############  Rebalance out data node ################
 ############### Capture index names before rebalance #13 ################
 - image: sequoiatools/indexmanager
@@ -2352,6 +2452,11 @@
 ###############  Auto failover for indexer node ################
 - template: autofailover1IndexNode
   args: "{{.ActiveIndexNode 1}}"
+
+# autofailover1IndexNode leaves the timeout at 30s; restore 120s so long index rebalances are not auto-failed-over mid-flight
+- template: enable_autofailover
+  args: "120,1"
+  wait: true
 
 - image: sequoiatools/cmd
   entrypoint: sleep
@@ -2473,15 +2578,15 @@
   wait: true
 
 
-###############  Add back index node  ################
-- template: add_node
-  args: "{{.NthInActiveNode 0}}, index"
-  wait: true
-
 ############### Capture index names before rebalance #16 ################
 - image: sequoiatools/indexmanager
   command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a capture_index_names --snapshot_file /data/index_snapshot_16.json"
   volumes: "/data:/data"
+  wait: true
+
+###############  Add back index node  ################
+- template: add_node
+  args: "{{.NthInActiveNode 0}}, index"
   wait: true
 
 
@@ -2515,6 +2620,11 @@
 ###############  Auto failover for indexer node ################
 - template: autofailover1IndexNode
   args: "{{.ActiveIndexNode 1}}"
+  wait: true
+
+# autofailover1IndexNode leaves the timeout at 30s; restore 120s so long index rebalances are not auto-failed-over mid-flight
+- template: enable_autofailover
+  args: "120,1"
   wait: true
 
 - section_end: change_indexer_topologies
@@ -2560,19 +2670,19 @@
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 1 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list  {{.NthBucket 7}} --distance_algo L2 --use_tls false --skip_default false --xattrs true"
   alias: query_workload_6a
 ############### bucket12 queries ################
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 900 --timeout 3600 --num_concurrent_queries 20 --use_sdk true --query_type n1ql --template hotel,hotel_vectors --bucket_list {{.NthBucket 11}} --distance_algo EUCLIDEAN_SQUARED --use_tls false"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 900 --timeout 3600 --num_concurrent_queries 20 --use_sdk true --query_type n1ql --template hotel,hotel_vectors --bucket_list {{.NthBucket 11}} --skip_default false --distance_algo EUCLIDEAN_SQUARED --use_tls false"
   alias: query_workload_12
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 900 --timeout 3600 --num_concurrent_queries 10 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list {{.NthBucket 11}} --distance_algo DOT --num_query_vectors 1000 --num_groundtruth_vectors 100 --query_file /gist_query.fvecs --groundtruth_file /gist_groundtruth.ivecs --use_tls false --run_bhive_queries true"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 900 --timeout 3600 --num_concurrent_queries 10 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list {{.NthBucket 11}} --skip_default false --distance_algo DOT --num_query_vectors 1000 --num_groundtruth_vectors 100 --query_file /gist_query.fvecs --groundtruth_file /gist_groundtruth.ivecs --use_tls false --run_bhive_queries true"
   alias: query_workload_12_bhive
 
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 10 --use_sdk true --query_type n1ql --template hotel_sparse_vectors --bucket_list {{.NthBucket 11}} -qf /queries.dev.csr -gf /base_1M.dev.gt --use_tls false --skip_default false"
   alias: query_workload_12_sparse
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 10 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list {{.NthBucket 10}} -qf /queries.dev.csr -gf /base_full.dev.gt --use_tls false --skip_default false"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 10 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list {{.NthBucket 10}} -qf /queries.dev.csr -gf /base_full.dev.gt --use_tls false --validate_vector_query_results true --keyspace_list {{.NthBucket 10}}.scope_0.coll_0 --qrels_file /msmarco_qrels.json --sparse_limit 100 --nprobe 100 --num_query_vectors 1000 --num_groundtruth_vectors 1000 --skip_default false"
   alias: query_workload_11_sparse
 
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template hotel_sparse_vectors --bucket_list {{.NthBucket 11}} -qf /queries.dev.csr -gf /base_1M.dev.gt --use_tls false --skip_default false --run_bhive_queries true"
   alias: query_workload_12_sparse_bhive
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list {{.NthBucket 4}} -qf /queries.dev.csr -gf /base_full.dev.gt --use_tls false --skip_default false --run_bhive_queries true"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list {{.NthBucket 4}} -qf /queries.dev.csr -gf /base_full.dev.gt --use_tls false --validate_vector_query_results true --sparse_topn 400 --keyspace_list {{.NthBucket 4}}._default._default --qrels_file /msmarco_qrels.json --sparse_limit 100 --nprobe 100 --num_query_vectors 1000 --num_groundtruth_vectors 1000 --skip_default false --run_bhive_queries true"
   alias: query_workload_5_sparse_bhive
 - section_end: query_vector_indexes
 
@@ -2604,6 +2714,7 @@
   wait: true
 
 - template: wait_for_rebalance
+  wait: true
 
 # Safety wait: hold 10 min after rebalance completion so the index/service
 # rebalance phase fully settles before validation / item_count_check
@@ -2652,6 +2763,7 @@
 - template: rebalance
 
 - template: wait_for_rebalance
+  wait: true
 
 # Safety wait: hold 10 min after rebalance completion so the index/service
 # rebalance phase fully settles before validation / item_count_check
@@ -2773,19 +2885,19 @@
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 1 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list  {{.NthBucket 7}} --distance_algo L2 --use_tls false --skip_default false --xattrs true"
   alias: query_workload_6a
 ############### bucket12 queries ################
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 900 --timeout 3600 --num_concurrent_queries 20 --use_sdk true --query_type n1ql --template hotel,hotel_vectors --bucket_list {{.NthBucket 11}} --distance_algo EUCLIDEAN_SQUARED --use_tls false"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 900 --timeout 3600 --num_concurrent_queries 20 --use_sdk true --query_type n1ql --template hotel,hotel_vectors --bucket_list {{.NthBucket 11}} --skip_default false --distance_algo EUCLIDEAN_SQUARED --use_tls false"
   alias: query_workload_12
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 900 --timeout 3600 --num_concurrent_queries 10 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list {{.NthBucket 11}} --distance_algo DOT --num_query_vectors 1000 --num_groundtruth_vectors 100 --query_file /gist_query.fvecs --groundtruth_file /gist_groundtruth.ivecs --use_tls false --run_bhive_queries true"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 900 --timeout 3600 --num_concurrent_queries 10 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list {{.NthBucket 11}} --skip_default false --distance_algo DOT --num_query_vectors 1000 --num_groundtruth_vectors 100 --query_file /gist_query.fvecs --groundtruth_file /gist_groundtruth.ivecs --use_tls false --run_bhive_queries true"
   alias: query_workload_12_bhive
 
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 10 --use_sdk true --query_type n1ql --template hotel_sparse_vectors --bucket_list {{.NthBucket 11}} -qf /queries.dev.csr -gf /base_1M.dev.gt --use_tls false --skip_default false"
   alias: query_workload_12_sparse
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 10 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list {{.NthBucket 10}} -qf /queries.dev.csr -gf /base_full.dev.gt --use_tls false --skip_default false"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 10 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list {{.NthBucket 10}} -qf /queries.dev.csr -gf /base_full.dev.gt --use_tls false --validate_vector_query_results true --keyspace_list {{.NthBucket 10}}.scope_0.coll_0 --qrels_file /msmarco_qrels.json --sparse_limit 100 --nprobe 100 --num_query_vectors 1000 --num_groundtruth_vectors 1000 --skip_default false"
   alias: query_workload_11_sparse
 
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template hotel_sparse_vectors --bucket_list {{.NthBucket 11}} -qf /queries.dev.csr -gf /base_1M.dev.gt --use_tls false --skip_default false --run_bhive_queries true"
   alias: query_workload_12_sparse_bhive
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list {{.NthBucket 4}} -qf /queries.dev.csr -gf /base_full.dev.gt --use_tls false --skip_default false --run_bhive_queries true"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list {{.NthBucket 4}} -qf /queries.dev.csr -gf /base_full.dev.gt --use_tls false --validate_vector_query_results true --sparse_topn 400 --keyspace_list {{.NthBucket 4}}._default._default --qrels_file /msmarco_qrels.json --sparse_limit 100 --nprobe 100 --num_query_vectors 1000 --num_groundtruth_vectors 1000 --skip_default false --run_bhive_queries true"
   alias: query_workload_5_sparse_bhive
 - section_end: query_vector_indexes
 
@@ -2837,6 +2949,7 @@
   wait: true
 
 - template: wait_for_rebalance
+  wait: true
 
 # Safety wait: hold 10 min after rebalance completion so the index/service
 # rebalance phase fully settles before validation / item_count_check
@@ -2947,6 +3060,7 @@
 - template: rebalance
 
 - template: wait_for_rebalance
+  wait: true
 
 # Safety wait: hold 10 min after rebalance completion so the index/service
 # rebalance phase fully settles before validation / item_count_check
@@ -3115,6 +3229,7 @@
 - template: rebalance
 
 - template: wait_for_rebalance
+  wait: true
 
 # Safety wait: hold 10 min after rebalance completion so the index/service
 # rebalance phase fully settles before validation / item_count_check
@@ -3206,6 +3321,7 @@
 
 # Wait for rebalance to complete
 - template: wait_for_rebalance
+  wait: true
 
 # Safety wait: hold 10 min after rebalance completion so the index/service
 # rebalance phase fully settles before validation / item_count_check
@@ -3270,6 +3386,7 @@
 
 
 - template: wait_for_rebalance
+  wait: true
 
 # Safety wait: hold 10 min after rebalance completion so the index/service
 # rebalance phase fully settles before validation / item_count_check
@@ -3319,19 +3436,19 @@
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 1 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list  {{.NthBucket 7}} --distance_algo L2 --use_tls false --skip_default false --xattrs true"
   alias: query_workload_6a
 ############### bucket12 queries ################
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 3600 --num_concurrent_queries 20 --use_sdk true --query_type n1ql --template hotel,hotel_vectors --bucket_list {{.NthBucket 11}} --distance_algo EUCLIDEAN_SQUARED --use_tls false"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 3600 --num_concurrent_queries 20 --use_sdk true --query_type n1ql --template hotel,hotel_vectors --bucket_list {{.NthBucket 11}} --skip_default false --distance_algo EUCLIDEAN_SQUARED --use_tls false"
   alias: query_workload_12
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 3600 --num_concurrent_queries 20 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list {{.NthBucket 11}} --distance_algo DOT --num_query_vectors 1000 --num_groundtruth_vectors 100 --query_file /gist_query.fvecs --groundtruth_file /gist_groundtruth.ivecs --use_tls false --run_bhive_queries true"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 3600 --num_concurrent_queries 20 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list {{.NthBucket 11}} --skip_default false --distance_algo DOT --num_query_vectors 1000 --num_groundtruth_vectors 100 --query_file /gist_query.fvecs --groundtruth_file /gist_groundtruth.ivecs --use_tls false --run_bhive_queries true"
   alias: query_workload_12_bhive
 
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 10 --use_sdk true --query_type n1ql --template hotel_sparse_vectors --bucket_list {{.NthBucket 11}} -qf /queries.dev.csr -gf /base_1M.dev.gt --use_tls false --skip_default false"
   alias: query_workload_12_sparse
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 10 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list {{.NthBucket 10}} -qf /queries.dev.csr -gf /base_full.dev.gt --use_tls false --skip_default false"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 10 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list {{.NthBucket 10}} -qf /queries.dev.csr -gf /base_full.dev.gt --use_tls false --validate_vector_query_results true --keyspace_list {{.NthBucket 10}}.scope_0.coll_0 --qrels_file /msmarco_qrels.json --sparse_limit 100 --nprobe 100 --num_query_vectors 1000 --num_groundtruth_vectors 1000 --skip_default false"
   alias: query_workload_11_sparse
 
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template hotel_sparse_vectors --bucket_list {{.NthBucket 11}} -qf /queries.dev.csr -gf /base_1M.dev.gt --use_tls false --skip_default false --run_bhive_queries true"
   alias: query_workload_12_sparse_bhive
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list {{.NthBucket 4}} -qf /queries.dev.csr -gf /base_full.dev.gt --use_tls false --skip_default false --run_bhive_queries true"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list {{.NthBucket 4}} -qf /queries.dev.csr -gf /base_full.dev.gt --use_tls false --validate_vector_query_results true --sparse_topn 400 --keyspace_list {{.NthBucket 4}}._default._default --qrels_file /msmarco_qrels.json --sparse_limit 100 --nprobe 100 --num_query_vectors 1000 --num_groundtruth_vectors 1000 --skip_default false --run_bhive_queries true"
   alias: query_workload_5_sparse_bhive
 - section_end: query_vector_indexes
 
@@ -3341,13 +3458,13 @@
   requires:  "{{eq true .DoOnce }}"
 
 ###############  Rebalance-in a index nodes ################
-- template: add_node
-  args: "{{.NthInActiveNode 0}}, index"
 ############### Capture index names before rebalance #26 ################
 - image: sequoiatools/indexmanager
   command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a capture_index_names --snapshot_file /data/index_snapshot_26.json"
   volumes: "/data:/data"
   wait: true
+- template: add_node
+  args: "{{.NthInActiveNode 0}}, index"
 
 
 - template: rebalance
@@ -3360,6 +3477,7 @@
 
 # Wait for rebalance to complete
 - template: wait_for_rebalance
+  wait: true
 
 # Safety wait: hold 10 min after rebalance completion so the index/service
 # rebalance phase fully settles before validation / item_count_check
@@ -3409,19 +3527,19 @@
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 1 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list  {{.NthBucket 7}} --distance_algo L2 --use_tls false --skip_default false --xattrs true"
   alias: query_workload_6a
 ############### bucket12 queries ################
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 900 --timeout 3600 --num_concurrent_queries 20 --use_sdk true --query_type n1ql --template hotel,hotel_vectors --bucket_list {{.NthBucket 11}} --distance_algo EUCLIDEAN_SQUARED --use_tls false"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 900 --timeout 3600 --num_concurrent_queries 20 --use_sdk true --query_type n1ql --template hotel,hotel_vectors --bucket_list {{.NthBucket 11}} --skip_default false --distance_algo EUCLIDEAN_SQUARED --use_tls false"
   alias: query_workload_12
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 900 --timeout 3600 --num_concurrent_queries 10 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list {{.NthBucket 11}} --distance_algo DOT --num_query_vectors 1000 --num_groundtruth_vectors 100 --query_file /gist_query.fvecs --groundtruth_file /gist_groundtruth.ivecs --use_tls false --run_bhive_queries true"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 900 --timeout 3600 --num_concurrent_queries 10 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list {{.NthBucket 11}} --skip_default false --distance_algo DOT --num_query_vectors 1000 --num_groundtruth_vectors 100 --query_file /gist_query.fvecs --groundtruth_file /gist_groundtruth.ivecs --use_tls false --run_bhive_queries true"
   alias: query_workload_12_bhive
 
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 10 --use_sdk true --query_type n1ql --template hotel_sparse_vectors --bucket_list {{.NthBucket 11}} -qf /queries.dev.csr -gf /base_1M.dev.gt --use_tls false --skip_default false"
   alias: query_workload_12_sparse
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 10 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list {{.NthBucket 10}} -qf /queries.dev.csr -gf /base_full.dev.gt --use_tls false --skip_default false"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 10 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list {{.NthBucket 10}} -qf /queries.dev.csr -gf /base_full.dev.gt --use_tls false --validate_vector_query_results true --keyspace_list {{.NthBucket 10}}.scope_0.coll_0 --qrels_file /msmarco_qrels.json --sparse_limit 100 --nprobe 100 --num_query_vectors 1000 --num_groundtruth_vectors 1000 --skip_default false"
   alias: query_workload_11_sparse
 
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template hotel_sparse_vectors --bucket_list {{.NthBucket 11}} -qf /queries.dev.csr -gf /base_1M.dev.gt --use_tls false --skip_default false --run_bhive_queries true"
   alias: query_workload_12_sparse_bhive
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list {{.NthBucket 4}} -qf /queries.dev.csr -gf /base_full.dev.gt --use_tls false --skip_default false --run_bhive_queries true"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list {{.NthBucket 4}} -qf /queries.dev.csr -gf /base_full.dev.gt --use_tls false --validate_vector_query_results true --sparse_topn 400 --keyspace_list {{.NthBucket 4}}._default._default --qrels_file /msmarco_qrels.json --sparse_limit 100 --nprobe 100 --num_query_vectors 1000 --num_groundtruth_vectors 1000 --skip_default false --run_bhive_queries true"
   alias: query_workload_5_sparse_bhive
 - section_end: query_vector_indexes
 
@@ -3445,6 +3563,7 @@
 
 # Wait for rebalance to complete
 - template: wait_for_rebalance
+  wait: true
 
 # Safety wait: hold 10 min after rebalance completion so the index/service
 # rebalance phase fully settles before validation / item_count_check
@@ -3494,19 +3613,19 @@
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 1 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list  {{.NthBucket 7}} --distance_algo L2 --use_tls false --skip_default false --xattrs true"
   alias: query_workload_6a
 ############### bucket12 queries ################
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 900 --timeout 3600 --num_concurrent_queries 20 --use_sdk true --query_type n1ql --template hotel,hotel_vectors --bucket_list {{.NthBucket 11}} --distance_algo EUCLIDEAN_SQUARED --use_tls false"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 900 --timeout 3600 --num_concurrent_queries 20 --use_sdk true --query_type n1ql --template hotel,hotel_vectors --bucket_list {{.NthBucket 11}} --skip_default false --distance_algo EUCLIDEAN_SQUARED --use_tls false"
   alias: query_workload_12
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 900 --timeout 3600 --num_concurrent_queries 10 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list {{.NthBucket 11}} --distance_algo DOT --num_query_vectors 1000 --num_groundtruth_vectors 100 --query_file /gist_query.fvecs --groundtruth_file /gist_groundtruth.ivecs --use_tls false --run_bhive_queries true"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 900 --timeout 3600 --num_concurrent_queries 10 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list {{.NthBucket 11}} --skip_default false --distance_algo DOT --num_query_vectors 1000 --num_groundtruth_vectors 100 --query_file /gist_query.fvecs --groundtruth_file /gist_groundtruth.ivecs --use_tls false --run_bhive_queries true"
   alias: query_workload_12_bhive
 
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 10 --use_sdk true --query_type n1ql --template hotel_sparse_vectors --bucket_list {{.NthBucket 11}} -qf /queries.dev.csr -gf /base_1M.dev.gt --use_tls false --skip_default false"
   alias: query_workload_12_sparse
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 10 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list {{.NthBucket 10}} -qf /queries.dev.csr -gf /base_full.dev.gt --use_tls false --skip_default false"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 10 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list {{.NthBucket 10}} -qf /queries.dev.csr -gf /base_full.dev.gt --use_tls false --validate_vector_query_results true --keyspace_list {{.NthBucket 10}}.scope_0.coll_0 --qrels_file /msmarco_qrels.json --sparse_limit 100 --nprobe 100 --num_query_vectors 1000 --num_groundtruth_vectors 1000 --skip_default false"
   alias: query_workload_11_sparse
 
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template hotel_sparse_vectors --bucket_list {{.NthBucket 11}} -qf /queries.dev.csr -gf /base_1M.dev.gt --use_tls false --skip_default false --run_bhive_queries true"
   alias: query_workload_12_sparse_bhive
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list {{.NthBucket 4}} -qf /queries.dev.csr -gf /base_full.dev.gt --use_tls false --skip_default false --run_bhive_queries true"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list {{.NthBucket 4}} -qf /queries.dev.csr -gf /base_full.dev.gt --use_tls false --validate_vector_query_results true --sparse_topn 400 --keyspace_list {{.NthBucket 4}}._default._default --qrels_file /msmarco_qrels.json --sparse_limit 100 --nprobe 100 --num_query_vectors 1000 --num_groundtruth_vectors 1000 --skip_default false --run_bhive_queries true"
   alias: query_workload_5_sparse_bhive
 - section_end: query_vector_indexes
 
@@ -3527,14 +3646,14 @@
   requires: "{{eq true .DoOnce }}"
 
 ###############  Rebalance-in two index nodes ################
-- template: add_node
-  args: "{{.NthInActiveNode 0}}, index"
-- args: "{{.NthInActiveNode 1}}, index"
 ############### Capture index names before rebalance #28 ################
 - image: sequoiatools/indexmanager
   command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a capture_index_names --snapshot_file /data/index_snapshot_28.json"
   volumes: "/data:/data"
   wait: true
+- template: add_node
+  args: "{{.NthInActiveNode 0}}, index"
+- args: "{{.NthInActiveNode 1}}, index"
 
 
 - template: rebalance
@@ -3547,6 +3666,7 @@
 
 # Wait for rebalance to complete
 - template: wait_for_rebalance
+  wait: true
 
 # Safety wait: hold 10 min after rebalance completion so the index/service
 # rebalance phase fully settles before validation / item_count_check
@@ -3677,6 +3797,11 @@
   args: "{{.ActiveIndexNode 1}}"
   wait: true
 
+# autofailover1IndexNode leaves the timeout at 30s; restore 120s so long index rebalances are not auto-failed-over mid-flight
+- template: enable_autofailover
+  args: "120,1"
+  wait: true
+
 ###############  Rebalance out data node ################
 ############### Capture index names before rebalance #29 ################
 - image: sequoiatools/indexmanager
@@ -3759,6 +3884,11 @@
 ###############  Auto failover for indexer node ################
 - template: autofailover1IndexNode
   args: "{{.ActiveIndexNode 1}}"
+
+# autofailover1IndexNode leaves the timeout at 30s; restore 120s so long index rebalances are not auto-failed-over mid-flight
+- template: enable_autofailover
+  args: "120,1"
+  wait: true
 
 # Sleep for some more time after indexer-kill completes (30 minutes)
 - image: sequoiatools/indexmanager
@@ -3844,21 +3974,22 @@
   wait: true
 
 
-###############  Add back index node  ################
-- template: add_node
-  args: "{{.NthInActiveNode 0}}, index"
-  wait: true
-
 ############### Capture index names before rebalance #32 ################
 - image: sequoiatools/indexmanager
   command: "-n {{.Orchestrator}} -o {{.RestPort}} -u {{.RestUsername}} -p {{.RestPassword}} -a capture_index_names --snapshot_file /data/index_snapshot_32.json"
   volumes: "/data:/data"
   wait: true
 
+###############  Add back index node  ################
+- template: add_node
+  args: "{{.NthInActiveNode 0}}, index"
+  wait: true
+
 
 - template: rebalance
 
 - template: wait_for_rebalance
+  wait: true
 
 # Safety wait: hold 10 min after rebalance completion so the index/service
 # rebalance phase fully settles before validation / item_count_check
@@ -3894,6 +4025,11 @@
 ###############  Auto failover for indexer node ################
 - template: autofailover1IndexNode
   args: "{{.ActiveIndexNode 1}}"
+  wait: true
+
+# autofailover1IndexNode leaves the timeout at 30s; restore 120s so long index rebalances are not auto-failed-over mid-flight
+- template: enable_autofailover
+  args: "120,1"
   wait: true
 
 - section_end: change_indexer_topologies_file_based
@@ -3954,6 +4090,7 @@
 
 ###############  Complete the rebalance ################
 - template: wait_for_rebalance
+  wait: true
 
 # Safety wait: hold 10 min after rebalance completion so the index/service
 # rebalance phase fully settles before validation / item_count_check
@@ -4002,6 +4139,7 @@
 - template: rebalance
 
 - template: wait_for_rebalance
+  wait: true
 
 # Safety wait: hold 10 min after rebalance completion so the index/service
 # rebalance phase fully settles before validation / item_count_check
@@ -4134,19 +4272,19 @@
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 1 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list  {{.NthBucket 7}} --distance_algo L2 --use_tls false --skip_default false --xattrs true"
   alias: query_workload_6a
 ############### bucket12 queries ################
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 900 --timeout 3600 --num_concurrent_queries 20 --use_sdk true --query_type n1ql --template hotel,hotel_vectors --bucket_list {{.NthBucket 11}} --distance_algo EUCLIDEAN_SQUARED --use_tls false"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 900 --timeout 3600 --num_concurrent_queries 20 --use_sdk true --query_type n1ql --template hotel,hotel_vectors --bucket_list {{.NthBucket 11}} --skip_default false --distance_algo EUCLIDEAN_SQUARED --use_tls false"
   alias: query_workload_12
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 900 --timeout 3600 --num_concurrent_queries 10 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list {{.NthBucket 11}} --distance_algo DOT --num_query_vectors 1000 --num_groundtruth_vectors 100 --query_file /gist_query.fvecs --groundtruth_file /gist_groundtruth.ivecs --use_tls false --run_bhive_queries true"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 900 --timeout 3600 --num_concurrent_queries 10 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list {{.NthBucket 11}} --skip_default false --distance_algo DOT --num_query_vectors 1000 --num_groundtruth_vectors 100 --query_file /gist_query.fvecs --groundtruth_file /gist_groundtruth.ivecs --use_tls false --run_bhive_queries true"
   alias: query_workload_12_bhive
 
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 10 --use_sdk true --query_type n1ql --template hotel_sparse_vectors --bucket_list {{.NthBucket 11}} -qf /queries.dev.csr -gf /base_1M.dev.gt --use_tls false --skip_default false"
   alias: query_workload_12_sparse
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 10 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list {{.NthBucket 10}} -qf /queries.dev.csr -gf /base_full.dev.gt --use_tls false --skip_default false"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 10 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list {{.NthBucket 10}} -qf /queries.dev.csr -gf /base_full.dev.gt --use_tls false --validate_vector_query_results true --keyspace_list {{.NthBucket 10}}.scope_0.coll_0 --qrels_file /msmarco_qrels.json --sparse_limit 100 --nprobe 100 --num_query_vectors 1000 --num_groundtruth_vectors 1000 --skip_default false"
   alias: query_workload_11_sparse
 
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template hotel_sparse_vectors --bucket_list {{.NthBucket 11}} -qf /queries.dev.csr -gf /base_1M.dev.gt --use_tls false --skip_default false --run_bhive_queries true"
   alias: query_workload_12_sparse_bhive
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list {{.NthBucket 4}} -qf /queries.dev.csr -gf /base_full.dev.gt --use_tls false --skip_default false --run_bhive_queries true"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --enable_scan_report true --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list {{.NthBucket 4}} -qf /queries.dev.csr -gf /base_full.dev.gt --use_tls false --validate_vector_query_results true --sparse_topn 400 --keyspace_list {{.NthBucket 4}}._default._default --qrels_file /msmarco_qrels.json --sparse_limit 100 --nprobe 100 --num_query_vectors 1000 --num_groundtruth_vectors 1000 --skip_default false --run_bhive_queries true"
   alias: query_workload_5_sparse_bhive
 - section_end: query_vector_indexes
 
@@ -4325,6 +4463,7 @@
 
 # Wait for rebalance to complete
 - template: wait_for_rebalance
+  wait: true
 
 # Safety wait: hold 10 min after rebalance completion so the index/service
 # rebalance phase fully settles before validation / item_count_check
@@ -4372,6 +4511,7 @@
 
 # Wait for rebalance to complete
 - template: wait_for_rebalance
+  wait: true
 
 # Safety wait: hold 10 min after rebalance completion so the index/service
 # rebalance phase fully settles before validation / item_count_check
@@ -4415,19 +4555,19 @@
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 600 --num_concurrent_queries 1 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list  {{.NthBucket 7}} --distance_algo L2 --use_tls false --skip_default false --xattrs true"
   alias: query_workload_6a
 ############### bucket12 queries ################
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 3600 --num_concurrent_queries 20 --use_sdk true --query_type n1ql --template hotel,hotel_vectors --bucket_list {{.NthBucket 11}} --distance_algo EUCLIDEAN_SQUARED --use_tls false"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 3600 --num_concurrent_queries 20 --use_sdk true --query_type n1ql --template hotel,hotel_vectors --bucket_list {{.NthBucket 11}} --skip_default false --distance_algo EUCLIDEAN_SQUARED --use_tls false"
   alias: query_workload_12
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 3600 --num_concurrent_queries 20 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list {{.NthBucket 11}} --distance_algo DOT --num_query_vectors 1000 --num_groundtruth_vectors 100 --query_file /gist_query.fvecs --groundtruth_file /gist_groundtruth.ivecs --use_tls false --run_bhive_queries true"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 900 --timeout 3600 --num_concurrent_queries 20 --use_sdk true --query_type n1ql --template hotel_vectors --bucket_list {{.NthBucket 11}} --skip_default false --distance_algo DOT --num_query_vectors 1000 --num_groundtruth_vectors 100 --query_file /gist_query.fvecs --groundtruth_file /gist_groundtruth.ivecs --use_tls false --run_bhive_queries true"
   alias: query_workload_12_bhive
 
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 10 --use_sdk true --query_type n1ql --template hotel_sparse_vectors --bucket_list {{.NthBucket 11}} -qf /queries.dev.csr -gf /base_1M.dev.gt --use_tls false --skip_default false"
   alias: query_workload_12_sparse
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 10 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list {{.NthBucket 10}} -qf /queries.dev.csr -gf /base_full.dev.gt --use_tls false --skip_default false"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 10 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list {{.NthBucket 10}} -qf /queries.dev.csr -gf /base_full.dev.gt --use_tls false --validate_vector_query_results true --keyspace_list {{.NthBucket 10}}.scope_0.coll_0 --qrels_file /msmarco_qrels.json --sparse_limit 100 --nprobe 100 --num_query_vectors 1000 --num_groundtruth_vectors 1000 --skip_default false"
   alias: query_workload_11_sparse
 
 - command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template hotel_sparse_vectors --bucket_list {{.NthBucket 11}} -qf /queries.dev.csr -gf /base_1M.dev.gt --use_tls false --skip_default false --run_bhive_queries true"
   alias: query_workload_12_sparse_bhive
-- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list {{.NthBucket 4}} -qf /queries.dev.csr -gf /base_full.dev.gt --use_tls false --skip_default false --run_bhive_queries true"
+- command: "--connection_string {{.Orchestrator}} --username {{.RestUsername}} --password {{.RestPassword}} --action run_query_workload --duration 7200 --refresh_duration 120 --timeout 300 --num_concurrent_queries 3 --use_sdk true --query_type n1ql --template msmarco_sparse_vectors --bucket_list {{.NthBucket 4}} -qf /queries.dev.csr -gf /base_full.dev.gt --use_tls false --validate_vector_query_results true --sparse_topn 400 --keyspace_list {{.NthBucket 4}}._default._default --qrels_file /msmarco_qrels.json --sparse_limit 100 --nprobe 100 --num_query_vectors 1000 --num_groundtruth_vectors 1000 --skip_default false --run_bhive_queries true"
   alias: query_workload_5_sparse_bhive
 - section_end: query_vector_indexes
 
