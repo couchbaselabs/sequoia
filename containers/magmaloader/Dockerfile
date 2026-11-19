@@ -27,7 +27,9 @@ RUN mvn -f pom.xml clean install
 WORKDIR target/magmadocloader
 ENV TZ=US/Pacific
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
-RUN apt-get install -y git git-all python3-dev python3-pip python3-setuptools cmake build-essential libssl-dev
-RUN python3 -m  pip install requests six future couchbase==3.0.10 httplib2 dnspython
+# magmaloader.py only imports requests and dns.resolver (dnspython); the loading is done by the Java loader built above.
+# No git-all / build toolchain / couchbase SDK: those pulled ~400 packages (1 GB) and built the SDK from source for nothing.
+RUN apt-get install -y --no-install-recommends python3-pip python3-setuptools python3-wheel && rm -rf /var/lib/apt/lists/*
+RUN python3 -m pip install --no-cache-dir requests dnspython
 COPY magmaloader.py magmaloader.py
 ENTRYPOINT ["python3","-u", "magmaloader.py"]

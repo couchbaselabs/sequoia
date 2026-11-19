@@ -1,0 +1,11 @@
+# Same data image as Dockerfile, but copied out of a query_manager image that was built before (those images already hold the
+# files in /gnd/ from the old download): no FTP at all. SEED must be an image built from the old query_manager Dockerfile or a
+# newer one that still has the files. Build and push once:
+#   docker buildx build --platform linux/amd64 -f containers/bigann_gnd/Dockerfile.seed --build-arg SEED=sequoiatools/query_manager:dev -t sequoiatools/bigann_gnd:1 --push containers/bigann_gnd
+ARG SEED=sequoiatools/query_manager:dev
+FROM --platform=linux/amd64 ${SEED} AS seed
+
+FROM scratch
+# the old image holds the groundtruth files in /gnd/ (query_manager.py reads /gnd/<file>) and the query vectors at /
+COPY --from=seed /gnd/idx_1M.ivecs /gnd/idx_2M.ivecs /gnd/idx_5M.ivecs /gnd/idx_10M.ivecs /gnd/idx_20M.ivecs /gnd/
+COPY --from=seed /bigann_query.bvecs /gnd/
